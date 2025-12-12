@@ -1,0 +1,303 @@
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal } from 'react-native';
+import { useHousehold } from '../../context/HouseholdContext';
+import { useAuth } from '../../context/AuthContext';
+import { expensesApi, PairwiseBalance } from '../../api/expensesApi';
+import { settlementsApi } from '../../api/settlementsApi';
+import { BalanceSummary } from '../../components/BalanceSummary';
+import { FormTextInput } from '../../components/FormTextInput';
+import { PrimaryButton } from '../../components/PrimaryButton';
+import { formatCurrency } from '../../utils/formatCurrency';
+import * as Sharing from 'expo-sharing';
+
+export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
+  const { selectedHousehold } = useHousehold();
+  const { user } = useAuth();
+  const [balances, setBalances] = useState<PairwiseBalance[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [settleModalVisible, setSettleModalVisible] = useState(false);
+  const [selectedBalance, setSelectedBalance] = useState<PairwiseBalance | null>(null);
+  const [amount, setAmount] = useState('');
+  const [method, setMethod] = useState('');
+  const [note, setNote] = useState('');
+
+  useEffect(() => {
+    if (selectedHousehold) {
+      loadBalances();
+    }
+  }, [selectedHousehold]);
+
+  const loadBalances = async () => {
+    if (!selectedHousehold) return;
+
+    setLoading(true);
+    try {
+      const data = await expensesApi.getBalances(selectedHousehold._id);
+      setBalances(data);
+    } catch (error) {
+      console.error('Failed to load balances:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getUserName = (userId: string): string => {
+    if (!selectedHousehold) return 'Unknown';
+    const member = selectedHousehold.members.find(m => m._id === userId);
+    return member?.name || 'Unknown';
+  };
+
+  const handlePayExternally = async (balance: PairwiseBalance) => {
+    const toUserName = getUserName(balance.toUserId);
+    const message = `Hey ${toUserName}, I owe you ${formatCurrency(balance.amount)} for our apartment expenses.`;
+
+    try {
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (isAvailable) {
+        await Sharing.shareAsync(message);
+      } else {
+        Alert.alert('Share', message);
+      }
+    } catch (error) {
+      console.error('Failed to share:', error);
+    }
+  };
+
+  const handleMarkAsPaid = (balance: PairwiseBalance) => {
+    setSelectedBalance(balance);
+    setAmount(balance.amount.toFixed(2));
+    setMethod('');
+    setNote('');
+    setSettleModalVisible(true);
+  };
+
+  const handleSubmitSettlement = async () => {
+    if (!selectedHousehold || !user || !selectedBalance) return;
+
+    if (!amount || !method) {
+      Alert.alert('Error', 'Please fill in amount and method');
+      return;
+    }
+
+    try {
+      await settlementsApi.createSettlement({
+        householdId: selectedHousehold._id,
+        fromUserId: selectedBalance.fromUserId,
+        toUserId: selectedBalance.toUserId,
+        amount: parseFloat(amount),
+        method,
+        note: note || undefined,
+        date: new Date().toISOString(),
+      });
+      setSettleModalVisible(false);
+      loadBalances();
+      navigation.goBack();
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.error || 'Failed to create settlement');
+    }
+  };
+
+  if (!selectedHousehold || !user) {
+    return (
+      <View style={styles.container}>
+        <Text>Please select a household</Text>
+      </View>
+    );
+  }
+
+  const userOwedBalances = balances.filter(b => b.fromUserId === user._id);
+
+  return (
+    <ScrollView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Settle Up</Text>
+      </View>
+
+      {userOwedBalances.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>All settled up! 🎉</Text>
+        </View>
+      ) : (
+        <View style={styles.section}>
+          {userOwedBalances.map((balance, index) => {
+            const toUserName = getUserName(balance.toUserId);
+            return (
+              <View key={index} style={styles.balanceCard}>
+                <Text style={styles.balanceText}>
+                  You owe <Text style={styles.userName}>{toUserName}</Text>{' '}
+                  <Text style={styles.amount}>{formatCurrency(balance.amount)}</Text>
+                </Text>
+                <View style={styles.actions}>
+                  <TouchableOpacity
+                    style={[styles.actionButton, styles.externalButton]}
+                    onPress={() => handlePayExternally(balance)}
+                  >
+                    <Text style={styles.actionButtonText}>Pay Externally</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.actionButton, styles.markButton]}
+                    onPress={() => handleMarkAsPaid(balance)}
+                  >
+                    <Text style={styles.actionButtonText}>Mark as Paid</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      )}
+
+      {/* Settlement Modal */}
+      <Modal
+        visible={settleModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setSettleModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Mark as Paid</Text>
+            {selectedBalance && (
+              <Text style={styles.modalSubtitle}>
+                Paying {getUserName(selectedBalance.toUserId)}
+              </Text>
+            )}
+            <FormTextInput
+              label="Amount"
+              value={amount}
+              onChangeText={setAmount}
+              placeholder="0.00"
+              keyboardType="numeric"
+            />
+            <FormTextInput
+              label="Method"
+              value={method}
+              onChangeText={setMethod}
+              placeholder="e.g., Venmo, Zelle, Cash"
+            />
+            <FormTextInput
+              label="Note (Optional)"
+              value={note}
+              onChangeText={setNote}
+              placeholder="Add a note"
+              multiline
+            />
+            <View style={styles.modalActions}>
+              <PrimaryButton
+                title="Cancel"
+                onPress={() => setSettleModalVisible(false)}
+              />
+              <View style={styles.spacer} />
+              <PrimaryButton
+                title="Save"
+                onPress={handleSubmitSettlement}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </ScrollView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  header: {
+    padding: 24,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#333',
+  },
+  section: {
+    padding: 16,
+  },
+  balanceCard: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  balanceText: {
+    fontSize: 16,
+    marginBottom: 12,
+  },
+  userName: {
+    fontWeight: '600',
+  },
+  amount: {
+    color: '#f44336',
+    fontWeight: '700',
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  externalButton: {
+    backgroundColor: '#2196F3',
+  },
+  markButton: {
+    backgroundColor: '#4CAF50',
+  },
+  actionButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  emptyContainer: {
+    padding: 32,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 18,
+    color: '#999',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    width: '90%',
+    maxWidth: 400,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 16,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    marginTop: 16,
+  },
+  spacer: {
+    width: 12,
+  },
+});
+
