@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, Platform } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
 import { goalsApi, Goal } from '../../api/goalsApi';
@@ -16,7 +18,8 @@ export const GoalsScreen: React.FC = () => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<'idea' | 'planned' | 'in_progress' | 'done'>('idea');
-  const [targetDate, setTargetDate] = useState('');
+  const [targetDate, setTargetDate] = useState<Date | null>(null);
+  const [showTargetDatePicker, setShowTargetDatePicker] = useState(false);
 
   useEffect(() => {
     if (selectedHousehold) {
@@ -50,13 +53,13 @@ export const GoalsScreen: React.FC = () => {
         title: title.trim(),
         description: description || undefined,
         status,
-        targetDate: targetDate || undefined,
+        targetDate: targetDate ? targetDate.toISOString().split('T')[0] : undefined,
       });
       setCreateModalVisible(false);
       setTitle('');
       setDescription('');
       setStatus('idea');
-      setTargetDate('');
+      setTargetDate(null);
       loadGoals();
     } catch (error: any) {
       Alert.alert('Error', error.response?.data?.error || 'Failed to create goal');
@@ -83,9 +86,11 @@ export const GoalsScreen: React.FC = () => {
 
   if (!selectedHousehold || !user) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.emptyText}>Please select a household</Text>
-      </View>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>Please select a household</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
@@ -102,7 +107,8 @@ export const GoalsScreen: React.FC = () => {
   });
 
   return (
-    <ScrollView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView style={styles.scrollView}>
       <View style={styles.header}>
         <Text style={styles.title}>Goals</Text>
         <PrimaryButton
@@ -193,12 +199,66 @@ export const GoalsScreen: React.FC = () => {
                 </TouchableOpacity>
               ))}
             </View>
-            <FormTextInput
-              label="Target Date (Optional)"
-              value={targetDate}
-              onChangeText={setTargetDate}
-              placeholder="YYYY-MM-DD"
-            />
+            <View style={styles.field}>
+              <Text style={styles.label}>Target Date (Optional)</Text>
+              <TouchableOpacity
+                style={styles.dateButton}
+                onPress={() => setShowTargetDatePicker(true)}
+              >
+                <Text style={styles.dateText}>
+                  {targetDate
+                    ? targetDate.toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      })
+                    : 'Select date'}
+                </Text>
+              </TouchableOpacity>
+              {showTargetDatePicker && (
+                <DateTimePicker
+                  value={targetDate || new Date()}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  minimumDate={new Date()}
+                  onChange={(event, selectedDate) => {
+                    setShowTargetDatePicker(Platform.OS === 'ios');
+                    if (selectedDate) {
+                      setTargetDate(selectedDate);
+                    }
+                  }}
+                />
+              )}
+              {Platform.OS === 'ios' && showTargetDatePicker && (
+                <View style={styles.datePickerActions}>
+                  <TouchableOpacity
+                    style={styles.datePickerButton}
+                    onPress={() => {
+                      setShowTargetDatePicker(false);
+                      if (!targetDate) {
+                        setTargetDate(null);
+                      }
+                    }}
+                  >
+                    <Text style={styles.datePickerButtonText}>Clear</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.datePickerButton}
+                    onPress={() => setShowTargetDatePicker(false)}
+                  >
+                    <Text style={styles.datePickerButtonText}>Done</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              {targetDate && Platform.OS !== 'ios' && (
+                <TouchableOpacity
+                  style={styles.clearDateButton}
+                  onPress={() => setTargetDate(null)}
+                >
+                  <Text style={styles.clearDateText}>Clear</Text>
+                </TouchableOpacity>
+              )}
+            </View>
             <View style={styles.modalActions}>
               <PrimaryButton
                 title="Cancel"
@@ -211,6 +271,7 @@ export const GoalsScreen: React.FC = () => {
         </View>
       </Modal>
     </ScrollView>
+    </SafeAreaView>
   );
 };
 
@@ -219,8 +280,17 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
+  scrollView: {
+    flex: 1,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   header: {
     padding: 24,
+    paddingTop: 16,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
@@ -320,6 +390,41 @@ const styles = StyleSheet.create({
   },
   spacer: {
     width: 12,
+  },
+  dateButton: {
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    backgroundColor: '#fff',
+  },
+  dateText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  datePickerActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  datePickerButton: {
+    padding: 8,
+    paddingHorizontal: 16,
+  },
+  datePickerButtonText: {
+    color: '#2196F3',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  clearDateButton: {
+    marginTop: 8,
+    padding: 8,
+    alignSelf: 'flex-end',
+  },
+  clearDateText: {
+    color: '#f44336',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 

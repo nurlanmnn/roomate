@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity, Platform } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
 import { expensesApi, ExpenseShare } from '../../api/expensesApi';
@@ -13,7 +15,8 @@ export const CreateExpenseScreen: React.FC<{ navigation: any }> = ({ navigation 
   const [description, setDescription] = useState('');
   const [totalAmount, setTotalAmount] = useState('');
   const [paidBy, setPaidBy] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [category, setCategory] = useState('');
   const [selectedParticipants, setSelectedParticipants] = useState<string[]>([]);
   const [splitMethod, setSplitMethod] = useState<'even' | 'manual'>('even');
@@ -100,7 +103,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any }> = ({ navigation 
         participants: selectedParticipants,
         splitMethod,
         shares,
-        date: new Date(date).toISOString(),
+        date: date.toISOString(),
         category: category || undefined,
       });
       navigation.goBack();
@@ -113,9 +116,11 @@ export const CreateExpenseScreen: React.FC<{ navigation: any }> = ({ navigation 
 
   if (!selectedHousehold) {
     return (
-      <View style={styles.container}>
-        <Text>Please select a household</Text>
-      </View>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+        <View style={styles.emptyContainer}>
+          <Text>Please select a household</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
@@ -123,7 +128,8 @@ export const CreateExpenseScreen: React.FC<{ navigation: any }> = ({ navigation 
   const canSubmit = splitMethod === 'even' || Math.abs(remaining) < 0.01;
 
   return (
-    <ScrollView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView style={styles.scrollView}>
       <View style={styles.header}>
         <Text style={styles.title}>Add Expense</Text>
       </View>
@@ -157,12 +163,45 @@ export const CreateExpenseScreen: React.FC<{ navigation: any }> = ({ navigation 
           ))}
         </View>
 
-        <FormTextInput
-          label="Date"
-          value={date}
-          onChangeText={setDate}
-          placeholder="YYYY-MM-DD"
-        />
+        <View style={styles.field}>
+          <Text style={styles.label}>Date</Text>
+          <TouchableOpacity
+            style={styles.dateButton}
+            onPress={() => setShowDatePicker(true)}
+          >
+            <Text style={styles.dateText}>
+              {date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              })}
+            </Text>
+          </TouchableOpacity>
+          {showDatePicker && (
+            <DateTimePicker
+              value={date}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              maximumDate={new Date()}
+              onChange={(event, selectedDate) => {
+                setShowDatePicker(Platform.OS === 'ios');
+                if (selectedDate) {
+                  setDate(selectedDate);
+                }
+              }}
+            />
+          )}
+          {Platform.OS === 'ios' && showDatePicker && (
+            <View style={styles.datePickerActions}>
+              <TouchableOpacity
+                style={styles.datePickerButton}
+                onPress={() => setShowDatePicker(false)}
+              >
+                <Text style={styles.datePickerButtonText}>Done</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
 
         <FormTextInput
           label="Category (Optional)"
@@ -248,6 +287,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any }> = ({ navigation 
         />
       </View>
     </ScrollView>
+    </SafeAreaView>
   );
 };
 
@@ -256,8 +296,17 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
+  scrollView: {
+    flex: 1,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   header: {
     padding: 24,
+    paddingTop: 16,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
@@ -343,6 +392,31 @@ const styles = StyleSheet.create({
   },
   remainingError: {
     color: '#f44336',
+  },
+  dateButton: {
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    backgroundColor: '#fff',
+  },
+  dateText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  datePickerActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 8,
+  },
+  datePickerButton: {
+    padding: 8,
+    paddingHorizontal: 16,
+  },
+  datePickerButtonText: {
+    color: '#2196F3',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

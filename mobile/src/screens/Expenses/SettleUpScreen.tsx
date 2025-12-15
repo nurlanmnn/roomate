@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
 import { expensesApi, PairwiseBalance } from '../../api/expensesApi';
@@ -99,16 +100,19 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
 
   if (!selectedHousehold || !user) {
     return (
-      <View style={styles.container}>
-        <Text>Please select a household</Text>
-      </View>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+        <View style={styles.emptyContainer}>
+          <Text>Please select a household</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   const userOwedBalances = balances.filter(b => b.fromUserId === user._id);
 
   return (
-    <ScrollView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView style={styles.scrollView}>
       <View style={styles.header}>
         <Text style={styles.title}>Settle Up</Text>
       </View>
@@ -197,6 +201,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         </View>
       </Modal>
     </ScrollView>
+    </SafeAreaView>
   );
 };
 
@@ -205,8 +210,17 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
+  scrollView: {
+    flex: 1,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   header: {
     padding: 24,
+    paddingTop: 16,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#eee',

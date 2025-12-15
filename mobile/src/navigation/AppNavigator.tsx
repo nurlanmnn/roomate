@@ -117,32 +117,29 @@ const MainNavigator = () => {
   const { selectedHousehold } = useHousehold();
 
   return (
-    <MainStack.Navigator>
-      {!selectedHousehold ? (
-        <MainStack.Screen
-          name="HouseholdSelect"
-          component={HouseholdSelectScreen}
-          options={{ headerShown: false }}
-        />
-      ) : (
-        <>
-          <MainStack.Screen
-            name="Main"
-            component={MainTabs}
-            options={{ headerShown: false }}
-          />
-          <MainStack.Screen
-            name="CreateExpense"
-            component={CreateExpenseScreen}
-            options={{ title: 'Add Expense', presentation: 'modal' }}
-          />
-          <MainStack.Screen
-            name="SettleUp"
-            component={SettleUpScreen}
-            options={{ title: 'Settle Up' }}
-          />
-        </>
-      )}
+    <MainStack.Navigator
+      initialRouteName={selectedHousehold ? 'Main' : 'HouseholdSelect'}
+    >
+      <MainStack.Screen
+        name="HouseholdSelect"
+        component={HouseholdSelectScreen}
+        options={{ headerShown: false }}
+      />
+      <MainStack.Screen
+        name="Main"
+        component={MainTabs}
+        options={{ headerShown: false }}
+      />
+      <MainStack.Screen
+        name="CreateExpense"
+        component={CreateExpenseScreen}
+        options={{ title: 'Add Expense', presentation: 'modal' }}
+      />
+      <MainStack.Screen
+        name="SettleUp"
+        component={SettleUpScreen}
+        options={{ title: 'Settle Up' }}
+      />
     </MainStack.Navigator>
   );
 };

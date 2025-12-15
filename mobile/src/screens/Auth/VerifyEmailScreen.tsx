@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { authApi } from '../../api/authApi';
 
@@ -91,7 +92,7 @@ export const VerifyEmailScreen: React.FC<{ navigation: any; route: any }> = ({ n
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.content}>
         <Text style={styles.title}>Verify Your Email</Text>
         <Text style={styles.subtitle}>
@@ -137,7 +138,7 @@ export const VerifyEmailScreen: React.FC<{ navigation: any; route: any }> = ({ n
           </TouchableOpacity>
         </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 

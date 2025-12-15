@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, Modal } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { householdsApi, Household } from '../../api/householdsApi';
 import { useHousehold } from '../../context/HouseholdContext';
 import { PrimaryButton } from '../../components/PrimaryButton';
@@ -72,11 +73,13 @@ export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigatio
 
   const handleSelectHousehold = (household: Household) => {
     setSelectedHousehold(household);
-    navigation.navigate('Main');
+    // Navigate to Main tabs after selecting household
+    navigation.replace('Main');
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <ScrollView style={styles.scrollView}>
       <View style={styles.header}>
         <Text style={styles.title}>Select Household</Text>
       </View>
@@ -180,6 +183,7 @@ export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigatio
         </View>
       </Modal>
     </ScrollView>
+    </SafeAreaView>
   );
 };
 
@@ -188,9 +192,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
+  scrollView: {
+    flex: 1,
+  },
   header: {
     padding: 24,
-    paddingTop: 60,
+    paddingTop: 16,
   },
   title: {
     fontSize: 32,

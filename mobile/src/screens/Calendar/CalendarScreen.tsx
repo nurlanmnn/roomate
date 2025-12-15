@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, Platform } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHousehold } from '../../context/HouseholdContext';
 import { eventsApi, Event } from '../../api/eventsApi';
 import { EventCard } from '../../components/EventCard';
@@ -15,10 +17,14 @@ export const CalendarScreen: React.FC = () => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [type, setType] = useState<'bill' | 'cleaning' | 'social' | 'other'>('other');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [time, setTime] = useState('12:00');
-  const [endDate, setEndDate] = useState('');
-  const [endTime, setEndTime] = useState('');
+  const [date, setDate] = useState(new Date());
+  const [time, setTime] = useState(new Date());
+  const [endDate, setEndDate] = useState<Date | null>(null);
+  const [endTime, setEndTime] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+  const [showEndTimePicker, setShowEndTimePicker] = useState(false);
 
   useEffect(() => {
     if (selectedHousehold) {
@@ -46,8 +52,22 @@ export const CalendarScreen: React.FC = () => {
       return;
     }
 
-    const dateTime = new Date(`${date}T${time}`);
-    const endDateTime = endDate && endTime ? new Date(`${endDate}T${endTime}`) : undefined;
+    // Combine date and time
+    const dateTime = new Date(date);
+    dateTime.setHours(time.getHours());
+    dateTime.setMinutes(time.getMinutes());
+    dateTime.setSeconds(0);
+    dateTime.setMilliseconds(0);
+
+    // Combine end date and time if both are set
+    let endDateTime: Date | undefined;
+    if (endDate && endTime) {
+      endDateTime = new Date(endDate);
+      endDateTime.setHours(endTime.getHours());
+      endDateTime.setMinutes(endTime.getMinutes());
+      endDateTime.setSeconds(0);
+      endDateTime.setMilliseconds(0);
+    }
 
     try {
       await eventsApi.createEvent({
@@ -62,10 +82,11 @@ export const CalendarScreen: React.FC = () => {
       setTitle('');
       setDescription('');
       setType('other');
-      setDate(new Date().toISOString().split('T')[0]);
-      setTime('12:00');
-      setEndDate('');
-      setEndTime('');
+      const now = new Date();
+      setDate(now);
+      setTime(now);
+      setEndDate(null);
+      setEndTime(null);
       loadEvents();
     } catch (error: any) {
       Alert.alert('Error', error.response?.data?.error || 'Failed to create event');
@@ -92,9 +113,11 @@ export const CalendarScreen: React.FC = () => {
 
   if (!selectedHousehold) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.emptyText}>Please select a household</Text>
-      </View>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>Please select a household</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
@@ -109,7 +132,8 @@ export const CalendarScreen: React.FC = () => {
   });
 
   return (
-    <ScrollView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView style={styles.scrollView}>
       <View style={styles.header}>
         <Text style={styles.title}>Calendar</Text>
         <PrimaryButton
@@ -176,31 +200,203 @@ export const CalendarScreen: React.FC = () => {
                 </TouchableOpacity>
               ))}
             </View>
-            <FormTextInput
-              label="Date"
-              value={date}
-              onChangeText={setDate}
-              placeholder="YYYY-MM-DD"
-            />
-            <FormTextInput
-              label="Time"
-              value={time}
-              onChangeText={setTime}
-              placeholder="HH:MM"
-            />
-            <FormTextInput
-              label="End Date (Optional)"
-              value={endDate}
-              onChangeText={setEndDate}
-              placeholder="YYYY-MM-DD"
-            />
+            <View style={styles.field}>
+              <Text style={styles.label}>Date</Text>
+              <TouchableOpacity
+                style={styles.dateButton}
+                onPress={() => setShowDatePicker(true)}
+              >
+                <Text style={styles.dateText}>
+                  {date.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  })}
+                </Text>
+              </TouchableOpacity>
+              {showDatePicker && (
+                <DateTimePicker
+                  value={date}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={(event, selectedDate) => {
+                    setShowDatePicker(Platform.OS === 'ios');
+                    if (selectedDate) {
+                      setDate(selectedDate);
+                    }
+                  }}
+                />
+              )}
+              {Platform.OS === 'ios' && showDatePicker && (
+                <View style={styles.datePickerActions}>
+                  <TouchableOpacity
+                    style={styles.datePickerButton}
+                    onPress={() => setShowDatePicker(false)}
+                  >
+                    <Text style={styles.datePickerButtonText}>Done</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>Time</Text>
+              <TouchableOpacity
+                style={styles.dateButton}
+                onPress={() => setShowTimePicker(true)}
+              >
+                <Text style={styles.dateText}>
+                  {time.toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true,
+                  })}
+                </Text>
+              </TouchableOpacity>
+              {showTimePicker && (
+                <DateTimePicker
+                  value={time}
+                  mode="time"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  is24Hour={false}
+                  onChange={(event, selectedTime) => {
+                    setShowTimePicker(Platform.OS === 'ios');
+                    if (selectedTime) {
+                      setTime(selectedTime);
+                    }
+                  }}
+                />
+              )}
+              {Platform.OS === 'ios' && showTimePicker && (
+                <View style={styles.datePickerActions}>
+                  <TouchableOpacity
+                    style={styles.datePickerButton}
+                    onPress={() => setShowTimePicker(false)}
+                  >
+                    <Text style={styles.datePickerButtonText}>Done</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>End Date (Optional)</Text>
+              <TouchableOpacity
+                style={styles.dateButton}
+                onPress={() => setShowEndDatePicker(true)}
+              >
+                <Text style={styles.dateText}>
+                  {endDate
+                    ? endDate.toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      })
+                    : 'Select end date'}
+                </Text>
+              </TouchableOpacity>
+              {showEndDatePicker && (
+                <DateTimePicker
+                  value={endDate || date}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  minimumDate={date}
+                  onChange={(event, selectedDate) => {
+                    setShowEndDatePicker(Platform.OS === 'ios');
+                    if (selectedDate) {
+                      setEndDate(selectedDate);
+                    }
+                  }}
+                />
+              )}
+              {Platform.OS === 'ios' && showEndDatePicker && (
+                <View style={styles.datePickerActions}>
+                  <TouchableOpacity
+                    style={styles.datePickerButton}
+                    onPress={() => {
+                      setShowEndDatePicker(false);
+                      if (!endDate) {
+                        setEndDate(null);
+                        setEndTime(null);
+                      }
+                    }}
+                  >
+                    <Text style={styles.datePickerButtonText}>Clear</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.datePickerButton}
+                    onPress={() => setShowEndDatePicker(false)}
+                  >
+                    <Text style={styles.datePickerButtonText}>Done</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              {endDate && Platform.OS !== 'ios' && (
+                <TouchableOpacity
+                  style={styles.clearDateButton}
+                  onPress={() => {
+                    setEndDate(null);
+                    setEndTime(null);
+                  }}
+                >
+                  <Text style={styles.clearDateText}>Clear</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
             {endDate && (
-              <FormTextInput
-                label="End Time (Optional)"
-                value={endTime}
-                onChangeText={setEndTime}
-                placeholder="HH:MM"
-              />
+              <View style={styles.field}>
+                <Text style={styles.label}>End Time (Optional)</Text>
+                <TouchableOpacity
+                  style={styles.dateButton}
+                  onPress={() => setShowEndTimePicker(true)}
+                >
+                  <Text style={styles.dateText}>
+                    {endTime
+                      ? endTime.toLocaleTimeString('en-US', {
+                          hour: 'numeric',
+                          minute: '2-digit',
+                          hour12: true,
+                        })
+                      : 'Select end time'}
+                  </Text>
+                </TouchableOpacity>
+                {showEndTimePicker && (
+                  <DateTimePicker
+                    value={endTime || time}
+                    mode="time"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    is24Hour={false}
+                    onChange={(event, selectedTime) => {
+                      setShowEndTimePicker(Platform.OS === 'ios');
+                      if (selectedTime) {
+                        setEndTime(selectedTime);
+                      }
+                    }}
+                  />
+                )}
+                {Platform.OS === 'ios' && showEndTimePicker && (
+                  <View style={styles.datePickerActions}>
+                    <TouchableOpacity
+                      style={styles.datePickerButton}
+                      onPress={() => {
+                        setShowEndTimePicker(false);
+                        if (!endTime) {
+                          setEndTime(null);
+                        }
+                      }}
+                    >
+                      <Text style={styles.datePickerButtonText}>Clear</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.datePickerButton}
+                      onPress={() => setShowEndTimePicker(false)}
+                    >
+                      <Text style={styles.datePickerButtonText}>Done</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
             )}
             <View style={styles.modalActions}>
               <PrimaryButton
@@ -214,6 +410,7 @@ export const CalendarScreen: React.FC = () => {
         </View>
       </Modal>
     </ScrollView>
+    </SafeAreaView>
   );
 };
 
@@ -222,8 +419,17 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
+  scrollView: {
+    flex: 1,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   header: {
     padding: 24,
+    paddingTop: 16,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
@@ -309,6 +515,41 @@ const styles = StyleSheet.create({
   },
   spacer: {
     width: 12,
+  },
+  dateButton: {
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    backgroundColor: '#fff',
+  },
+  dateText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  datePickerActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  datePickerButton: {
+    padding: 8,
+    paddingHorizontal: 16,
+  },
+  datePickerButtonText: {
+    color: '#2196F3',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  clearDateButton: {
+    marginTop: 8,
+    padding: 8,
+    alignSelf: 'flex-end',
+  },
+  clearDateText: {
+    color: '#f44336',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 

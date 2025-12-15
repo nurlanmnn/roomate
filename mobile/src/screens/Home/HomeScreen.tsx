@@ -1,21 +1,30 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
 import { eventsApi, Event } from '../../api/eventsApi';
-import { expensesApi, PairwiseBalance } from '../../api/expensesApi';
+import { expensesApi, PairwiseBalance, Expense } from '../../api/expensesApi';
 import { goalsApi, Goal } from '../../api/goalsApi';
+import { shoppingApi, ShoppingItem } from '../../api/shoppingApi';
 import { EventCard } from '../../components/EventCard';
 import { BalanceSummary } from '../../components/BalanceSummary';
 import { GoalCard } from '../../components/GoalCard';
+import { StatsCard } from '../../components/StatsCard';
+import { QuickActionButton } from '../../components/QuickActionButton';
 import { formatDate } from '../../utils/dateHelpers';
+import { formatCurrency } from '../../utils/formatCurrency';
 
 export const HomeScreen: React.FC = () => {
+  const navigation = useNavigation<any>();
   const { selectedHousehold } = useHousehold();
   const { user } = useAuth();
   const [events, setEvents] = useState<Event[]>([]);
   const [balances, setBalances] = useState<PairwiseBalance[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [shoppingItems, setShoppingItems] = useState<ShoppingItem[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -29,10 +38,12 @@ export const HomeScreen: React.FC = () => {
 
     setLoading(true);
     try {
-      const [eventsData, balancesData, goalsData] = await Promise.all([
+      const [eventsData, balancesData, goalsData, expensesData, shoppingData] = await Promise.all([
         eventsApi.getEvents(selectedHousehold._id),
         expensesApi.getBalances(selectedHousehold._id),
         goalsApi.getGoals(selectedHousehold._id),
+        expensesApi.getExpenses(selectedHousehold._id),
+        shoppingApi.getShoppingItems(selectedHousehold._id, false),
       ]);
 
       // Get upcoming events (next 5)
@@ -50,6 +61,8 @@ export const HomeScreen: React.FC = () => {
       setEvents(upcomingEvents);
       setBalances(balancesData);
       setGoals(activeGoals);
+      setExpenses(expensesData);
+      setShoppingItems(shoppingData);
     } catch (error) {
       console.error('Failed to load home data:', error);
     } finally {
@@ -63,19 +76,61 @@ export const HomeScreen: React.FC = () => {
     return member?.name || 'Unknown';
   };
 
+  // Calculate stats
+  const calculateStats = () => {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    // Monthly expenses
+    const monthlyExpenses = expenses
+      .filter(e => new Date(e.date) >= startOfMonth)
+      .reduce((sum, e) => sum + e.totalAmount, 0);
+
+    // Pending shopping items
+    const pendingShopping = shoppingItems.filter(item => !item.completed).length;
+
+    // Upcoming events count
+    const upcomingEventsCount = events.length;
+
+    // Net balance for current user
+    let netBalance = 0;
+    if (user) {
+      const userOwed = balances
+        .filter(b => b.fromUserId === user._id)
+        .reduce((sum, b) => sum + b.amount, 0);
+      const userOwedTo = balances
+        .filter(b => b.toUserId === user._id)
+        .reduce((sum, b) => sum + b.amount, 0);
+      netBalance = userOwedTo - userOwed;
+    }
+
+    return {
+      monthlyExpenses,
+      pendingShopping,
+      upcomingEventsCount,
+      netBalance,
+    };
+  };
+
+  const stats = calculateStats();
+  const hasData = expenses.length > 0 || events.length > 0 || goals.length > 0 || shoppingItems.length > 0;
+
   if (!selectedHousehold) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.emptyText}>Please select a household</Text>
-      </View>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>Please select a household</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <ScrollView
-      style={styles.container}
-      refreshControl={<RefreshControl refreshing={loading} onRefresh={loadData} />}
-    >
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView
+        style={styles.scrollView}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={loadData} />}
+      >
       <View style={styles.header}>
         <Text style={styles.title}>{selectedHousehold.name}</Text>
         {selectedHousehold.address && (
@@ -83,6 +138,62 @@ export const HomeScreen: React.FC = () => {
         )}
       </View>
 
+      {/* Quick Stats Cards */}
+      {hasData && (
+        <View style={styles.statsContainer}>
+          <StatsCard
+            icon="💰"
+            label="This Month"
+            value={formatCurrency(stats.monthlyExpenses)}
+          />
+          <StatsCard
+            icon="🛒"
+            label="Shopping"
+            value={stats.pendingShopping}
+          />
+          <StatsCard
+            icon="📅"
+            label="Events"
+            value={stats.upcomingEventsCount}
+          />
+        </View>
+      )}
+
+      {/* Welcome Message & Quick Actions for New Users */}
+      {!hasData && (
+        <View style={styles.welcomeSection}>
+          <Text style={styles.welcomeTitle}>Welcome to {selectedHousehold.name}! 👋</Text>
+          <Text style={styles.welcomeText}>
+            Get started by adding your first expense, creating a shopping list, or setting up a goal.
+          </Text>
+          <View style={styles.quickActionsContainer}>
+            <QuickActionButton
+              icon="💰"
+              label="Add Expense"
+              onPress={() => {
+                navigation.getParent()?.navigate('CreateExpense');
+              }}
+            />
+            <QuickActionButton
+              icon="🛒"
+              label="Shopping List"
+              onPress={() => navigation.navigate('Shopping')}
+            />
+            <QuickActionButton
+              icon="🎯"
+              label="New Goal"
+              onPress={() => navigation.navigate('Goals')}
+            />
+            <QuickActionButton
+              icon="📅"
+              label="Add Event"
+              onPress={() => navigation.navigate('Calendar')}
+            />
+          </View>
+        </View>
+      )}
+
+      {/* Balance Summary */}
       {user && balances.length > 0 && (
         <View style={styles.section}>
           <BalanceSummary
@@ -93,18 +204,30 @@ export const HomeScreen: React.FC = () => {
         </View>
       )}
 
+      {/* Upcoming Events */}
       {events.length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Upcoming Events</Text>
-          {events.map((event) => (
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Upcoming Events</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Calendar')}>
+              <Text style={styles.seeAllText}>See All</Text>
+            </TouchableOpacity>
+          </View>
+          {events.slice(0, 3).map((event) => (
             <EventCard key={event._id} event={event} />
           ))}
         </View>
       )}
 
+      {/* Active Goals */}
       {goals.length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Active Goals</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Active Goals</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Goals')}>
+              <Text style={styles.seeAllText}>See All</Text>
+            </TouchableOpacity>
+          </View>
           {goals.map((goal) => (
             <GoalCard
               key={goal._id}
@@ -122,13 +245,8 @@ export const HomeScreen: React.FC = () => {
           ))}
         </View>
       )}
-
-      {events.length === 0 && balances.length === 0 && goals.length === 0 && (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No data to display yet</Text>
-        </View>
-      )}
     </ScrollView>
+    </SafeAreaView>
   );
 };
 
@@ -137,8 +255,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
+  scrollView: {
+    flex: 1,
+  },
   header: {
     padding: 24,
+    paddingTop: 16,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
@@ -153,22 +275,59 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
+  statsContainer: {
+    flexDirection: 'row',
+    padding: 16,
+    paddingBottom: 8,
+  },
   section: {
     padding: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
-    marginBottom: 12,
     color: '#333',
   },
-  emptyContainer: {
-    padding: 32,
-    alignItems: 'center',
+  seeAllText: {
+    fontSize: 14,
+    color: '#4CAF50',
+    fontWeight: '600',
   },
-  emptyText: {
+  welcomeSection: {
+    padding: 24,
+    backgroundColor: '#fff',
+    margin: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  welcomeTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  welcomeText: {
     fontSize: 16,
-    color: '#999',
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  quickActionsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
   },
 });
 

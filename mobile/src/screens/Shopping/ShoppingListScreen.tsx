@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, RefreshControl, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
 import { shoppingApi, ShoppingItem } from '../../api/shoppingApi';
@@ -118,17 +119,20 @@ export const ShoppingListScreen: React.FC = () => {
 
   if (!selectedHousehold) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.emptyText}>Please select a household</Text>
-      </View>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>Please select a household</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <ScrollView
-      style={styles.container}
-      refreshControl={<RefreshControl refreshing={loading} onRefresh={loadItems} />}
-    >
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView
+        style={styles.scrollView}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={loadItems} />}
+      >
       <View style={styles.header}>
         <Text style={styles.title}>Shopping List</Text>
         <VoiceInputButton onTranscript={handleVoiceInput} />
@@ -229,6 +233,7 @@ export const ShoppingListScreen: React.FC = () => {
         <PrimaryButton title="Add Item" onPress={handleAddItem} />
       </View>
     </ScrollView>
+    </SafeAreaView>
   );
 };
 
@@ -237,8 +242,17 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
+  scrollView: {
+    flex: 1,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   header: {
     padding: 24,
+    paddingTop: 16,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#eee',

@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Clipboard } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useHousehold } from '../../context/HouseholdContext';
 import { householdsApi } from '../../api/householdsApi';
@@ -21,9 +23,9 @@ export const SettingsScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     refreshUser();
   }, []);
 
-  const handleCopyCode = () => {
+  const handleCopyCode = async () => {
     if (selectedHousehold) {
-      Clipboard.setString(selectedHousehold.joinCode);
+      await Clipboard.setStringAsync(selectedHousehold.joinCode);
       Alert.alert('Copied', 'Join code copied to clipboard');
     }
   };
@@ -46,7 +48,7 @@ export const SettingsScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   };
 
   const handleSwitchHousehold = () => {
-    navigation.navigate('HouseholdSelect');
+    navigation.getParent()?.navigate('HouseholdSelect');
   };
 
   const handleLeaveHousehold = async () => {
@@ -61,7 +63,7 @@ export const SettingsScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
           try {
             await householdsApi.leaveHousehold(selectedHousehold._id);
             setSelectedHousehold(null);
-            navigation.navigate('HouseholdSelect');
+            navigation.getParent()?.navigate('HouseholdSelect');
           } catch (error: any) {
             Alert.alert('Error', error.response?.data?.error || 'Failed to leave household');
           }
@@ -90,17 +92,15 @@ export const SettingsScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         style: 'destructive',
         onPress: async () => {
           await logout();
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'Auth' }],
-          });
+          // AppNavigator will automatically switch to AuthNavigator when user becomes null
         },
       },
     ]);
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView style={styles.scrollView}>
       <View style={styles.header}>
         <Text style={styles.title}>Settings</Text>
       </View>
@@ -184,6 +184,7 @@ export const SettingsScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         />
       </View>
     </ScrollView>
+    </SafeAreaView>
   );
 };
 
@@ -192,8 +193,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
+  scrollView: {
+    flex: 1,
+  },
   header: {
     padding: 24,
+    paddingTop: 16,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
