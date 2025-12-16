@@ -2,31 +2,26 @@ import express, { Request, Response } from 'express';
 import { z } from 'zod';
 import mongoose from 'mongoose';
 import { ShoppingItem } from '../models/ShoppingItem';
+import { ShoppingList } from '../models/ShoppingList';
 import { Household } from '../models/Household';
 import { authMiddleware } from '../middleware/auth';
 
 const router = express.Router();
 
-const createShoppingItemSchema = z.object({
+// ========== SCHEMAS ==========
+const createShoppingListSchema = z.object({
   householdId: z.string(),
   name: z.string().min(1),
-  quantity: z.string().optional(),
-  category: z.string().optional(),
-  isShared: z.boolean().default(true),
-  ownerId: z.string().optional(),
 });
 
-const updateShoppingItemSchema = z.object({
-  name: z.string().min(1).optional(),
-  quantity: z.string().optional(),
-  category: z.string().optional(),
-  isShared: z.boolean().optional(),
-  ownerId: z.string().optional(),
-  completed: z.boolean().optional(),
+const updateShoppingListSchema = z.object({
+  name: z.string().min(1),
 });
 
-// GET /shopping/household/:householdId
-router.get('/household/:householdId', authMiddleware, async (req: Request, res: Response) => {
+// ========== SHOPPING LISTS ROUTES ==========
+
+// GET /shopping/lists/household/:householdId
+router.get('/lists/household/:householdId', authMiddleware, async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userId;
     if (!userId) {
@@ -43,8 +38,213 @@ router.get('/household/:householdId', authMiddleware, async (req: Request, res: 
       return res.status(403).json({ error: 'Access denied' });
     }
 
+    const lists = await ShoppingList.find({ householdId: req.params.householdId })
+      .populate('createdBy', 'name email')
+      .sort({ createdAt: -1 });
+
+    res.json(lists);
+  } catch (error) {
+    console.error('Get shopping lists error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /shopping/lists
+router.post('/lists', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const data = createShoppingListSchema.parse(req.body);
+
+    // Verify household exists and user is member
+    const household = await Household.findById(data.householdId);
+    if (!household) {
+      return res.status(404).json({ error: 'Household not found' });
+    }
+
+    const userIdObjectId = new mongoose.Types.ObjectId(userId);
+    if (!household.members.some(m => m.equals(userIdObjectId))) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Create list
+    const list = new ShoppingList({
+      householdId: new mongoose.Types.ObjectId(data.householdId),
+      name: data.name.trim(),
+      createdBy: userIdObjectId,
+    });
+    await list.save();
+
+    await list.populate('createdBy', 'name email');
+
+    res.status(201).json(list);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+    }
+    console.error('Create shopping list error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({ error: 'Internal server error', details: errorMessage });
+  }
+});
+
+// PATCH /shopping/lists/:id
+router.patch('/lists/:id', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const data = updateShoppingListSchema.parse(req.body);
+
+    const list = await ShoppingList.findById(req.params.id);
+    if (!list) {
+      return res.status(404).json({ error: 'Shopping list not found' });
+    }
+
+    // Verify user is member of household
+    const household = await Household.findById(list.householdId);
+    if (!household) {
+      return res.status(404).json({ error: 'Household not found' });
+    }
+    const userIdObjectId = new mongoose.Types.ObjectId(userId);
+    if (!household.members.some(m => m.equals(userIdObjectId))) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    list.name = data.name.trim();
+    await list.save();
+
+    await list.populate('createdBy', 'name email');
+
+    res.json(list);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+    }
+    console.error('Update shopping list error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// DELETE /shopping/lists/:id
+router.delete('/lists/:id', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const list = await ShoppingList.findById(req.params.id);
+    if (!list) {
+      return res.status(404).json({ error: 'Shopping list not found' });
+    }
+
+    // Verify user is member of household
+    const household = await Household.findById(list.householdId);
+    if (!household) {
+      return res.status(404).json({ error: 'Household not found' });
+    }
+    const userIdObjectId = new mongoose.Types.ObjectId(userId);
+    if (!household.members.some(m => m.equals(userIdObjectId))) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Delete all items in the list
+    await ShoppingItem.deleteMany({ listId: list._id });
+    
+    // Delete the list
+    await ShoppingList.deleteOne({ _id: list._id });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete shopping list error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ========== SHOPPING ITEMS ROUTES ==========
+
+const createShoppingItemSchema = z.object({
+  householdId: z.string(),
+  listId: z.string(),
+  name: z.string().min(1),
+  quantity: z.union([
+    z.number().int().positive(),
+    z.string().transform((val) => {
+      if (!val || val.trim() === '') return undefined;
+      const num = parseInt(val, 10);
+      return isNaN(num) ? undefined : num;
+    }),
+  ]).optional(),
+  weight: z.union([
+    z.number().int().positive(),
+    z.string().transform((val) => {
+      if (!val || val.trim() === '') return undefined;
+      const num = parseInt(val, 10);
+      return isNaN(num) ? undefined : num;
+    }),
+  ]).optional(),
+  weightUnit: z.enum(['lbs', 'kg', 'g', 'oz', 'liter', 'ml', 'fl oz', 'cup', 'pint', 'quart', 'gallon']).optional(),
+  category: z.string().optional(),
+  isShared: z.boolean().default(true),
+  ownerId: z.string().optional(),
+});
+
+const updateShoppingItemSchema = z.object({
+  name: z.string().min(1).optional(),
+  quantity: z.union([
+    z.number().int().positive(),
+    z.string().transform((val) => {
+      if (!val || val.trim() === '') return undefined;
+      const num = parseInt(val, 10);
+      return isNaN(num) ? undefined : num;
+    }),
+  ]).optional(),
+  weight: z.union([
+    z.number().int().positive(),
+    z.string().transform((val) => {
+      if (!val || val.trim() === '') return undefined;
+      const num = parseInt(val, 10);
+      return isNaN(num) ? undefined : num;
+    }),
+  ]).optional(),
+  weightUnit: z.enum(['lbs', 'kg', 'g', 'oz', 'liter', 'ml', 'fl oz', 'cup', 'pint', 'quart', 'gallon']).optional(),
+  category: z.string().optional(),
+  isShared: z.boolean().optional(),
+  ownerId: z.string().optional(),
+  completed: z.boolean().optional(),
+});
+
+// GET /shopping/items/list/:listId
+router.get('/items/list/:listId', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const list = await ShoppingList.findById(req.params.listId);
+    if (!list) {
+      return res.status(404).json({ error: 'Shopping list not found' });
+    }
+
+    // Verify user is member of household
+    const household = await Household.findById(list.householdId);
+    if (!household) {
+      return res.status(404).json({ error: 'Household not found' });
+    }
+    const userIdObjectId = new mongoose.Types.ObjectId(userId);
+    if (!household.members.some(m => m.equals(userIdObjectId))) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
     const { completed } = req.query;
-    const query: any = { householdId: req.params.householdId };
+    const query: any = { listId: req.params.listId };
     
     if (completed !== undefined) {
       query.completed = completed === 'true';
@@ -72,10 +272,21 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
 
     const data = createShoppingItemSchema.parse(req.body);
 
+    // Verify list exists
+    const list = await ShoppingList.findById(data.listId);
+    if (!list) {
+      return res.status(404).json({ error: 'Shopping list not found' });
+    }
+
     // Verify household exists and user is member
     const household = await Household.findById(data.householdId);
     if (!household) {
       return res.status(404).json({ error: 'Household not found' });
+    }
+
+    // Verify list belongs to household
+    if (list.householdId.toString() !== data.householdId) {
+      return res.status(400).json({ error: 'Shopping list does not belong to this household' });
     }
 
     const userIdObjectId = new mongoose.Types.ObjectId(userId);
@@ -91,8 +302,11 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
     // Create item
     const item = new ShoppingItem({
       householdId: data.householdId,
+      listId: data.listId,
       name: data.name,
       quantity: data.quantity,
+      weight: data.weight,
+      weightUnit: data.weightUnit,
       category: data.category,
       isShared: data.isShared,
       ownerId: data.ownerId,
@@ -142,6 +356,8 @@ router.patch('/:id', authMiddleware, async (req: Request, res: Response) => {
     // Update fields
     if (data.name !== undefined) item.name = data.name;
     if (data.quantity !== undefined) item.quantity = data.quantity;
+    if (data.weight !== undefined) item.weight = data.weight;
+    if (data.weightUnit !== undefined) item.weightUnit = data.weightUnit;
     if (data.category !== undefined) item.category = data.category;
     if (data.isShared !== undefined) item.isShared = data.isShared;
     if (data.ownerId !== undefined) item.ownerId = data.ownerId;

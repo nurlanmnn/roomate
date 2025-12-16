@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, Modal, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { householdsApi, Household } from '../../api/householdsApi';
 import { useHousehold } from '../../context/HouseholdContext';
@@ -122,7 +122,11 @@ export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigatio
         transparent
         onRequestClose={() => setCreateModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        >
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Create Household</Text>
             <FormTextInput
@@ -149,7 +153,7 @@ export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigatio
               />
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Join Modal */}
@@ -159,7 +163,11 @@ export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigatio
         transparent
         onRequestClose={() => setJoinModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        >
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Join Household</Text>
             <FormTextInput
@@ -180,7 +188,7 @@ export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigatio
               />
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </ScrollView>
     </SafeAreaView>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, Platform, KeyboardAvoidingView } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHousehold } from '../../context/HouseholdContext';
@@ -171,8 +171,15 @@ export const GoalsScreen: React.FC = () => {
         transparent
         onRequestClose={() => setCreateModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <ScrollView style={styles.modalContent}>
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        >
+          <ScrollView 
+            style={styles.modalContent}
+            keyboardShouldPersistTaps="handled"
+          >
             <Text style={styles.modalTitle}>New Goal</Text>
             <FormTextInput
               label="Title"
@@ -268,7 +275,7 @@ export const GoalsScreen: React.FC = () => {
               <PrimaryButton title="Create" onPress={handleCreateGoal} />
             </View>
           </ScrollView>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </ScrollView>
     </SafeAreaView>

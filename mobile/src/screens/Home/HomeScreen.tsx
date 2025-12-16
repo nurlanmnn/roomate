@@ -38,12 +38,21 @@ export const HomeScreen: React.FC = () => {
 
     setLoading(true);
     try {
-      const [eventsData, balancesData, goalsData, expensesData, shoppingData] = await Promise.all([
+      // Get all shopping lists first
+      const shoppingLists = await shoppingApi.getShoppingLists(selectedHousehold._id);
+      
+      // Get items from all lists
+      const shoppingItemsPromises = shoppingLists.map(list => 
+        shoppingApi.getShoppingItems(list._id, false)
+      );
+      const shoppingItemsArrays = await Promise.all(shoppingItemsPromises);
+      const allShoppingItems = shoppingItemsArrays.flat();
+
+      const [eventsData, balancesData, goalsData, expensesData] = await Promise.all([
         eventsApi.getEvents(selectedHousehold._id),
         expensesApi.getBalances(selectedHousehold._id),
         goalsApi.getGoals(selectedHousehold._id),
         expensesApi.getExpenses(selectedHousehold._id),
-        shoppingApi.getShoppingItems(selectedHousehold._id, false),
       ]);
 
       // Get upcoming events (next 5)
@@ -62,7 +71,7 @@ export const HomeScreen: React.FC = () => {
       setBalances(balancesData);
       setGoals(activeGoals);
       setExpenses(expensesData);
-      setShoppingItems(shoppingData);
+      setShoppingItems(allShoppingItems);
     } catch (error) {
       console.error('Failed to load home data:', error);
     } finally {

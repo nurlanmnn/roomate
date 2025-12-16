@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { authApi } from '../../api/authApi';
@@ -93,7 +93,12 @@ export const VerifyEmailScreen: React.FC<{ navigation: any; route: any }> = ({ n
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <View style={styles.content}>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoid}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <View style={styles.content}>
         <Text style={styles.title}>Verify Your Email</Text>
         <Text style={styles.subtitle}>
           We've sent a 6-digit code to{'\n'}
@@ -138,6 +143,7 @@ export const VerifyEmailScreen: React.FC<{ navigation: any; route: any }> = ({ n
           </TouchableOpacity>
         </View>
       </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -146,6 +152,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+    justifyContent: 'center',
+  },
+  keyboardAvoid: {
+    flex: 1,
     justifyContent: 'center',
   },
   content: {

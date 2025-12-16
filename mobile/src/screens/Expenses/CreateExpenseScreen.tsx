@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity, Platform, KeyboardAvoidingView } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHousehold } from '../../context/HouseholdContext';
@@ -129,7 +129,15 @@ export const CreateExpenseScreen: React.FC<{ navigation: any }> = ({ navigation 
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView style={styles.scrollView}>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoid}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <ScrollView 
+          style={styles.scrollView}
+          keyboardShouldPersistTaps="handled"
+        >
       <View style={styles.header}>
         <Text style={styles.title}>Add Expense</Text>
       </View>
@@ -287,6 +295,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any }> = ({ navigation 
         />
       </View>
     </ScrollView>
+    </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -295,6 +304,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  keyboardAvoid: {
+    flex: 1,
   },
   scrollView: {
     flex: 1,

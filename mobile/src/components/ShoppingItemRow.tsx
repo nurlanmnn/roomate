@@ -5,12 +5,14 @@ import { ShoppingItem } from '../api/shoppingApi';
 interface ShoppingItemRowProps {
   item: ShoppingItem;
   onToggle: () => void;
+  onEdit?: () => void;
   onDelete?: () => void;
 }
 
 export const ShoppingItemRow: React.FC<ShoppingItemRowProps> = ({
   item,
   onToggle,
+  onEdit,
   onDelete,
 }) => {
   return (
@@ -24,9 +26,16 @@ export const ShoppingItemRow: React.FC<ShoppingItemRowProps> = ({
         <Text style={[styles.name, item.completed && styles.nameCompleted]}>
           {item.name}
         </Text>
-        {item.quantity && (
-          <Text style={styles.quantity}>{item.quantity}</Text>
-        )}
+        <View style={styles.details}>
+          {item.quantity && (
+            <Text style={styles.detailText}>Qty: {item.quantity}</Text>
+          )}
+          {item.weight && (
+            <Text style={styles.detailText}>
+              {item.quantity ? ' • ' : ''}Weight: {item.weight}{item.weightUnit ? ` ${item.weightUnit}` : ''}
+            </Text>
+          )}
+        </View>
         <View style={styles.meta}>
           {item.isShared ? (
             <Text style={styles.sharedBadge}>Shared</Text>
@@ -37,11 +46,18 @@ export const ShoppingItemRow: React.FC<ShoppingItemRowProps> = ({
           )}
         </View>
       </View>
-      {onDelete && (
-        <TouchableOpacity onPress={onDelete} style={styles.deleteButton}>
-          <Text style={styles.deleteText}>×</Text>
-        </TouchableOpacity>
-      )}
+      <View style={styles.actions}>
+        {onEdit && (
+          <TouchableOpacity onPress={onEdit} style={styles.editButton}>
+            <Text style={styles.editText}>✎</Text>
+          </TouchableOpacity>
+        )}
+        {onDelete && (
+          <TouchableOpacity onPress={onDelete} style={styles.deleteButton}>
+            <Text style={styles.deleteText}>×</Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 };
@@ -92,14 +108,30 @@ const styles = StyleSheet.create({
     textDecorationLine: 'line-through',
     color: '#999',
   },
-  quantity: {
+  details: {
+    flexDirection: 'row',
+    marginBottom: 4,
+  },
+  detailText: {
     fontSize: 14,
     color: '#666',
-    marginBottom: 4,
   },
   meta: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  editButton: {
+    padding: 8,
+    marginRight: 4,
+  },
+  editText: {
+    fontSize: 18,
+    color: '#2196F3',
+    fontWeight: 'bold',
   },
   sharedBadge: {
     fontSize: 12,

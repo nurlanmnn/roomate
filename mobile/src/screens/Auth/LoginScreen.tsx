@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FormTextInput } from '../../components/FormTextInput';
 import { PrimaryButton } from '../../components/PrimaryButton';
@@ -29,7 +29,16 @@ export const LoginScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoid}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <ScrollView 
+          style={styles.container} 
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+        >
       <TouchableOpacity 
         style={styles.backButton}
         onPress={() => navigation.navigate('Landing')}
@@ -65,6 +74,7 @@ export const LoginScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
         </TouchableOpacity>
       </View>
     </ScrollView>
+    </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -73,6 +83,9 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  keyboardAvoid: {
+    flex: 1,
   },
   container: {
     flex: 1,

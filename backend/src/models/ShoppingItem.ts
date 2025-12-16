@@ -2,8 +2,11 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IShoppingItem extends Document {
   householdId: mongoose.Types.ObjectId;
+  listId: mongoose.Types.ObjectId;
   name: string;
-  quantity?: string;
+  quantity?: number;
+  weight?: number;
+  weightUnit?: string;
   category?: string;
   isShared: boolean;
   ownerId?: mongoose.Types.ObjectId;
@@ -18,14 +21,28 @@ const ShoppingItemSchema = new Schema<IShoppingItem>({
     ref: 'Household',
     required: true,
   },
+  listId: {
+    type: Schema.Types.ObjectId,
+    ref: 'ShoppingList',
+    required: true,
+  },
   name: {
     type: String,
     required: true,
     trim: true,
   },
   quantity: {
+    type: Number,
+    min: 0,
+  },
+  weight: {
+    type: Number,
+    min: 0,
+  },
+  weightUnit: {
     type: String,
     trim: true,
+    enum: ['lbs', 'kg', 'g', 'oz', 'liter', 'ml', 'fl oz', 'cup', 'pint', 'quart', 'gallon'],
   },
   category: {
     type: String,

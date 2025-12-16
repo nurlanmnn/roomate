@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
@@ -163,7 +163,15 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView style={styles.scrollView}>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoid}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <ScrollView 
+          style={styles.scrollView}
+          keyboardShouldPersistTaps="handled"
+        >
       <View style={styles.header}>
         <Text style={styles.title}>Settle Up</Text>
       </View>
@@ -224,7 +232,11 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         transparent
         onRequestClose={() => setSettleModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        >
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Mark as Paid</Text>
             {selectedBalance && (
@@ -264,9 +276,10 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
               />
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </ScrollView>
+    </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -275,6 +288,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  keyboardAvoid: {
+    flex: 1,
   },
   scrollView: {
     flex: 1,
