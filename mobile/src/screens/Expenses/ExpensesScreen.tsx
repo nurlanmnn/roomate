@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
@@ -43,6 +43,16 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     if (!selectedHousehold) return 'Unknown';
     const member = selectedHousehold.members.find(m => m._id === userId);
     return member?.name || 'Unknown';
+  };
+
+  const handleDeleteExpense = async (expenseId: string) => {
+    try {
+      await expensesApi.deleteExpense(expenseId);
+      // Reload expenses and balances after deletion
+      await loadData();
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.error || 'Failed to delete expense');
+    }
   };
 
   if (!selectedHousehold) {
@@ -93,7 +103,12 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
           <Text style={styles.emptyText}>No expenses yet</Text>
         ) : (
           expenses.map((expense) => (
-            <ExpenseCard key={expense._id} expense={expense} />
+            <ExpenseCard
+              key={expense._id}
+              expense={expense}
+              onDelete={handleDeleteExpense}
+              canDelete={true}
+            />
           ))
         )}
       </View>
@@ -118,7 +133,6 @@ const styles = StyleSheet.create({
   header: {
     padding: 24,
     paddingTop: 16,
-    padding: 24,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
@@ -150,4 +164,3 @@ const styles = StyleSheet.create({
     padding: 32,
   },
 });
-

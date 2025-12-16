@@ -1,23 +1,47 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Expense } from '../api/expensesApi';
 import { formatCurrency } from '../utils/formatCurrency';
 import { formatDate } from '../utils/dateHelpers';
 
 interface ExpenseCardProps {
   expense: Expense;
+  onDelete?: (expenseId: string) => void;
+  canDelete?: boolean;
 }
 
-export const ExpenseCard: React.FC<ExpenseCardProps> = ({ expense }) => {
+export const ExpenseCard: React.FC<ExpenseCardProps> = ({ expense, onDelete, canDelete = false }) => {
+  const handleDelete = () => {
+    Alert.alert(
+      'Delete Expense',
+      `Are you sure you want to delete "${expense.description}"? This action cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => onDelete?.(expense._id),
+        },
+      ]
+    );
+  };
+
   return (
     <View style={styles.card}>
       <View style={styles.header}>
         <Text style={styles.description}>{expense.description}</Text>
         <Text style={styles.amount}>{formatCurrency(expense.totalAmount)}</Text>
       </View>
-      <Text style={styles.paidBy}>
-        Paid by {expense.paidBy.name} • {formatDate(expense.date)}
-      </Text>
+      <View style={styles.metaRow}>
+        <Text style={styles.paidBy}>
+          Paid by {expense.paidBy.name} • {formatDate(expense.date)}
+        </Text>
+        {canDelete && onDelete && (
+          <TouchableOpacity onPress={handleDelete} style={styles.deleteButton}>
+            <Text style={styles.deleteText}>Delete</Text>
+          </TouchableOpacity>
+        )}
+      </View>
       {expense.category && (
         <Text style={styles.category}>{expense.category}</Text>
       )}
@@ -57,10 +81,25 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#4CAF50',
   },
+  metaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
   paidBy: {
     fontSize: 14,
     color: '#666',
-    marginBottom: 4,
+    flex: 1,
+  },
+  deleteButton: {
+    padding: 4,
+    paddingHorizontal: 8,
+  },
+  deleteText: {
+    fontSize: 14,
+    color: '#f44336',
+    fontWeight: '600',
   },
   category: {
     fontSize: 12,

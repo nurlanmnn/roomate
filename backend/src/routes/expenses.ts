@@ -39,7 +39,8 @@ router.get('/household/:householdId', authMiddleware, async (req: Request, res: 
       return res.status(404).json({ error: 'Household not found' });
     }
 
-    if (!household.members.some(m => m.toString() === userId)) {
+    const userIdObjectId = new mongoose.Types.ObjectId(userId);
+    if (!household.members.some(m => m.equals(userIdObjectId))) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
@@ -70,7 +71,8 @@ router.get('/household/:householdId/balances', authMiddleware, async (req: Reque
       return res.status(404).json({ error: 'Household not found' });
     }
 
-    if (!household.members.some(m => m.toString() === userId)) {
+    const userIdObjectId = new mongoose.Types.ObjectId(userId);
+    if (!household.members.some(m => m.equals(userIdObjectId))) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
@@ -106,7 +108,8 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Household not found' });
     }
 
-    if (!household.members.some(m => m.toString() === userId)) {
+    const userIdObjectId = new mongoose.Types.ObjectId(userId);
+    if (!household.members.some(m => m.equals(userIdObjectId))) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
@@ -140,7 +143,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
 
     // Validate sum of shares equals totalAmount
     const sumShares = data.shares.reduce((sum, share) => sum + share.amount, 0);
-    if (Math.abs(sumShares - data.totalAmount) > 0.01) {
+    if (Math.abs(sumShares - data.totalAmount) > 0.02) {
       return res.status(400).json({ error: 'Share amounts must add up to totalAmount' });
     }
 
@@ -189,7 +192,12 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
 
     // Verify user is member of household
     const household = await Household.findById(expense.householdId);
-    if (!household || !household.members.some(m => m.toString() === userId)) {
+    if (!household) {
+      return res.status(404).json({ error: 'Household not found' });
+    }
+    
+    const userIdObjectId = new mongoose.Types.ObjectId(userId);
+    if (!household.members.some(m => m.equals(userIdObjectId))) {
       return res.status(403).json({ error: 'Access denied' });
     }
 

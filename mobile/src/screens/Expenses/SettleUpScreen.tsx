@@ -72,6 +72,48 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     setSettleModalVisible(true);
   };
 
+  const handleNetBalance = async (balance: PairwiseBalance) => {
+    if (!selectedHousehold || !user) return;
+
+    // Find the reverse balance
+    const reverseBalance = balances.find(
+      b => b.fromUserId === balance.toUserId && b.toUserId === user._id
+    );
+
+    if (!reverseBalance) {
+      Alert.alert('Error', 'No mutual debt found to net');
+      return;
+    }
+
+    const otherUserName = getUserName(balance.toUserId);
+    const userOwes = balance.amount;
+    const otherOwes = reverseBalance.amount;
+    const netAmount = Math.abs(userOwes - otherOwes);
+
+    Alert.alert(
+      'Net Balance',
+      `You owe ${otherUserName} ${formatCurrency(userOwes)} and ${otherUserName} owes you ${formatCurrency(otherOwes)}.\n\nThis will create a settlement to simplify the balance. After netting, ${userOwes >= otherOwes ? 'you' : otherUserName} will owe ${formatCurrency(netAmount)} to ${userOwes >= otherOwes ? otherUserName : 'you'}.\n\nContinue?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Net Balance',
+          onPress: async () => {
+            try {
+              await settlementsApi.netBalance({
+                householdId: selectedHousehold._id,
+                otherUserId: balance.toUserId,
+              });
+              Alert.alert('Success', 'Balance has been netted successfully!');
+              loadBalances();
+            } catch (error: any) {
+              Alert.alert('Error', error.response?.data?.error || 'Failed to net balance');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleSubmitSettlement = async () => {
     if (!selectedHousehold || !user || !selectedBalance) return;
 
@@ -109,6 +151,15 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   }
 
   const userOwedBalances = balances.filter(b => b.fromUserId === user._id);
+  
+  // Find mutual debts (where user owes someone AND that person owes user)
+  const mutualDebts = balances.filter(b => {
+    if (b.fromUserId === user._id) {
+      // User owes this person - check if this person also owes user
+      return balances.some(other => other.fromUserId === b.toUserId && other.toUserId === user._id);
+    }
+    return false;
+  });
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -125,13 +176,28 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         <View style={styles.section}>
           {userOwedBalances.map((balance, index) => {
             const toUserName = getUserName(balance.toUserId);
+            const hasMutualDebt = mutualDebts.some(b => b.toUserId === balance.toUserId);
+            
             return (
               <View key={index} style={styles.balanceCard}>
                 <Text style={styles.balanceText}>
                   You owe <Text style={styles.userName}>{toUserName}</Text>{' '}
                   <Text style={styles.amount}>{formatCurrency(balance.amount)}</Text>
                 </Text>
+                {hasMutualDebt && (
+                  <Text style={styles.mutualDebtNote}>
+                    💡 {toUserName} also owes you money. You can net the balances.
+                  </Text>
+                )}
                 <View style={styles.actions}>
+                  {hasMutualDebt && (
+                    <TouchableOpacity
+                      style={[styles.actionButton, styles.netButton]}
+                      onPress={() => handleNetBalance(balance)}
+                    >
+                      <Text style={styles.actionButtonText}>Net Balance</Text>
+                    </TouchableOpacity>
+                  )}
                   <TouchableOpacity
                     style={[styles.actionButton, styles.externalButton]}
                     onPress={() => handlePayExternally(balance)}
@@ -258,18 +324,29 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: 'row',
     gap: 8,
+    flexWrap: 'wrap',
   },
   actionButton: {
     flex: 1,
+    minWidth: 100,
     padding: 12,
     borderRadius: 8,
     alignItems: 'center',
+  },
+  netButton: {
+    backgroundColor: '#FF9800',
   },
   externalButton: {
     backgroundColor: '#2196F3',
   },
   markButton: {
     backgroundColor: '#4CAF50',
+  },
+  mutualDebtNote: {
+    fontSize: 12,
+    color: '#FF9800',
+    fontStyle: 'italic',
+    marginBottom: 8,
   },
   actionButtonText: {
     color: '#fff',

@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
 import { z } from 'zod';
+import mongoose from 'mongoose';
 import { Event } from '../models/Event';
 import { Household } from '../models/Household';
 import { authMiddleware } from '../middleware/auth';
@@ -28,7 +29,8 @@ router.get('/household/:householdId', authMiddleware, async (req: Request, res: 
       return res.status(404).json({ error: 'Household not found' });
     }
 
-    if (!household.members.some(m => m.toString() === userId)) {
+    const userIdObjectId = new mongoose.Types.ObjectId(userId);
+    if (!household.members.some(m => m.equals(userIdObjectId))) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
@@ -61,7 +63,8 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Household not found' });
     }
 
-    if (!household.members.some(m => m.toString() === userId)) {
+    const userIdObjectId = new mongoose.Types.ObjectId(userId);
+    if (!household.members.some(m => m.equals(userIdObjectId))) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
@@ -104,7 +107,11 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
 
     // Verify user is member of household
     const household = await Household.findById(event.householdId);
-    if (!household || !household.members.some(m => m.toString() === userId)) {
+    if (!household) {
+      return res.status(404).json({ error: 'Household not found' });
+    }
+    const userIdObjectId = new mongoose.Types.ObjectId(userId);
+    if (!household.members.some(m => m.equals(userIdObjectId))) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
