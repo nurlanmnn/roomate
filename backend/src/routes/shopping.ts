@@ -192,7 +192,13 @@ const createShoppingItemSchema = z.object({
   weightUnit: z.enum(['lbs', 'kg', 'g', 'oz', 'liter', 'ml', 'fl oz', 'cup', 'pint', 'quart', 'gallon']).optional(),
   category: z.string().optional(),
   isShared: z.boolean().default(true),
-  ownerId: z.string().optional(),
+  ownerId: z
+    .string()
+    .transform((val) => {
+      const trimmed = val?.trim();
+      return trimmed ? trimmed : undefined;
+    })
+    .optional(),
 });
 
 const updateShoppingItemSchema = z.object({
@@ -216,7 +222,13 @@ const updateShoppingItemSchema = z.object({
   weightUnit: z.enum(['lbs', 'kg', 'g', 'oz', 'liter', 'ml', 'fl oz', 'cup', 'pint', 'quart', 'gallon']).optional(),
   category: z.string().optional(),
   isShared: z.boolean().optional(),
-  ownerId: z.string().optional(),
+  ownerId: z
+    .string()
+    .transform((val) => {
+      const trimmed = val?.trim();
+      return trimmed ? trimmed : undefined;
+    })
+    .optional(),
   completed: z.boolean().optional(),
 });
 
@@ -301,15 +313,15 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
 
     // Create item
     const item = new ShoppingItem({
-      householdId: data.householdId,
-      listId: data.listId,
+      householdId: new mongoose.Types.ObjectId(data.householdId),
+      listId: new mongoose.Types.ObjectId(data.listId),
       name: data.name,
       quantity: data.quantity,
       weight: data.weight,
       weightUnit: data.weightUnit,
       category: data.category,
       isShared: data.isShared,
-      ownerId: data.ownerId,
+      ownerId: data.ownerId ? new mongoose.Types.ObjectId(data.ownerId) : undefined,
       addedBy: userId,
       completed: false,
     });
@@ -360,7 +372,9 @@ router.patch('/:id', authMiddleware, async (req: Request, res: Response) => {
     if (data.weightUnit !== undefined) item.weightUnit = data.weightUnit;
     if (data.category !== undefined) item.category = data.category;
     if (data.isShared !== undefined) item.isShared = data.isShared;
-    if (data.ownerId !== undefined) item.ownerId = data.ownerId;
+    if (data.ownerId !== undefined) {
+      item.ownerId = data.ownerId ? new mongoose.Types.ObjectId(data.ownerId) : undefined;
+    }
     if (data.completed !== undefined) item.completed = data.completed;
 
     await item.save();

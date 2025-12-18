@@ -109,7 +109,9 @@ export const VerifyEmailScreen: React.FC<{ navigation: any; route: any }> = ({ n
           {otp.map((digit, index) => (
             <TextInput
               key={index}
-              ref={(ref) => (inputRefs.current[index] = ref)}
+              ref={(ref) => {
+                inputRefs.current[index] = ref;
+              }}
               style={[
                 styles.otpInput,
                 focusedIndex === index && styles.otpInputFocused,

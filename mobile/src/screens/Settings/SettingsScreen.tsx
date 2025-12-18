@@ -115,18 +115,20 @@ export const SettingsScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
           <Text style={styles.infoLabel}>Email</Text>
           <Text style={styles.infoValue}>{user?.email}</Text>
         </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Email Verified</Text>
-          <Text style={[styles.infoValue, !user?.isEmailVerified && styles.unverified]}>
-            {user?.isEmailVerified ? 'Yes' : 'No'}
-          </Text>
-        </View>
         {!user?.isEmailVerified && (
           <PrimaryButton
             title="Resend Verification Email"
             onPress={handleResendVerification}
           />
         )}
+        <View style={styles.spacer} />
+        <TouchableOpacity
+          style={styles.linkRow}
+          onPress={() => navigation.getParent()?.navigate('AccountSettings')}
+        >
+          <Text style={styles.linkRowText}>Account Settings</Text>
+          <Text style={styles.linkRowChevron}>›</Text>
+        </TouchableOpacity>
       </View>
 
       {selectedHousehold && (
@@ -146,6 +148,27 @@ export const SettingsScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
             <Text style={styles.infoLabel}>Join Code</Text>
             <Text style={styles.infoValue}>{selectedHousehold.joinCode}</Text>
           </View>
+
+          <View style={styles.membersSection}>
+            <Text style={styles.membersTitle}>Members</Text>
+            {selectedHousehold.members.map((m) => {
+              const isOwnerMember = m._id === selectedHousehold.ownerId;
+              return (
+                <View key={m._id} style={styles.memberRow}>
+                  <View style={styles.memberLeft}>
+                    <Text style={styles.memberName}>{m.name}</Text>
+                    <Text style={styles.memberEmail}>{m.email}</Text>
+                  </View>
+                  {isOwnerMember && (
+                    <View style={styles.ownerBadge}>
+                      <Text style={styles.ownerBadgeText}>Owner</Text>
+                    </View>
+                  )}
+                </View>
+              );
+            })}
+          </View>
+
           <View style={styles.codeActions}>
             <TouchableOpacity style={styles.codeButton} onPress={handleCopyCode}>
               <Text style={styles.codeButtonText}>Copy Code</Text>
@@ -241,6 +264,28 @@ const styles = StyleSheet.create({
   unverified: {
     color: '#f44336',
   },
+  linkRow: {
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#eee',
+    borderRadius: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#fafafa',
+  },
+  linkRowText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  linkRowChevron: {
+    fontSize: 22,
+    color: '#999',
+    marginLeft: 12,
+  },
   codeActions: {
     flexDirection: 'row',
     gap: 12,
@@ -256,6 +301,53 @@ const styles = StyleSheet.create({
   codeButtonText: {
     color: '#fff',
     fontWeight: '600',
+  },
+  membersSection: {
+    marginTop: 14,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  membersTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 10,
+  },
+  memberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f5f5f5',
+  },
+  memberLeft: {
+    flex: 1,
+    marginRight: 12,
+  },
+  memberName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
+  },
+  memberEmail: {
+    marginTop: 2,
+    fontSize: 12,
+    color: '#777',
+  },
+  ownerBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
+    backgroundColor: '#E8F5E9',
+    borderWidth: 1,
+    borderColor: '#C8E6C9',
+  },
+  ownerBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#2E7D32',
   },
   ownerNote: {
     fontSize: 12,

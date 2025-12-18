@@ -144,7 +144,7 @@ export const ShoppingListScreen: React.FC = () => {
     setEditItemName(item.name);
     setEditItemQuantity(item.quantity?.toString() || '');
     setEditItemWeight(item.weight?.toString() || '');
-    setEditItemWeightUnit(item.weightUnit || '');
+    setEditItemWeightUnit((item.weightUnit as WeightUnit) || '');
     setEditItemIsShared(item.isShared);
     setEditItemOwnerId(item.ownerId?._id || '');
   };
@@ -273,15 +273,67 @@ export const ShoppingListScreen: React.FC = () => {
     if (!selectedHousehold || !selectedList) return;
 
     try {
+      // Parse the transcript to extract item details
+      // Format: "quantity name" or "weight unit name" or "quantity weight unit name" or just "name"
+      const parts = transcript.trim().split(/\s+/);
+      
+      let itemName = transcript;
+      let itemQuantity: number | undefined;
+      let itemWeight: number | undefined;
+      let itemWeightUnit: WeightUnit | undefined;
+      
+      // Try to extract quantity (number at the start)
+      if (parts.length > 0 && /^\d+$/.test(parts[0])) {
+        itemQuantity = parseInt(parts[0], 10);
+        itemName = parts.slice(1).join(' ');
+      }
+      
+      // Try to extract weight and unit (e.g., "2kg", "1.5lbs", "500g")
+      const weightRegex = /^(\d+(?:\.\d+)?)(kg|g|lbs|oz|liter|l|ml|fl oz|cup|pint|quart|gallon)$/i;
+      for (let i = 0; i < parts.length; i++) {
+        const match = parts[i].match(weightRegex);
+        if (match) {
+          itemWeight = parseFloat(match[1]);
+          const unit = match[2].toLowerCase();
+          // Normalize unit
+          if (unit === 'l') itemWeightUnit = 'liter';
+          else if (['kg', 'g', 'lbs', 'oz', 'liter', 'ml', 'fl oz', 'cup', 'pint', 'quart', 'gallon'].includes(unit)) {
+            itemWeightUnit = unit as WeightUnit;
+          }
+          // Remove weight part from name
+          parts.splice(i, 1);
+          itemName = parts.join(' ').trim();
+          break;
+        }
+      }
+      
+      // If we extracted quantity but name is empty, use the original transcript
+      if (!itemName && itemQuantity) {
+        itemName = transcript;
+        itemQuantity = undefined;
+      }
+      
+      // Clean up item name
+      itemName = itemName.replace(/^(a|an|the)\s+/i, '').trim();
+      
+      if (!itemName) {
+        Alert.alert('Error', 'Could not parse item name from input');
+        return;
+      }
+
       await shoppingApi.createShoppingItem({
         householdId: selectedHousehold._id,
         listId: selectedList._id,
-        name: transcript,
+        name: itemName,
+        quantity: itemQuantity,
+        weight: itemWeight,
+        weightUnit: itemWeightUnit,
         isShared: true,
       });
       loadItems();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to add voice item:', error);
+      Alert.alert('Error', error.response?.data?.error || 'Failed to add item');
     }
   };
 

@@ -24,6 +24,7 @@ import { ShoppingListScreen } from '../screens/Shopping/ShoppingListScreen';
 import { CalendarScreen } from '../screens/Calendar/CalendarScreen';
 import { GoalsScreen } from '../screens/Goals/GoalsScreen';
 import { SettingsScreen } from '../screens/Settings/SettingsScreen';
+import { AccountSettingsScreen } from '../screens/Settings/AccountSettingsScreen';
 
 const AuthStack = createNativeStackNavigator();
 const MainStack = createNativeStackNavigator();
@@ -139,6 +140,11 @@ const MainNavigator = () => {
         name="SettleUp"
         component={SettleUpScreen}
         options={{ title: 'Settle Up' }}
+      />
+      <MainStack.Screen
+        name="AccountSettings"
+        component={AccountSettingsScreen}
+        options={{ title: 'Account Settings' }}
       />
     </MainStack.Navigator>
   );

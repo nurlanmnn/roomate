@@ -9,6 +9,7 @@ import settlementRoutes from './routes/settlements';
 import shoppingRoutes from './routes/shopping';
 import goalRoutes from './routes/goals';
 import eventRoutes from './routes/events';
+import speechRoutes from './routes/speech';
 
 const app = express();
 
@@ -17,7 +18,8 @@ app.use(cors({
   origin: config.frontendUrl,
   credentials: true,
 }));
-app.use(express.json());
+// Speech transcription sends base64 audio; default JSON limit (100kb) is too small.
+app.use(express.json({ limit: '15mb' }));
 
 // Routes
 app.use('/auth', authRoutes);
@@ -27,6 +29,7 @@ app.use('/settlements', settlementRoutes);
 app.use('/shopping', shoppingRoutes);
 app.use('/goals', goalRoutes);
 app.use('/events', eventRoutes);
+app.use('/speech', speechRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

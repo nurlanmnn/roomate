@@ -10,7 +10,7 @@ export interface Expense {
   householdId: string;
   description: string;
   totalAmount: number;
-  paidBy: { _id: string; name: string; email: string };
+  paidBy: { _id: string; name: string; email: string } | null;
   participants: Array<{ _id: string; name: string; email: string }>;
   splitMethod: 'even' | 'manual';
   shares: ExpenseShare[];

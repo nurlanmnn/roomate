@@ -11,6 +11,8 @@ interface ExpenseCardProps {
 }
 
 export const ExpenseCard: React.FC<ExpenseCardProps> = ({ expense, onDelete, canDelete = false }) => {
+  const paidByName = expense.paidBy?.name || 'Unknown';
+
   const handleDelete = () => {
     Alert.alert(
       'Delete Expense',
@@ -34,7 +36,7 @@ export const ExpenseCard: React.FC<ExpenseCardProps> = ({ expense, onDelete, can
       </View>
       <View style={styles.metaRow}>
         <Text style={styles.paidBy}>
-          Paid by {expense.paidBy.name} • {formatDate(expense.date)}
+          Paid by {paidByName} • {formatDate(expense.date)}
         </Text>
         {canDelete && onDelete && (
           <TouchableOpacity onPress={handleDelete} style={styles.deleteButton}>

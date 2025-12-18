@@ -430,8 +430,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
+    padding: 32,
     alignItems: 'center',
   },
   header: {
@@ -467,10 +466,6 @@ const styles = StyleSheet.create({
   deleteText: {
     color: '#f44336',
     fontSize: 14,
-  },
-  emptyContainer: {
-    padding: 32,
-    alignItems: 'center',
   },
   emptyText: {
     fontSize: 16,

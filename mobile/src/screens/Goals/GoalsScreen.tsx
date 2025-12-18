@@ -18,6 +18,7 @@ export const GoalsScreen: React.FC = () => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<'idea' | 'planned' | 'in_progress' | 'done'>('idea');
+  const [activeStatus, setActiveStatus] = useState<'idea' | 'planned' | 'in_progress' | 'done'>('idea');
   const [targetDate, setTargetDate] = useState<Date | null>(null);
   const [showTargetDatePicker, setShowTargetDatePicker] = useState(false);
 
@@ -117,50 +118,57 @@ export const GoalsScreen: React.FC = () => {
         />
       </View>
 
-      {Object.entries(goalsByStatus).map(([statusKey, statusGoals]) => {
-        if (statusGoals.length === 0) return null;
-        return (
-          <View key={statusKey} style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              {statusKey.charAt(0).toUpperCase() + statusKey.replace('_', ' ').slice(1)}
+      <View style={styles.filterRow}>
+        {(['idea', 'planned', 'in_progress', 'done'] as const).map((s) => (
+          <TouchableOpacity
+            key={s}
+            style={[styles.filterPill, activeStatus === s && styles.filterPillActive]}
+            onPress={() => setActiveStatus(s)}
+          >
+            <Text style={[styles.filterText, activeStatus === s && styles.filterTextActive]}>
+              {s.replace('_', ' ')}
             </Text>
-            {statusGoals.map((goal) => (
-              <View key={goal._id} style={styles.goalWrapper}>
-                <GoalCard
-                  goal={goal}
-                  onUpvote={() => handleUpvote(goal)}
-                  currentUserId={user._id}
-                />
-                <View style={styles.statusActions}>
-                  {(['idea', 'planned', 'in_progress', 'done'] as const).map((s) => (
-                    <TouchableOpacity
-                      key={s}
-                      style={[
-                        styles.statusButton,
-                        goal.status === s && styles.statusButtonActive,
-                      ]}
-                      onPress={() => handleUpdateStatus(goal, s)}
-                    >
-                      <Text
-                        style={[
-                          styles.statusButtonText,
-                          goal.status === s && styles.statusButtonTextActive,
-                        ]}
-                      >
-                        {s.replace('_', ' ')}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-            ))}
-          </View>
-        );
-      })}
+          </TouchableOpacity>
+        ))}
+      </View>
 
-      {goals.length === 0 && (
+      <View style={styles.section}>
+        {goalsByStatus[activeStatus].map((goal) => (
+          <View key={goal._id} style={styles.goalWrapper}>
+            <GoalCard
+              goal={goal}
+              onUpvote={() => handleUpvote(goal)}
+              currentUserId={user._id}
+            />
+            <Text style={styles.moveToLabel}>Move to:</Text>
+            <View style={styles.statusActions}>
+              {(['idea', 'planned', 'in_progress', 'done'] as const).map((s) => (
+                <TouchableOpacity
+                  key={s}
+                  style={[
+                    styles.statusButton,
+                    goal.status === s && styles.statusButtonActive,
+                  ]}
+                  onPress={() => handleUpdateStatus(goal, s)}
+                >
+                  <Text
+                    style={[
+                      styles.statusButtonText,
+                      goal.status === s && styles.statusButtonTextActive,
+                    ]}
+                  >
+                    {s.replace('_', ' ')}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        ))}
+      </View>
+
+      {goalsByStatus[activeStatus].length === 0 && (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No goals yet</Text>
+          <Text style={styles.emptyText}>No goals in this section</Text>
         </View>
       )}
 
@@ -291,8 +299,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
+    padding: 32,
     alignItems: 'center',
   },
   header: {
@@ -308,17 +315,46 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 16,
   },
+  filterRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  filterPill: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 18,
+    backgroundColor: '#f0f0f0',
+  },
+  filterPillActive: {
+    backgroundColor: '#4CAF50',
+  },
+  filterText: {
+    fontSize: 14,
+    color: '#666',
+    textTransform: 'capitalize',
+  },
+  filterTextActive: {
+    color: '#fff',
+    fontWeight: '700',
+  },
   section: {
     padding: 16,
   },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 12,
-    color: '#333',
-  },
   goalWrapper: {
     marginBottom: 12,
+  },
+  moveToLabel: {
+    marginTop: 10,
+    marginBottom: 6,
+    fontSize: 12,
+    color: '#777',
+    fontWeight: '600',
   },
   statusActions: {
     flexDirection: 'row',
@@ -342,10 +378,6 @@ const styles = StyleSheet.create({
   statusButtonTextActive: {
     color: '#fff',
     fontWeight: '600',
-  },
-  emptyContainer: {
-    padding: 32,
-    alignItems: 'center',
   },
   emptyText: {
     fontSize: 16,

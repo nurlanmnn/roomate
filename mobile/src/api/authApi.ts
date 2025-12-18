@@ -41,6 +41,21 @@ export const authApi = {
     return response.data;
   },
 
+  updateProfile: async (data: { name: string }): Promise<User> => {
+    const response = await apiClient.instance.patch('/auth/me', data);
+    return response.data;
+  },
+
+  changePassword: async (data: { currentPassword: string; newPassword: string }): Promise<{ success: boolean }> => {
+    const response = await apiClient.instance.post('/auth/change-password', data);
+    return response.data;
+  },
+
+  deleteAccount: async (data: { password: string }): Promise<{ success: boolean }> => {
+    const response = await apiClient.instance.post('/auth/delete-account', data);
+    return response.data;
+  },
+
   verifyEmail: async (email: string, otp: string): Promise<{ success: boolean }> => {
     const response = await apiClient.instance.post('/auth/verify-email', { email, otp });
     return response.data;

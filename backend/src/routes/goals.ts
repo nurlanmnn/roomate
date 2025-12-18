@@ -12,14 +12,15 @@ const createGoalSchema = z.object({
   title: z.string().min(1),
   description: z.string().optional(),
   status: z.enum(['idea', 'planned', 'in_progress', 'done']).default('idea'),
-  targetDate: z.string().datetime().or(z.date()).optional(),
+  // Mobile sends YYYY-MM-DD; also accept full ISO datetime strings.
+  targetDate: z.coerce.date().optional(),
 });
 
 const updateGoalSchema = z.object({
   title: z.string().min(1).optional(),
   description: z.string().optional(),
   status: z.enum(['idea', 'planned', 'in_progress', 'done']).optional(),
-  targetDate: z.string().datetime().or(z.date()).optional(),
+  targetDate: z.coerce.date().optional(),
 });
 
 // GET /goals/household/:householdId
@@ -83,7 +84,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
       status: data.status || 'idea',
       createdBy: userId,
       upvotes: [],
-      targetDate: data.targetDate ? new Date(data.targetDate) : undefined,
+      targetDate: data.targetDate,
     });
     await goal.save();
 
@@ -130,7 +131,7 @@ router.patch('/:id', authMiddleware, async (req: Request, res: Response) => {
     if (data.description !== undefined) goal.description = data.description;
     if (data.status !== undefined) goal.status = data.status;
     if (data.targetDate !== undefined) {
-      goal.targetDate = data.targetDate ? new Date(data.targetDate) : undefined;
+      goal.targetDate = data.targetDate;
     }
 
     await goal.save();

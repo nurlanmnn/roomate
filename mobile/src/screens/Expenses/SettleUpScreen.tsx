@@ -296,8 +296,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
+    padding: 32,
     alignItems: 'center',
   },
   header: {
@@ -367,10 +366,6 @@ const styles = StyleSheet.create({
   actionButtonText: {
     color: '#fff',
     fontWeight: '600',
-  },
-  emptyContainer: {
-    padding: 32,
-    alignItems: 'center',
   },
   emptyText: {
     fontSize: 18,
