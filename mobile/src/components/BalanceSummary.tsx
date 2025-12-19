@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { PairwiseBalance } from '../api/expensesApi';
 import { formatCurrency } from '../utils/formatCurrency';
+import { colors, fontSizes, fontWeights, radii, spacing, shadows } from '../theme';
 
 interface BalanceSummaryProps {
   balances: PairwiseBalance[];
@@ -57,41 +58,45 @@ export const BalanceSummary: React.FC<BalanceSummaryProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 16,
+    backgroundColor: colors.surface,
+    padding: spacing.lg,
+    borderRadius: radii.lg,
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...(shadows.sm as object),
   },
   title: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 12,
+    fontSize: fontSizes.lg,
+    fontWeight: fontWeights.extrabold,
+    color: colors.text,
+    marginBottom: spacing.md,
   },
   balanceRow: {
-    paddingVertical: 8,
+    paddingVertical: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: colors.border,
   },
   balanceText: {
-    fontSize: 16,
-    color: '#333',
+    fontSize: fontSizes.md,
+    color: colors.text,
   },
   userName: {
-    fontWeight: '600',
+    fontWeight: fontWeights.semibold,
   },
   amountPositive: {
-    color: '#4CAF50',
-    fontWeight: '700',
+    color: colors.success,
+    fontWeight: fontWeights.extrabold,
   },
   amountNegative: {
-    color: '#f44336',
-    fontWeight: '700',
+    color: colors.danger,
+    fontWeight: fontWeights.extrabold,
   },
   emptyText: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: fontSizes.md,
+    color: colors.textSecondary,
     textAlign: 'center',
-    padding: 16,
+    padding: spacing.lg,
   },
 });
 

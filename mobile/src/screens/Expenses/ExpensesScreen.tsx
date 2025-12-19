@@ -7,6 +7,8 @@ import { expensesApi, Expense, PairwiseBalance } from '../../api/expensesApi';
 import { ExpenseCard } from '../../components/ExpenseCard';
 import { BalanceSummary } from '../../components/BalanceSummary';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { ScreenHeader } from '../../components/ui/ScreenHeader';
+import { colors, fontSizes, fontWeights, spacing } from '../../theme';
 
 export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { selectedHousehold } = useHousehold();
@@ -71,9 +73,7 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         style={styles.scrollView}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={loadData} />}
       >
-      <View style={styles.header}>
-        <Text style={styles.title}>Expenses</Text>
-      </View>
+      <ScreenHeader title="Expenses" subtitle={selectedHousehold.name} />
 
       {user && (
         <View style={styles.section}>
@@ -92,6 +92,7 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         />
         <View style={styles.spacer} />
         <PrimaryButton
+          variant="secondary"
           title="Settle Up"
           onPress={() => navigation.navigate('SettleUp')}
         />
@@ -120,7 +121,7 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background,
   },
   scrollView: {
     flex: 1,
@@ -130,37 +131,29 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  header: {
-    padding: 24,
-    paddingTop: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#333',
-  },
   section: {
-    padding: 16,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xs,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 12,
-    color: '#333',
+    fontSize: fontSizes.xl,
+    fontWeight: fontWeights.semibold,
+    marginBottom: spacing.md,
+    color: colors.text,
   },
   actions: {
-    padding: 16,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.md,
   },
   spacer: {
-    height: 12,
+    height: spacing.sm,
   },
   emptyText: {
-    fontSize: 16,
-    color: '#999',
+    fontSize: fontSizes.md,
+    color: colors.muted,
     textAlign: 'center',
-    padding: 32,
+    padding: spacing.xxl,
   },
 });

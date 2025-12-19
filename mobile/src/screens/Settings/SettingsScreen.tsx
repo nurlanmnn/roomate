@@ -7,6 +7,8 @@ import { useHousehold } from '../../context/HouseholdContext';
 import { householdsApi } from '../../api/householdsApi';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import * as Sharing from 'expo-sharing';
+import { colors, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
+import { Avatar } from '../../components/ui/Avatar';
 
 export const SettingsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { user, logout, refreshUser } = useAuth();
@@ -107,6 +109,13 @@ export const SettingsScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Account</Text>
+        <View style={styles.avatarRow}>
+          <Avatar name={user?.name} uri={user?.avatarUrl} size={52} />
+          <View style={styles.avatarMeta}>
+            <Text style={styles.avatarName}>{user?.name}</Text>
+            <Text style={styles.avatarEmail}>{user?.email}</Text>
+          </View>
+        </View>
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Name</Text>
           <Text style={styles.infoValue}>{user?.name}</Text>
@@ -214,105 +223,106 @@ export const SettingsScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background,
   },
   scrollView: {
     flex: 1,
   },
   header: {
-    padding: 24,
-    paddingTop: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.md,
+    backgroundColor: colors.background,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#333',
+    fontSize: fontSizes.xxl,
+    fontWeight: fontWeights.extrabold,
+    color: colors.text,
   },
   section: {
-    backgroundColor: '#fff',
-    padding: 16,
-    marginTop: 16,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: '#eee',
+    backgroundColor: colors.surface,
+    padding: spacing.lg,
+    marginTop: spacing.md,
+    marginHorizontal: spacing.md,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...(shadows.sm as object),
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 16,
-    color: '#333',
+    fontSize: fontSizes.lg,
+    fontWeight: fontWeights.semibold,
+    marginBottom: spacing.md,
+    color: colors.text,
   },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 12,
+    paddingVertical: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: colors.border,
   },
   infoLabel: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: fontSizes.md,
+    color: colors.textSecondary,
   },
   infoValue: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
+    fontSize: fontSizes.md,
+    fontWeight: fontWeights.medium,
+    color: colors.text,
   },
   unverified: {
-    color: '#f44336',
+    color: colors.danger,
   },
   linkRow: {
-    marginTop: 12,
+    marginTop: spacing.md,
     borderWidth: 1,
-    borderColor: '#eee',
-    borderRadius: 10,
-    paddingVertical: 14,
-    paddingHorizontal: 14,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#fafafa',
+    backgroundColor: colors.surfaceAlt,
   },
   linkRowText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: fontSizes.md,
+    fontWeight: fontWeights.semibold,
+    color: colors.text,
   },
   linkRowChevron: {
     fontSize: 22,
-    color: '#999',
-    marginLeft: 12,
+    color: colors.muted,
+    marginLeft: spacing.md,
   },
   codeActions: {
     flexDirection: 'row',
     gap: 12,
-    marginTop: 12,
+    marginTop: spacing.md,
   },
   codeButton: {
     flex: 1,
-    padding: 12,
-    backgroundColor: '#2196F3',
-    borderRadius: 8,
+    padding: spacing.md,
+    backgroundColor: colors.accent,
+    borderRadius: radii.md,
     alignItems: 'center',
   },
   codeButtonText: {
-    color: '#fff',
-    fontWeight: '600',
+    color: colors.surface,
+    fontWeight: fontWeights.semibold,
   },
   membersSection: {
-    marginTop: 14,
-    paddingTop: 14,
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    borderTopColor: colors.border,
   },
   membersTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#333',
-    marginBottom: 10,
+    fontSize: fontSizes.md,
+    fontWeight: fontWeights.semibold,
+    color: colors.text,
+    marginBottom: spacing.sm,
   },
   memberRow: {
     flexDirection: 'row',
@@ -320,43 +330,65 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#f5f5f5',
+    borderBottomColor: colors.border,
   },
   memberLeft: {
     flex: 1,
-    marginRight: 12,
+    marginRight: spacing.md,
   },
   memberName: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: fontWeights.semibold,
+    color: colors.text,
   },
   memberEmail: {
     marginTop: 2,
     fontSize: 12,
-    color: '#777',
+    color: colors.muted,
   },
   ownerBadge: {
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 14,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: colors.primarySoft,
     borderWidth: 1,
-    borderColor: '#C8E6C9',
+    borderColor: colors.primary,
   },
   ownerBadgeText: {
     fontSize: 12,
-    fontWeight: '700',
-    color: '#2E7D32',
+    fontWeight: fontWeights.bold,
+    color: colors.primaryDark,
   },
   ownerNote: {
     fontSize: 12,
-    color: '#999',
-    marginTop: 8,
+    color: colors.muted,
+    marginTop: spacing.xs,
     fontStyle: 'italic',
   },
   spacer: {
-    height: 12,
+    height: spacing.sm,
+  },
+  avatarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingBottom: spacing.md,
+    marginBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  avatarMeta: {
+    flex: 1,
+  },
+  avatarName: {
+    fontSize: fontSizes.lg,
+    fontWeight: fontWeights.extrabold,
+    color: colors.text,
+  },
+  avatarEmail: {
+    marginTop: spacing.xxs,
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
   },
 });
 

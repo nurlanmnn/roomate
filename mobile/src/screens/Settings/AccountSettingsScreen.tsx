@@ -5,11 +5,15 @@ import { FormTextInput } from '../../components/FormTextInput';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { useAuth } from '../../context/AuthContext';
 import { authApi } from '../../api/authApi';
+import { Avatar } from '../../components/ui/Avatar';
+import { colors, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
 
 export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { user, refreshUser, logout } = useAuth();
   const [name, setName] = useState(user?.name || '');
   const [savingName, setSavingName] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl || '');
+  const [savingAvatar, setSavingAvatar] = useState(false);
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -22,6 +26,11 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
     const trimmed = name.trim();
     return !!user && trimmed.length > 0 && trimmed !== user.name;
   }, [name, user]);
+
+  const canSaveAvatar = useMemo(() => {
+    const trimmed = avatarUrl.trim();
+    return !!user && trimmed.length > 0 && trimmed !== (user.avatarUrl || '');
+  }, [avatarUrl, user]);
 
   const canChangePassword = useMemo(() => {
     return currentPassword.length > 0 && newPassword.length >= 6;
@@ -39,6 +48,20 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
       Alert.alert('Error', error.response?.data?.error || 'Failed to update name');
     } finally {
       setSavingName(false);
+    }
+  };
+
+  const handleSaveAvatar = async () => {
+    if (!canSaveAvatar) return;
+    try {
+      setSavingAvatar(true);
+      await authApi.updateProfile({ avatarUrl: avatarUrl.trim() });
+      await refreshUser();
+      Alert.alert('Saved', 'Your profile photo has been updated.');
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.error || 'Failed to update profile photo');
+    } finally {
+      setSavingAvatar(false);
     }
   };
 
@@ -116,6 +139,29 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Profile</Text>
+            <View style={styles.avatarRow}>
+              <Avatar name={user?.name} uri={user?.avatarUrl} size={72} />
+              <View style={styles.avatarInfo}>
+                <Text style={styles.avatarName}>{user?.name}</Text>
+                <Text style={styles.avatarEmail}>{user?.email}</Text>
+              </View>
+            </View>
+            <FormTextInput
+              label="Profile Photo URL"
+              value={avatarUrl}
+              onChangeText={setAvatarUrl}
+              placeholder="https://..."
+              autoCapitalize="none"
+              helperText="Paste a direct image URL (png/jpg). We'll show it as your avatar."
+            />
+            <PrimaryButton
+              title="Save Photo"
+              onPress={handleSaveAvatar}
+              disabled={!canSaveAvatar}
+              loading={savingAvatar}
+              variant="secondary"
+            />
+            <View style={styles.spacer} />
             <FormTextInput
               label="Name"
               value={name}
@@ -173,30 +219,31 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background,
   },
   content: {
-    padding: 16,
+    padding: spacing.md,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#333',
-    marginBottom: 16,
+    fontSize: fontSizes.xxl,
+    fontWeight: fontWeights.extrabold,
+    color: colors.text,
+    marginBottom: spacing.md,
   },
   section: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 12,
+    backgroundColor: colors.surface,
+    padding: spacing.lg,
+    borderRadius: radii.lg,
     borderWidth: 1,
-    borderColor: '#eee',
-    marginBottom: 16,
+    borderColor: colors.border,
+    marginBottom: spacing.md,
+    ...(shadows.sm as object),
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#333',
-    marginBottom: 12,
+    fontSize: fontSizes.md,
+    fontWeight: fontWeights.extrabold,
+    color: colors.text,
+    marginBottom: spacing.md,
   },
   dangerSection: {
     borderColor: '#ffdddd',
@@ -205,9 +252,31 @@ const styles = StyleSheet.create({
     color: '#b00020',
   },
   dangerText: {
-    color: '#666',
-    marginBottom: 12,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
     lineHeight: 18,
+  },
+  avatarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  avatarInfo: {
+    flex: 1,
+  },
+  avatarName: {
+    fontSize: fontSizes.xl,
+    fontWeight: fontWeights.extrabold,
+    color: colors.text,
+  },
+  avatarEmail: {
+    marginTop: spacing.xxs,
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
+  },
+  spacer: {
+    height: spacing.md,
   },
 });
 

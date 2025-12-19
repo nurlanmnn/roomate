@@ -1,10 +1,11 @@
 import React from 'react';
-import { Text } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useAuth } from '../context/AuthContext';
 import { useHousehold } from '../context/HouseholdContext';
+import { Ionicons } from '@expo/vector-icons';
+import { colors } from '../theme';
 
 // Auth Screens
 import { LandingScreen } from '../screens/Auth/LandingScreen';
@@ -22,7 +23,9 @@ import { CreateExpenseScreen } from '../screens/Expenses/CreateExpenseScreen';
 import { SettleUpScreen } from '../screens/Expenses/SettleUpScreen';
 import { ShoppingListScreen } from '../screens/Shopping/ShoppingListScreen';
 import { CalendarScreen } from '../screens/Calendar/CalendarScreen';
+import { CreateEventScreen } from '../screens/Calendar/CreateEventScreen';
 import { GoalsScreen } from '../screens/Goals/GoalsScreen';
+import { CreateGoalScreen } from '../screens/Goals/CreateGoalScreen';
 import { SettingsScreen } from '../screens/Settings/SettingsScreen';
 import { AccountSettingsScreen } from '../screens/Settings/AccountSettingsScreen';
 
@@ -46,8 +49,9 @@ const MainTabs = () => {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#4CAF50',
-        tabBarInactiveTintColor: '#999',
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.muted,
+        tabBarStyle: { borderTopColor: colors.border },
       }}
     >
       <Tab.Screen
@@ -102,16 +106,16 @@ const MainTabs = () => {
   );
 };
 
-const TabIcon: React.FC<{ name: string; color: string }> = ({ name }) => {
-  const icons: Record<string, string> = {
-    home: '🏠',
-    dollar: '💰',
-    cart: '🛒',
-    calendar: '📅',
-    target: '🎯',
-    settings: '⚙️',
+const TabIcon: React.FC<{ name: string; color: string }> = ({ name, color }) => {
+  const icons: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
+    home: 'home-outline',
+    dollar: 'cash-outline',
+    cart: 'cart-outline',
+    calendar: 'calendar-outline',
+    target: 'radio-button-on-outline',
+    settings: 'settings-outline',
   };
-  return <Text style={{ fontSize: 24 }}>{icons[name] || '•'}</Text>;
+  return <Ionicons name={icons[name] || 'ellipse'} size={22} color={color} />;
 };
 
 const MainNavigator = () => {
@@ -140,6 +144,16 @@ const MainNavigator = () => {
         name="SettleUp"
         component={SettleUpScreen}
         options={{ title: 'Settle Up' }}
+      />
+      <MainStack.Screen
+        name="CreateEvent"
+        component={CreateEventScreen}
+        options={{ title: 'Add Event', presentation: 'modal' }}
+      />
+      <MainStack.Screen
+        name="CreateGoal"
+        component={CreateGoalScreen}
+        options={{ title: 'New Goal', presentation: 'modal' }}
       />
       <MainStack.Screen
         name="AccountSettings"

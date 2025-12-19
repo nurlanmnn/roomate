@@ -10,6 +10,8 @@ import { FormTextInput } from '../../components/FormTextInput';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { formatCurrency } from '../../utils/formatCurrency';
 import * as Sharing from 'expo-sharing';
+import { ScreenHeader } from '../../components/ui/ScreenHeader';
+import { colors, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
 
 export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { selectedHousehold } = useHousehold();
@@ -172,9 +174,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
           style={styles.scrollView}
           keyboardShouldPersistTaps="handled"
         >
-      <View style={styles.header}>
-        <Text style={styles.title}>Settle Up</Text>
-      </View>
+      <ScreenHeader title="Settle Up" subtitle={selectedHousehold.name} />
 
       {userOwedBalances.length === 0 ? (
         <View style={styles.emptyContainer}>
@@ -287,7 +287,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background,
   },
   keyboardAvoid: {
     flex: 1,
@@ -296,80 +296,69 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   emptyContainer: {
-    padding: 32,
+    padding: spacing.xxl,
     alignItems: 'center',
   },
-  header: {
-    padding: 24,
-    paddingTop: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#333',
-  },
   section: {
-    padding: 16,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xs,
   },
   balanceCard: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    backgroundColor: colors.surface,
+    padding: spacing.lg,
+    borderRadius: radii.lg,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...(shadows.sm as object),
   },
   balanceText: {
-    fontSize: 16,
-    marginBottom: 12,
+    fontSize: fontSizes.md,
+    marginBottom: spacing.md,
+    color: colors.text,
   },
   userName: {
-    fontWeight: '600',
+    fontWeight: fontWeights.semibold,
   },
   amount: {
-    color: '#f44336',
-    fontWeight: '700',
+    color: colors.danger,
+    fontWeight: fontWeights.extrabold,
   },
   actions: {
     flexDirection: 'row',
-    gap: 8,
+    gap: spacing.xs,
     flexWrap: 'wrap',
   },
   actionButton: {
     flex: 1,
     minWidth: 100,
-    padding: 12,
-    borderRadius: 8,
+    padding: spacing.md,
+    borderRadius: radii.md,
     alignItems: 'center',
   },
   netButton: {
-    backgroundColor: '#FF9800',
+    backgroundColor: colors.warning,
   },
   externalButton: {
-    backgroundColor: '#2196F3',
+    backgroundColor: colors.accent,
   },
   markButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: colors.primary,
   },
   mutualDebtNote: {
-    fontSize: 12,
-    color: '#FF9800',
+    fontSize: fontSizes.xs,
+    color: colors.warning,
     fontStyle: 'italic',
-    marginBottom: 8,
+    marginBottom: spacing.xs,
   },
   actionButtonText: {
-    color: '#fff',
-    fontWeight: '600',
+    color: colors.surface,
+    fontWeight: fontWeights.semibold,
   },
   emptyText: {
-    fontSize: 18,
-    color: '#999',
+    fontSize: fontSizes.lg,
+    color: colors.muted,
   },
   modalOverlay: {
     flex: 1,
@@ -378,28 +367,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 24,
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+    padding: spacing.xl,
     width: '90%',
     maxWidth: 400,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   modalTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 8,
+    fontSize: fontSizes.xl,
+    fontWeight: fontWeights.extrabold,
+    marginBottom: spacing.xs,
+    color: colors.text,
   },
   modalSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 16,
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
   },
   modalActions: {
     flexDirection: 'row',
-    marginTop: 16,
+    marginTop: spacing.md,
   },
   spacer: {
-    width: 12,
+    width: spacing.sm,
   },
 });
 

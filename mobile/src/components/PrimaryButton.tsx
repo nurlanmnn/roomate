@@ -1,11 +1,14 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { Text, StyleSheet, ActivityIndicator, Pressable, ViewStyle } from 'react-native';
+import { colors, fontSizes, fontWeights, radii, spacing } from '../theme';
 
 interface PrimaryButtonProps {
   title: string;
   onPress: () => void;
   disabled?: boolean;
   loading?: boolean;
+  variant?: 'primary' | 'secondary' | 'danger';
+  style?: ViewStyle;
 }
 
 export const PrimaryButton: React.FC<PrimaryButtonProps> = ({
@@ -13,38 +16,65 @@ export const PrimaryButton: React.FC<PrimaryButtonProps> = ({
   onPress,
   disabled,
   loading,
+  variant = 'primary',
+  style,
 }) => {
+  const variantStyle =
+    variant === 'secondary'
+      ? styles.buttonSecondary
+      : variant === 'danger'
+        ? styles.buttonDanger
+        : styles.buttonPrimary;
+
   return (
-    <TouchableOpacity
-      style={[styles.button, (disabled || loading) && styles.buttonDisabled]}
+    <Pressable
+      style={({ pressed }) => [
+        styles.buttonBase,
+        variantStyle,
+        (disabled || loading) && styles.buttonDisabled,
+        pressed && !(disabled || loading) && styles.buttonPressed,
+        style,
+      ]}
       onPress={onPress}
       disabled={disabled || loading}
     >
       {loading ? (
-        <ActivityIndicator color="#fff" />
+        <ActivityIndicator color={colors.surface} />
       ) : (
         <Text style={styles.buttonText}>{title}</Text>
       )}
-    </TouchableOpacity>
+    </Pressable>
   );
 };
 
 const styles = StyleSheet.create({
-  button: {
-    backgroundColor: '#4CAF50',
-    padding: 16,
-    borderRadius: 8,
+  buttonBase: {
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.md,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 50,
+    minHeight: 52,
+  },
+  buttonPrimary: {
+    backgroundColor: colors.primary,
+  },
+  buttonSecondary: {
+    backgroundColor: colors.accent,
+  },
+  buttonDanger: {
+    backgroundColor: colors.danger,
   },
   buttonDisabled: {
-    backgroundColor: '#ccc',
+    opacity: 0.55,
+  },
+  buttonPressed: {
+    transform: [{ scale: 0.99 }],
   },
   buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    color: colors.surface,
+    fontSize: fontSizes.md,
+    fontWeight: fontWeights.semibold,
   },
 });
 

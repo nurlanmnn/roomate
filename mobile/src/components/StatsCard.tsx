@@ -1,17 +1,17 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { colors, fontSizes, fontWeights, radii, spacing, shadows } from '../theme';
 
 interface StatsCardProps {
-  icon: string;
+  icon: React.ReactNode;
   label: string;
   value: string | number;
-  color?: string;
 }
 
-export const StatsCard: React.FC<StatsCardProps> = ({ icon, label, value, color = '#4CAF50' }) => {
+export const StatsCard: React.FC<StatsCardProps> = ({ icon, label, value }) => {
   return (
     <View style={styles.card}>
-      <Text style={styles.icon}>{icon}</Text>
+      <View style={styles.icon}>{icon}</View>
       <Text style={styles.value}>{value}</Text>
       <Text style={styles.label}>{label}</Text>
     </View>
@@ -21,30 +21,27 @@ export const StatsCard: React.FC<StatsCardProps> = ({ icon, label, value, color 
 const styles = StyleSheet.create({
   card: {
     flex: 1,
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 12,
+    backgroundColor: colors.surface,
+    padding: spacing.lg,
+    borderRadius: radii.lg,
     alignItems: 'center',
-    marginHorizontal: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    marginHorizontal: spacing.xxs,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...(shadows.sm as object),
   },
   icon: {
-    fontSize: 24,
-    marginBottom: 8,
+    marginBottom: spacing.xs,
   },
   value: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#333',
-    marginBottom: 4,
+    fontSize: fontSizes.xl,
+    fontWeight: fontWeights.extrabold,
+    color: colors.text,
+    marginBottom: spacing.xxs,
   },
   label: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: fontSizes.xs,
+    color: colors.textSecondary,
     textAlign: 'center',
   },
 });

@@ -1,45 +1,47 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { Pressable, Text, StyleSheet } from 'react-native';
+import { colors, fontSizes, fontWeights, radii, spacing, shadows } from '../theme';
 
 interface QuickActionButtonProps {
-  icon: string;
+  icon: React.ReactNode;
   label: string;
   onPress: () => void;
 }
 
 export const QuickActionButton: React.FC<QuickActionButtonProps> = ({ icon, label, onPress }) => {
   return (
-    <TouchableOpacity style={styles.button} onPress={onPress}>
-      <Text style={styles.icon}>{icon}</Text>
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.button, pressed && styles.pressed]}
+    >
+      {icon}
       <Text style={styles.label}>{label}</Text>
-    </TouchableOpacity>
+    </Pressable>
   );
 };
 
 const styles = StyleSheet.create({
   button: {
     flex: 1,
-    backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 12,
+    backgroundColor: colors.surface,
+    padding: spacing.xl,
+    borderRadius: radii.lg,
     alignItems: 'center',
     justifyContent: 'center',
-    margin: 6,
+    margin: spacing.xs,
     minHeight: 100,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...(shadows.sm as object),
   },
-  icon: {
-    fontSize: 32,
-    marginBottom: 8,
+  pressed: {
+    transform: [{ scale: 0.99 }],
+    opacity: 0.96,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: fontSizes.sm,
+    fontWeight: fontWeights.semibold,
+    color: colors.text,
     textAlign: 'center',
   },
 });

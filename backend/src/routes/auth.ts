@@ -33,7 +33,8 @@ const verifyOtpSchema = z.object({
 });
 
 const updateProfileSchema = z.object({
-  name: z.string().min(1).max(80),
+  name: z.string().min(1).max(80).optional(),
+  avatarUrl: z.string().url().max(500).optional(),
 });
 
 const changePasswordSchema = z.object({
@@ -95,6 +96,7 @@ router.post('/signup', async (req: Request, res: Response) => {
         name: user.name,
         email: user.email,
         isEmailVerified: user.isEmailVerified,
+        avatarUrl: user.avatarUrl,
       },
     });
   } catch (error) {
@@ -136,6 +138,7 @@ router.post('/login', async (req: Request, res: Response) => {
         name: user.name,
         email: user.email,
         isEmailVerified: user.isEmailVerified,
+        avatarUrl: user.avatarUrl,
       },
     });
   } catch (error) {
@@ -175,7 +178,12 @@ router.patch('/me', authMiddleware, async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    user.name = data.name.trim();
+    if (typeof data.name === 'string') {
+      user.name = data.name.trim();
+    }
+    if (typeof data.avatarUrl === 'string') {
+      user.avatarUrl = data.avatarUrl.trim();
+    }
     await user.save();
 
     res.json({
@@ -183,6 +191,7 @@ router.patch('/me', authMiddleware, async (req: Request, res: Response) => {
       name: user.name,
       email: user.email,
       isEmailVerified: user.isEmailVerified,
+      avatarUrl: user.avatarUrl,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

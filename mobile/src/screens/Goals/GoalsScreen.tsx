@@ -1,36 +1,29 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, Platform, KeyboardAvoidingView } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
 import { goalsApi, Goal } from '../../api/goalsApi';
 import { GoalCard } from '../../components/GoalCard';
-import { FormTextInput } from '../../components/FormTextInput';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { ScreenHeader } from '../../components/ui/ScreenHeader';
+import { SearchBar } from '../../components/ui/SearchBar';
+import { colors, fontSizes, fontWeights, spacing } from '../../theme';
 
-export const GoalsScreen: React.FC = () => {
+export const GoalsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { selectedHousehold } = useHousehold();
   const { user } = useAuth();
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(false);
-  const [createModalVisible, setCreateModalVisible] = useState(false);
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [status, setStatus] = useState<'idea' | 'planned' | 'in_progress' | 'done'>('idea');
   const [activeStatus, setActiveStatus] = useState<'idea' | 'planned' | 'in_progress' | 'done'>('idea');
-  const [targetDate, setTargetDate] = useState<Date | null>(null);
-  const [showTargetDatePicker, setShowTargetDatePicker] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    if (selectedHousehold) {
-      loadGoals();
-    }
+    if (selectedHousehold) loadGoals();
   }, [selectedHousehold]);
 
   const loadGoals = async () => {
     if (!selectedHousehold) return;
-
     setLoading(true);
     try {
       const data = await goalsApi.getGoals(selectedHousehold._id);
@@ -39,31 +32,6 @@ export const GoalsScreen: React.FC = () => {
       console.error('Failed to load goals:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleCreateGoal = async () => {
-    if (!selectedHousehold || !title.trim()) {
-      Alert.alert('Error', 'Please enter a title');
-      return;
-    }
-
-    try {
-      await goalsApi.createGoal({
-        householdId: selectedHousehold._id,
-        title: title.trim(),
-        description: description || undefined,
-        status,
-        targetDate: targetDate ? targetDate.toISOString().split('T')[0] : undefined,
-      });
-      setCreateModalVisible(false);
-      setTitle('');
-      setDescription('');
-      setStatus('idea');
-      setTargetDate(null);
-      loadGoals();
-    } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to create goal');
     }
   };
 
@@ -76,7 +44,7 @@ export const GoalsScreen: React.FC = () => {
     }
   };
 
-  const handleUpdateStatus = async (goal: Goal, newStatus: typeof status) => {
+  const handleUpdateStatus = async (goal: Goal, newStatus: Goal['status']) => {
     try {
       await goalsApi.updateGoal(goal._id, { status: newStatus });
       loadGoals();
@@ -95,375 +63,116 @@ export const GoalsScreen: React.FC = () => {
     );
   }
 
-  // Group goals by status
-  const goalsByStatus: Record<string, Goal[]> = {
+  const goalsByStatus: Record<Goal['status'], Goal[]> = {
     idea: [],
     planned: [],
     in_progress: [],
     done: [],
   };
+  goals.forEach((g) => goalsByStatus[g.status].push(g));
 
-  goals.forEach((goal) => {
-    goalsByStatus[goal.status].push(goal);
-  });
+  const q = searchQuery.trim().toLowerCase();
+  const visibleGoals = q
+    ? goalsByStatus[activeStatus].filter((g) => `${g.title} ${g.description || ''}`.toLowerCase().includes(q))
+    : goalsByStatus[activeStatus];
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView style={styles.scrollView}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Goals</Text>
-        <PrimaryButton
-          title="+ New Goal"
-          onPress={() => setCreateModalVisible(true)}
-        />
-      </View>
-
-      <View style={styles.filterRow}>
-        {(['idea', 'planned', 'in_progress', 'done'] as const).map((s) => (
-          <TouchableOpacity
-            key={s}
-            style={[styles.filterPill, activeStatus === s && styles.filterPillActive]}
-            onPress={() => setActiveStatus(s)}
-          >
-            <Text style={[styles.filterText, activeStatus === s && styles.filterTextActive]}>
-              {s.replace('_', ' ')}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <View style={styles.section}>
-        {goalsByStatus[activeStatus].map((goal) => (
-          <View key={goal._id} style={styles.goalWrapper}>
-            <GoalCard
-              goal={goal}
-              onUpvote={() => handleUpvote(goal)}
-              currentUserId={user._id}
-            />
-            <Text style={styles.moveToLabel}>Move to:</Text>
-            <View style={styles.statusActions}>
-              {(['idea', 'planned', 'in_progress', 'done'] as const).map((s) => (
-                <TouchableOpacity
-                  key={s}
-                  style={[
-                    styles.statusButton,
-                    goal.status === s && styles.statusButtonActive,
-                  ]}
-                  onPress={() => handleUpdateStatus(goal, s)}
-                >
-                  <Text
-                    style={[
-                      styles.statusButtonText,
-                      goal.status === s && styles.statusButtonTextActive,
-                    ]}
-                  >
-                    {s.replace('_', ' ')}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        ))}
-      </View>
-
-      {goalsByStatus[activeStatus].length === 0 && (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No goals in this section</Text>
+        <ScreenHeader title="Goals" subtitle={selectedHousehold.name} />
+        <View style={styles.topActions}>
+          <PrimaryButton title="+ New Goal" onPress={() => navigation.navigate('CreateGoal')} />
         </View>
-      )}
+        <View style={styles.searchWrap}>
+          <SearchBar value={searchQuery} onChangeText={setSearchQuery} placeholder="Search goals" />
+        </View>
 
-      {/* Create Goal Modal */}
-      <Modal
-        visible={createModalVisible}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setCreateModalVisible(false)}
-      >
-        <KeyboardAvoidingView
-          style={styles.modalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-        >
-          <ScrollView 
-            style={styles.modalContent}
-            keyboardShouldPersistTaps="handled"
-          >
-            <Text style={styles.modalTitle}>New Goal</Text>
-            <FormTextInput
-              label="Title"
-              value={title}
-              onChangeText={setTitle}
-              placeholder="e.g., Get a big living room rug"
-            />
-            <FormTextInput
-              label="Description (Optional)"
-              value={description}
-              onChangeText={setDescription}
-              placeholder="Add details"
-              multiline
-            />
-            <View style={styles.field}>
-              <Text style={styles.label}>Status</Text>
-              {(['idea', 'planned', 'in_progress', 'done'] as const).map((s) => (
-                <TouchableOpacity
-                  key={s}
-                  style={[styles.radioOption, status === s && styles.radioSelected]}
-                  onPress={() => setStatus(s)}
-                >
-                  <Text>{s.charAt(0).toUpperCase() + s.replace('_', ' ').slice(1)}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <View style={styles.field}>
-              <Text style={styles.label}>Target Date (Optional)</Text>
-              <TouchableOpacity
-                style={styles.dateButton}
-                onPress={() => setShowTargetDatePicker(true)}
-              >
-                <Text style={styles.dateText}>
-                  {targetDate
-                    ? targetDate.toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                      })
-                    : 'Select date'}
-                </Text>
-              </TouchableOpacity>
-              {showTargetDatePicker && (
-                <DateTimePicker
-                  value={targetDate || new Date()}
-                  mode="date"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  minimumDate={new Date()}
-                  onChange={(event, selectedDate) => {
-                    setShowTargetDatePicker(Platform.OS === 'ios');
-                    if (selectedDate) {
-                      setTargetDate(selectedDate);
-                    }
-                  }}
-                />
-              )}
-              {Platform.OS === 'ios' && showTargetDatePicker && (
-                <View style={styles.datePickerActions}>
+        <View style={styles.filterRow}>
+          {(['idea', 'planned', 'in_progress', 'done'] as const).map((s) => (
+            <TouchableOpacity
+              key={s}
+              style={[styles.filterPill, activeStatus === s && styles.filterPillActive]}
+              onPress={() => setActiveStatus(s)}
+            >
+              <Text style={[styles.filterText, activeStatus === s && styles.filterTextActive]}>
+                {s.replace('_', ' ')}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <View style={styles.section}>
+          {visibleGoals.map((goal) => (
+            <View key={goal._id} style={styles.goalWrapper}>
+              <GoalCard goal={goal} onUpvote={() => handleUpvote(goal)} currentUserId={user._id} />
+              <Text style={styles.moveToLabel}>Move to:</Text>
+              <View style={styles.statusActions}>
+                {(['idea', 'planned', 'in_progress', 'done'] as const).map((s) => (
                   <TouchableOpacity
-                    style={styles.datePickerButton}
-                    onPress={() => {
-                      setShowTargetDatePicker(false);
-                      if (!targetDate) {
-                        setTargetDate(null);
-                      }
-                    }}
+                    key={s}
+                    style={[styles.statusButton, goal.status === s && styles.statusButtonActive]}
+                    onPress={() => handleUpdateStatus(goal, s)}
                   >
-                    <Text style={styles.datePickerButtonText}>Clear</Text>
+                    <Text style={[styles.statusButtonText, goal.status === s && styles.statusButtonTextActive]}>
+                      {s.replace('_', ' ')}
+                    </Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.datePickerButton}
-                    onPress={() => setShowTargetDatePicker(false)}
-                  >
-                    <Text style={styles.datePickerButtonText}>Done</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-              {targetDate && Platform.OS !== 'ios' && (
-                <TouchableOpacity
-                  style={styles.clearDateButton}
-                  onPress={() => setTargetDate(null)}
-                >
-                  <Text style={styles.clearDateText}>Clear</Text>
-                </TouchableOpacity>
-              )}
+                ))}
+              </View>
             </View>
-            <View style={styles.modalActions}>
-              <PrimaryButton
-                title="Cancel"
-                onPress={() => setCreateModalVisible(false)}
-              />
-              <View style={styles.spacer} />
-              <PrimaryButton title="Create" onPress={handleCreateGoal} />
-            </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </Modal>
-    </ScrollView>
+          ))}
+        </View>
+
+        {visibleGoals.length === 0 && (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No goals in this section</Text>
+          </View>
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  emptyContainer: {
-    padding: 32,
-    alignItems: 'center',
-  },
-  header: {
-    padding: 24,
-    paddingTop: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#333',
-    marginBottom: 16,
-  },
+  container: { flex: 1, backgroundColor: colors.background },
+  scrollView: { flex: 1 },
+  topActions: { paddingHorizontal: spacing.md, paddingBottom: spacing.md },
+  searchWrap: { paddingHorizontal: spacing.md, paddingBottom: spacing.md },
+  emptyContainer: { padding: spacing.xxl, alignItems: 'center' },
+  emptyText: { fontSize: fontSizes.md, color: colors.muted },
   filterRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
   },
   filterPill: {
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 18,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  filterPillActive: {
-    backgroundColor: '#4CAF50',
-  },
-  filterText: {
-    fontSize: 14,
-    color: '#666',
-    textTransform: 'capitalize',
-  },
-  filterTextActive: {
-    color: '#fff',
-    fontWeight: '700',
-  },
-  section: {
-    padding: 16,
-  },
-  goalWrapper: {
-    marginBottom: 12,
-  },
-  moveToLabel: {
-    marginTop: 10,
-    marginBottom: 6,
-    fontSize: 12,
-    color: '#777',
-    fontWeight: '600',
-  },
-  statusActions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 8,
-  },
+  filterPillActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  filterText: { fontSize: 14, color: colors.textSecondary, textTransform: 'capitalize' },
+  filterTextActive: { color: colors.surface, fontWeight: fontWeights.bold },
+  section: { paddingHorizontal: spacing.md, paddingVertical: spacing.md },
+  goalWrapper: { marginBottom: spacing.md },
+  moveToLabel: { marginTop: spacing.xs, marginBottom: spacing.xs, color: colors.textSecondary, fontSize: 12 },
+  statusActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   statusButton: {
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    backgroundColor: '#f0f0f0',
-  },
-  statusButtonActive: {
-    backgroundColor: '#4CAF50',
-  },
-  statusButtonText: {
-    fontSize: 12,
-    color: '#666',
-  },
-  statusButtonTextActive: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#999',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 24,
-    width: '90%',
-    maxWidth: 400,
-    maxHeight: '80%',
-  },
-  modalTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 24,
-  },
-  field: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
-    color: '#333',
-  },
-  radioOption: {
-    padding: 12,
+    paddingVertical: 8,
+    borderRadius: 14,
+    backgroundColor: colors.surfaceAlt,
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    marginBottom: 8,
-    backgroundColor: '#fff',
+    borderColor: colors.border,
   },
-  radioSelected: {
-    backgroundColor: '#E3F2FD',
-    borderColor: '#2196F3',
-  },
-  modalActions: {
-    flexDirection: 'row',
-    marginTop: 16,
-  },
-  spacer: {
-    width: 12,
-  },
-  dateButton: {
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    backgroundColor: '#fff',
-  },
-  dateText: {
-    fontSize: 16,
-    color: '#333',
-  },
-  datePickerActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 8,
-  },
-  datePickerButton: {
-    padding: 8,
-    paddingHorizontal: 16,
-  },
-  datePickerButtonText: {
-    color: '#2196F3',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  clearDateButton: {
-    marginTop: 8,
-    padding: 8,
-    alignSelf: 'flex-end',
-  },
-  clearDateText: {
-    color: '#f44336',
-    fontSize: 14,
-    fontWeight: '600',
-  },
+  statusButtonActive: { backgroundColor: colors.primarySoft, borderColor: colors.primary },
+  statusButtonText: { fontSize: 12, color: colors.textSecondary, textTransform: 'capitalize' },
+  statusButtonTextActive: { color: colors.primaryDark, fontWeight: fontWeights.semibold },
 });
+
 

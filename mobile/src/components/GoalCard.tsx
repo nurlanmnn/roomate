@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Goal } from '../api/goalsApi';
 import { formatDate } from '../utils/dateHelpers';
+import { colors, fontSizes, fontWeights, radii, spacing, shadows } from '../theme';
 
 interface GoalCardProps {
   goal: Goal;
@@ -48,43 +49,42 @@ export const GoalCard: React.FC<GoalCardProps> = ({ goal, onUpvote, currentUserI
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    backgroundColor: colors.surface,
+    padding: spacing.lg,
+    borderRadius: radii.lg,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...(shadows.sm as object),
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 8,
+    marginBottom: spacing.xs,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: fontSizes.lg,
+    fontWeight: fontWeights.semibold,
+    color: colors.text,
     flex: 1,
-    marginRight: 8,
+    marginRight: spacing.sm,
   },
   statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.pill,
   },
   statusText: {
     color: '#fff',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: fontWeights.semibold,
     textTransform: 'capitalize',
   },
   description: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 12,
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
   },
   footer: {
     flexDirection: 'row',
@@ -92,21 +92,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   upvoteButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    backgroundColor: '#f0f0f0',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.pill,
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   upvoteButtonActive: {
-    backgroundColor: '#E3F2FD',
+    backgroundColor: colors.accentSoft,
+    borderColor: colors.accent,
   },
   upvoteText: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: fontSizes.sm,
+    fontWeight: fontWeights.semibold,
+    color: colors.text,
   },
   targetDate: {
-    fontSize: 12,
-    color: '#999',
+    fontSize: fontSizes.xs,
+    color: colors.muted,
   },
 });
 

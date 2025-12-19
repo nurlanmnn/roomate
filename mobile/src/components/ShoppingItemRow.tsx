@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { ShoppingItem } from '../api/shoppingApi';
+import { colors, fontSizes, fontWeights, radii, spacing, shadows } from '../theme';
 
 interface ShoppingItemRowProps {
   item: ShoppingItem;
@@ -66,33 +67,35 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    marginBottom: 8,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+    marginBottom: spacing.xs,
     borderWidth: 1,
-    borderColor: '#eee',
+    borderColor: colors.border,
+    ...(shadows.sm as object),
   },
   rowCompleted: {
     opacity: 0.6,
   },
   checkboxContainer: {
-    marginRight: 12,
+    marginRight: spacing.md,
   },
   checkbox: {
     width: 24,
     height: 24,
     borderWidth: 2,
-    borderColor: '#4CAF50',
-    borderRadius: 4,
+    borderColor: colors.primary,
+    borderRadius: radii.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkboxChecked: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: colors.primary,
   },
   checkmark: {
-    color: '#fff',
+    color: colors.surface,
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -100,21 +103,22 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   name: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 4,
+    fontSize: fontSizes.md,
+    fontWeight: fontWeights.semibold,
+    marginBottom: spacing.xxs,
+    color: colors.text,
   },
   nameCompleted: {
     textDecorationLine: 'line-through',
-    color: '#999',
+    color: colors.muted,
   },
   details: {
     flexDirection: 'row',
-    marginBottom: 4,
+    marginBottom: spacing.xxs,
   },
   detailText: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
   },
   meta: {
     flexDirection: 'row',
@@ -125,32 +129,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   editButton: {
-    padding: 8,
-    marginRight: 4,
+    padding: spacing.xs,
+    marginRight: spacing.xxs,
   },
   editText: {
     fontSize: 18,
-    color: '#2196F3',
+    color: colors.accent,
     fontWeight: 'bold',
   },
   sharedBadge: {
-    fontSize: 12,
-    color: '#2196F3',
-    backgroundColor: '#E3F2FD',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
+    fontSize: fontSizes.xs,
+    color: colors.accent,
+    backgroundColor: colors.accentSoft,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   personalBadge: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: fontSizes.xs,
+    color: colors.textSecondary,
   },
   deleteButton: {
-    padding: 8,
+    padding: spacing.xs,
   },
   deleteText: {
     fontSize: 24,
-    color: '#f44336',
+    color: colors.danger,
   },
 });
 

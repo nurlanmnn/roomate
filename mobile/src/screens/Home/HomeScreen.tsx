@@ -15,6 +15,8 @@ import { StatsCard } from '../../components/StatsCard';
 import { QuickActionButton } from '../../components/QuickActionButton';
 import { formatDate } from '../../utils/dateHelpers';
 import { formatCurrency } from '../../utils/formatCurrency';
+import { colors, fontSizes, fontWeights, spacing } from '../../theme';
+import { Ionicons } from '@expo/vector-icons';
 
 export const HomeScreen: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -151,17 +153,17 @@ export const HomeScreen: React.FC = () => {
       {hasData && (
         <View style={styles.statsContainer}>
           <StatsCard
-            icon="💰"
+            icon={<Ionicons name="cash-outline" size={22} color={colors.muted} />}
             label="This Month"
             value={formatCurrency(stats.monthlyExpenses)}
           />
           <StatsCard
-            icon="🛒"
+            icon={<Ionicons name="cart-outline" size={22} color={colors.muted} />}
             label="Shopping"
             value={stats.pendingShopping}
           />
           <StatsCard
-            icon="📅"
+            icon={<Ionicons name="calendar-outline" size={22} color={colors.muted} />}
             label="Events"
             value={stats.upcomingEventsCount}
           />
@@ -177,24 +179,24 @@ export const HomeScreen: React.FC = () => {
           </Text>
           <View style={styles.quickActionsContainer}>
             <QuickActionButton
-              icon="💰"
+              icon={<Ionicons name="add-circle-outline" size={22} color={colors.primary} />}
               label="Add Expense"
               onPress={() => {
                 navigation.getParent()?.navigate('CreateExpense');
               }}
             />
             <QuickActionButton
-              icon="🛒"
+              icon={<Ionicons name="cart-outline" size={22} color={colors.primary} />}
               label="Shopping List"
               onPress={() => navigation.navigate('Shopping')}
             />
             <QuickActionButton
-              icon="🎯"
+              icon={<Ionicons name="flag-outline" size={22} color={colors.primary} />}
               label="New Goal"
               onPress={() => navigation.navigate('Goals')}
             />
             <QuickActionButton
-              icon="📅"
+              icon={<Ionicons name="calendar-outline" size={22} color={colors.primary} />}
               label="Add Event"
               onPress={() => navigation.navigate('Calendar')}
             />
@@ -262,7 +264,7 @@ export const HomeScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background,
   },
   scrollView: {
     flex: 1,
@@ -271,76 +273,76 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 32,
+    padding: spacing.xxl,
   },
   emptyText: {
-    fontSize: 16,
-    color: '#999',
+    fontSize: fontSizes.md,
+    color: colors.muted,
   },
   header: {
-    padding: 24,
-    paddingTop: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.lg,
+    backgroundColor: colors.background,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#333',
-    marginBottom: 4,
+    fontSize: fontSizes.xxl,
+    fontWeight: fontWeights.extrabold,
+    color: colors.text,
+    marginBottom: spacing.xxs,
   },
   address: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
   },
   statsContainer: {
     flexDirection: 'row',
-    padding: 16,
-    paddingBottom: 8,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
   },
   section: {
-    padding: 16,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xs,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: fontSizes.xl,
+    fontWeight: fontWeights.semibold,
+    color: colors.text,
   },
   seeAllText: {
-    fontSize: 14,
-    color: '#4CAF50',
-    fontWeight: '600',
+    fontSize: fontSizes.sm,
+    color: colors.primary,
+    fontWeight: fontWeights.semibold,
   },
   welcomeSection: {
-    padding: 24,
-    backgroundColor: '#fff',
-    margin: 16,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    padding: spacing.xl,
+    backgroundColor: colors.surface,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.md,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   welcomeTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#333',
-    marginBottom: 12,
+    fontSize: fontSizes.xl,
+    fontWeight: fontWeights.extrabold,
+    color: colors.text,
+    marginBottom: spacing.md,
     textAlign: 'center',
   },
   welcomeText: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: fontSizes.md,
+    color: colors.textSecondary,
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: spacing.xl,
     lineHeight: 22,
   },
   quickActionsContainer: {

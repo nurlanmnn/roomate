@@ -8,6 +8,8 @@ import { expensesApi, ExpenseShare } from '../../api/expensesApi';
 import { FormTextInput } from '../../components/FormTextInput';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { formatCurrency } from '../../utils/formatCurrency';
+import { ScreenHeader } from '../../components/ui/ScreenHeader';
+import { colors, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
 
 export const CreateExpenseScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { selectedHousehold } = useHousehold();
@@ -138,9 +140,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any }> = ({ navigation 
           style={styles.scrollView}
           keyboardShouldPersistTaps="handled"
         >
-      <View style={styles.header}>
-        <Text style={styles.title}>Add Expense</Text>
-      </View>
+      <ScreenHeader title="Add Expense" subtitle={selectedHousehold.name} />
 
       <View style={styles.form}>
         <FormTextInput
@@ -303,7 +303,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any }> = ({ navigation 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background,
   },
   keyboardAvoid: {
     flex: 1,
@@ -316,119 +316,121 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  header: {
-    padding: 24,
-    paddingTop: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#333',
-  },
   form: {
-    padding: 16,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xxl,
   },
   field: {
-    marginBottom: 16,
+    marginBottom: spacing.md,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
-    color: '#333',
+    fontSize: fontSizes.sm,
+    fontWeight: fontWeights.semibold,
+    marginBottom: spacing.xs,
+    color: colors.textSecondary,
   },
   radioOption: {
-    padding: 12,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    marginBottom: 8,
-    backgroundColor: '#fff',
+    borderColor: colors.border,
+    borderRadius: radii.lg,
+    marginBottom: spacing.xs,
+    backgroundColor: colors.surface,
+    ...(shadows.sm as object),
   },
   radioSelected: {
-    backgroundColor: '#E3F2FD',
-    borderColor: '#2196F3',
+    backgroundColor: colors.accentSoft,
+    borderColor: colors.accent,
   },
   checkboxOption: {
-    padding: 12,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    marginBottom: 8,
-    backgroundColor: '#fff',
+    borderColor: colors.border,
+    borderRadius: radii.lg,
+    marginBottom: spacing.xs,
+    backgroundColor: colors.surface,
+    ...(shadows.sm as object),
   },
   checkboxSelected: {
-    backgroundColor: '#E8F5E9',
-    borderColor: '#4CAF50',
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.primary,
   },
   selectAllButton: {
     alignSelf: 'flex-end',
-    padding: 8,
+    padding: spacing.xs,
   },
   selectAllText: {
-    color: '#2196F3',
-    fontWeight: '600',
+    color: colors.primary,
+    fontWeight: fontWeights.semibold,
   },
   sharesPreview: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 16,
+    backgroundColor: colors.surface,
+    padding: spacing.lg,
+    borderRadius: radii.lg,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...(shadows.sm as object),
   },
   sharesTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8,
+    fontSize: fontSizes.md,
+    fontWeight: fontWeights.semibold,
+    marginBottom: spacing.xs,
+    color: colors.text,
   },
   shareItem: {
-    fontSize: 14,
-    marginBottom: 4,
+    fontSize: fontSizes.sm,
+    marginBottom: spacing.xxs,
+    color: colors.textSecondary,
   },
   manualShareRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: spacing.xs,
   },
   manualShareLabel: {
     width: 100,
-    fontSize: 14,
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
   },
   remaining: {
-    marginTop: 8,
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#4CAF50',
+    marginTop: spacing.xs,
+    fontSize: fontSizes.sm,
+    fontWeight: fontWeights.semibold,
+    color: colors.success,
   },
   remainingError: {
-    color: '#f44336',
+    color: colors.danger,
   },
   dateButton: {
-    padding: 12,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    backgroundColor: '#fff',
+    borderColor: colors.border,
+    borderRadius: radii.lg,
+    backgroundColor: colors.surface,
+    ...(shadows.sm as object),
   },
   dateText: {
-    fontSize: 16,
-    color: '#333',
+    fontSize: fontSizes.md,
+    color: colors.text,
   },
   datePickerActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    marginTop: 8,
+    marginTop: spacing.xs,
   },
   datePickerButton: {
-    padding: 8,
-    paddingHorizontal: 16,
+    padding: spacing.xs,
+    paddingHorizontal: spacing.md,
   },
   datePickerButtonText: {
-    color: '#2196F3',
-    fontSize: 16,
-    fontWeight: '600',
+    color: colors.primary,
+    fontSize: fontSizes.md,
+    fontWeight: fontWeights.semibold,
   },
 });
 

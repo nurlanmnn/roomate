@@ -7,6 +7,9 @@ import { shoppingApi, ShoppingItem, ShoppingList, WeightUnit } from '../../api/s
 import { ShoppingItemRow } from '../../components/ShoppingItemRow';
 import { VoiceInputButton } from '../../components/VoiceInputButton';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { ScreenHeader } from '../../components/ui/ScreenHeader';
+import { colors, fontSizes, fontWeights, radii, spacing } from '../../theme';
+import { SearchBar } from '../../components/ui/SearchBar';
 
 const weightUnits: WeightUnit[] = ['lbs', 'kg', 'g', 'oz', 'liter', 'ml', 'fl oz', 'cup', 'pint', 'quart', 'gallon'];
 
@@ -37,6 +40,7 @@ export const ShoppingListScreen: React.FC = () => {
   const [editItemOwnerId, setEditItemOwnerId] = useState('');
   const [showUnitDropdown, setShowUnitDropdown] = useState(false);
   const [showEditUnitDropdown, setShowEditUnitDropdown] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     if (selectedHousehold) {
@@ -347,6 +351,17 @@ export const ShoppingListScreen: React.FC = () => {
     );
   }
 
+  const q = searchQuery.trim().toLowerCase();
+  const filteredLists = q
+    ? lists.filter((l) => l.name.toLowerCase().includes(q))
+    : lists;
+  const filteredItems = q
+    ? items.filter((it) => it.name.toLowerCase().includes(q))
+    : items;
+  const filteredCompletedItems = q
+    ? completedItems.filter((it) => it.name.toLowerCase().includes(q))
+    : completedItems;
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <KeyboardAvoidingView
@@ -359,20 +374,20 @@ export const ShoppingListScreen: React.FC = () => {
           refreshControl={<RefreshControl refreshing={loading} onRefresh={loadLists} />}
           keyboardShouldPersistTaps="handled"
         >
-        <View style={styles.header}>
-          <Text style={styles.title}>Shopping Lists</Text>
-          <TouchableOpacity
-            style={styles.addListButton}
-            onPress={() => setShowListModal(true)}
-          >
-            <Text style={styles.addListButtonText}>+ New List</Text>
-          </TouchableOpacity>
+        <View style={styles.topHeader}>
+          <ScreenHeader title="Shopping" subtitle={selectedHousehold.name} />
+          <View style={styles.topHeaderActions}>
+            <PrimaryButton title="+ New List" onPress={() => setShowListModal(true)} />
+          </View>
+          <View style={styles.searchWrap}>
+            <SearchBar value={searchQuery} onChangeText={setSearchQuery} placeholder="Search lists & items" />
+          </View>
         </View>
 
         {/* List Selection */}
         <View style={styles.listSection}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.listScroll}>
-            {lists.map((list) => (
+            {filteredLists.map((list) => (
               <TouchableOpacity
                 key={list._id}
                 style={[
@@ -413,17 +428,17 @@ export const ShoppingListScreen: React.FC = () => {
 
         {selectedList ? (
           <>
-            <View style={styles.header}>
+            <View style={styles.listHeader}>
               <Text style={styles.listTitle}>{selectedList.name}</Text>
               <VoiceInputButton onTranscript={handleVoiceInput} />
             </View>
 
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>To Buy</Text>
-              {items.length === 0 ? (
+              {filteredItems.length === 0 ? (
                 <Text style={styles.emptyText}>No items to buy</Text>
               ) : (
-                items.map((item) => (
+                filteredItems.map((item) => (
                   <ShoppingItemRow
                     key={item._id}
                     item={item}
@@ -435,19 +450,19 @@ export const ShoppingListScreen: React.FC = () => {
               )}
             </View>
 
-            {completedItems.length > 0 && (
+            {filteredCompletedItems.length > 0 && (
               <View style={styles.section}>
                 <TouchableOpacity
                   onPress={() => setShowCompleted(!showCompleted)}
                   style={styles.completedHeader}
                 >
                   <Text style={styles.sectionTitle}>
-                    Completed ({completedItems.length})
+                    Completed ({filteredCompletedItems.length})
                   </Text>
                   <Text>{showCompleted ? '▼' : '▶'}</Text>
                 </TouchableOpacity>
                 {showCompleted &&
-                  completedItems.map((item) => (
+                  filteredCompletedItems.map((item) => (
                     <ShoppingItemRow
                       key={item._id}
                       item={item}
@@ -807,7 +822,7 @@ export const ShoppingListScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background,
   },
   keyboardAvoid: {
     flex: 1,
@@ -821,63 +836,47 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 32,
   },
-  header: {
-    padding: 24,
-    paddingTop: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  topHeader: {
+    backgroundColor: colors.background,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#333',
+  topHeaderActions: {
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.md,
   },
-  addListButton: {
-    backgroundColor: '#4CAF50',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  addListButtonText: {
-    color: '#fff',
-    fontWeight: '600',
+  searchWrap: {
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.md,
   },
   listSection: {
-    paddingVertical: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    paddingVertical: spacing.md,
+    backgroundColor: colors.background,
   },
   listScroll: {
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.md,
   },
   listCard: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-    backgroundColor: '#f5f5f5',
-    marginRight: 12,
-    borderWidth: 2,
-    borderColor: 'transparent',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.pill,
+    backgroundColor: colors.surfaceAlt,
+    marginRight: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
     flexDirection: 'row',
     alignItems: 'center',
   },
   listCardSelected: {
-    backgroundColor: '#E8F5E9',
-    borderColor: '#4CAF50',
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.primary,
   },
   listCardText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#666',
+    fontSize: fontSizes.md,
+    fontWeight: fontWeights.medium,
+    color: colors.textSecondary,
   },
   listCardTextSelected: {
-    color: '#4CAF50',
-    fontWeight: '600',
+    color: colors.primaryDark,
+    fontWeight: fontWeights.semibold,
   },
   listCardActions: {
     flexDirection: 'row',
@@ -890,7 +889,7 @@ const styles = StyleSheet.create({
   },
   editListButtonText: {
     fontSize: 18,
-    color: '#2196F3',
+    color: colors.accent,
     fontWeight: 'bold',
   },
   deleteListButton: {
@@ -898,56 +897,71 @@ const styles = StyleSheet.create({
   },
   deleteListButtonText: {
     fontSize: 20,
-    color: '#f44336',
+    color: colors.danger,
     fontWeight: 'bold',
   },
+  listHeader: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.sm,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   listTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#333',
+    fontSize: fontSizes.xl,
+    fontWeight: fontWeights.extrabold,
+    color: colors.text,
   },
   section: {
-    padding: 16,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xs,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 12,
-    color: '#333',
+    fontSize: fontSizes.xl,
+    fontWeight: fontWeights.semibold,
+    marginBottom: spacing.md,
+    color: colors.text,
   },
   completedHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   emptyText: {
-    fontSize: 16,
-    color: '#999',
+    fontSize: fontSizes.md,
+    color: colors.muted,
     textAlign: 'center',
-    padding: 32,
+    padding: spacing.xxl,
   },
   addSection: {
-    padding: 16,
-    backgroundColor: '#fff',
-    marginTop: 16,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.lg,
+    backgroundColor: colors.surface,
+    marginTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
   addSectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 16,
+    fontSize: fontSizes.lg,
+    fontWeight: fontWeights.semibold,
+    marginBottom: spacing.md,
+    color: colors.text,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: '#fff',
-    marginBottom: 12,
+    borderColor: colors.border,
+    borderRadius: radii.lg,
+    padding: spacing.md,
+    fontSize: fontSizes.md,
+    backgroundColor: colors.surface,
+    marginBottom: spacing.md,
+    color: colors.text,
   },
   dropdownContainer: {
-    marginBottom: 12,
+    marginBottom: spacing.md,
     position: 'relative',
     zIndex: 1,
   },
@@ -956,32 +970,32 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    backgroundColor: '#fff',
+    borderColor: colors.border,
+    borderRadius: radii.lg,
+    padding: spacing.md,
+    backgroundColor: colors.surface,
   },
   dropdownButtonText: {
-    fontSize: 16,
-    color: '#333',
+    fontSize: fontSizes.md,
+    color: colors.text,
   },
   dropdownPlaceholder: {
-    color: '#999',
+    color: colors.muted,
   },
   dropdownArrow: {
     fontSize: 12,
-    color: '#666',
+    color: colors.textSecondary,
   },
   dropdownMenu: {
     position: 'absolute',
     top: '100%',
     left: 0,
     right: 0,
-    marginTop: 4,
-    backgroundColor: '#fff',
-    borderRadius: 8,
+    marginTop: spacing.xxs,
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: colors.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -994,64 +1008,66 @@ const styles = StyleSheet.create({
     maxHeight: 200,
   },
   dropdownItem: {
-    padding: 12,
+    padding: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: colors.border,
   },
   dropdownItemSelected: {
-    backgroundColor: '#E8F5E9',
+    backgroundColor: colors.primarySoft,
   },
   dropdownItemText: {
-    fontSize: 16,
-    color: '#333',
+    fontSize: fontSizes.md,
+    color: colors.text,
   },
   dropdownItemTextSelected: {
-    color: '#4CAF50',
-    fontWeight: '600',
+    color: colors.primaryDark,
+    fontWeight: fontWeights.semibold,
   },
   toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: spacing.md,
     gap: 12,
   },
   toggle: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.pill,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt,
   },
   toggleActive: {
-    backgroundColor: '#4CAF50',
-    borderColor: '#4CAF50',
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   toggleText: {
-    color: '#666',
+    color: colors.textSecondary,
   },
   toggleTextActive: {
-    color: '#fff',
-    fontWeight: '600',
+    color: colors.surface,
+    fontWeight: fontWeights.semibold,
   },
   ownerSelect: {
     marginBottom: 12,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
+    fontSize: fontSizes.sm,
+    fontWeight: fontWeights.semibold,
+    marginBottom: spacing.xs,
+    color: colors.textSecondary,
   },
   ownerOption: {
-    padding: 12,
+    padding: spacing.md,
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    marginBottom: 8,
-    backgroundColor: '#fff',
+    borderColor: colors.border,
+    borderRadius: radii.lg,
+    marginBottom: spacing.xs,
+    backgroundColor: colors.surface,
   },
   ownerOptionSelected: {
-    backgroundColor: '#E8F5E9',
-    borderColor: '#4CAF50',
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.primary,
   },
   modalOverlay: {
     flex: 1,
@@ -1060,11 +1076,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 24,
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+    padding: spacing.xl,
     width: '90%',
     maxWidth: 400,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   modalScrollView: {
     width: '100%',
@@ -1076,15 +1094,16 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 16,
+    fontSize: fontSizes.xl,
+    fontWeight: fontWeights.extrabold,
+    marginBottom: spacing.md,
+    color: colors.text,
   },
   modalActions: {
     flexDirection: 'row',
-    marginTop: 16,
+    marginTop: spacing.md,
   },
   spacer: {
-    width: 12,
+    width: spacing.sm,
   },
 });
