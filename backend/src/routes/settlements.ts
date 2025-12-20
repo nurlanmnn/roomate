@@ -45,8 +45,8 @@ router.get('/household/:householdId', authMiddleware, async (req: Request, res: 
     const settlements = await Settlement.find({
       householdId: req.params.householdId,
     })
-      .populate('fromUserId', 'name email')
-      .populate('toUserId', 'name email')
+      .populate('fromUserId', 'name email avatarUrl')
+      .populate('toUserId', 'name email avatarUrl')
       .sort({ date: -1 });
 
     res.json(settlements);
@@ -101,8 +101,8 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
     });
     await settlement.save();
 
-    await settlement.populate('fromUserId', 'name email');
-    await settlement.populate('toUserId', 'name email');
+    await settlement.populate('fromUserId', 'name email avatarUrl');
+    await settlement.populate('toUserId', 'name email avatarUrl');
 
     res.status(201).json(settlement);
   } catch (error) {

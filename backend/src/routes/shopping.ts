@@ -39,7 +39,7 @@ router.get('/lists/household/:householdId', authMiddleware, async (req: Request,
     }
 
     const lists = await ShoppingList.find({ householdId: req.params.householdId })
-      .populate('createdBy', 'name email')
+      .populate('createdBy', 'name email avatarUrl')
       .sort({ createdAt: -1 });
 
     res.json(lists);
@@ -78,7 +78,7 @@ router.post('/lists', authMiddleware, async (req: Request, res: Response) => {
     });
     await list.save();
 
-    await list.populate('createdBy', 'name email');
+    await list.populate('createdBy', 'name email avatarUrl');
 
     res.status(201).json(list);
   } catch (error) {
@@ -119,7 +119,7 @@ router.patch('/lists/:id', authMiddleware, async (req: Request, res: Response) =
     list.name = data.name.trim();
     await list.save();
 
-    await list.populate('createdBy', 'name email');
+    await list.populate('createdBy', 'name email avatarUrl');
 
     res.json(list);
   } catch (error) {
@@ -263,8 +263,8 @@ router.get('/items/list/:listId', authMiddleware, async (req: Request, res: Resp
     }
 
     const items = await ShoppingItem.find(query)
-      .populate('addedBy', 'name email')
-      .populate('ownerId', 'name email')
+      .populate('addedBy', 'name email avatarUrl')
+      .populate('ownerId', 'name email avatarUrl')
       .sort({ createdAt: -1 });
 
     res.json(items);
@@ -327,8 +327,8 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
     });
     await item.save();
 
-    await item.populate('addedBy', 'name email');
-    await item.populate('ownerId', 'name email');
+    await item.populate('addedBy', 'name email avatarUrl');
+    await item.populate('ownerId', 'name email avatarUrl');
 
     res.status(201).json(item);
   } catch (error) {
@@ -379,8 +379,8 @@ router.patch('/:id', authMiddleware, async (req: Request, res: Response) => {
 
     await item.save();
 
-    await item.populate('addedBy', 'name email');
-    await item.populate('ownerId', 'name email');
+    await item.populate('addedBy', 'name email avatarUrl');
+    await item.populate('ownerId', 'name email avatarUrl');
 
     res.json(item);
   } catch (error) {

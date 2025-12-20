@@ -34,7 +34,7 @@ const verifyOtpSchema = z.object({
 
 const updateProfileSchema = z.object({
   name: z.string().min(1).max(80).optional(),
-  avatarUrl: z.string().url().max(500).optional(),
+  avatarUrl: z.string().max(1000000).optional(), // Accept data URLs (base64 images can be large)
 });
 
 const changePasswordSchema = z.object({

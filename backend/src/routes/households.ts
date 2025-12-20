@@ -31,7 +31,7 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
 
     const households = await Household.find({
       members: new mongoose.Types.ObjectId(userId),
-    }).populate('ownerId', 'name email').populate('members', 'name email');
+    }).populate('ownerId', 'name email avatarUrl').populate('members', 'name email avatarUrl');
 
     res.json(households);
   } catch (error) {
@@ -71,8 +71,8 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
     });
     await household.save();
 
-    await household.populate('ownerId', 'name email');
-    await household.populate('members', 'name email');
+    await household.populate('ownerId', 'name email avatarUrl');
+    await household.populate('members', 'name email avatarUrl');
 
     res.status(201).json(household);
   } catch (error) {
@@ -112,8 +112,8 @@ router.post('/join', authMiddleware, async (req: Request, res: Response) => {
     household.members.push(userIdObj);
     await household.save();
 
-    await household.populate('ownerId', 'name email');
-    await household.populate('members', 'name email');
+    await household.populate('ownerId', 'name email avatarUrl');
+    await household.populate('members', 'name email avatarUrl');
 
     res.json(household);
   } catch (error) {
@@ -143,8 +143,8 @@ router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    await household.populate('ownerId', 'name email');
-    await household.populate('members', 'name email');
+    await household.populate('ownerId', 'name email avatarUrl');
+    await household.populate('members', 'name email avatarUrl');
 
     res.json(household);
   } catch (error) {

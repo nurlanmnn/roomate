@@ -116,14 +116,6 @@ export const SettingsScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
             <Text style={styles.avatarEmail}>{user?.email}</Text>
           </View>
         </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Name</Text>
-          <Text style={styles.infoValue}>{user?.name}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Email</Text>
-          <Text style={styles.infoValue}>{user?.email}</Text>
-        </View>
         {!user?.isEmailVerified && (
           <PrimaryButton
             title="Resend Verification Email"
@@ -164,6 +156,7 @@ export const SettingsScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
               const isOwnerMember = m._id === selectedHousehold.ownerId;
               return (
                 <View key={m._id} style={styles.memberRow}>
+                  <Avatar name={m.name} uri={m.avatarUrl} size={40} />
                   <View style={styles.memberLeft}>
                     <Text style={styles.memberName}>{m.name}</Text>
                     <Text style={styles.memberEmail}>{m.email}</Text>
@@ -331,10 +324,10 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+    gap: spacing.md,
   },
   memberLeft: {
     flex: 1,
-    marginRight: spacing.md,
   },
   memberName: {
     fontSize: 15,

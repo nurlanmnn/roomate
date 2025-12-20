@@ -4,6 +4,7 @@ import { Expense } from '../api/expensesApi';
 import { formatCurrency } from '../utils/formatCurrency';
 import { formatDate } from '../utils/dateHelpers';
 import { colors, fontSizes, fontWeights, radii, spacing, shadows } from '../theme';
+import { Avatar } from './ui/Avatar';
 
 interface ExpenseCardProps {
   expense: Expense;
@@ -36,9 +37,12 @@ export const ExpenseCard: React.FC<ExpenseCardProps> = ({ expense, onDelete, can
         <Text style={styles.amount}>{formatCurrency(expense.totalAmount)}</Text>
       </View>
       <View style={styles.metaRow}>
-        <Text style={styles.paidBy}>
-          Paid by {paidByName} • {formatDate(expense.date)}
-        </Text>
+        <View style={styles.paidByRow}>
+          <Avatar name={paidByName} uri={expense.paidBy?.avatarUrl} size={20} />
+          <Text style={styles.paidBy}>
+            Paid by {paidByName} • {formatDate(expense.date)}
+          </Text>
+        </View>
         {canDelete && onDelete && (
           <TouchableOpacity onPress={handleDelete} style={styles.deleteButton}>
             <Text style={styles.deleteText}>Delete</Text>
@@ -89,10 +93,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.xxs,
   },
+  paidByRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    flex: 1,
+  },
   paidBy: {
     fontSize: fontSizes.sm,
     color: colors.textSecondary,
-    flex: 1,
   },
   deleteButton: {
     paddingVertical: spacing.xxs,

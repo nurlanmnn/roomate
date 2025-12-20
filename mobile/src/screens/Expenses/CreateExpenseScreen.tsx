@@ -9,6 +9,7 @@ import { FormTextInput } from '../../components/FormTextInput';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
+import { Avatar } from '../../components/ui/Avatar';
 import { colors, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
 
 export const CreateExpenseScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
@@ -166,7 +167,8 @@ export const CreateExpenseScreen: React.FC<{ navigation: any }> = ({ navigation 
               style={[styles.radioOption, paidBy === member._id && styles.radioSelected]}
               onPress={() => setPaidBy(member._id)}
             >
-              <Text>{member.name}</Text>
+              <Avatar name={member.name} uri={member.avatarUrl} size={32} />
+              <Text style={styles.radioText}>{member.name}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -229,7 +231,8 @@ export const CreateExpenseScreen: React.FC<{ navigation: any }> = ({ navigation 
               style={[styles.checkboxOption, selectedParticipants.includes(member._id) && styles.checkboxSelected]}
               onPress={() => toggleParticipant(member._id)}
             >
-              <Text>{member.name}</Text>
+              <Avatar name={member.name} uri={member.avatarUrl} size={32} />
+              <Text style={styles.checkboxText}>{member.name}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -331,6 +334,9 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   radioOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
     borderWidth: 1,
@@ -344,7 +350,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accentSoft,
     borderColor: colors.accent,
   },
+  radioText: {
+    fontSize: fontSizes.md,
+    color: colors.text,
+  },
   checkboxOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
     borderWidth: 1,
@@ -357,6 +370,10 @@ const styles = StyleSheet.create({
   checkboxSelected: {
     backgroundColor: colors.primarySoft,
     borderColor: colors.primary,
+  },
+  checkboxText: {
+    fontSize: fontSizes.md,
+    color: colors.text,
   },
   selectAllButton: {
     alignSelf: 'flex-end',

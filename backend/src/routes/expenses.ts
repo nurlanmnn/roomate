@@ -47,8 +47,8 @@ router.get('/household/:householdId', authMiddleware, async (req: Request, res: 
     const expenses = await Expense.find({
       householdId: req.params.householdId,
     })
-      .populate('paidBy', 'name email')
-      .populate('participants', 'name email')
+      .populate('paidBy', 'name email avatarUrl')
+      .populate('participants', 'name email avatarUrl')
       .sort({ date: -1 });
 
     res.json(expenses);
@@ -164,8 +164,8 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
     });
     await expense.save();
 
-    await expense.populate('paidBy', 'name email');
-    await expense.populate('participants', 'name email');
+    await expense.populate('paidBy', 'name email avatarUrl');
+    await expense.populate('participants', 'name email avatarUrl');
 
     res.status(201).json(expense);
   } catch (error) {

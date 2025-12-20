@@ -5,7 +5,7 @@ export interface Household {
   name: string;
   address?: string;
   ownerId: string;
-  members: Array<{ _id: string; name: string; email: string }>;
+  members: Array<{ _id: string; name: string; email: string; avatarUrl?: string }>;
   joinCode: string;
   createdAt: string;
 }

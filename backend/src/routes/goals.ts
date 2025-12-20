@@ -44,8 +44,8 @@ router.get('/household/:householdId', authMiddleware, async (req: Request, res: 
     const goals = await Goal.find({
       householdId: req.params.householdId,
     })
-      .populate('createdBy', 'name email')
-      .populate('upvotes', 'name email')
+      .populate('createdBy', 'name email avatarUrl')
+      .populate('upvotes', 'name email avatarUrl')
       .sort({ createdAt: -1 });
 
     res.json(goals);
@@ -88,8 +88,8 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
     });
     await goal.save();
 
-    await goal.populate('createdBy', 'name email');
-    await goal.populate('upvotes', 'name email');
+    await goal.populate('createdBy', 'name email avatarUrl');
+    await goal.populate('upvotes', 'name email avatarUrl');
 
     res.status(201).json(goal);
   } catch (error) {
@@ -136,8 +136,8 @@ router.patch('/:id', authMiddleware, async (req: Request, res: Response) => {
 
     await goal.save();
 
-    await goal.populate('createdBy', 'name email');
-    await goal.populate('upvotes', 'name email');
+    await goal.populate('createdBy', 'name email avatarUrl');
+    await goal.populate('upvotes', 'name email avatarUrl');
 
     res.json(goal);
   } catch (error) {
@@ -184,8 +184,8 @@ router.post('/:id/upvote', authMiddleware, async (req: Request, res: Response) =
 
     await goal.save();
 
-    await goal.populate('createdBy', 'name email');
-    await goal.populate('upvotes', 'name email');
+    await goal.populate('createdBy', 'name email avatarUrl');
+    await goal.populate('upvotes', 'name email avatarUrl');
 
     res.json(goal);
   } catch (error) {

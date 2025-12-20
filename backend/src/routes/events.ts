@@ -37,7 +37,7 @@ router.get('/household/:householdId', authMiddleware, async (req: Request, res: 
     const events = await Event.find({
       householdId: req.params.householdId,
     })
-      .populate('createdBy', 'name email')
+      .populate('createdBy', 'name email avatarUrl')
       .sort({ date: 1 });
 
     res.json(events);
@@ -80,7 +80,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
     });
     await event.save();
 
-    await event.populate('createdBy', 'name email');
+    await event.populate('createdBy', 'name email avatarUrl');
 
     res.status(201).json(event);
   } catch (error) {

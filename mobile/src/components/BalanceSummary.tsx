@@ -3,17 +3,20 @@ import { View, Text, StyleSheet } from 'react-native';
 import { PairwiseBalance } from '../api/expensesApi';
 import { formatCurrency } from '../utils/formatCurrency';
 import { colors, fontSizes, fontWeights, radii, spacing, shadows } from '../theme';
+import { Avatar } from './ui/Avatar';
 
 interface BalanceSummaryProps {
   balances: PairwiseBalance[];
   currentUserId: string;
   getUserName: (userId: string) => string;
+  getUserAvatar?: (userId: string) => string | undefined;
 }
 
 export const BalanceSummary: React.FC<BalanceSummaryProps> = ({
   balances,
   currentUserId,
   getUserName,
+  getUserAvatar,
 }) => {
   const userBalances = balances.filter(b => b.fromUserId === currentUserId || b.toUserId === currentUserId);
 
@@ -32,23 +35,29 @@ export const BalanceSummary: React.FC<BalanceSummaryProps> = ({
         const isOwed = balance.toUserId === currentUserId;
         const otherUserId = isOwed ? balance.fromUserId : balance.toUserId;
         
+        const otherUserName = getUserName(otherUserId);
+        const otherUserAvatar = getUserAvatar?.(otherUserId);
+        
         return (
           <View key={index} style={styles.balanceRow}>
-            <Text style={styles.balanceText}>
-              {isOwed ? (
-                <>
-                  <Text style={styles.userName}>{getUserName(otherUserId)}</Text>
-                  {' owes you '}
-                  <Text style={styles.amountPositive}>{formatCurrency(balance.amount)}</Text>
-                </>
-              ) : (
-                <>
-                  You owe <Text style={styles.userName}>{getUserName(otherUserId)}</Text>
-                  {' '}
-                  <Text style={styles.amountNegative}>{formatCurrency(balance.amount)}</Text>
-                </>
-              )}
-            </Text>
+            <View style={styles.balanceContent}>
+              <Avatar name={otherUserName} uri={otherUserAvatar} size={32} />
+              <Text style={styles.balanceText}>
+                {isOwed ? (
+                  <>
+                    <Text style={styles.userName}>{otherUserName}</Text>
+                    {' owes you '}
+                    <Text style={styles.amountPositive}>{formatCurrency(balance.amount)}</Text>
+                  </>
+                ) : (
+                  <>
+                    You owe <Text style={styles.userName}>{otherUserName}</Text>
+                    {' '}
+                    <Text style={styles.amountNegative}>{formatCurrency(balance.amount)}</Text>
+                  </>
+                )}
+              </Text>
+            </View>
           </View>
         );
       })}
@@ -77,9 +86,15 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
+  balanceContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
   balanceText: {
     fontSize: fontSizes.md,
     color: colors.text,
+    flex: 1,
   },
   userName: {
     fontWeight: fontWeights.semibold,

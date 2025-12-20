@@ -11,6 +11,7 @@ import { PrimaryButton } from '../../components/PrimaryButton';
 import { formatCurrency } from '../../utils/formatCurrency';
 import * as Sharing from 'expo-sharing';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
+import { Avatar } from '../../components/ui/Avatar';
 import { colors, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
 
 export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
@@ -48,6 +49,12 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     if (!selectedHousehold) return 'Unknown';
     const member = selectedHousehold.members.find(m => m._id === userId);
     return member?.name || 'Unknown';
+  };
+
+  const getUserAvatar = (userId: string): string | undefined => {
+    if (!selectedHousehold) return undefined;
+    const member = selectedHousehold.members.find(m => m._id === userId);
+    return member?.avatarUrl;
   };
 
   const handlePayExternally = async (balance: PairwiseBalance) => {
@@ -186,12 +193,19 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
             const toUserName = getUserName(balance.toUserId);
             const hasMutualDebt = mutualDebts.some(b => b.toUserId === balance.toUserId);
             
+            const toUserAvatar = getUserAvatar(balance.toUserId);
+            
             return (
               <View key={index} style={styles.balanceCard}>
-                <Text style={styles.balanceText}>
-                  You owe <Text style={styles.userName}>{toUserName}</Text>{' '}
-                  <Text style={styles.amount}>{formatCurrency(balance.amount)}</Text>
-                </Text>
+                <View style={styles.balanceHeader}>
+                  <Avatar name={toUserName} uri={toUserAvatar} size={40} />
+                  <View style={styles.balanceTextContainer}>
+                    <Text style={styles.balanceText}>
+                      You owe <Text style={styles.userName}>{toUserName}</Text>{' '}
+                      <Text style={styles.amount}>{formatCurrency(balance.amount)}</Text>
+                    </Text>
+                  </View>
+                </View>
                 {hasMutualDebt && (
                   <Text style={styles.mutualDebtNote}>
                     💡 {toUserName} also owes you money. You can net the balances.
@@ -313,9 +327,17 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     ...(shadows.sm as object),
   },
+  balanceHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  balanceTextContainer: {
+    flex: 1,
+  },
   balanceText: {
     fontSize: fontSizes.md,
-    marginBottom: spacing.md,
     color: colors.text,
   },
   userName: {

@@ -87,6 +87,12 @@ export const HomeScreen: React.FC = () => {
     return member?.name || 'Unknown';
   };
 
+  const getUserAvatar = (userId: string): string | undefined => {
+    if (!selectedHousehold) return undefined;
+    const member = selectedHousehold.members.find(m => m._id === userId);
+    return member?.avatarUrl;
+  };
+
   // Calculate stats
   const calculateStats = () => {
     const now = new Date();
@@ -211,6 +217,7 @@ export const HomeScreen: React.FC = () => {
             balances={balances}
             currentUserId={user._id}
             getUserName={getUserName}
+            getUserAvatar={getUserAvatar}
           />
         </View>
       )}
