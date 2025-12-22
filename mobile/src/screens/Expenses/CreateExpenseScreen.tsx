@@ -10,6 +10,9 @@ import { PrimaryButton } from '../../components/PrimaryButton';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
 import { Avatar } from '../../components/ui/Avatar';
+import { NaturalLanguageExpenseInput } from '../../components/NaturalLanguageExpenseInput';
+import { ReceiptScanner } from '../../components/ReceiptScanner';
+import { ParsedExpense } from '../../utils/expenseParser';
 import { colors, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
 
 export const CreateExpenseScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
@@ -25,6 +28,9 @@ export const CreateExpenseScreen: React.FC<{ navigation: any }> = ({ navigation 
   const [splitMethod, setSplitMethod] = useState<'even' | 'manual'>('even');
   const [manualShares, setManualShares] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+  const [categorySuggestions, setCategorySuggestions] = useState<string[]>([]);
+  const [categorizing, setCategorizing] = useState(false);
+  const [showReceiptScanner, setShowReceiptScanner] = useState(false);
 
   useEffect(() => {
     if (selectedHousehold && user) {
@@ -32,6 +38,36 @@ export const CreateExpenseScreen: React.FC<{ navigation: any }> = ({ navigation 
       setSelectedParticipants([user._id]);
     }
   }, [selectedHousehold, user]);
+
+  // Auto-categorize when description changes
+  useEffect(() => {
+    if (!description.trim() || description.length < 3) {
+      setCategorySuggestions([]);
+      return;
+    }
+
+    const timeoutId = setTimeout(async () => {
+      try {
+        setCategorizing(true);
+        const result = await expensesApi.categorizeExpense(description);
+        if (result.confidence >= 50) {
+          setCategorySuggestions([result.category]);
+          // Auto-fill if confidence is high
+          if (result.confidence >= 70 && !category) {
+            setCategory(result.category);
+          }
+        } else {
+          setCategorySuggestions([]);
+        }
+      } catch (error) {
+        console.error('Failed to categorize:', error);
+      } finally {
+        setCategorizing(false);
+      }
+    }, 500); // Debounce 500ms
+
+    return () => clearTimeout(timeoutId);
+  }, [description, category]);
 
   const toggleParticipant = (memberId: string) => {
     if (selectedParticipants.includes(memberId)) {
@@ -144,6 +180,70 @@ export const CreateExpenseScreen: React.FC<{ navigation: any }> = ({ navigation 
       <ScreenHeader title="Add Expense" subtitle={selectedHousehold.name} />
 
       <View style={styles.form}>
+        <View style={styles.quickAddContainer}>
+          <View style={styles.quickAddRow}>
+            <NaturalLanguageExpenseInput
+              memberNames={selectedHousehold.members.map(m => ({ _id: m._id, name: m.name }))}
+              currentUserId={user?._id || ''}
+              onExpenseParsed={(parsed: ParsedExpense) => {
+                if (parsed.description) setDescription(parsed.description);
+                if (parsed.amount) setTotalAmount(parsed.amount.toString());
+                if (parsed.participants.length > 0) {
+                  setSelectedParticipants(parsed.participants);
+                }
+                if (parsed.splitMethod === 'manual' && parsed.manualShares) {
+                  setSplitMethod('manual');
+                  const shares: Record<string, string> = {};
+                  Object.entries(parsed.manualShares).forEach(([userId, amount]) => {
+                    shares[userId] = amount.toString();
+                  });
+                  setManualShares(shares);
+                } else if (parsed.splitMethod === 'percentage' && parsed.percentage && parsed.amount) {
+                  // Convert percentage to manual split
+                  setSplitMethod('manual');
+                  const total = parsed.amount;
+                  const currentUserShare = (total * parsed.percentage) / 100;
+                  const otherShare = total - currentUserShare;
+                  const shares: Record<string, string> = {};
+                  shares[user._id] = currentUserShare.toFixed(2);
+                  parsed.participants.filter(id => id !== user._id).forEach(id => {
+                    shares[id] = (otherShare / (parsed.participants.length - 1)).toFixed(2);
+                  });
+                  setManualShares(shares);
+                } else {
+                  setSplitMethod('even');
+                }
+              }}
+            />
+            <TouchableOpacity
+              style={styles.scanReceiptButton}
+              onPress={() => setShowReceiptScanner(true)}
+            >
+              <Text style={styles.scanReceiptButtonText}>📷 Scan Receipt</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {showReceiptScanner && (
+          <ReceiptScanner
+            onReceiptScanned={(data) => {
+              if (data.description) setDescription(data.description);
+              if (data.totalAmount) setTotalAmount(data.totalAmount.toString());
+              if (data.date) setDate(data.date);
+              // Try to categorize based on merchant/description
+              if (data.description) {
+                expensesApi.categorizeExpense(data.description).then(result => {
+                  if (result.confidence >= 50) {
+                    setCategory(result.category);
+                  }
+                }).catch(() => {
+                  // Ignore categorization errors
+                });
+              }
+            }}
+            onClose={() => setShowReceiptScanner(false)}
+          />
+        )}
         <FormTextInput
           label="Description"
           value={description}
@@ -213,12 +313,31 @@ export const CreateExpenseScreen: React.FC<{ navigation: any }> = ({ navigation 
           )}
         </View>
 
-        <FormTextInput
-          label="Category (Optional)"
-          value={category}
-          onChangeText={setCategory}
-          placeholder="e.g., utilities, groceries"
-        />
+        <View style={styles.field}>
+          <Text style={styles.label}>Category (Optional)</Text>
+          <FormTextInput
+            value={category}
+            onChangeText={setCategory}
+            placeholder="e.g., utilities, groceries"
+          />
+          {categorySuggestions.length > 0 && (
+            <View style={styles.suggestionsContainer}>
+              <Text style={styles.suggestionsLabel}>Suggested:</Text>
+              {categorySuggestions.map((suggestion, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.suggestionChip}
+                  onPress={() => setCategory(suggestion)}
+                >
+                  <Text style={styles.suggestionText}>{suggestion}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+          {categorizing && (
+            <Text style={styles.categorizingText}>Analyzing...</Text>
+          )}
+        </View>
 
         <View style={styles.field}>
           <Text style={styles.label}>Participants</Text>
@@ -448,6 +567,59 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: fontSizes.md,
     fontWeight: fontWeights.semibold,
+  },
+  quickAddContainer: {
+    marginBottom: spacing.md,
+  },
+  quickAddRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    alignItems: 'center',
+  },
+  scanReceiptButton: {
+    backgroundColor: colors.accent,
+    padding: spacing.sm,
+    borderRadius: radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
+    minWidth: 120,
+  },
+  scanReceiptButtonText: {
+    color: colors.textInverse,
+    fontSize: fontSizes.md,
+    fontWeight: fontWeights.semibold,
+  },
+  suggestionsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    marginTop: spacing.xs,
+    gap: spacing.xs,
+  },
+  suggestionsLabel: {
+    fontSize: fontSizes.xs,
+    color: colors.textSecondary,
+    marginRight: spacing.xs,
+  },
+  suggestionChip: {
+    backgroundColor: colors.primarySoft,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  suggestionText: {
+    fontSize: fontSizes.xs,
+    color: colors.primary,
+    fontWeight: fontWeights.medium,
+  },
+  categorizingText: {
+    fontSize: fontSizes.xs,
+    color: colors.textSecondary,
+    fontStyle: 'italic',
+    marginTop: spacing.xxs,
   },
 });
 

@@ -10,5 +10,8 @@ export const config = {
   sendgridFromEmail: process.env.SENDGRID_FROM_EMAIL || 'noreply@roommate-app.com',
   backendPublicUrl: process.env.BACKEND_PUBLIC_URL || 'http://localhost:3000',
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:19006',
+  geminiApiKey: process.env.GEMINI_API_KEY || '',
 };
+
+export const getEnv = () => config;
 

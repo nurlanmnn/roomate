@@ -13,6 +13,7 @@ import { BalanceSummary } from '../../components/BalanceSummary';
 import { GoalCard } from '../../components/GoalCard';
 import { StatsCard } from '../../components/StatsCard';
 import { QuickActionButton } from '../../components/QuickActionButton';
+import { SpendingChart } from '../../components/SpendingChart';
 import { formatDate } from '../../utils/dateHelpers';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { colors, fontSizes, fontWeights, spacing } from '../../theme';
@@ -28,6 +29,7 @@ export const HomeScreen: React.FC = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [shoppingItems, setShoppingItems] = useState<ShoppingItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [insights, setInsights] = useState<any>(null);
 
   useEffect(() => {
     if (selectedHousehold) {
@@ -50,11 +52,12 @@ export const HomeScreen: React.FC = () => {
       const shoppingItemsArrays = await Promise.all(shoppingItemsPromises);
       const allShoppingItems = shoppingItemsArrays.flat();
 
-      const [eventsData, balancesData, goalsData, expensesData] = await Promise.all([
+      const [eventsData, balancesData, goalsData, expensesData, insightsData] = await Promise.all([
         eventsApi.getEvents(selectedHousehold._id),
         expensesApi.getBalances(selectedHousehold._id),
         goalsApi.getGoals(selectedHousehold._id),
         expensesApi.getExpenses(selectedHousehold._id),
+        expensesApi.getInsights(selectedHousehold._id).catch(() => null),
       ]);
 
       // Get upcoming events (next 5)
@@ -74,6 +77,7 @@ export const HomeScreen: React.FC = () => {
       setGoals(activeGoals);
       setExpenses(expensesData);
       setShoppingItems(allShoppingItems);
+      setInsights(insightsData);
     } catch (error) {
       console.error('Failed to load home data:', error);
     } finally {
@@ -207,6 +211,20 @@ export const HomeScreen: React.FC = () => {
               onPress={() => navigation.navigate('Calendar')}
             />
           </View>
+        </View>
+      )}
+
+      {/* Spending Insights & Charts */}
+      {insights && insights.byCategory.length > 0 && (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Spending Insights</Text>
+          </View>
+          <SpendingChart
+            byCategory={insights.byCategory}
+            monthlyTrend={insights.monthlyTrend}
+            predictions={insights.predictions}
+          />
         </View>
       )}
 
