@@ -68,11 +68,11 @@ export const BalanceSummary: React.FC<BalanceSummaryProps> = ({
 const styles = StyleSheet.create({
   container: {
     backgroundColor: colors.surface,
-    padding: spacing.lg,
+    padding: spacing.xl,
     borderRadius: radii.lg,
     marginBottom: spacing.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderLight,
     ...(shadows.sm as object),
   },
   title: {
@@ -82,9 +82,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   balanceRow: {
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.borderLight,
   },
   balanceContent: {
     flexDirection: 'row',

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
@@ -16,7 +16,7 @@ import { QuickActionButton } from '../../components/QuickActionButton';
 import { SpendingChart } from '../../components/SpendingChart';
 import { formatDate } from '../../utils/dateHelpers';
 import { formatCurrency } from '../../utils/formatCurrency';
-import { colors, fontSizes, fontWeights, spacing } from '../../theme';
+import { colors, fontSizes, fontWeights, spacing, lineHeights, radii, shadows } from '../../theme';
 import { Ionicons } from '@expo/vector-icons';
 
 export const HomeScreen: React.FC = () => {
@@ -36,6 +36,15 @@ export const HomeScreen: React.FC = () => {
       loadData();
     }
   }, [selectedHousehold]);
+
+  // Reload data when screen comes into focus (e.g., after creating an event)
+  useFocusEffect(
+    React.useCallback(() => {
+      if (selectedHousehold) {
+        loadData();
+      }
+    }, [selectedHousehold])
+  );
 
   const loadData = async () => {
     if (!selectedHousehold) return;
@@ -163,19 +172,25 @@ export const HomeScreen: React.FC = () => {
       {hasData && (
         <View style={styles.statsContainer}>
           <StatsCard
-            icon={<Ionicons name="cash-outline" size={22} color={colors.muted} />}
+            icon={<Ionicons name="cash-outline" size={24} color={colors.primary} />}
             label="This Month"
             value={formatCurrency(stats.monthlyExpenses)}
+            iconColor={colors.primary}
+            iconBgColor={colors.primaryUltraSoft}
           />
           <StatsCard
-            icon={<Ionicons name="cart-outline" size={22} color={colors.muted} />}
+            icon={<Ionicons name="cart-outline" size={24} color={colors.accent} />}
             label="Shopping"
             value={stats.pendingShopping}
+            iconColor={colors.accent}
+            iconBgColor={colors.accentUltraSoft}
           />
           <StatsCard
-            icon={<Ionicons name="calendar-outline" size={22} color={colors.muted} />}
+            icon={<Ionicons name="calendar-outline" size={24} color={colors.teal} />}
             label="Events"
             value={stats.upcomingEventsCount}
+            iconColor={colors.teal}
+            iconBgColor={colors.tealUltraSoft}
           />
         </View>
       )}
@@ -306,41 +321,46 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xl,
     backgroundColor: colors.background,
   },
   title: {
-    fontSize: fontSizes.xxl,
+    fontSize: fontSizes.xxxl,
     fontWeight: fontWeights.extrabold,
     color: colors.text,
-    marginBottom: spacing.xxs,
+    marginBottom: spacing.xs,
+    lineHeight: lineHeights.xxxl,
+    letterSpacing: -0.5,
   },
   address: {
     fontSize: fontSizes.sm,
     color: colors.textSecondary,
+    lineHeight: lineHeights.sm,
   },
   statsContainer: {
     flexDirection: 'row',
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xs,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.md,
+    gap: spacing.sm,
   },
   section: {
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.xs,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.md,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
   sectionTitle: {
     fontSize: fontSizes.xl,
-    fontWeight: fontWeights.semibold,
+    fontWeight: fontWeights.bold,
     color: colors.text,
+    letterSpacing: -0.3,
   },
   seeAllText: {
     fontSize: fontSizes.sm,
@@ -348,27 +368,29 @@ const styles = StyleSheet.create({
     fontWeight: fontWeights.semibold,
   },
   welcomeSection: {
-    padding: spacing.xl,
+    padding: spacing.xxl,
     backgroundColor: colors.surface,
-    marginHorizontal: spacing.md,
-    marginTop: spacing.md,
-    borderRadius: 18,
+    marginHorizontal: spacing.xl,
+    marginTop: spacing.lg,
+    borderRadius: radii.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderLight,
+    ...(shadows.sm as object),
   },
   welcomeTitle: {
-    fontSize: fontSizes.xl,
+    fontSize: fontSizes.xxl,
     fontWeight: fontWeights.extrabold,
     color: colors.text,
     marginBottom: spacing.md,
     textAlign: 'center',
+    lineHeight: lineHeights.xxl,
   },
   welcomeText: {
     fontSize: fontSizes.md,
     color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: spacing.xl,
-    lineHeight: 22,
+    lineHeight: lineHeights.md,
   },
   quickActionsContainer: {
     flexDirection: 'row',

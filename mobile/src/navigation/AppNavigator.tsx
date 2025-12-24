@@ -50,8 +50,30 @@ const MainTabs = () => {
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.muted,
-        tabBarStyle: { borderTopColor: colors.border },
+        tabBarInactiveTintColor: colors.textTertiary,
+        tabBarStyle: { 
+          borderTopColor: colors.borderLight,
+          borderTopWidth: 1,
+          backgroundColor: colors.surface,
+          paddingTop: 6,
+          paddingBottom: 6,
+          paddingHorizontal: 4,
+          height: 70,
+          elevation: 8,
+          shadowColor: colors.shadow,
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 8,
+        },
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontWeight: '600',
+          marginTop: 2,
+          marginBottom: 2,
+        },
+        tabBarItemStyle: {
+          paddingVertical: 4,
+        },
       }}
     >
       <Tab.Screen
@@ -59,7 +81,7 @@ const MainTabs = () => {
         component={HomeScreen}
         options={{
           tabBarLabel: 'Home',
-          tabBarIcon: ({ color }) => <TabIcon name="home" color={color} />,
+          tabBarIcon: ({ color, focused }) => <TabIcon name="home" color={color} focused={focused} />,
         }}
       />
       <Tab.Screen
@@ -67,7 +89,7 @@ const MainTabs = () => {
         component={ExpensesScreen}
         options={{
           tabBarLabel: 'Expenses',
-          tabBarIcon: ({ color }) => <TabIcon name="dollar" color={color} />,
+          tabBarIcon: ({ color, focused }) => <TabIcon name="dollar" color={color} focused={focused} />,
         }}
       />
       <Tab.Screen
@@ -75,7 +97,7 @@ const MainTabs = () => {
         component={ShoppingListScreen}
         options={{
           tabBarLabel: 'Shopping',
-          tabBarIcon: ({ color }) => <TabIcon name="cart" color={color} />,
+          tabBarIcon: ({ color, focused }) => <TabIcon name="cart" color={color} focused={focused} />,
         }}
       />
       <Tab.Screen
@@ -83,7 +105,7 @@ const MainTabs = () => {
         component={CalendarScreen}
         options={{
           tabBarLabel: 'Calendar',
-          tabBarIcon: ({ color }) => <TabIcon name="calendar" color={color} />,
+          tabBarIcon: ({ color, focused }) => <TabIcon name="calendar" color={color} focused={focused} />,
         }}
       />
       <Tab.Screen
@@ -91,7 +113,7 @@ const MainTabs = () => {
         component={GoalsScreen}
         options={{
           tabBarLabel: 'Goals',
-          tabBarIcon: ({ color }) => <TabIcon name="target" color={color} />,
+          tabBarIcon: ({ color, focused }) => <TabIcon name="target" color={color} focused={focused} />,
         }}
       />
       <Tab.Screen
@@ -99,23 +121,24 @@ const MainTabs = () => {
         component={SettingsScreen}
         options={{
           tabBarLabel: 'Settings',
-          tabBarIcon: ({ color }) => <TabIcon name="settings" color={color} />,
+          tabBarIcon: ({ color, focused }) => <TabIcon name="settings" color={color} focused={focused} />,
         }}
       />
     </Tab.Navigator>
   );
 };
 
-const TabIcon: React.FC<{ name: string; color: string }> = ({ name, color }) => {
-  const icons: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
-    home: 'home-outline',
-    dollar: 'cash-outline',
-    cart: 'cart-outline',
-    calendar: 'calendar-outline',
-    target: 'radio-button-on-outline',
-    settings: 'settings-outline',
+const TabIcon: React.FC<{ name: string; color: string; focused: boolean }> = ({ name, color, focused }) => {
+  const icons: Record<string, { outline: React.ComponentProps<typeof Ionicons>['name']; filled: React.ComponentProps<typeof Ionicons>['name'] }> = {
+    home: { outline: 'home-outline', filled: 'home' },
+    dollar: { outline: 'cash-outline', filled: 'cash' },
+    cart: { outline: 'cart-outline', filled: 'cart' },
+    calendar: { outline: 'calendar-outline', filled: 'calendar' },
+    target: { outline: 'flag-outline', filled: 'flag' },
+    settings: { outline: 'settings-outline', filled: 'settings' },
   };
-  return <Ionicons name={icons[name] || 'ellipse'} size={22} color={color} />;
+  const iconSet = icons[name] || { outline: 'ellipse-outline', filled: 'ellipse' };
+  return <Ionicons name={focused ? iconSet.filled : iconSet.outline} size={22} color={color} />;
 };
 
 const MainNavigator = () => {

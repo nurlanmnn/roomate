@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { useHousehold } from '../../context/HouseholdContext';
 import { eventsApi, Event } from '../../api/eventsApi';
 import { EventCard } from '../../components/EventCard';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
 import { SearchBar } from '../../components/ui/SearchBar';
+import { EmptyState } from '../../components/ui/EmptyState';
 import { formatDate } from '../../utils/dateHelpers';
 import { colors, fontSizes, fontWeights, spacing } from '../../theme';
 
@@ -19,6 +21,15 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   useEffect(() => {
     if (selectedHousehold) loadEvents();
   }, [selectedHousehold]);
+
+  // Reload events when screen comes into focus (e.g., after creating an event)
+  useFocusEffect(
+    React.useCallback(() => {
+      if (selectedHousehold) {
+        loadEvents();
+      }
+    }, [selectedHousehold])
+  );
 
   const loadEvents = async () => {
     if (!selectedHousehold) return;
@@ -84,9 +95,13 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         </View>
 
         {Object.keys(eventsByDate).length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No events scheduled</Text>
-          </View>
+          <EmptyState
+            icon="calendar-outline"
+            title="No events yet"
+            message="Add an event so everyone stays in sync. Plan house meetings, bill due dates, or social gatherings."
+            actionLabel="+ Add Event"
+            onAction={() => navigation.navigate('CreateEvent')}
+          />
         ) : (
           Object.entries(eventsByDate).map(([dateKey, dateEvents]) => (
             <View key={dateKey} style={styles.dateSection}>

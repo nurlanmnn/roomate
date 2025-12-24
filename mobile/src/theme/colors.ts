@@ -1,29 +1,47 @@
 export const colors = {
-  // Base
-  background: '#F6F7FB',
+  // Base - Warm light grays instead of pure white
+  background: '#F8F9FA',
+  backgroundGradient: ['#F8F9FA', '#F5F6F8'],
   surface: '#FFFFFF',
-  surfaceAlt: '#FAFAFC',
-  border: '#E7E8EE',
-  text: '#12131A',
-  textSecondary: '#5A5E6B',
-  muted: '#8A8FA1',
+  surfaceAlt: '#FBFCFD',
+  surfaceElevated: '#FFFFFF',
+  border: '#E8EAED',
+  borderLight: '#F0F1F3',
+  text: '#1A1C21',
+  textSecondary: '#6B7280',
+  textTertiary: '#9CA3AF',
+  muted: '#9CA3AF',
 
-  // Brand (keep existing green vibe)
-  primary: '#2FB463',
-  primaryDark: '#23914F',
-  primarySoft: '#E9F8EF',
+  // Brand - Refined, muted premium green
+  primary: '#22C55E',
+  primaryDark: '#16A34A',
+  primaryLight: '#4ADE80',
+  primarySoft: '#D1FAE5',
+  primaryUltraSoft: '#ECFDF5',
 
-  // Secondary accent (blue used in Settings code buttons)
-  accent: '#2F80ED',
-  accentSoft: '#EAF2FF',
+  // Secondary accent - Soft blue/teal for analytics, highlights
+  accent: '#3B82F6',
+  accentDark: '#2563EB',
+  accentLight: '#60A5FA',
+  accentSoft: '#DBEAFE',
+  accentUltraSoft: '#EFF6FF',
+
+  // Teal variant for insights/predictions
+  teal: '#14B8A6',
+  tealSoft: '#CCFBF1',
+  tealUltraSoft: '#F0FDFA',
 
   // States
-  danger: '#E5484D',
-  warning: '#F5A524',
-  success: '#2FB463',
+  danger: '#EF4444',
+  dangerSoft: '#FEE2E2',
+  warning: '#F59E0B',
+  warningSoft: '#FEF3C7',
+  success: '#22C55E',
+  successSoft: '#D1FAE5',
 
-  // Shadows
-  shadow: 'rgba(18, 19, 26, 0.10)',
+  // Shadows - Softer, more subtle
+  shadow: 'rgba(0, 0, 0, 0.08)',
+  shadowStrong: 'rgba(0, 0, 0, 0.12)',
 };
 
 

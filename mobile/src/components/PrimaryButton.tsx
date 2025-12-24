@@ -1,13 +1,13 @@
 import React from 'react';
 import { Text, StyleSheet, ActivityIndicator, Pressable, ViewStyle } from 'react-native';
-import { colors, fontSizes, fontWeights, radii, spacing } from '../theme';
+import { colors, fontSizes, fontWeights, radii, spacing, shadows } from '../theme';
 
 interface PrimaryButtonProps {
   title: string;
   onPress: () => void;
   disabled?: boolean;
   loading?: boolean;
-  variant?: 'primary' | 'secondary' | 'danger';
+  variant?: 'primary' | 'secondary' | 'danger' | 'outline';
   style?: ViewStyle;
 }
 
@@ -24,7 +24,14 @@ export const PrimaryButton: React.FC<PrimaryButtonProps> = ({
       ? styles.buttonSecondary
       : variant === 'danger'
         ? styles.buttonDanger
-        : styles.buttonPrimary;
+        : variant === 'outline'
+          ? styles.buttonOutline
+          : styles.buttonPrimary;
+
+  const textStyle =
+    variant === 'outline'
+      ? styles.buttonTextOutline
+      : styles.buttonText;
 
   return (
     <Pressable
@@ -39,9 +46,9 @@ export const PrimaryButton: React.FC<PrimaryButtonProps> = ({
       disabled={disabled || loading}
     >
       {loading ? (
-        <ActivityIndicator color={colors.surface} />
+        <ActivityIndicator color={variant === 'outline' ? colors.primary : colors.surface} />
       ) : (
-        <Text style={styles.buttonText}>{title}</Text>
+        <Text style={textStyle}>{title}</Text>
       )}
     </Pressable>
   );
@@ -58,23 +65,39 @@ const styles = StyleSheet.create({
   },
   buttonPrimary: {
     backgroundColor: colors.primary,
+    ...(shadows.sm as object),
   },
   buttonSecondary: {
     backgroundColor: colors.accent,
+    ...(shadows.sm as object),
   },
   buttonDanger: {
     backgroundColor: colors.danger,
+    ...(shadows.sm as object),
+  },
+  buttonOutline: {
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: colors.primary,
   },
   buttonDisabled: {
-    opacity: 0.55,
+    opacity: 0.5,
   },
   buttonPressed: {
-    transform: [{ scale: 0.99 }],
+    transform: [{ scale: 0.98 }],
+    opacity: 0.9,
   },
   buttonText: {
     color: colors.surface,
     fontSize: fontSizes.md,
     fontWeight: fontWeights.semibold,
+    letterSpacing: 0.2,
+  },
+  buttonTextOutline: {
+    color: colors.primary,
+    fontSize: fontSizes.md,
+    fontWeight: fontWeights.semibold,
+    letterSpacing: 0.2,
   },
 });
 

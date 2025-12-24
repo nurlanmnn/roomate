@@ -8,6 +8,7 @@ import { GoalCard } from '../../components/GoalCard';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
 import { SearchBar } from '../../components/ui/SearchBar';
+import { EmptyState } from '../../components/ui/EmptyState';
 import { colors, fontSizes, fontWeights, spacing } from '../../theme';
 
 export const GoalsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
@@ -124,9 +125,15 @@ export const GoalsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
         </View>
 
         {visibleGoals.length === 0 && (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No goals in this section</Text>
-          </View>
+          <EmptyState
+            icon="flag-outline"
+            title="No goals yet"
+            message={goals.length === 0 
+              ? "Set a goal together with your roommates. Plan home improvements, savings targets, or shared activities."
+              : `No goals in "${activeStatus.replace('_', ' ')}" status. Try a different filter or create a new goal.`}
+            actionLabel={goals.length === 0 ? "+ New Goal" : undefined}
+            onAction={goals.length === 0 ? () => navigation.navigate('CreateGoal') : undefined}
+          />
         )}
       </ScrollView>
     </SafeAreaView>

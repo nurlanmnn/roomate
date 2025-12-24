@@ -6,12 +6,22 @@ interface StatsCardProps {
   icon: React.ReactNode;
   label: string;
   value: string | number;
+  iconColor?: string;
+  iconBgColor?: string;
 }
 
-export const StatsCard: React.FC<StatsCardProps> = ({ icon, label, value }) => {
+export const StatsCard: React.FC<StatsCardProps> = ({ 
+  icon, 
+  label, 
+  value,
+  iconColor = colors.primary,
+  iconBgColor = colors.primaryUltraSoft,
+}) => {
   return (
     <View style={styles.card}>
-      <View style={styles.icon}>{icon}</View>
+      <View style={[styles.iconContainer, { backgroundColor: iconBgColor }]}>
+        <View style={styles.icon}>{icon}</View>
+      </View>
       <Text style={styles.value}>{value}</Text>
       <Text style={styles.label}>{label}</Text>
     </View>
@@ -27,11 +37,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginHorizontal: spacing.xxs,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderLight,
     ...(shadows.sm as object),
   },
+  iconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
   icon: {
-    marginBottom: spacing.xs,
+    // Icon wrapper for proper centering
   },
   value: {
     fontSize: fontSizes.xl,
@@ -43,6 +61,7 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.xs,
     color: colors.textSecondary,
     textAlign: 'center',
+    fontWeight: fontWeights.medium,
   },
 });
 

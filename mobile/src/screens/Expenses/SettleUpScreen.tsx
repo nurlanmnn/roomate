@@ -12,6 +12,7 @@ import { formatCurrency } from '../../utils/formatCurrency';
 import * as Sharing from 'expo-sharing';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
 import { Avatar } from '../../components/ui/Avatar';
+import { EmptyState } from '../../components/ui/EmptyState';
 import { colors, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
 
 export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
@@ -184,9 +185,12 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
       <ScreenHeader title="Settle Up" subtitle={selectedHousehold.name} />
 
       {userOwedBalances.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>All settled up! 🎉</Text>
-        </View>
+        <EmptyState
+          icon="checkmark-circle-outline"
+          title="All settled up! 🎉"
+          message="You're all caught up with your roommates. No outstanding balances to settle."
+          variant="minimal"
+        />
       ) : (
         <View style={styles.section}>
           {userOwedBalances.map((balance, index) => {

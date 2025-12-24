@@ -5,10 +5,7 @@ import { Settlement } from '../models/Settlement';
 import { Household } from '../models/Household';
 import { authMiddleware } from '../middleware/auth';
 import { computeBalances } from '../utils/balances';
-import { categorizeExpense } from '../services/categorizationService';
 import { calculateExpenseInsights } from '../utils/expenseInsights';
-import { scanReceipt } from '../services/ocrService';
-import { config } from '../config/env';
 import mongoose from 'mongoose';
 
 const router = express.Router();
@@ -208,47 +205,6 @@ router.get('/household/:householdId/insights', authMiddleware, async (req: Reque
     res.json(insights);
   } catch (error) {
     console.error('Get insights error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// POST /expenses/scan-receipt
-router.post('/scan-receipt', authMiddleware, async (req: Request, res: Response) => {
-  try {
-    const { imageBase64 } = req.body;
-
-    if (!imageBase64 || typeof imageBase64 !== 'string') {
-      return res.status(400).json({ error: 'Image data is required' });
-    }
-
-    const result = await scanReceipt(imageBase64);
-
-    // Convert date to ISO string for JSON response
-    res.json({
-      ...result,
-      date: result.date ? result.date.toISOString() : null,
-    });
-  } catch (error) {
-    console.error('Scan receipt error:', error);
-    res.status(500).json({ error: 'Failed to scan receipt. Please try again.' });
-  }
-});
-
-// POST /expenses/categorize
-router.post('/categorize', authMiddleware, async (req: Request, res: Response) => {
-  try {
-    const { description } = req.body;
-
-    if (!description || typeof description !== 'string') {
-      return res.status(400).json({ error: 'Description is required' });
-    }
-
-    const geminiApiKey = config.geminiApiKey;
-    const result = await categorizeExpense(description, geminiApiKey);
-
-    res.json(result);
-  } catch (error) {
-    console.error('Categorize expense error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

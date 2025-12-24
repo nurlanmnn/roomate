@@ -136,6 +136,17 @@ export const CreateEventScreen: React.FC<{ navigation: any }> = ({ navigation })
                   }}
                 />
               )}
+              {Platform.OS === 'ios' && showDatePicker && (
+                <View style={styles.datePickerActions}>
+                  <TouchableOpacity
+                    style={styles.datePickerButton}
+                    onPress={() => setShowDatePicker(false)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.datePickerButtonText}>Done</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
 
             <View style={styles.field}>
@@ -155,6 +166,17 @@ export const CreateEventScreen: React.FC<{ navigation: any }> = ({ navigation })
                     if (selectedTime) setTime(selectedTime);
                   }}
                 />
+              )}
+              {Platform.OS === 'ios' && showTimePicker && (
+                <View style={styles.datePickerActions}>
+                  <TouchableOpacity
+                    style={styles.datePickerButton}
+                    onPress={() => setShowTimePicker(false)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.datePickerButtonText}>Done</Text>
+                  </TouchableOpacity>
+                </View>
               )}
             </View>
 
@@ -177,6 +199,17 @@ export const CreateEventScreen: React.FC<{ navigation: any }> = ({ navigation })
                     if (selectedDate) setEndDate(selectedDate);
                   }}
                 />
+              )}
+              {Platform.OS === 'ios' && showEndDatePicker && (
+                <View style={styles.datePickerActions}>
+                  <TouchableOpacity
+                    style={styles.datePickerButton}
+                    onPress={() => setShowEndDatePicker(false)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.datePickerButtonText}>Done</Text>
+                  </TouchableOpacity>
+                </View>
               )}
             </View>
 
@@ -205,6 +238,17 @@ export const CreateEventScreen: React.FC<{ navigation: any }> = ({ navigation })
                     if (selectedTime) setEndTime(selectedTime);
                   }}
                 />
+              )}
+              {Platform.OS === 'ios' && showEndTimePicker && (
+                <View style={styles.datePickerActions}>
+                  <TouchableOpacity
+                    style={styles.datePickerButton}
+                    onPress={() => setShowEndTimePicker(false)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.datePickerButtonText}>Done</Text>
+                  </TouchableOpacity>
+                </View>
               )}
             </View>
 
@@ -261,6 +305,29 @@ const styles = StyleSheet.create({
   },
   dateText: { fontSize: fontSizes.md, color: colors.text },
   placeholderText: { color: colors.muted },
+  datePickerActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+  },
+  datePickerButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xl,
+    borderRadius: radii.md,
+    minWidth: 80,
+    alignItems: 'center',
+    ...(shadows.xs as object),
+  },
+  datePickerButtonText: {
+    color: colors.surface,
+    fontSize: fontSizes.md,
+    fontWeight: fontWeights.semibold,
+    letterSpacing: 0.2,
+  },
   actions: { flexDirection: 'row', marginTop: spacing.md },
   spacer: { width: spacing.sm },
 });

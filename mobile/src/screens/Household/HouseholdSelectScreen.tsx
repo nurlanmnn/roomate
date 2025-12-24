@@ -5,6 +5,7 @@ import { householdsApi, Household } from '../../api/householdsApi';
 import { useHousehold } from '../../context/HouseholdContext';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { FormTextInput } from '../../components/FormTextInput';
+import { colors, spacing } from '../../theme';
 
 export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const [households, setHouseholds] = useState<Household[]>([]);
@@ -107,11 +108,13 @@ export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigatio
         <PrimaryButton
           title="Create New Household"
           onPress={() => setCreateModalVisible(true)}
+          style={styles.actionButton}
         />
-        <View style={styles.spacer} />
         <PrimaryButton
           title="Join Household with Code"
           onPress={() => setJoinModalVisible(true)}
+          variant="secondary"
+          style={styles.actionButton}
         />
       </View>
 
@@ -145,11 +148,14 @@ export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigatio
               <PrimaryButton
                 title="Cancel"
                 onPress={() => setCreateModalVisible(false)}
+                variant="secondary"
+                style={styles.modalButton}
               />
-              <View style={styles.spacer} />
+              <View style={styles.buttonSpacer} />
               <PrimaryButton
                 title="Create"
                 onPress={handleCreateHousehold}
+                style={styles.modalButton}
               />
             </View>
           </View>
@@ -180,11 +186,14 @@ export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigatio
               <PrimaryButton
                 title="Cancel"
                 onPress={() => setJoinModalVisible(false)}
+                variant="secondary"
+                style={styles.modalButton}
               />
-              <View style={styles.spacer} />
+              <View style={styles.buttonSpacer} />
               <PrimaryButton
                 title="Join"
                 onPress={handleJoinHousehold}
+                style={styles.modalButton}
               />
             </View>
           </View>
@@ -247,10 +256,11 @@ const styles = StyleSheet.create({
     color: '#999',
   },
   actions: {
-    padding: 24,
+    padding: spacing.xl,
+    gap: spacing.md,
   },
-  spacer: {
-    height: 12,
+  actionButton: {
+    marginBottom: spacing.md,
   },
   modalOverlay: {
     flex: 1,
@@ -259,20 +269,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: 16,
-    padding: 24,
+    padding: spacing.xl,
     width: '90%',
     maxWidth: 400,
   },
   modalTitle: {
     fontSize: 24,
     fontWeight: '700',
-    marginBottom: 24,
+    marginBottom: spacing.xl,
+    color: colors.text,
   },
   modalActions: {
     flexDirection: 'row',
-    marginTop: 16,
+    marginTop: spacing.lg,
+  },
+  modalButton: {
+    flex: 1,
+  },
+  buttonSpacer: {
+    width: spacing.md,
   },
 });
 

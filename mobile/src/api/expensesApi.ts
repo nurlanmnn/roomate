@@ -58,11 +58,6 @@ export const expensesApi = {
     return response.data;
   },
 
-  categorizeExpense: async (description: string): Promise<{ category: string; confidence: number; reason?: string }> => {
-    const response = await apiClient.instance.post('/expenses/categorize', { description });
-    return response.data;
-  },
-
   getInsights: async (householdId: string): Promise<{
     byCategory: Array<{ category: string; amount: number; percentage: number; count: number }>;
     monthlyTrend: Array<{ month: string; amount: number }>;
@@ -71,17 +66,6 @@ export const expensesApi = {
     averageMonthly: number;
   }> => {
     const response = await apiClient.instance.get(`/expenses/household/${householdId}/insights`);
-    return response.data;
-  },
-
-  scanReceipt: async (imageBase64: string): Promise<{
-    description: string;
-    totalAmount: number | null;
-    date: string | null;
-    merchant: string | null;
-    items: string[];
-  }> => {
-    const response = await apiClient.instance.post('/expenses/scan-receipt', { imageBase64 });
     return response.data;
   },
 };

@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { ShoppingItem } from '../api/shoppingApi';
 import { colors, fontSizes, fontWeights, radii, spacing, shadows } from '../theme';
 
@@ -50,12 +51,12 @@ export const ShoppingItemRow: React.FC<ShoppingItemRowProps> = ({
       <View style={styles.actions}>
         {onEdit && (
           <TouchableOpacity onPress={onEdit} style={styles.editButton}>
-            <Text style={styles.editText}>✎</Text>
+            <Ionicons name="create-outline" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
         )}
         {onDelete && (
           <TouchableOpacity onPress={onDelete} style={styles.deleteButton}>
-            <Text style={styles.deleteText}>×</Text>
+            <Ionicons name="trash-outline" size={20} color={colors.danger} />
           </TouchableOpacity>
         )}
       </View>
@@ -130,12 +131,7 @@ const styles = StyleSheet.create({
   },
   editButton: {
     padding: spacing.xs,
-    marginRight: spacing.xxs,
-  },
-  editText: {
-    fontSize: 18,
-    color: colors.accent,
-    fontWeight: 'bold',
+    marginRight: spacing.xs,
   },
   sharedBadge: {
     fontSize: fontSizes.xs,
@@ -153,10 +149,6 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     padding: spacing.xs,
-  },
-  deleteText: {
-    fontSize: 24,
-    color: colors.danger,
   },
 });
 

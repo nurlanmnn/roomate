@@ -10,6 +10,7 @@ import { PrimaryButton } from '../../components/PrimaryButton';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
 import { colors, fontSizes, fontWeights, radii, spacing } from '../../theme';
 import { SearchBar } from '../../components/ui/SearchBar';
+import { Ionicons } from '@expo/vector-icons';
 
 const weightUnits: WeightUnit[] = ['lbs', 'kg', 'g', 'oz', 'liter', 'ml', 'fl oz', 'cup', 'pint', 'quart', 'gallon'];
 
@@ -396,7 +397,7 @@ export const ShoppingListScreen: React.FC = () => {
                   selectedList?._id === list._id && styles.listCardSelected,
                 ]}
                 onPress={() => setSelectedList(list)}
-                onLongPress={() => handleDeleteList(list)}
+                onLongPress={() => handleEditList(list)}
               >
                 <Text
                   style={[
@@ -406,22 +407,6 @@ export const ShoppingListScreen: React.FC = () => {
                 >
                   {list.name}
                 </Text>
-                {selectedList?._id === list._id && (
-                  <View style={styles.listCardActions}>
-                    <TouchableOpacity
-                      style={styles.editListButton}
-                      onPress={() => handleEditList(list)}
-                    >
-                      <Text style={styles.editListButtonText}>✎</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.deleteListButton}
-                      onPress={() => handleDeleteList(list)}
-                    >
-                      <Text style={styles.deleteListButtonText}>×</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -431,7 +416,21 @@ export const ShoppingListScreen: React.FC = () => {
           <>
             <View style={styles.listHeader}>
               <Text style={styles.listTitle}>{selectedList.name}</Text>
-              <QuickAddButton onAddItems={handleQuickAdd} />
+              <View style={styles.listHeaderActions}>
+                <TouchableOpacity
+                  style={styles.listActionButton}
+                  onPress={() => handleEditList(selectedList)}
+                >
+                  <Ionicons name="create-outline" size={20} color={colors.textSecondary} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.listActionButton}
+                  onPress={() => handleDeleteList(selectedList)}
+                >
+                  <Ionicons name="trash-outline" size={20} color={colors.danger} />
+                </TouchableOpacity>
+                <QuickAddButton onAddItems={handleQuickAdd} />
+              </View>
             </View>
 
             <View style={styles.section}>
@@ -857,49 +856,28 @@ const styles = StyleSheet.create({
   },
   listCard: {
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.pill,
-    backgroundColor: colors.surfaceAlt,
-    marginRight: spacing.sm,
+    paddingVertical: spacing.md,
+    borderRadius: radii.md,
+    backgroundColor: colors.surface,
+    marginRight: spacing.md,
     borderWidth: 1,
-    borderColor: colors.border,
-    flexDirection: 'row',
+    borderColor: colors.borderLight,
     alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 100,
   },
   listCardSelected: {
-    backgroundColor: colors.primarySoft,
+    backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
   listCardText: {
     fontSize: fontSizes.md,
     fontWeight: fontWeights.medium,
-    color: colors.textSecondary,
+    color: colors.text,
   },
   listCardTextSelected: {
-    color: colors.primaryDark,
+    color: colors.surface,
     fontWeight: fontWeights.semibold,
-  },
-  listCardActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginLeft: 8,
-  },
-  editListButton: {
-    padding: 4,
-    marginRight: 4,
-  },
-  editListButtonText: {
-    fontSize: 18,
-    color: colors.accent,
-    fontWeight: 'bold',
-  },
-  deleteListButton: {
-    padding: 4,
-  },
-  deleteListButtonText: {
-    fontSize: 20,
-    color: colors.danger,
-    fontWeight: 'bold',
   },
   listHeader: {
     paddingHorizontal: spacing.md,
@@ -913,6 +891,15 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.xl,
     fontWeight: fontWeights.extrabold,
     color: colors.text,
+    flex: 1,
+  },
+  listHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  listActionButton: {
+    padding: spacing.xs,
   },
   section: {
     paddingHorizontal: spacing.md,

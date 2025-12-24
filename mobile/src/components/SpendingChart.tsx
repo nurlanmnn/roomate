@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { PieChart, BarChart } from 'react-native-chart-kit';
 import { colors, fontSizes, fontWeights, spacing, radii, shadows } from '../theme';
 import { formatCurrency } from '../utils/formatCurrency';
+import { MonthlyTrendChart } from './MonthlyTrendChart';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -27,17 +28,17 @@ interface SpendingChartProps {
   };
 }
 
-// Color palette for categories
+// Modern, softer color palette for categories
 const categoryColors = [
-  '#4A90E2', // Blue
-  '#50C878', // Green
-  '#FF6B6B', // Red
-  '#FFD93D', // Yellow
-  '#9B59B6', // Purple
-  '#FF8C42', // Orange
-  '#1ABC9C', // Teal
-  '#E74C3C', // Dark Red
-  '#95A5A6', // Gray
+  '#3B82F6', // Soft Blue
+  '#22C55E', // Soft Green
+  '#F59E0B', // Warm Amber
+  '#8B5CF6', // Soft Purple
+  '#EC4899', // Soft Pink
+  '#14B8A6', // Teal
+  '#F97316', // Warm Orange
+  '#6366F1', // Indigo
+  '#64748B', // Slate Gray
 ];
 
 const getCategoryColor = (index: number): string => {
@@ -78,16 +79,18 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
     backgroundGradientFrom: colors.surface,
     backgroundGradientTo: colors.surface,
     decimalPlaces: 0,
-    color: (opacity = 1) => `rgba(74, 144, 226, ${opacity})`,
-    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+    color: (opacity = 1) => `rgba(34, 197, 94, ${opacity})`, // Primary green
+    labelColor: (opacity = 1) => `rgba(26, 28, 33, ${opacity})`, // Text color
     style: {
       borderRadius: radii.md,
     },
     propsForDots: {
-      r: '4',
+      r: '5',
       strokeWidth: '2',
       stroke: colors.primary,
     },
+    fillShadowGradient: colors.primary,
+    fillShadowGradientOpacity: 0.1,
   };
 
   const hasData = byCategory.length > 0 && monthlyTrend.some(m => m.amount > 0);
@@ -135,20 +138,7 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
 
       {/* Monthly Trend - Bar Chart */}
       {monthlyTrend.length > 0 && (
-        <View style={styles.chartSection}>
-          <Text style={styles.sectionTitle}>Monthly Trend</Text>
-          <View style={styles.barChartContainer}>
-            <BarChart
-              data={barData}
-              width={screenWidth - spacing.xl * 2}
-              height={220}
-              chartConfig={chartConfig}
-              verticalLabelRotation={0}
-              showValuesOnTopOfBars
-              fromZero
-            />
-          </View>
-        </View>
+        <MonthlyTrendChart monthlyTrend={monthlyTrend} />
       )}
 
       {/* Predictions */}
@@ -183,8 +173,12 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
     backgroundColor: colors.surface,
     borderRadius: radii.lg,
-    padding: spacing.md,
-    ...(shadows.md as object),
+    padding: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    ...(shadows.sm as object),
   },
   sectionTitle: {
     fontSize: fontSizes.lg,
@@ -196,8 +190,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.md,
   },
+  barChartWrapper: {
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.md,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
+  },
   barChartContainer: {
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  barChart: {
+    marginVertical: 0,
   },
   categoryList: {
     marginTop: spacing.sm,
@@ -230,12 +234,13 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   predictionContainer: {
-    backgroundColor: colors.accentSoft,
+    backgroundColor: colors.tealUltraSoft,
     borderRadius: radii.lg,
-    padding: spacing.md,
+    padding: spacing.lg,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: colors.accent,
+    borderColor: colors.tealSoft,
+    ...(shadows.xs as object),
   },
   predictionTitle: {
     fontSize: fontSizes.sm,

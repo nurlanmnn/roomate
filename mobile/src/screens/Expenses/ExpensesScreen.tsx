@@ -8,7 +8,8 @@ import { ExpenseCard } from '../../components/ExpenseCard';
 import { BalanceSummary } from '../../components/BalanceSummary';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
-import { colors, fontSizes, fontWeights, spacing } from '../../theme';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, fontSizes, fontWeights, spacing, radii, shadows } from '../../theme';
 
 export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { selectedHousehold } = useHousehold();
@@ -98,6 +99,16 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         />
       </View>
 
+      {/* Category reminder message */}
+      {expenses.length > 0 && expenses.some(e => !e.category) && (
+        <View style={styles.infoBanner}>
+          <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
+          <Text style={styles.infoText}>
+            For better insights into your spending trends, consider adding categories to your expenses when creating them.
+          </Text>
+        </View>
+      )}
+
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Recent Expenses</Text>
         {expenses.length === 0 ? (
@@ -155,5 +166,23 @@ const styles = StyleSheet.create({
     color: colors.muted,
     textAlign: 'center',
     padding: spacing.xxl,
+  },
+  infoBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: colors.primarySoft,
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.md,
+    padding: spacing.md,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    gap: spacing.sm,
+  },
+  infoText: {
+    flex: 1,
+    fontSize: fontSizes.sm,
+    color: colors.text,
+    lineHeight: 20,
   },
 });
