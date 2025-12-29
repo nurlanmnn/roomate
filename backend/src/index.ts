@@ -14,7 +14,9 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: config.frontendUrl,
+  origin: process.env.NODE_ENV !== 'production'
+    ? true // Allow all origins in development (for mobile device access)
+    : config.frontendUrl,
   credentials: true,
 }));
 // Increase body size limit to handle base64 image data URLs (can be several MB)
@@ -38,8 +40,9 @@ app.get('/health', (req, res) => {
 const startServer = async () => {
   try {
     await connectDB();
-    app.listen(config.port, () => {
+    app.listen(config.port, '0.0.0.0', () => {
       console.log(`Server running on port ${config.port}`);
+      console.log(`Accessible at http://localhost:${config.port} or http://192.168.1.187:${config.port}`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);

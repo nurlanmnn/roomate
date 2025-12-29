@@ -1,8 +1,11 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
+// For development: Use your Mac's local IP address when testing on physical devices
+// Find your IP with: ifconfig | grep "inet " | grep -v 127.0.0.1
+// Or check System Preferences > Network
 const API_BASE_URL = __DEV__ 
-  ? 'http://localhost:3000' 
+  ? 'http://192.168.1.187:3000' // Replace with your Mac's local IP address
   : 'https://your-production-api.com'; // Change this in production
 
 class ApiClient {

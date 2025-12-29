@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHousehold } from '../../context/HouseholdContext';
@@ -29,6 +29,7 @@ export const HomeScreen: React.FC = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [shoppingItems, setShoppingItems] = useState<ShoppingItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [insights, setInsights] = useState<any>(null);
 
   useEffect(() => {
@@ -91,6 +92,7 @@ export const HomeScreen: React.FC = () => {
       console.error('Failed to load home data:', error);
     } finally {
       setLoading(false);
+      setInitialLoading(false);
     }
   };
 
@@ -150,6 +152,18 @@ export const HomeScreen: React.FC = () => {
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>Please select a household</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Show loading indicator on initial load
+  if (initialLoading) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>Loading...</Text>
         </View>
       </SafeAreaView>
     );
@@ -318,6 +332,17 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: fontSizes.md,
     color: colors.muted,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  loadingText: {
+    marginTop: spacing.md,
+    fontSize: fontSizes.md,
+    color: colors.textSecondary,
   },
   header: {
     paddingHorizontal: spacing.xl,

@@ -165,6 +165,36 @@ export const ShoppingListScreen: React.FC = () => {
       return;
     }
 
+    // Optimistic update - update UI immediately
+    const updatedItem = {
+      ...editingItem,
+      name: editItemName.trim(),
+      quantity: editItemQuantity ? parseInt(editItemQuantity, 10) : undefined,
+      weight: editItemWeight ? parseInt(editItemWeight, 10) : undefined,
+      weightUnit: editItemWeightUnit || undefined,
+      isShared: editItemIsShared,
+      ownerId: editItemIsShared ? undefined : editItemOwnerId,
+    };
+
+    // Update local state immediately
+    setItems(items.map(item => 
+      item._id === editingItem._id ? updatedItem : item
+    ));
+    setCompletedItems(completedItems.map(item => 
+      item._id === editingItem._id ? updatedItem : item
+    ));
+
+    // Close modal immediately
+    setEditingItem(null);
+    setEditItemName('');
+    setEditItemQuantity('');
+    setEditItemWeight('');
+    setEditItemWeightUnit('');
+    setShowEditUnitDropdown(false);
+    setEditItemIsShared(true);
+    setEditItemOwnerId('');
+
+    // Then sync with server in background
     try {
       await shoppingApi.updateShoppingItem(editingItem._id, {
         name: editItemName.trim(),
@@ -174,17 +204,12 @@ export const ShoppingListScreen: React.FC = () => {
         isShared: editItemIsShared,
         ownerId: editItemIsShared ? undefined : editItemOwnerId,
       });
-      setEditingItem(null);
-      setEditItemName('');
-      setEditItemQuantity('');
-      setEditItemWeight('');
-      setEditItemWeightUnit('');
-      setShowEditUnitDropdown(false);
-      setEditItemIsShared(true);
-      setEditItemOwnerId('');
+      // Reload to ensure we have the latest data from server
       loadItems();
     } catch (error: any) {
+      // If update fails, reload to revert optimistic update
       Alert.alert('Error', error.response?.data?.error || 'Failed to update item');
+      loadItems();
     }
   };
 

@@ -38,6 +38,25 @@ const ShoppingItemSchema = new Schema<IShoppingItem>({
   weight: {
     type: Number,
     min: 0,
+    set: function(value: any) {
+      // Prevent invalid values from being set
+      if (value === null || value === undefined || value === '') {
+        return undefined;
+      }
+      if (typeof value === 'string') {
+        // Reject strings that look like units
+        const weightUnits = ['lbs', 'kg', 'g', 'oz', 'liter', 'ml', 'fl oz', 'cup', 'pint', 'quart', 'gallon', 'k'];
+        if (weightUnits.includes(value.toLowerCase().trim())) {
+          return undefined;
+        }
+        const num = parseFloat(value);
+        return isNaN(num) || num <= 0 ? undefined : num;
+      }
+      if (typeof value === 'number' && !isNaN(value) && value > 0) {
+        return value;
+      }
+      return undefined;
+    },
   },
   weightUnit: {
     type: String,

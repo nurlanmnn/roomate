@@ -208,18 +208,31 @@ const updateShoppingItemSchema = z.object({
     z.string().transform((val) => {
       if (!val || val.trim() === '') return undefined;
       const num = parseInt(val, 10);
-      return isNaN(num) ? undefined : num;
+      if (isNaN(num) || num <= 0) return undefined;
+      return num;
     }),
+    z.undefined(),
   ]).optional(),
   weight: z.union([
-    z.number().int().positive(),
+    z.number().positive(),
     z.string().transform((val) => {
       if (!val || val.trim() === '') return undefined;
-      const num = parseInt(val, 10);
-      return isNaN(num) ? undefined : num;
+      // Reject strings that look like weight units
+      const weightUnits = ['lbs', 'kg', 'g', 'oz', 'liter', 'ml', 'fl oz', 'cup', 'pint', 'quart', 'gallon', 'k'];
+      if (weightUnits.includes(val.toLowerCase().trim())) {
+        return undefined;
+      }
+      // Try parsing as float (for decimal weights like 1.5)
+      const num = parseFloat(val);
+      if (isNaN(num) || num <= 0) return undefined;
+      return num;
     }),
-  ]).optional(),
-  weightUnit: z.enum(['lbs', 'kg', 'g', 'oz', 'liter', 'ml', 'fl oz', 'cup', 'pint', 'quart', 'gallon']).optional(),
+    z.undefined(),
+  ]).optional().refine((val) => {
+    // Final check: ensure value is either undefined or a valid positive number
+    return val === undefined || (typeof val === 'number' && !isNaN(val) && val > 0);
+  }, { message: 'Weight must be a positive number' }),
+  weightUnit: z.enum(['lbs', 'kg', 'g', 'oz', 'liter', 'ml', 'fl oz', 'cup', 'pint', 'quart', 'gallon']).optional().or(z.undefined()),
   category: z.string().optional(),
   isShared: z.boolean().optional(),
   ownerId: z
@@ -348,7 +361,29 @@ router.patch('/:id', authMiddleware, async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
+    // Log incoming data for debugging
+    console.log('Update shopping item request body:', JSON.stringify(req.body));
+    
     const data = updateShoppingItemSchema.parse(req.body);
+    
+    // Additional validation: ensure weight is never a string that looks like a unit
+    if (data.weight !== undefined) {
+      if (typeof data.weight === 'string') {
+        // If weight is a string that matches weight unit values, it's invalid
+        const weightUnits = ['lbs', 'kg', 'g', 'oz', 'liter', 'ml', 'fl oz', 'cup', 'pint', 'quart', 'gallon', 'k'];
+        if (weightUnits.includes(data.weight.toLowerCase())) {
+          console.warn('Invalid weight value detected (looks like unit):', data.weight);
+          data.weight = undefined; // Clear invalid weight
+        }
+      }
+      // Ensure weight is a valid number
+      if (typeof data.weight !== 'number' || isNaN(data.weight) || data.weight <= 0) {
+        console.warn('Invalid weight value:', data.weight);
+        data.weight = undefined;
+      }
+    }
+    
+    console.log('Parsed and validated data:', JSON.stringify(data));
 
     const item = await ShoppingItem.findById(req.params.id);
     if (!item) {
@@ -367,9 +402,21 @@ router.patch('/:id', authMiddleware, async (req: Request, res: Response) => {
 
     // Update fields
     if (data.name !== undefined) item.name = data.name;
-    if (data.quantity !== undefined) item.quantity = data.quantity;
-    if (data.weight !== undefined) item.weight = data.weight;
-    if (data.weightUnit !== undefined) item.weightUnit = data.weightUnit;
+    if (data.quantity !== undefined) {
+      item.quantity = data.quantity === null || data.quantity === undefined ? undefined : data.quantity;
+    }
+    if (data.weight !== undefined) {
+      // Ensure weight is a valid number, not a string or invalid value
+      if (typeof data.weight === 'number' && !isNaN(data.weight) && data.weight > 0) {
+        item.weight = data.weight;
+      } else {
+        // If weight is invalid, set to undefined to clear it
+        item.weight = undefined;
+      }
+    }
+    if (data.weightUnit !== undefined) {
+      item.weightUnit = data.weightUnit === null || data.weightUnit === '' ? undefined : data.weightUnit;
+    }
     if (data.category !== undefined) item.category = data.category;
     if (data.isShared !== undefined) item.isShared = data.isShared;
     if (data.ownerId !== undefined) {
