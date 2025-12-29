@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
 import { expensesApi, PairwiseBalance } from '../../api/expensesApi';
@@ -13,6 +14,7 @@ import * as Sharing from 'expo-sharing';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
 import { Avatar } from '../../components/ui/Avatar';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
 
 export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
@@ -25,6 +27,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState('');
   const [note, setNote] = useState('');
+  const [proofImage, setProofImage] = useState<string | null>(null);
 
   useEffect(() => {
     if (selectedHousehold) {
@@ -79,7 +82,43 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     setAmount(balance.amount.toFixed(2));
     setMethod('');
     setNote('');
+    setProofImage(null);
     setSettleModalVisible(true);
+  };
+
+  const handlePickProofImage = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'We need access to your photos to add proof of payment.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        if (asset.base64) {
+          // Construct data URL
+          const mimeType = asset.type === 'image' ? 'image/jpeg' : 'image/png';
+          const dataUrl = `data:${mimeType};base64,${asset.base64}`;
+          setProofImage(dataUrl);
+        }
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image');
+    }
+  };
+
+  const handleRemoveProofImage = () => {
+    setProofImage(null);
   };
 
   const handleNetBalance = async (balance: PairwiseBalance) => {
@@ -141,8 +180,10 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         method,
         note: note || undefined,
         date: new Date().toISOString(),
+        proofImageUrl: proofImage || undefined,
       });
       setSettleModalVisible(false);
+      setProofImage(null);
       loadBalances();
       navigation.goBack();
     } catch (error: any) {
@@ -183,6 +224,16 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
           keyboardShouldPersistTaps="handled"
         >
       <ScreenHeader title="Settle Up" subtitle={selectedHousehold.name} />
+
+      <View style={styles.historyButtonContainer}>
+        <TouchableOpacity
+          style={styles.historyButton}
+          onPress={() => navigation.navigate('SettlementHistory')}
+        >
+          <Ionicons name="receipt-outline" size={20} color={colors.primary} />
+          <Text style={styles.historyButtonText}>View Settlement History</Text>
+        </TouchableOpacity>
+      </View>
 
       {userOwedBalances.length === 0 ? (
         <EmptyState
@@ -282,6 +333,28 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
               placeholder="Add a note"
               multiline
             />
+            <View style={styles.proofSection}>
+              <Text style={styles.proofLabel}>Proof of Payment (Optional)</Text>
+              {proofImage ? (
+                <View style={styles.proofImageContainer}>
+                  <Image source={{ uri: proofImage }} style={styles.proofImage} />
+                  <TouchableOpacity
+                    style={styles.removeProofButton}
+                    onPress={handleRemoveProofImage}
+                  >
+                    <Ionicons name="close-circle" size={24} color={colors.danger} />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.addProofButton}
+                  onPress={handlePickProofImage}
+                >
+                  <Ionicons name="camera-outline" size={24} color={colors.primary} />
+                  <Text style={styles.addProofText}>Add Photo</Text>
+                </TouchableOpacity>
+              )}
+            </View>
             <View style={styles.modalActions}>
               <PrimaryButton
                 title="Cancel"
@@ -418,6 +491,74 @@ const styles = StyleSheet.create({
   },
   spacer: {
     width: spacing.sm,
+  },
+  proofSection: {
+    marginBottom: spacing.md,
+  },
+  proofLabel: {
+    fontSize: fontSizes.sm,
+    fontWeight: fontWeights.semibold,
+    color: colors.text,
+    marginBottom: spacing.xs,
+  },
+  proofImageContainer: {
+    position: 'relative',
+    width: '100%',
+    height: 200,
+    borderRadius: radii.md,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  proofImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  removeProofButton: {
+    position: 'absolute',
+    top: spacing.xs,
+    right: spacing.xs,
+    backgroundColor: colors.surface,
+    borderRadius: radii.full,
+    padding: spacing.xxs,
+  },
+  addProofButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    padding: spacing.md,
+    borderWidth: 2,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
+    borderRadius: radii.md,
+    backgroundColor: colors.background,
+  },
+  addProofText: {
+    fontSize: fontSizes.sm,
+    color: colors.primary,
+    fontWeight: fontWeights.medium,
+  },
+  historyButtonContainer: {
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  historyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    padding: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  historyButtonText: {
+    fontSize: fontSizes.sm,
+    color: colors.primary,
+    fontWeight: fontWeights.semibold,
   },
 });
 

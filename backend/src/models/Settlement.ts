@@ -8,6 +8,7 @@ export interface ISettlement extends Document {
   method?: string;
   note?: string;
   date: Date;
+  proofImageUrl?: string;
   createdAt: Date;
 }
 
@@ -44,6 +45,10 @@ const SettlementSchema = new Schema<ISettlement>({
     type: Date,
     required: true,
     default: Date.now,
+  },
+  proofImageUrl: {
+    type: String,
+    trim: true,
   },
   createdAt: {
     type: Date,

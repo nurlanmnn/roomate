@@ -5,7 +5,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useAuth } from '../context/AuthContext';
 import { useHousehold } from '../context/HouseholdContext';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../theme';
+import { colors, fontSizes, fontWeights } from '../theme';
 
 // Auth Screens
 import { LandingScreen } from '../screens/Auth/LandingScreen';
@@ -21,6 +21,7 @@ import { HomeScreen } from '../screens/Home/HomeScreen';
 import { ExpensesScreen } from '../screens/Expenses/ExpensesScreen';
 import { CreateExpenseScreen } from '../screens/Expenses/CreateExpenseScreen';
 import { SettleUpScreen } from '../screens/Expenses/SettleUpScreen';
+import { SettlementHistoryScreen } from '../screens/Expenses/SettlementHistoryScreen';
 import { ShoppingListScreen } from '../screens/Shopping/ShoppingListScreen';
 import { CalendarScreen } from '../screens/Calendar/CalendarScreen';
 import { CreateEventScreen } from '../screens/Calendar/CreateEventScreen';
@@ -167,6 +168,21 @@ const MainNavigator = () => {
         name="SettleUp"
         component={SettleUpScreen}
         options={{ title: 'Settle Up' }}
+      />
+      <MainStack.Screen
+        name="SettlementHistory"
+        component={SettlementHistoryScreen}
+        options={{ 
+          title: 'Settlement History',
+          headerStyle: {
+            backgroundColor: colors.background,
+          },
+          headerTitleStyle: {
+            fontWeight: fontWeights.extrabold,
+            fontSize: fontSizes.lg,
+          },
+          headerBackTitleVisible: false,
+        }}
       />
       <MainStack.Screen
         name="CreateEvent"

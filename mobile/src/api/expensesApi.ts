@@ -35,6 +35,7 @@ export interface PairwiseBalance {
   fromUserId: string;
   toUserId: string;
   amount: number;
+  sinceDate?: string; // Oldest expense date that contributes to this balance
 }
 
 export const expensesApi = {

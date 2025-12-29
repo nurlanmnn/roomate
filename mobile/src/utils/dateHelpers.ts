@@ -18,3 +18,8 @@ export const formatTime = (dateString: string): string => {
   return format(date, 'h:mm a');
 };
 
+export const formatDateShort = (dateString: string): string => {
+  const date = parseISO(dateString);
+  return format(date, 'dd.MM.yyyy');
+};
+

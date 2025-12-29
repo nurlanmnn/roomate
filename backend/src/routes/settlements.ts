@@ -17,6 +17,7 @@ const createSettlementSchema = z.object({
   method: z.string().optional(),
   note: z.string().optional(),
   date: z.string().datetime().or(z.date()),
+  proofImageUrl: z.string().max(1000000).optional(), // Accept data URLs (base64 images can be large)
 });
 
 const netBalanceSchema = z.object({
@@ -98,6 +99,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
       method: data.method,
       note: data.note,
       date: new Date(data.date),
+      proofImageUrl: data.proofImageUrl,
     });
     await settlement.save();
 

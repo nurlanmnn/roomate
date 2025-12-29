@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { PairwiseBalance } from '../api/expensesApi';
 import { formatCurrency } from '../utils/formatCurrency';
+import { formatDateShort } from '../utils/dateHelpers';
 import { colors, fontSizes, fontWeights, radii, spacing, shadows } from '../theme';
 import { Avatar } from './ui/Avatar';
 
@@ -42,21 +43,28 @@ export const BalanceSummary: React.FC<BalanceSummaryProps> = ({
           <View key={index} style={styles.balanceRow}>
             <View style={styles.balanceContent}>
               <Avatar name={otherUserName} uri={otherUserAvatar} size={32} />
-              <Text style={styles.balanceText}>
-                {isOwed ? (
-                  <>
-                    <Text style={styles.userName}>{otherUserName}</Text>
-                    {' owes you '}
-                    <Text style={styles.amountPositive}>{formatCurrency(balance.amount)}</Text>
-                  </>
-                ) : (
-                  <>
-                    You owe <Text style={styles.userName}>{otherUserName}</Text>
-                    {' '}
-                    <Text style={styles.amountNegative}>{formatCurrency(balance.amount)}</Text>
-                  </>
+              <View style={styles.balanceTextContainer}>
+                <Text style={styles.balanceText}>
+                  {isOwed ? (
+                    <>
+                      <Text style={styles.userName}>{otherUserName}</Text>
+                      {' owes you '}
+                      <Text style={styles.amountPositive}>{formatCurrency(balance.amount)}</Text>
+                    </>
+                  ) : (
+                    <>
+                      You owe <Text style={styles.userName}>{otherUserName}</Text>
+                      {' '}
+                      <Text style={styles.amountNegative}>{formatCurrency(balance.amount)}</Text>
+                    </>
+                  )}
+                </Text>
+                {balance.sinceDate && (
+                  <Text style={styles.sinceDate}>
+                    since {formatDateShort(balance.sinceDate)}
+                  </Text>
                 )}
-              </Text>
+              </View>
             </View>
           </View>
         );
@@ -91,10 +99,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
+  balanceTextContainer: {
+    flex: 1,
+  },
   balanceText: {
     fontSize: fontSizes.md,
     color: colors.text,
-    flex: 1,
+  },
+  sinceDate: {
+    fontSize: fontSizes.xs,
+    color: colors.textTertiary,
+    marginTop: spacing.xxs,
   },
   userName: {
     fontWeight: fontWeights.semibold,

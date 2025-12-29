@@ -86,7 +86,33 @@ router.get('/household/:householdId/balances', authMiddleware, async (req: Reque
 
     const balances = computeBalances(expenses, settlements);
 
-    res.json(balances);
+    // Calculate oldest expense date for each balance (when the debt started)
+    const balancesWithSinceDate = balances.map(balance => {
+      // Find all expenses that contribute to this balance
+      const contributingExpenses = expenses.filter(expense => {
+        const paidById = expense.paidBy.toString();
+        return expense.shares.some(share => {
+          const shareUserId = share.userId.toString();
+          // Check if this expense creates debt from fromUserId to toUserId
+          return (shareUserId === balance.fromUserId && paidById === balance.toUserId);
+        });
+      });
+
+      // Find the oldest expense date (when expense was created, not when it was made)
+      const oldestDate = contributingExpenses.length > 0
+        ? contributingExpenses.reduce((oldest, expense) => {
+            const expenseDate = expense.createdAt || expense.date;
+            return expenseDate < oldest ? expenseDate : oldest;
+          }, contributingExpenses[0].createdAt || contributingExpenses[0].date)
+        : null;
+
+      return {
+        ...balance,
+        sinceDate: oldestDate ? oldestDate.toISOString() : null,
+      };
+    });
+
+    res.json(balancesWithSinceDate);
   } catch (error) {
     console.error('Get balances error:', error);
     res.status(500).json({ error: 'Internal server error' });

@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Expense } from '../api/expensesApi';
 import { formatCurrency } from '../utils/formatCurrency';
-import { formatDate } from '../utils/dateHelpers';
+import { formatDate, formatDateShort } from '../utils/dateHelpers';
 import { colors, fontSizes, fontWeights, radii, spacing, shadows } from '../theme';
 import { Avatar } from './ui/Avatar';
 
@@ -39,9 +39,16 @@ export const ExpenseCard: React.FC<ExpenseCardProps> = ({ expense, onDelete, can
       <View style={styles.metaRow}>
         <View style={styles.paidByRow}>
           <Avatar name={paidByName} uri={expense.paidBy?.avatarUrl} size={20} />
-          <Text style={styles.paidBy}>
-            Paid by {paidByName} • {formatDate(expense.date)}
-          </Text>
+          <View style={styles.paidByContainer}>
+            <Text style={styles.paidBy}>
+              Paid by {paidByName} • {formatDate(expense.date)}
+            </Text>
+            {expense.createdAt && (
+              <Text style={styles.sinceDate}>
+                Added since {formatDateShort(expense.createdAt)}
+              </Text>
+            )}
+          </View>
         </View>
         {canDelete && onDelete && (
           <TouchableOpacity onPress={handleDelete} style={styles.deleteButton}>
@@ -99,9 +106,17 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     flex: 1,
   },
+  paidByContainer: {
+    flex: 1,
+  },
   paidBy: {
     fontSize: fontSizes.sm,
     color: colors.textSecondary,
+  },
+  sinceDate: {
+    fontSize: fontSizes.xs,
+    color: colors.textTertiary,
+    marginTop: spacing.xxs,
   },
   deleteButton: {
     paddingVertical: spacing.xxs,

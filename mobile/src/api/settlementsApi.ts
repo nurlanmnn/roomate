@@ -3,12 +3,13 @@ import { apiClient } from './apiClient';
 export interface Settlement {
   _id: string;
   householdId: string;
-  fromUserId: { _id: string; name: string; email: string };
-  toUserId: { _id: string; name: string; email: string };
+  fromUserId: { _id: string; name: string; email: string; avatarUrl?: string } | string | null;
+  toUserId: { _id: string; name: string; email: string; avatarUrl?: string } | string | null;
   amount: number;
   method?: string;
   note?: string;
   date: string;
+  proofImageUrl?: string;
   createdAt: string;
 }
 
@@ -20,6 +21,7 @@ export interface CreateSettlementData {
   method?: string;
   note?: string;
   date: string;
+  proofImageUrl?: string;
 }
 
 export interface NetBalanceData {
