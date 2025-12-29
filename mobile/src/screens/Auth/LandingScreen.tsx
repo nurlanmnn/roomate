@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PrimaryButton } from '../../components/PrimaryButton';
 
@@ -21,12 +21,11 @@ export const LandingScreen: React.FC<{ navigation: any }> = ({ navigation }) => 
             onPress={() => navigation.navigate('Login')}
           />
           <View style={styles.spacer} />
-          <TouchableOpacity
-            style={styles.signupButton}
+          <PrimaryButton
+            title="Create Account"
             onPress={() => navigation.navigate('Signup')}
-          >
-            <Text style={styles.signupButtonText}>Create Account</Text>
-          </TouchableOpacity>
+            variant="outline"
+          />
         </View>
       </View>
     </SafeAreaView>
@@ -69,21 +68,6 @@ const styles = StyleSheet.create({
   },
   spacer: {
     height: 16,
-  },
-  signupButton: {
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-    borderWidth: 2,
-    borderColor: '#4CAF50',
-    minHeight: 50,
-  },
-  signupButtonText: {
-    color: '#4CAF50',
-    fontSize: 16,
-    fontWeight: '600',
   },
 });
 

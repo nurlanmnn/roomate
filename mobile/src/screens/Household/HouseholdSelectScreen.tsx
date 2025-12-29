@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, Modal, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { householdsApi, Household } from '../../api/householdsApi';
 import { useHousehold } from '../../context/HouseholdContext';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { FormTextInput } from '../../components/FormTextInput';
+import { EmptyState } from '../../components/ui/EmptyState';
 import { colors, spacing } from '../../theme';
 
 export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
@@ -83,9 +85,15 @@ export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigatio
       <ScrollView style={styles.scrollView}>
       <View style={styles.header}>
         <Text style={styles.title}>Select Household</Text>
+        <TouchableOpacity
+          style={styles.settingsButton}
+          onPress={() => navigation.navigate('Settings', { fromHouseholdSelect: true })}
+        >
+          <Ionicons name="settings-outline" size={24} color={colors.text} />
+        </TouchableOpacity>
       </View>
 
-      {households.length > 0 && (
+      {households.length > 0 ? (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Your Households</Text>
           {households.map((household) => (
@@ -102,7 +110,16 @@ export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigatio
             </TouchableOpacity>
           ))}
         </View>
-      )}
+      ) : !loading ? (
+        <View style={styles.emptyStateContainer}>
+          <EmptyState
+            icon="home-outline"
+            title="No Household Yet"
+            message="You're not part of any household. Create a new one or join an existing household using a code."
+            variant="minimal"
+          />
+        </View>
+      ) : null}
 
       <View style={styles.actions}>
         <PrimaryButton
@@ -215,11 +232,19 @@ const styles = StyleSheet.create({
   header: {
     padding: 24,
     paddingTop: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   title: {
     fontSize: 32,
     fontWeight: '700',
     color: '#333',
+    flex: 1,
+  },
+  settingsButton: {
+    padding: 8,
+    marginLeft: spacing.md,
   },
   section: {
     padding: 24,
@@ -290,6 +315,10 @@ const styles = StyleSheet.create({
   },
   buttonSpacer: {
     width: spacing.md,
+  },
+  emptyStateContainer: {
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xxl,
   },
 });
 

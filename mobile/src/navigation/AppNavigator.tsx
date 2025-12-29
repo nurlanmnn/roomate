@@ -1,5 +1,5 @@
-import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import React, { useEffect } from 'react';
+import { NavigationContainer, useNavigation } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useAuth } from '../context/AuthContext';
@@ -142,6 +142,33 @@ const TabIcon: React.FC<{ name: string; color: string; focused: boolean }> = ({ 
   return <Ionicons name={focused ? iconSet.filled : iconSet.outline} size={22} color={color} />;
 };
 
+// Wrapper component for MainTabs that redirects if no household
+const MainTabsWithGuard = () => {
+  const { selectedHousehold } = useHousehold();
+  const navigation = useNavigation<any>();
+
+  useEffect(() => {
+    // Redirect to HouseholdSelect if no household is selected or household is invalid
+    if (!selectedHousehold || !selectedHousehold._id) {
+      // Use requestAnimationFrame to ensure navigation happens after render
+      const frameId = requestAnimationFrame(() => {
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'HouseholdSelect' }],
+        });
+      });
+      return () => cancelAnimationFrame(frameId);
+    }
+  }, [selectedHousehold, navigation]);
+
+  // Don't render tabs if no household
+  if (!selectedHousehold || !selectedHousehold._id) {
+    return null;
+  }
+
+  return <MainTabs />;
+};
+
 const MainNavigator = () => {
   const { selectedHousehold } = useHousehold();
 
@@ -156,7 +183,7 @@ const MainNavigator = () => {
       />
       <MainStack.Screen
         name="Main"
-        component={MainTabs}
+        component={MainTabsWithGuard}
         options={{ headerShown: false }}
       />
       <MainStack.Screen
@@ -167,7 +194,17 @@ const MainNavigator = () => {
       <MainStack.Screen
         name="SettleUp"
         component={SettleUpScreen}
-        options={{ title: 'Settle Up' }}
+        options={{
+          title: 'Settle Up',
+          headerStyle: {
+            backgroundColor: colors.background,
+          },
+          headerTitleStyle: {
+            fontWeight: fontWeights.extrabold,
+            fontSize: fontSizes.lg,
+          },
+          headerBackTitleVisible: false,
+        }}
       />
       <MainStack.Screen
         name="SettlementHistory"
@@ -198,6 +235,28 @@ const MainNavigator = () => {
         name="AccountSettings"
         component={AccountSettingsScreen}
         options={{ title: 'Account Settings' }}
+      />
+      <MainStack.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={({ navigation, route }) => {
+          const fromHouseholdSelect = route.params?.fromHouseholdSelect;
+          return {
+            title: 'Settings',
+            headerStyle: {
+              backgroundColor: colors.background,
+            },
+            headerTitleStyle: {
+              fontWeight: fontWeights.extrabold,
+              fontSize: fontSizes.lg,
+            },
+            headerBackTitleVisible: false,
+            headerShown: true,
+            // Ensure back button works when coming from HouseholdSelect
+            gestureEnabled: true,
+            headerBackVisible: true,
+          };
+        }}
       />
     </MainStack.Navigator>
   );

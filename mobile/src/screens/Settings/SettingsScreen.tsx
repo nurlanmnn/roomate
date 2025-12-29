@@ -1,19 +1,38 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import React, { useEffect, useState, useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
+import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useHousehold } from '../../context/HouseholdContext';
 import { householdsApi } from '../../api/householdsApi';
+import { authApi } from '../../api/authApi';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { FormTextInput } from '../../components/FormTextInput';
 import * as Sharing from 'expo-sharing';
 import { colors, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
 
-export const SettingsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
+export const SettingsScreen: React.FC<{ navigation: any; route?: any }> = ({ navigation, route }) => {
   const { user, logout, refreshUser } = useAuth();
   const { selectedHousehold, setSelectedHousehold } = useHousehold();
   const [isOwner, setIsOwner] = useState(false);
+  
+  // Check if Settings was accessed from HouseholdSelectScreen (not from within a household)
+  const fromHouseholdSelect = route?.params?.fromHouseholdSelect || false;
+  // Only show household options if we have a household AND we're not coming from HouseholdSelectScreen
+  const showHouseholdOptions = selectedHousehold && !fromHouseholdSelect;
+  
+  // Account settings state
+  const [name, setName] = useState(user?.name || '');
+  const [savingName, setSavingName] = useState(false);
+  const [avatarUri, setAvatarUri] = useState<string | null>(user?.avatarUrl || null);
+  const [savingAvatar, setSavingAvatar] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (selectedHousehold && user) {
@@ -24,6 +43,26 @@ export const SettingsScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   useEffect(() => {
     refreshUser();
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      setName(user.name || '');
+      setAvatarUri(user.avatarUrl || null);
+    }
+  }, [user]);
+
+  const canSaveName = useMemo(() => {
+    const trimmed = name.trim();
+    return !!user && trimmed.length > 0 && trimmed !== user.name;
+  }, [name, user]);
+
+  const canSaveAvatar = useMemo(() => {
+    return !!user && !!avatarUri && avatarUri !== (user.avatarUrl || '');
+  }, [avatarUri, user]);
+
+  const canChangePassword = useMemo(() => {
+    return currentPassword.length > 0 && newPassword.length >= 6;
+  }, [currentPassword, newPassword]);
 
   const handleCopyCode = async () => {
     if (selectedHousehold) {
@@ -100,39 +139,255 @@ export const SettingsScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     ]);
   };
 
+  const handleSaveName = async () => {
+    if (!canSaveName) return;
+    try {
+      setSavingName(true);
+      await authApi.updateProfile({ name: name.trim() });
+      await refreshUser();
+      Alert.alert('Saved', 'Your name has been updated.');
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.error || 'Failed to update name');
+    } finally {
+      setSavingName(false);
+    }
+  };
+
+  const handlePickImage = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please grant camera roll permissions to select a photo.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: 'images',
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        if (asset.base64) {
+          let mimeType = 'image/jpeg';
+          const uriLower = asset.uri.toLowerCase();
+          if (uriLower.includes('.png')) {
+            mimeType = 'image/png';
+          } else if (uriLower.includes('.gif')) {
+            mimeType = 'image/gif';
+          } else if (uriLower.includes('.webp')) {
+            mimeType = 'image/webp';
+          }
+          const base64DataUrl = `data:${mimeType};base64,${asset.base64}`;
+          setAvatarUri(base64DataUrl);
+        }
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image');
+    }
+  };
+
+  const handleSaveAvatar = async () => {
+    if (!canSaveAvatar || !avatarUri) return;
+    try {
+      setSavingAvatar(true);
+      await authApi.updateProfile({ avatarUrl: avatarUri });
+      await refreshUser();
+      Alert.alert('Saved', 'Your profile photo has been updated.');
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.error || 'Failed to update profile photo');
+    } finally {
+      setSavingAvatar(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!canChangePassword) {
+      Alert.alert('Error', 'New password must be at least 6 characters.');
+      return;
+    }
+
+    Alert.alert(
+      'Change Password',
+      'Are you sure you want to change your password?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Change',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setChangingPassword(true);
+              await authApi.changePassword({ currentPassword, newPassword });
+              setCurrentPassword('');
+              setNewPassword('');
+              Alert.alert('Success', 'Password changed.');
+            } catch (error: any) {
+              Alert.alert('Error', error.response?.data?.error || 'Failed to change password');
+            } finally {
+              setChangingPassword(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!deletePassword) {
+      Alert.alert('Error', 'Please enter your password to confirm.');
+      return;
+    }
+
+    Alert.alert(
+      'Delete Account',
+      'This will permanently delete your account. This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setDeleting(true);
+              await authApi.deleteAccount({ password: deletePassword });
+              await logout();
+            } catch (error: any) {
+              Alert.alert('Error', error.response?.data?.error || 'Failed to delete account');
+            } finally {
+              setDeleting(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView style={styles.scrollView}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Settings</Text>
-      </View>
-
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Account</Text>
         <View style={styles.avatarRow}>
-          <Avatar name={user?.name} uri={user?.avatarUrl} size={52} />
+          <TouchableOpacity onPress={handlePickImage} activeOpacity={0.7}>
+            <View style={styles.avatarContainer}>
+              {avatarUri && avatarUri !== user?.avatarUrl ? (
+                <Image source={{ uri: avatarUri }} style={styles.avatarPreview} />
+              ) : (
+                <Avatar name={user?.name} uri={user?.avatarUrl} size={52} />
+              )}
+              <View style={styles.avatarOverlay}>
+                <Text style={styles.avatarOverlayText}>📷</Text>
+              </View>
+            </View>
+          </TouchableOpacity>
           <View style={styles.avatarMeta}>
             <Text style={styles.avatarName}>{user?.name}</Text>
             <Text style={styles.avatarEmail}>{user?.email}</Text>
           </View>
         </View>
-        {!user?.isEmailVerified && (
+        {avatarUri && avatarUri !== user?.avatarUrl && (
           <PrimaryButton
-            title="Resend Verification Email"
-            onPress={handleResendVerification}
+            title="Save Photo"
+            onPress={handleSaveAvatar}
+            disabled={!canSaveAvatar}
+            loading={savingAvatar}
+            variant="secondary"
+          />
+        )}
+        {(!avatarUri || avatarUri === user?.avatarUrl) && (
+          <PrimaryButton
+            title="Change Photo"
+            onPress={handlePickImage}
+            variant="secondary"
           />
         )}
         <View style={styles.spacer} />
-        <TouchableOpacity
-          style={styles.linkRow}
-          onPress={() => navigation.getParent()?.navigate('AccountSettings')}
-        >
-          <Text style={styles.linkRowText}>Account Settings</Text>
-          <Text style={styles.linkRowChevron}>›</Text>
-        </TouchableOpacity>
+        <FormTextInput
+          label="Name"
+          value={name}
+          onChangeText={setName}
+          placeholder="Your name"
+          autoCapitalize="words"
+        />
+        <PrimaryButton 
+          title="Save Name" 
+          onPress={handleSaveName} 
+          disabled={!canSaveName} 
+          loading={savingName}
+          variant="secondary"
+        />
+        {!user?.isEmailVerified && (
+          <>
+            <View style={styles.spacer} />
+            <PrimaryButton
+              title="Resend Verification Email"
+              onPress={handleResendVerification}
+              variant="secondary"
+            />
+          </>
+        )}
       </View>
 
-      {selectedHousehold && (
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Change Password</Text>
+        <FormTextInput
+          label="Current Password"
+          value={currentPassword}
+          onChangeText={setCurrentPassword}
+          placeholder="Current password"
+          secureTextEntry
+        />
+        <FormTextInput
+          label="New Password"
+          value={newPassword}
+          onChangeText={setNewPassword}
+          placeholder="New password (min 6 chars)"
+          secureTextEntry
+        />
+        <PrimaryButton
+          title="Change Password"
+          onPress={handleChangePassword}
+          disabled={!canChangePassword}
+          loading={changingPassword}
+          variant="secondary"
+        />
+      </View>
+
+      <View style={[styles.section, styles.dangerSection]}>
+        <Text style={[styles.sectionTitle, styles.dangerTitle]}>Danger Zone</Text>
+        <Text style={styles.dangerText}>
+          To delete your account, confirm your password. If you own a household, you must transfer/delete it first.
+        </Text>
+        <FormTextInput
+          label="Password"
+          value={deletePassword}
+          onChangeText={setDeletePassword}
+          placeholder="Password"
+          secureTextEntry
+        />
+        <PrimaryButton 
+          title="Delete Account" 
+          onPress={handleDeleteAccount} 
+          loading={deleting}
+          variant="secondary"
+        />
+      </View>
+
+      {showHouseholdOptions && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Household</Text>
           <View style={styles.infoRow}>
@@ -184,31 +439,36 @@ export const SettingsScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Actions</Text>
-        <PrimaryButton
-          title="Switch Household"
-          onPress={handleSwitchHousehold}
-        />
-        {selectedHousehold && !isOwner && (
+        {showHouseholdOptions && (
           <>
-            <View style={styles.spacer} />
             <PrimaryButton
-              title="Leave Household"
-              onPress={handleLeaveHousehold}
+              title="Switch Household"
+              onPress={handleSwitchHousehold}
             />
+            {!isOwner && (
+              <>
+                <View style={styles.spacer} />
+                <PrimaryButton
+                  title="Leave Household"
+                  onPress={handleLeaveHousehold}
+                />
+              </>
+            )}
+            {isOwner && (
+              <Text style={styles.ownerNote}>
+                Note: Owners cannot leave the household
+              </Text>
+            )}
+            <View style={styles.spacer} />
           </>
         )}
-        {selectedHousehold && isOwner && (
-          <Text style={styles.ownerNote}>
-            Note: Owners cannot leave the household
-          </Text>
-        )}
-        <View style={styles.spacer} />
         <PrimaryButton
           title="Log Out"
           onPress={handleLogout}
         />
       </View>
     </ScrollView>
+    </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -220,6 +480,46 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: spacing.xl,
+    paddingTop: spacing.md,
+  },
+  avatarContainer: {
+    position: 'relative',
+  },
+  avatarPreview: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+  },
+  avatarOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+    borderWidth: 2,
+    borderColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarOverlayText: {
+    fontSize: 12,
+  },
+  dangerSection: {
+    borderColor: '#ffdddd',
+  },
+  dangerTitle: {
+    color: '#b00020',
+  },
+  dangerText: {
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
+    lineHeight: 18,
+    fontSize: fontSizes.sm,
   },
   header: {
     paddingHorizontal: spacing.xl,

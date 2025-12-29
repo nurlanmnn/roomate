@@ -11,7 +11,6 @@ import { FormTextInput } from '../../components/FormTextInput';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { formatCurrency } from '../../utils/formatCurrency';
 import * as Sharing from 'expo-sharing';
-import { ScreenHeader } from '../../components/ui/ScreenHeader';
 import { Avatar } from '../../components/ui/Avatar';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { Ionicons } from '@expo/vector-icons';
@@ -221,10 +220,9 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
       >
         <ScrollView 
           style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
-      <ScreenHeader title="Settle Up" subtitle={selectedHousehold.name} />
-
       <View style={styles.historyButtonContainer}>
         <TouchableOpacity
           style={styles.historyButton}
@@ -539,6 +537,10 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.sm,
     color: colors.primary,
     fontWeight: fontWeights.medium,
+  },
+  scrollContent: {
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xl,
   },
   historyButtonContainer: {
     paddingHorizontal: spacing.lg,
