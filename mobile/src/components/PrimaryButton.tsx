@@ -1,5 +1,6 @@
 import React from 'react';
-import { Text, StyleSheet, ActivityIndicator, Pressable, ViewStyle } from 'react-native';
+import { StyleSheet, ActivityIndicator, Pressable, ViewStyle } from 'react-native';
+import { AppText } from './AppText';
 import { colors, fontSizes, fontWeights, radii, spacing, shadows } from '../theme';
 
 interface PrimaryButtonProps {
@@ -48,7 +49,7 @@ export const PrimaryButton: React.FC<PrimaryButtonProps> = ({
       {loading ? (
         <ActivityIndicator color={variant === 'outline' ? colors.primary : colors.surface} />
       ) : (
-        <Text style={textStyle}>{title}</Text>
+        <AppText style={textStyle}>{title}</AppText>
       )}
     </Pressable>
   );

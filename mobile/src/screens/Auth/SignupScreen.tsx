@@ -19,8 +19,8 @@ export const SignupScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
       return;
     }
 
-    if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
+    if (password.length < 8) {
+      Alert.alert('Error', 'Password must be at least 8 characters');
       return;
     }
 
@@ -82,7 +82,7 @@ export const SignupScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
         label="Password"
         value={password}
         onChangeText={setPassword}
-        placeholder="At least 6 characters"
+        placeholder="At least 8 characters"
         secureTextEntry
       />
 

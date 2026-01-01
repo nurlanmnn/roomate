@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { AppText } from './AppText';
 import { Expense } from '../api/expensesApi';
 import { formatCurrency } from '../utils/formatCurrency';
 import { formatDate, formatDateShort } from '../utils/dateHelpers';
@@ -33,35 +34,35 @@ export const ExpenseCard: React.FC<ExpenseCardProps> = ({ expense, onDelete, can
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <Text style={styles.description}>{expense.description}</Text>
-        <Text style={styles.amount}>{formatCurrency(expense.totalAmount)}</Text>
+        <AppText style={styles.description}>{expense.description}</AppText>
+        <AppText style={styles.amount}>{formatCurrency(expense.totalAmount)}</AppText>
       </View>
       <View style={styles.metaRow}>
         <View style={styles.paidByRow}>
           <Avatar name={paidByName} uri={expense.paidBy?.avatarUrl} size={20} />
           <View style={styles.paidByContainer}>
-            <Text style={styles.paidBy}>
+            <AppText style={styles.paidBy}>
               Paid by {paidByName} • {formatDate(expense.date)}
-            </Text>
+            </AppText>
             {expense.createdAt && (
-              <Text style={styles.sinceDate}>
+              <AppText style={styles.sinceDate}>
                 Added since {formatDateShort(expense.createdAt)}
-              </Text>
+              </AppText>
             )}
           </View>
         </View>
         {canDelete && onDelete && (
           <TouchableOpacity onPress={handleDelete} style={styles.deleteButton}>
-            <Text style={styles.deleteText}>Delete</Text>
+            <AppText style={styles.deleteText}>Delete</AppText>
           </TouchableOpacity>
         )}
       </View>
       {expense.category && (
-        <Text style={styles.category}>{expense.category}</Text>
+        <AppText style={styles.category}>{expense.category}</AppText>
       )}
-      <Text style={styles.participants}>
+      <AppText style={styles.participants}>
         Split among {expense.participants.length} {expense.participants.length === 1 ? 'person' : 'people'}
-      </Text>
+      </AppText>
     </View>
   );
 };

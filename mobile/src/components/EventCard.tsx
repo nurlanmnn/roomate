@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { AppText } from './AppText';
 import { Event } from '../api/eventsApi';
 import { formatDateTime, formatTime } from '../utils/dateHelpers';
 import { colors, fontSizes, fontWeights, radii, spacing, shadows } from '../theme';
@@ -22,15 +23,15 @@ export const EventCard: React.FC<EventCardProps> = ({ event }) => {
       <View style={styles.header}>
         <Ionicons name={typeIcons[event.type] || 'calendar-outline'} size={22} color={colors.muted} />
         <View style={styles.content}>
-          <Text style={styles.title}>{event.title}</Text>
-          <Text style={styles.time}>
+          <AppText style={styles.title}>{event.title}</AppText>
+          <AppText style={styles.time}>
             {formatDateTime(event.date)}
             {event.endDate && ` - ${formatTime(event.endDate)}`}
-          </Text>
+          </AppText>
         </View>
       </View>
       {event.description && (
-        <Text style={styles.description}>{event.description}</Text>
+        <AppText style={styles.description}>{event.description}</AppText>
       )}
     </View>
   );

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, RefreshControl, Alert, Modal, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, StyleSheet, ScrollView, TextInput, TouchableOpacity, RefreshControl, Alert, Modal, KeyboardAvoidingView, Platform } from 'react-native';
+import { AppText } from '../../components/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
@@ -372,7 +373,7 @@ export const ShoppingListScreen: React.FC = () => {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>Please select a household</Text>
+          <AppText style={styles.emptyText}>Please select a household</AppText>
         </View>
       </SafeAreaView>
     );
@@ -424,14 +425,14 @@ export const ShoppingListScreen: React.FC = () => {
                 onPress={() => setSelectedList(list)}
                 onLongPress={() => handleEditList(list)}
               >
-                <Text
+                <AppText
                   style={[
                     styles.listCardText,
                     selectedList?._id === list._id && styles.listCardTextSelected,
                   ]}
                 >
                   {list.name}
-                </Text>
+                </AppText>
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -440,7 +441,7 @@ export const ShoppingListScreen: React.FC = () => {
         {selectedList ? (
           <>
             <View style={styles.listHeader}>
-              <Text style={styles.listTitle}>{selectedList.name}</Text>
+              <AppText style={styles.listTitle}>{selectedList.name}</AppText>
               <View style={styles.listHeaderActions}>
                 <TouchableOpacity
                   style={styles.listActionButton}
@@ -459,9 +460,9 @@ export const ShoppingListScreen: React.FC = () => {
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>To Buy</Text>
+              <AppText style={styles.sectionTitle}>To Buy</AppText>
               {filteredItems.length === 0 ? (
-                <Text style={styles.emptyText}>No items to buy</Text>
+                <AppText style={styles.emptyText}>No items to buy</AppText>
               ) : (
                 filteredItems.map((item) => (
                   <ShoppingItemRow
@@ -481,10 +482,10 @@ export const ShoppingListScreen: React.FC = () => {
                   onPress={() => setShowCompleted(!showCompleted)}
                   style={styles.completedHeader}
                 >
-                  <Text style={styles.sectionTitle}>
+                  <AppText style={styles.sectionTitle}>
                     Completed ({filteredCompletedItems.length})
-                  </Text>
-                  <Text>{showCompleted ? '▼' : '▶'}</Text>
+                  </AppText>
+                  <AppText>{showCompleted ? '▼' : '▶'}</AppText>
                 </TouchableOpacity>
                 {showCompleted &&
                   filteredCompletedItems.map((item) => (
@@ -500,7 +501,7 @@ export const ShoppingListScreen: React.FC = () => {
             )}
 
             <View style={styles.addSection}>
-              <Text style={styles.addSectionTitle}>Add Item</Text>
+              <AppText style={styles.addSectionTitle}>Add Item</AppText>
               <TextInput
                 style={styles.input}
                 value={name}
@@ -535,10 +536,10 @@ export const ShoppingListScreen: React.FC = () => {
                     style={styles.dropdownButton}
                     onPress={() => setShowUnitDropdown(!showUnitDropdown)}
                   >
-                    <Text style={[styles.dropdownButtonText, !weightUnit && styles.dropdownPlaceholder]}>
+                    <AppText style={[styles.dropdownButtonText, !weightUnit && styles.dropdownPlaceholder]}>
                       {weightUnit || 'Select Unit'}
-                    </Text>
-                    <Text style={styles.dropdownArrow}>{showUnitDropdown ? '▲' : '▼'}</Text>
+                    </AppText>
+                    <AppText style={styles.dropdownArrow}>{showUnitDropdown ? '▲' : '▼'}</AppText>
                   </TouchableOpacity>
                   {showUnitDropdown && (
                     <View style={styles.dropdownMenu}>
@@ -555,14 +556,14 @@ export const ShoppingListScreen: React.FC = () => {
                               setShowUnitDropdown(false);
                             }}
                           >
-                            <Text
+                            <AppText
                               style={[
                                 styles.dropdownItemText,
                                 weightUnit === unit && styles.dropdownItemTextSelected,
                               ]}
                             >
                               {unit}
-                            </Text>
+                            </AppText>
                           </TouchableOpacity>
                         ))}
                         <TouchableOpacity
@@ -572,7 +573,7 @@ export const ShoppingListScreen: React.FC = () => {
                             setShowUnitDropdown(false);
                           }}
                         >
-                          <Text style={styles.dropdownItemText}>None</Text>
+                          <AppText style={styles.dropdownItemText}>None</AppText>
                         </TouchableOpacity>
                       </ScrollView>
                     </View>
@@ -580,7 +581,7 @@ export const ShoppingListScreen: React.FC = () => {
                 </View>
               </View>
               <View style={styles.toggleRow}>
-                <Text>Shared</Text>
+                <AppText>Shared</AppText>
                 <TouchableOpacity
                   style={[styles.toggle, isShared && styles.toggleActive]}
                   onPress={() => {
@@ -588,22 +589,22 @@ export const ShoppingListScreen: React.FC = () => {
                     setOwnerId('');
                   }}
                 >
-                  <Text style={isShared ? styles.toggleTextActive : styles.toggleText}>
+                  <AppText style={isShared ? styles.toggleTextActive : styles.toggleText}>
                     Yes
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.toggle, !isShared && styles.toggleActive]}
                   onPress={() => setIsShared(false)}
                 >
-                  <Text style={!isShared ? styles.toggleTextActive : styles.toggleText}>
+                  <AppText style={!isShared ? styles.toggleTextActive : styles.toggleText}>
                     No
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
               </View>
               {!isShared && (
                 <View style={styles.ownerSelect}>
-                  <Text style={styles.label}>Owner</Text>
+                  <AppText style={styles.label}>Owner</AppText>
                   {selectedHousehold.members.map((member) => (
                     <TouchableOpacity
                       key={member._id}
@@ -613,7 +614,7 @@ export const ShoppingListScreen: React.FC = () => {
                       ]}
                       onPress={() => setOwnerId(member._id)}
                     >
-                      <Text>{member.name}</Text>
+                      <AppText>{member.name}</AppText>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -623,7 +624,7 @@ export const ShoppingListScreen: React.FC = () => {
           </>
         ) : (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No shopping lists yet. Create one to get started!</Text>
+            <AppText style={styles.emptyText}>No shopping lists yet. Create one to get started!</AppText>
           </View>
         )}
       </ScrollView>
@@ -645,9 +646,9 @@ export const ShoppingListScreen: React.FC = () => {
           keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>
+            <AppText style={styles.modalTitle}>
               {editingList ? 'Edit List' : 'Create New List'}
-            </Text>
+            </AppText>
             <TextInput
               style={styles.input}
               value={newListName}
@@ -700,7 +701,7 @@ export const ShoppingListScreen: React.FC = () => {
             keyboardShouldPersistTaps="handled"
           >
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Edit Item</Text>
+              <AppText style={styles.modalTitle}>Edit Item</AppText>
               <TextInput
                 style={styles.input}
                 value={editItemName}
@@ -736,10 +737,10 @@ export const ShoppingListScreen: React.FC = () => {
                     style={styles.dropdownButton}
                     onPress={() => setShowEditUnitDropdown(!showEditUnitDropdown)}
                   >
-                    <Text style={[styles.dropdownButtonText, !editItemWeightUnit && styles.dropdownPlaceholder]}>
+                    <AppText style={[styles.dropdownButtonText, !editItemWeightUnit && styles.dropdownPlaceholder]}>
                       {editItemWeightUnit || 'Select Unit'}
-                    </Text>
-                    <Text style={styles.dropdownArrow}>{showEditUnitDropdown ? '▲' : '▼'}</Text>
+                    </AppText>
+                    <AppText style={styles.dropdownArrow}>{showEditUnitDropdown ? '▲' : '▼'}</AppText>
                   </TouchableOpacity>
                   {showEditUnitDropdown && (
                     <View style={styles.dropdownMenu}>
@@ -756,14 +757,14 @@ export const ShoppingListScreen: React.FC = () => {
                               setShowEditUnitDropdown(false);
                             }}
                           >
-                            <Text
+                            <AppText
                               style={[
                                 styles.dropdownItemText,
                                 editItemWeightUnit === unit && styles.dropdownItemTextSelected,
                               ]}
                             >
                               {unit}
-                            </Text>
+                            </AppText>
                           </TouchableOpacity>
                         ))}
                         <TouchableOpacity
@@ -773,7 +774,7 @@ export const ShoppingListScreen: React.FC = () => {
                             setShowEditUnitDropdown(false);
                           }}
                         >
-                          <Text style={styles.dropdownItemText}>None</Text>
+                          <AppText style={styles.dropdownItemText}>None</AppText>
                         </TouchableOpacity>
                       </ScrollView>
                     </View>
@@ -781,7 +782,7 @@ export const ShoppingListScreen: React.FC = () => {
                 </View>
               </View>
               <View style={styles.toggleRow}>
-                <Text>Shared</Text>
+                <AppText>Shared</AppText>
                 <TouchableOpacity
                   style={[styles.toggle, editItemIsShared && styles.toggleActive]}
                   onPress={() => {
@@ -789,22 +790,22 @@ export const ShoppingListScreen: React.FC = () => {
                     setEditItemOwnerId('');
                   }}
                 >
-                  <Text style={editItemIsShared ? styles.toggleTextActive : styles.toggleText}>
+                  <AppText style={editItemIsShared ? styles.toggleTextActive : styles.toggleText}>
                     Yes
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.toggle, !editItemIsShared && styles.toggleActive]}
                   onPress={() => setEditItemIsShared(false)}
                 >
-                  <Text style={!editItemIsShared ? styles.toggleTextActive : styles.toggleText}>
+                  <AppText style={!editItemIsShared ? styles.toggleTextActive : styles.toggleText}>
                     No
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
               </View>
               {!editItemIsShared && selectedHousehold && (
                 <View style={styles.ownerSelect}>
-                  <Text style={styles.label}>Owner</Text>
+                  <AppText style={styles.label}>Owner</AppText>
                   {selectedHousehold.members.map((member) => (
                     <TouchableOpacity
                       key={member._id}
@@ -814,7 +815,7 @@ export const ShoppingListScreen: React.FC = () => {
                       ]}
                       onPress={() => setEditItemOwnerId(member._id)}
                     >
-                      <Text>{member.name}</Text>
+                      <AppText>{member.name}</AppText>
                     </TouchableOpacity>
                   ))}
                 </View>

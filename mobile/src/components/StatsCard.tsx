@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { AppText } from './AppText';
 import { colors, fontSizes, fontWeights, radii, spacing, shadows } from '../theme';
 
 interface StatsCardProps {
@@ -22,8 +23,8 @@ export const StatsCard: React.FC<StatsCardProps> = ({
       <View style={[styles.iconContainer, { backgroundColor: iconBgColor }]}>
         <View style={styles.icon}>{icon}</View>
       </View>
-      <Text style={styles.value}>{value}</Text>
-      <Text style={styles.label}>{label}</Text>
+      <AppText style={styles.value}>{value}</AppText>
+      <AppText style={styles.label}>{label}</AppText>
     </View>
   );
 };

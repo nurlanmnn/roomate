@@ -1,5 +1,6 @@
 import React from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
+import { AppText } from '../AppText';
 import { colors, fontSizes, fontWeights, radii, spacing } from '../../theme';
 
 type AvatarProps = {
@@ -31,7 +32,7 @@ export const Avatar: React.FC<AvatarProps> = ({ name, uri, size = 44 }) => {
 
   return (
     <View style={[styles.fallback, dim]}>
-      <Text style={[styles.initials, { fontSize: Math.max(14, size * 0.38) }]}>{initials}</Text>
+      <AppText style={[styles.initials, { fontSize: Math.max(14, size * 0.38) }]}>{initials}</AppText>
     </View>
   );
 };

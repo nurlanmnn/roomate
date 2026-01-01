@@ -1,9 +1,14 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, StyleSheet, Dimensions } from 'react-native';
+import { AppText } from './AppText';
 import { PieChart, BarChart } from 'react-native-chart-kit';
 import { colors, fontSizes, fontWeights, spacing, radii, shadows } from '../theme';
 import { formatCurrency } from '../utils/formatCurrency';
 import { MonthlyTrendChart } from './MonthlyTrendChart';
+
+// #region agent log
+fetch('http://127.0.0.1:7242/ingest/16e3335f-6715-4f8a-beae-87df786dbc1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SpendingChart.tsx:7',message:'SpendingChart importing MonthlyTrendChart',data:{monthlyTrendChartType:typeof MonthlyTrendChart,isUndefined:MonthlyTrendChart === undefined,isFunction:typeof MonthlyTrendChart === 'function',isClass:typeof MonthlyTrendChart === 'function' && MonthlyTrendChart.prototype},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+// #endregion
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -98,7 +103,7 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
   if (!hasData) {
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>No spending data available yet</Text>
+        <AppText style={styles.emptyText}>No spending data available yet</AppText>
       </View>
     );
   }
@@ -108,7 +113,7 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
       {/* Category Breakdown - Pie Chart */}
       {topCategories.length > 0 && (
         <View style={styles.chartSection}>
-          <Text style={styles.sectionTitle}>Spending by Category</Text>
+          <AppText style={styles.sectionTitle}>Spending by Category</AppText>
           <View style={styles.pieChartContainer}>
             <PieChart
               data={pieData}
@@ -125,11 +130,11 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
             {topCategories.map((cat, index) => (
               <View key={cat.category} style={styles.categoryItem}>
                 <View style={[styles.colorDot, { backgroundColor: getCategoryColor(index) }]} />
-                <Text style={styles.categoryName}>
+                <AppText style={styles.categoryName}>
                   {cat.category.charAt(0).toUpperCase() + cat.category.slice(1)}
-                </Text>
-                <Text style={styles.categoryAmount}>{formatCurrency(cat.amount)}</Text>
-                <Text style={styles.categoryPercentage}>({cat.percentage.toFixed(1)}%)</Text>
+                </AppText>
+                <AppText style={styles.categoryAmount}>{formatCurrency(cat.amount)}</AppText>
+                <AppText style={styles.categoryPercentage}>({cat.percentage.toFixed(1)}%)</AppText>
               </View>
             ))}
           </View>
@@ -138,19 +143,22 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
 
       {/* Monthly Trend - Bar Chart */}
       {monthlyTrend.length > 0 && (
+        // #region agent log
+        (() => {fetch('http://127.0.0.1:7242/ingest/16e3335f-6715-4f8a-beae-87df786dbc1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SpendingChart.tsx:142',message:'Before rendering MonthlyTrendChart',data:{monthlyTrendChartType:typeof MonthlyTrendChart,isUndefined:MonthlyTrendChart === undefined,monthlyTrendLength:monthlyTrend.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{}); return null;})() ||
+        // #endregion
         <MonthlyTrendChart monthlyTrend={monthlyTrend} />
       )}
 
       {/* Predictions */}
       {predictions && (
         <View style={styles.predictionContainer}>
-          <Text style={styles.predictionTitle}>Next Month Prediction</Text>
-          <Text style={styles.predictionAmount}>{formatCurrency(predictions.nextMonth)}</Text>
-          <Text style={styles.predictionTrend}>
+          <AppText style={styles.predictionTitle}>Next Month Prediction</AppText>
+          <AppText style={styles.predictionAmount}>{formatCurrency(predictions.nextMonth)}</AppText>
+          <AppText style={styles.predictionTrend}>
             Trend: {predictions.trend === 'increasing' ? '📈 Increasing' : 
                    predictions.trend === 'decreasing' ? '📉 Decreasing' : 
                    '➡️ Stable'}
-          </Text>
+          </AppText>
         </View>
       )}
     </View>

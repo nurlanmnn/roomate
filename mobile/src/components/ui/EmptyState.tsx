@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { AppText } from '../AppText';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSizes, fontWeights, spacing, radii, shadows, lineHeights } from '../../theme';
 import { PrimaryButton } from '../PrimaryButton';
@@ -25,8 +26,8 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
     return (
       <View style={styles.minimalContainer}>
         <Ionicons name={icon} size={48} color={colors.textTertiary} />
-        <Text style={styles.minimalTitle}>{title}</Text>
-        <Text style={styles.minimalMessage}>{message}</Text>
+        <AppText style={styles.minimalTitle}>{title}</AppText>
+        <AppText style={styles.minimalMessage}>{message}</AppText>
       </View>
     );
   }
@@ -36,8 +37,8 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       <View style={styles.iconContainer}>
         <Ionicons name={icon} size={56} color={colors.primary} />
       </View>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.message}>{message}</Text>
+      <AppText style={styles.title}>{title}</AppText>
+      <AppText style={styles.message}>{message}</AppText>
       {actionLabel && onAction && (
         <View style={styles.actionContainer}>
           <PrimaryButton title={actionLabel} onPress={onAction} />

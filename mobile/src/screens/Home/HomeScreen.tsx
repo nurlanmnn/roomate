@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
+import { AppText } from '../../components/AppText';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHousehold } from '../../context/HouseholdContext';
@@ -151,7 +153,7 @@ export const HomeScreen: React.FC = () => {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>Please select a household</Text>
+          <AppText style={styles.emptyText}>Please select a household</AppText>
         </View>
       </SafeAreaView>
     );
@@ -163,7 +165,7 @@ export const HomeScreen: React.FC = () => {
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Loading...</Text>
+          <AppText style={styles.loadingText}>Loading...</AppText>
         </View>
       </SafeAreaView>
     );
@@ -176,9 +178,9 @@ export const HomeScreen: React.FC = () => {
         refreshControl={<RefreshControl refreshing={loading} onRefresh={loadData} />}
       >
       <View style={styles.header}>
-        <Text style={styles.title}>{selectedHousehold.name}</Text>
+        <AppText style={styles.title}>{selectedHousehold.name}</AppText>
         {selectedHousehold.address && (
-          <Text style={styles.address}>{selectedHousehold.address}</Text>
+          <AppText style={styles.address}>{selectedHousehold.address}</AppText>
         )}
       </View>
 
@@ -211,34 +213,61 @@ export const HomeScreen: React.FC = () => {
 
       {/* Welcome Message & Quick Actions for New Users */}
       {!hasData && (
-        <View style={styles.welcomeSection}>
-          <Text style={styles.welcomeTitle}>Welcome to {selectedHousehold.name}! 👋</Text>
-          <Text style={styles.welcomeText}>
-            Get started by adding your first expense, creating a shopping list, or setting up a goal.
-          </Text>
+        <View style={styles.emptyStateContainer}>
+          <View style={styles.welcomeSection}>
+            <View style={styles.welcomeIconContainer}>
+              <Ionicons name="home-outline" size={48} color={colors.primary} />
+            </View>
+            <AppText style={styles.welcomeTitle}>Welcome to {selectedHousehold.name}! 👋</AppText>
+            <AppText style={styles.welcomeText}>
+              Get started by adding your first expense, creating a shopping list, or setting up a goal.
+            </AppText>
+            {selectedHousehold.members.length === 1 && selectedHousehold.joinCode && (
+              <View style={styles.inviteMessageContainer}>
+                <Ionicons name="people-outline" size={20} color={colors.primary} />
+                <AppText style={styles.inviteMessage}>
+                  Invite your roommates using the code:{' '}
+                </AppText>
+                <TouchableOpacity
+                  onPress={async () => {
+                    await Clipboard.setStringAsync(selectedHousehold.joinCode);
+                    Alert.alert('Copied!', 'Join code copied to clipboard');
+                  }}
+                  style={styles.joinCodeContainer}
+                >
+                  <AppText style={styles.joinCode}>{selectedHousehold.joinCode}</AppText>
+                  <Ionicons name="copy-outline" size={16} color={colors.primary} style={styles.copyIcon} />
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
           <View style={styles.quickActionsContainer}>
-            <QuickActionButton
-              icon={<Ionicons name="add-circle-outline" size={22} color={colors.primary} />}
-              label="Add Expense"
-              onPress={() => {
-                navigation.getParent()?.navigate('CreateExpense');
-              }}
-            />
-            <QuickActionButton
-              icon={<Ionicons name="cart-outline" size={22} color={colors.primary} />}
-              label="Shopping List"
-              onPress={() => navigation.navigate('Shopping')}
-            />
-            <QuickActionButton
-              icon={<Ionicons name="flag-outline" size={22} color={colors.primary} />}
-              label="New Goal"
-              onPress={() => navigation.navigate('Goals')}
-            />
-            <QuickActionButton
-              icon={<Ionicons name="calendar-outline" size={22} color={colors.primary} />}
-              label="Add Event"
-              onPress={() => navigation.navigate('Calendar')}
-            />
+            <View style={styles.quickActionsRow}>
+              <QuickActionButton
+                icon={<Ionicons name="add-circle-outline" size={24} color={colors.primary} />}
+                label="Add Expense"
+                onPress={() => {
+                  navigation.getParent()?.navigate('CreateExpense');
+                }}
+              />
+              <QuickActionButton
+                icon={<Ionicons name="cart-outline" size={24} color={colors.primary} />}
+                label="Shopping List"
+                onPress={() => navigation.navigate('Shopping')}
+              />
+            </View>
+            <View style={styles.quickActionsRow}>
+              <QuickActionButton
+                icon={<Ionicons name="flag-outline" size={24} color={colors.primary} />}
+                label="New Goal"
+                onPress={() => navigation.navigate('Goals')}
+              />
+              <QuickActionButton
+                icon={<Ionicons name="calendar-outline" size={24} color={colors.primary} />}
+                label="Add Event"
+                onPress={() => navigation.navigate('Calendar')}
+              />
+            </View>
           </View>
         </View>
       )}
@@ -247,7 +276,7 @@ export const HomeScreen: React.FC = () => {
       {insights && insights.byCategory.length > 0 && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Spending Insights</Text>
+            <AppText style={styles.sectionTitle}>Spending Insights</AppText>
           </View>
           <SpendingChart
             byCategory={insights.byCategory}
@@ -273,9 +302,9 @@ export const HomeScreen: React.FC = () => {
       {events.length > 0 && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Upcoming Events</Text>
+            <AppText style={styles.sectionTitle}>Upcoming Events</AppText>
             <TouchableOpacity onPress={() => navigation.navigate('Calendar')}>
-              <Text style={styles.seeAllText}>See All</Text>
+              <AppText style={styles.seeAllText}>See All</AppText>
             </TouchableOpacity>
           </View>
           {events.slice(0, 3).map((event) => (
@@ -288,9 +317,9 @@ export const HomeScreen: React.FC = () => {
       {goals.length > 0 && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Active Goals</Text>
+            <AppText style={styles.sectionTitle}>Active Goals</AppText>
             <TouchableOpacity onPress={() => navigation.navigate('Goals')}>
-              <Text style={styles.seeAllText}>See All</Text>
+              <AppText style={styles.seeAllText}>See All</AppText>
             </TouchableOpacity>
           </View>
           {goals.map((goal) => (
@@ -392,15 +421,28 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: fontWeights.semibold,
   },
+  emptyStateContainer: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
+  },
   welcomeSection: {
     padding: spacing.xxl,
     backgroundColor: colors.surface,
-    marginHorizontal: spacing.xl,
-    marginTop: spacing.lg,
     borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: colors.borderLight,
+    alignItems: 'center',
+    marginBottom: spacing.xl,
     ...(shadows.sm as object),
+  },
+  welcomeIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.primaryUltraSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
   },
   welcomeTitle: {
     fontSize: fontSizes.xxl,
@@ -414,13 +456,53 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.md,
     color: colors.textSecondary,
     textAlign: 'center',
-    marginBottom: spacing.xl,
     lineHeight: lineHeights.md,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.md,
+  },
+  inviteMessageContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryUltraSoft,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.md,
+    marginTop: spacing.md,
+    gap: spacing.xs,
+    flexWrap: 'wrap',
+  },
+  inviteMessage: {
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  joinCodeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    gap: spacing.xs,
+  },
+  joinCode: {
+    fontSize: fontSizes.sm,
+    fontWeight: fontWeights.bold,
+    color: colors.primary,
+    letterSpacing: 1,
+  },
+  copyIcon: {
+    marginLeft: spacing.xxs,
   },
   quickActionsContainer: {
+    gap: spacing.md,
+  },
+  quickActionsRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    gap: spacing.md,
   },
 });
 

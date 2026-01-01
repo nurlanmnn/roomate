@@ -1,5 +1,6 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { AppText } from '../AppText';
 import { colors, fontSizes, fontWeights, spacing } from '../../theme';
 
 type ScreenHeaderProps = {
@@ -13,12 +14,12 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({ title, subtitle, rig
   return (
     <View style={styles.container}>
       <View style={styles.left}>
-        <Text style={styles.title}>{title}</Text>
-        {!!subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+        <AppText style={styles.title}>{title}</AppText>
+        {!!subtitle && <AppText style={styles.subtitle}>{subtitle}</AppText>}
       </View>
       {!!rightText && !!onRightPress && (
         <Pressable onPress={onRightPress} style={styles.right}>
-          <Text style={styles.rightText}>{rightText}</Text>
+          <AppText style={styles.rightText}>{rightText}</AppText>
         </Pressable>
       )}
     </View>

@@ -1,7 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Dimensions } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Animated, Dimensions } from 'react-native';
+import { AppText } from './AppText';
 import { colors, fontSizes, fontWeights, spacing, radii, shadows } from '../theme';
 import { formatCurrency } from '../utils/formatCurrency';
+
+// #region agent log
+fetch('http://127.0.0.1:7242/ingest/16e3335f-6715-4f8a-beae-87df786dbc1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MonthlyTrendChart.tsx:6',message:'MonthlyTrendChart module loading',data:{appTextType:typeof AppText,appTextValue:AppText?.toString?.()?.substring(0,100),isUndefined:AppText === undefined,isFunction:typeof AppText === 'function',isClass:typeof AppText === 'function' && AppText.prototype},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+// #endregion
 
 const screenWidth = Dimensions.get('window').width;
 const PLOT_HEIGHT = 200;
@@ -29,7 +34,22 @@ const clamp = (value: number, min: number, max: number): number => {
   return Math.max(min, Math.min(max, value));
 };
 
-export const MonthlyTrendChart: React.FC<MonthlyTrendChartProps> = ({ monthlyTrend }) => {
+// #region agent log
+try {
+  fetch('http://127.0.0.1:7242/ingest/16e3335f-6715-4f8a-beae-87df786dbc1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MonthlyTrendChart.tsx:33',message:'Before component definition',data:{appTextType:typeof AppText,appTextIsFunction:typeof AppText === 'function',appTextConstructor:AppText?.constructor?.name,reactType:typeof React,reactCreateElementType:typeof React.createElement},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'D'})}).catch(()=>{});
+} catch(e) {
+  fetch('http://127.0.0.1:7242/ingest/16e3335f-6715-4f8a-beae-87df786dbc1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MonthlyTrendChart.tsx:33',message:'Error before component definition',data:{error:e?.message,stack:e?.stack?.substring(0,200)},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'D'})}).catch(()=>{});
+}
+// #endregion
+
+const MonthlyTrendChartComponent = ({ monthlyTrend }: MonthlyTrendChartProps) => {
+  // #region agent log
+  try {
+    fetch('http://127.0.0.1:7242/ingest/16e3335f-6715-4f8a-beae-87df786dbc1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MonthlyTrendChart.tsx:42',message:'MonthlyTrendChart component entry',data:{appTextType:typeof AppText,appTextIsUndefined:AppText === undefined,appTextIsFunction:typeof AppText === 'function',monthlyTrendLength:monthlyTrend?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'A'})}).catch(()=>{});
+  } catch(e) {
+    fetch('http://127.0.0.1:7242/ingest/16e3335f-6715-4f8a-beae-87df786dbc1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MonthlyTrendChart.tsx:42',message:'Error in component entry',data:{error:e?.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'A'})}).catch(()=>{});
+  }
+  // #endregion
   const [selectedRange, setSelectedRange] = useState<MonthRange>(6);
   const [barAnimations, setBarAnimations] = useState<Animated.Value[]>([]);
 
@@ -146,7 +166,10 @@ export const MonthlyTrendChart: React.FC<MonthlyTrendChartProps> = ({ monthlyTre
     return (
       <View style={styles.chartSection}>
         <View style={styles.headerRow}>
-          <Text style={styles.sectionTitle}>Monthly Trend</Text>
+          {/* #region agent log */}
+          {(() => {try {fetch('http://127.0.0.1:7242/ingest/16e3335f-6715-4f8a-beae-87df786dbc1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MonthlyTrendChart.tsx:160',message:'Before rendering AppText in empty state',data:{appTextType:typeof AppText,appTextIsUndefined:AppText === undefined,appTextIsFunction:typeof AppText === 'function',appTextToString:AppText?.toString?.()?.substring(0,50)},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'A'})}).catch(()=>{});} catch(e) {fetch('http://127.0.0.1:7242/ingest/16e3335f-6715-4f8a-beae-87df786dbc1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MonthlyTrendChart.tsx:160',message:'Error checking AppText',data:{error:e?.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'A'})}).catch(()=>{});} return null;})()}
+          {/* #endregion */}
+          <AppText style={styles.sectionTitle}>Monthly Trend</AppText>
           <View style={styles.rangeSelector}>
             {([1, 3, 6] as MonthRange[]).map((range) => (
               <TouchableOpacity
@@ -157,20 +180,20 @@ export const MonthlyTrendChart: React.FC<MonthlyTrendChartProps> = ({ monthlyTre
                 ]}
                 onPress={() => setSelectedRange(range)}
               >
-                <Text
+                <AppText
                   style={[
                     styles.rangeButtonText,
                     selectedRange === range && styles.rangeButtonTextActive,
                   ]}
                 >
                   {range}M
-                </Text>
+                </AppText>
               </TouchableOpacity>
             ))}
           </View>
         </View>
         <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>No spending data for this period</Text>
+          <AppText style={styles.emptyText}>No spending data for this period</AppText>
         </View>
       </View>
     );
@@ -180,7 +203,7 @@ export const MonthlyTrendChart: React.FC<MonthlyTrendChartProps> = ({ monthlyTre
     <View style={styles.chartSection}>
       {/* HeaderRow: Title + Range Selector */}
       <View style={styles.headerRow}>
-        <Text style={styles.sectionTitle}>Monthly Trend</Text>
+        <AppText style={styles.sectionTitle}>Monthly Trend</AppText>
         <View style={styles.rangeSelector}>
           {([1, 3, 6] as MonthRange[]).map((range) => (
             <TouchableOpacity
@@ -191,14 +214,14 @@ export const MonthlyTrendChart: React.FC<MonthlyTrendChartProps> = ({ monthlyTre
               ]}
               onPress={() => setSelectedRange(range)}
             >
-              <Text
+              <AppText
                 style={[
                   styles.rangeButtonText,
                   selectedRange === range && styles.rangeButtonTextActive,
                 ]}
               >
                 {range}M
-              </Text>
+              </AppText>
             </TouchableOpacity>
           ))}
         </View>
@@ -206,13 +229,16 @@ export const MonthlyTrendChart: React.FC<MonthlyTrendChartProps> = ({ monthlyTre
 
       {/* SubheaderRow: Range label + Summary */}
       <View style={styles.subheaderRow}>
-        <Text style={styles.rangeLabelText}>
+        {/* #region agent log */}
+        {(() => {try {fetch('http://127.0.0.1:7242/ingest/16e3335f-6715-4f8a-beae-87df786dbc1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MonthlyTrendChart.tsx:220',message:'Before rendering AppText in subheader',data:{appTextType:typeof AppText,appTextIsUndefined:AppText === undefined},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'A'})}).catch(()=>{});} catch(e) {} return null;})()}
+        {/* #endregion */}
+        <AppText style={styles.rangeLabelText}>
           {selectedRange === 1 ? 'Last month' : `Last ${selectedRange} months`}
-        </Text>
+        </AppText>
         {summaryData.total > 0 && (
-          <Text style={styles.summaryText}>
+          <AppText style={styles.summaryText}>
             Total: {formatCurrency(summaryData.total)}
-          </Text>
+          </AppText>
         )}
       </View>
 
@@ -232,7 +258,7 @@ export const MonthlyTrendChart: React.FC<MonthlyTrendChartProps> = ({ monthlyTre
                   },
                 ]}
               >
-                <Text style={styles.yAxisText}>{formatYAxisValue(tickValue)}</Text>
+                <AppText style={styles.yAxisText}>{formatYAxisValue(tickValue)}</AppText>
               </View>
             );
           })}
@@ -311,14 +337,14 @@ export const MonthlyTrendChart: React.FC<MonthlyTrendChartProps> = ({ monthlyTre
                     },
                   ]}
                 >
-                  <Text
+                  <AppText
                     style={[
                       styles.monthLabel,
                       isCurrentMonth && styles.monthLabelCurrent,
                     ]}
                   >
                     {formatMonthLabel(data.month)}
-                  </Text>
+                  </AppText>
                 </View>
               </React.Fragment>
             );
@@ -328,6 +354,16 @@ export const MonthlyTrendChart: React.FC<MonthlyTrendChartProps> = ({ monthlyTre
     </View>
   );
 };
+
+// #region agent log
+try {
+  fetch('http://127.0.0.1:7242/ingest/16e3335f-6715-4f8a-beae-87df786dbc1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MonthlyTrendChart.tsx:356',message:'Before export statement',data:{componentType:typeof MonthlyTrendChartComponent,isFunction:typeof MonthlyTrendChartComponent === 'function'},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'E'})}).catch(()=>{});
+} catch(e) {
+  fetch('http://127.0.0.1:7242/ingest/16e3335f-6715-4f8a-beae-87df786dbc1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MonthlyTrendChart.tsx:356',message:'Error before export',data:{error:e?.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'E'})}).catch(()=>{});
+}
+// #endregion
+
+export const MonthlyTrendChart = MonthlyTrendChartComponent;
 
 const styles = StyleSheet.create({
   chartSection: {

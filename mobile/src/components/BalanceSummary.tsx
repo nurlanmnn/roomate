@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { AppText } from './AppText';
 import { PairwiseBalance } from '../api/expensesApi';
 import { formatCurrency } from '../utils/formatCurrency';
 import { formatDateShort } from '../utils/dateHelpers';
@@ -24,14 +25,14 @@ export const BalanceSummary: React.FC<BalanceSummaryProps> = ({
   if (userBalances.length === 0) {
     return (
       <View style={styles.container}>
-        <Text style={styles.emptyText}>All settled up! 🎉</Text>
+        <AppText style={styles.emptyText}>All settled up! 🎉</AppText>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Your Balances</Text>
+      <AppText style={styles.title}>Your Balances</AppText>
       {userBalances.map((balance, index) => {
         const isOwed = balance.toUserId === currentUserId;
         const otherUserId = isOwed ? balance.fromUserId : balance.toUserId;
@@ -44,25 +45,23 @@ export const BalanceSummary: React.FC<BalanceSummaryProps> = ({
             <View style={styles.balanceContent}>
               <Avatar name={otherUserName} uri={otherUserAvatar} size={32} />
               <View style={styles.balanceTextContainer}>
-                <Text style={styles.balanceText}>
-                  {isOwed ? (
-                    <>
-                      <Text style={styles.userName}>{otherUserName}</Text>
-                      {' owes you '}
-                      <Text style={styles.amountPositive}>{formatCurrency(balance.amount)}</Text>
-                    </>
-                  ) : (
-                    <>
-                      You owe <Text style={styles.userName}>{otherUserName}</Text>
-                      {' '}
-                      <Text style={styles.amountNegative}>{formatCurrency(balance.amount)}</Text>
-                    </>
-                  )}
-                </Text>
+                {isOwed ? (
+                  <AppText style={styles.balanceText}>
+                    <AppText style={styles.userName}>{otherUserName}</AppText>
+                    {' owes you '}
+                    <AppText style={styles.amountPositive}>{formatCurrency(balance.amount)}</AppText>
+                  </AppText>
+                ) : (
+                  <AppText style={styles.balanceText}>
+                    You owe <AppText style={styles.userName}>{otherUserName}</AppText>
+                    {' '}
+                    <AppText style={styles.amountNegative}>{formatCurrency(balance.amount)}</AppText>
+                  </AppText>
+                )}
                 {balance.sinceDate && (
-                  <Text style={styles.sinceDate}>
+                  <AppText style={styles.sinceDate}>
                     since {formatDateShort(balance.sinceDate)}
-                  </Text>
+                  </AppText>
                 )}
               </View>
             </View>

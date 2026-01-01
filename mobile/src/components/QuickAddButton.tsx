@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { TouchableOpacity, Text, StyleSheet, Modal, View, TextInput, Alert, Platform, KeyboardAvoidingView } from 'react-native';
+import { TouchableOpacity, StyleSheet, Modal, View, TextInput, Alert, Platform, KeyboardAvoidingView } from 'react-native';
+import { AppText } from './AppText';
 import { colors, fontSizes, spacing } from '../theme';
 
 interface QuickAddButtonProps {
@@ -142,7 +143,7 @@ export const QuickAddButton: React.FC<QuickAddButtonProps> = ({ onAddItems }) =>
         style={styles.button}
         onPress={() => setShowTextModal(true)}
       >
-        <Text style={styles.buttonText}>📝 Quick Add</Text>
+        <AppText style={styles.buttonText}>📝 Quick Add</AppText>
       </TouchableOpacity>
 
       <Modal
@@ -160,11 +161,11 @@ export const QuickAddButton: React.FC<QuickAddButtonProps> = ({ onAddItems }) =>
           keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Quick Add Items</Text>
-            <Text style={styles.modalSubtitle}>
+            <AppText style={styles.modalTitle}>Quick Add Items</AppText>
+            <AppText style={styles.modalSubtitle}>
               Type your shopping list. You can include quantities and weights.
               {'\n\n'}Example: "milk, 2kg chicken, 3 eggs, 1 liter of water"
-            </Text>
+            </AppText>
             <TextInput
               style={styles.textInput}
               value={textInput}
@@ -182,13 +183,13 @@ export const QuickAddButton: React.FC<QuickAddButtonProps> = ({ onAddItems }) =>
                   setTextInput('');
                 }}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <AppText style={styles.cancelButtonText}>Cancel</AppText>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.submitButton]}
                 onPress={handleTextSubmit}
               >
-                <Text style={styles.submitButtonText}>Add Items</Text>
+                <AppText style={styles.submitButtonText}>Add Items</AppText>
               </TouchableOpacity>
             </View>
           </View>

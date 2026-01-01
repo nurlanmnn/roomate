@@ -34,7 +34,7 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
   }, [avatarUri, user]);
 
   const canChangePassword = useMemo(() => {
-    return currentPassword.length > 0 && newPassword.length >= 6;
+    return currentPassword.length > 0 && newPassword.length >= 8;
   }, [currentPassword, newPassword]);
 
   const handleSaveName = async () => {
@@ -139,7 +139,7 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
 
   const handleChangePassword = async () => {
     if (!canChangePassword) {
-      Alert.alert('Error', 'New password must be at least 6 characters.');
+      Alert.alert('Error', 'New password must be at least 8 characters.');
       return;
     }
 

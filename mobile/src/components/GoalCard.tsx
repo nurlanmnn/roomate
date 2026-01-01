@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { AppText } from './AppText';
 import { Goal } from '../api/goalsApi';
 import { formatDate } from '../utils/dateHelpers';
 import { colors, fontSizes, fontWeights, radii, spacing, shadows } from '../theme';
@@ -22,25 +23,25 @@ export const GoalCard: React.FC<GoalCardProps> = ({ goal, onUpvote, currentUserI
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <Text style={styles.title}>{goal.title}</Text>
+        <AppText style={styles.title}>{goal.title}</AppText>
         <View style={[styles.statusBadge, { backgroundColor: statusColors[goal.status] }]}>
-          <Text style={styles.statusText}>{goal.status.replace('_', ' ')}</Text>
+          <AppText style={styles.statusText}>{goal.status.replace('_', ' ')}</AppText>
         </View>
       </View>
       {goal.description && (
-        <Text style={styles.description}>{goal.description}</Text>
+        <AppText style={styles.description}>{goal.description}</AppText>
       )}
       <View style={styles.footer}>
         <TouchableOpacity
           style={[styles.upvoteButton, isUpvoted && styles.upvoteButtonActive]}
           onPress={onUpvote}
         >
-          <Text style={styles.upvoteText}>👍 {goal.upvotes.length}</Text>
+          <AppText style={styles.upvoteText}>👍 {goal.upvotes.length}</AppText>
         </TouchableOpacity>
         {goal.targetDate && (
-          <Text style={styles.targetDate}>
+          <AppText style={styles.targetDate}>
             Target: {formatDate(goal.targetDate)}
-          </Text>
+          </AppText>
         )}
       </View>
     </View>

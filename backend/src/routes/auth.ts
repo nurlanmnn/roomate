@@ -15,7 +15,7 @@ const router = express.Router();
 const signupSchema = z.object({
   name: z.string().min(1),
   email: z.string().email().transform((e) => e.trim().toLowerCase()),
-  password: z.string().min(6),
+  password: z.string().min(8),
 });
 
 const loginSchema = z.object({
@@ -39,7 +39,7 @@ const updateProfileSchema = z.object({
 
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(1),
-  newPassword: z.string().min(6),
+  newPassword: z.string().min(8),
 });
 
 const deleteAccountSchema = z.object({
@@ -54,7 +54,7 @@ router.post('/signup', async (req: Request, res: Response) => {
     // Check if email already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ error: 'Email already registered' });
+      return res.status(400).json({ error: 'An account with this email already exists' });
     }
 
     // Hash password

@@ -1,5 +1,6 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { AppText } from '../AppText';
 import { colors, fontSizes, fontWeights, radii, spacing } from '../../theme';
 
 type ListRowProps = {
@@ -13,12 +14,12 @@ export const ListRow: React.FC<ListRowProps> = ({ title, subtitle, right, onPres
   const content = (
     <View style={styles.row}>
       <View style={styles.left}>
-        <Text style={styles.title}>{title}</Text>
-        {!!subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+        <AppText style={styles.title}>{title}</AppText>
+        {!!subtitle && <AppText style={styles.subtitle}>{subtitle}</AppText>}
       </View>
       <View style={styles.right}>
-        {!!right && <Text style={styles.rightText}>{right}</Text>}
-        {!!onPress && <Text style={styles.chevron}>›</Text>}
+        {!!right && <AppText style={styles.rightText}>{right}</AppText>}
+        {!!onPress && <AppText style={styles.chevron}>›</AppText>}
       </View>
     </View>
   );

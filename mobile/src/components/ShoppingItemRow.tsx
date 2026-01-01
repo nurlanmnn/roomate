@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { AppText } from './AppText';
 import { Ionicons } from '@expo/vector-icons';
 import { ShoppingItem } from '../api/shoppingApi';
 import { colors, fontSizes, fontWeights, radii, spacing, shadows } from '../theme';
@@ -21,29 +22,29 @@ export const ShoppingItemRow: React.FC<ShoppingItemRowProps> = ({
     <View style={[styles.row, item.completed && styles.rowCompleted]}>
       <TouchableOpacity onPress={onToggle} style={styles.checkboxContainer}>
         <View style={[styles.checkbox, item.completed && styles.checkboxChecked]}>
-          {item.completed && <Text style={styles.checkmark}>✓</Text>}
+          {item.completed && <AppText style={styles.checkmark}>✓</AppText>}
         </View>
       </TouchableOpacity>
       <View style={styles.content}>
-        <Text style={[styles.name, item.completed && styles.nameCompleted]}>
+        <AppText style={[styles.name, item.completed && styles.nameCompleted]}>
           {item.name}
-        </Text>
+        </AppText>
         <View style={styles.details}>
           {item.quantity && (
-            <Text style={styles.detailText}>Qty: {item.quantity}</Text>
+            <AppText style={styles.detailText}>Qty: {item.quantity}</AppText>
           )}
           {item.weight && (
-            <Text style={styles.detailText}>
+            <AppText style={styles.detailText}>
               {item.quantity ? ' • ' : ''}Weight: {item.weight}{item.weightUnit ? ` ${item.weightUnit}` : ''}
-            </Text>
+            </AppText>
           )}
         </View>
         <View style={styles.meta}>
           {item.isShared ? (
-            <Text style={styles.sharedBadge}>Shared</Text>
+            <AppText style={styles.sharedBadge}>Shared</AppText>
           ) : (
             item.ownerId && (
-              <Text style={styles.personalBadge}>{item.ownerId.name}</Text>
+              <AppText style={styles.personalBadge}>{item.ownerId.name}</AppText>
             )
           )}
         </View>
