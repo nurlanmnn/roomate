@@ -23,7 +23,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event }) => {
       <View style={styles.header}>
         <Ionicons name={typeIcons[event.type] || 'calendar-outline'} size={22} color={colors.muted} />
         <View style={styles.content}>
-          <AppText style={styles.title}>{event.title}</AppText>
+          <AppText style={styles.title} numberOfLines={2} ellipsizeMode="tail">{event.title}</AppText>
           <AppText style={styles.time}>
             {formatDateTime(event.date)}
             {event.endDate && ` - ${formatTime(event.endDate)}`}
@@ -62,6 +62,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeights.semibold,
     color: colors.text,
     marginBottom: spacing.xxs,
+    flexShrink: 1,
   },
   time: {
     fontSize: fontSizes.sm,
@@ -71,6 +72,7 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.sm,
     color: colors.textSecondary,
     marginTop: spacing.sm,
+    flexShrink: 1,
   },
 });
 

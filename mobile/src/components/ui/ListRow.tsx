@@ -14,7 +14,7 @@ export const ListRow: React.FC<ListRowProps> = ({ title, subtitle, right, onPres
   const content = (
     <View style={styles.row}>
       <View style={styles.left}>
-        <AppText style={styles.title}>{title}</AppText>
+        <AppText style={styles.title} numberOfLines={2} ellipsizeMode="tail">{title}</AppText>
         {!!subtitle && <AppText style={styles.subtitle}>{subtitle}</AppText>}
       </View>
       <View style={styles.right}>
@@ -43,6 +43,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
+    minHeight: 44, // Minimum touch target
   },
   pressed: {
     opacity: 0.96,
@@ -56,11 +57,13 @@ const styles = StyleSheet.create({
   left: {
     flex: 1,
     paddingRight: spacing.md,
+    flexShrink: 1,
   },
   title: {
     fontSize: fontSizes.md,
     fontWeight: fontWeights.semibold,
     color: colors.text,
+    flexShrink: 1,
   },
   subtitle: {
     marginTop: spacing.xxs,

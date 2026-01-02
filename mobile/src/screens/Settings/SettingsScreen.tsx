@@ -11,6 +11,7 @@ import { PrimaryButton } from '../../components/PrimaryButton';
 import { FormTextInput } from '../../components/FormTextInput';
 import * as Sharing from 'expo-sharing';
 import { colors, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
+import { scale, scaleFont } from '../../utils/scaling';
 import { Avatar } from '../../components/ui/Avatar';
 
 export const SettingsScreen: React.FC<{ navigation: any; route?: any }> = ({ navigation, route }) => {
@@ -489,17 +490,17 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   avatarPreview: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: scale(52),
+    height: scale(52),
+    borderRadius: scale(26),
   },
   avatarOverlay: {
     position: 'absolute',
     bottom: 0,
     right: 0,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: scale(24),
+    height: scale(24),
+    borderRadius: scale(12),
     backgroundColor: colors.primary,
     borderWidth: 2,
     borderColor: colors.surface,
@@ -507,7 +508,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarOverlayText: {
-    fontSize: 12,
+    fontSize: scaleFont(12),
   },
   dangerSection: {
     borderColor: '#ffdddd',
@@ -585,7 +586,7 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   linkRowChevron: {
-    fontSize: 22,
+    fontSize: scaleFont(22),
     color: colors.muted,
     marginLeft: spacing.md,
   },
@@ -630,30 +631,30 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   memberName: {
-    fontSize: 15,
+    fontSize: scaleFont(15),
     fontWeight: fontWeights.semibold,
     color: colors.text,
   },
   memberEmail: {
-    marginTop: 2,
-    fontSize: 12,
+    marginTop: scale(2),
+    fontSize: scaleFont(12),
     color: colors.muted,
   },
   ownerBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 14,
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(6),
+    borderRadius: scale(14),
     backgroundColor: colors.primarySoft,
     borderWidth: 1,
     borderColor: colors.primary,
   },
   ownerBadgeText: {
-    fontSize: 12,
+    fontSize: scaleFont(12),
     fontWeight: fontWeights.bold,
     color: colors.primaryDark,
   },
   ownerNote: {
-    fontSize: 12,
+    fontSize: scaleFont(12),
     color: colors.muted,
     marginTop: spacing.xs,
     fontStyle: 'italic',

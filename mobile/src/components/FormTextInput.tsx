@@ -1,5 +1,6 @@
 import React from 'react';
 import { TextInput, StyleSheet, Text, View, Platform } from 'react-native';
+import { AppText } from './AppText';
 import { colors, fontSizes, fontWeights, radii, spacing } from '../theme';
 
 interface FormTextInputProps {
@@ -31,7 +32,7 @@ export const FormTextInput: React.FC<FormTextInputProps> = ({
 }) => {
   return (
     <View style={styles.container}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label && <AppText style={styles.label}>{label}</AppText>}
       <TextInput
         style={[
           styles.input,
@@ -44,12 +45,13 @@ export const FormTextInput: React.FC<FormTextInputProps> = ({
         secureTextEntry={secureTextEntry}
         keyboardType={keyboardType}
         multiline={multiline}
-        numberOfLines={numberOfLines}
+        numberOfLines={multiline ? numberOfLines : undefined}
         autoCapitalize={autoCapitalize}
         placeholderTextColor={colors.muted}
+        textAlignVertical={multiline ? 'top' : 'center'}
       />
-      {!error && !!helperText && <Text style={styles.helperText}>{helperText}</Text>}
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {!error && !!helperText && <AppText style={styles.helperText}>{helperText}</AppText>}
+      {error && <AppText style={styles.errorText}>{error}</AppText>}
     </View>
   );
 };
@@ -76,7 +78,8 @@ const styles = StyleSheet.create({
   },
   multilineInput: {
     minHeight: 80,
-    textAlignVertical: 'top',
+    paddingTop: spacing.md,
+    paddingBottom: spacing.md,
   },
   inputError: {
     borderColor: colors.danger,

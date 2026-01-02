@@ -19,6 +19,7 @@ import { SpendingChart } from '../../components/SpendingChart';
 import { formatDate } from '../../utils/dateHelpers';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { colors, fontSizes, fontWeights, spacing, lineHeights, radii, shadows } from '../../theme';
+import { scale } from '../../utils/scaling';
 import { Ionicons } from '@expo/vector-icons';
 
 export const HomeScreen: React.FC = () => {
@@ -276,19 +277,86 @@ export const HomeScreen: React.FC = () => {
       {insights && insights.byCategory.length > 0 && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <AppText style={styles.sectionTitle}>Spending Insights</AppText>
+            <View style={styles.sectionTitleContainer}>
+              <AppText style={styles.sectionTitle}>Spending Insights</AppText>
+              <AppText style={styles.sectionDescription}>
+                Track your spending patterns and see where your money goes each month
+              </AppText>
+            </View>
           </View>
           <SpendingChart
             byCategory={insights.byCategory}
             monthlyTrend={insights.monthlyTrend}
             predictions={insights.predictions}
           />
+          {/* Spending Summary Card */}
+          {insights.monthlyTrend && insights.monthlyTrend.length > 1 && (
+            <View style={styles.summaryCard}>
+              <View style={styles.summaryRow}>
+                <View style={styles.summaryItem}>
+                  <Ionicons name="trending-up-outline" size={20} color={colors.primary} />
+                  <View style={styles.summaryTextContainer}>
+                    <AppText style={styles.summaryLabel}>This Month</AppText>
+                    <AppText style={styles.summaryValue}>
+                      {formatCurrency(stats.monthlyExpenses)}
+                    </AppText>
+                  </View>
+                </View>
+                {insights.monthlyTrend.length >= 2 && (
+                  <View style={styles.summaryItem}>
+                    <Ionicons name="calendar-outline" size={20} color={colors.textSecondary} />
+                    <View style={styles.summaryTextContainer}>
+                      <AppText style={styles.summaryLabel}>Last Month</AppText>
+                      <AppText style={styles.summaryValue}>
+                        {formatCurrency(insights.monthlyTrend[insights.monthlyTrend.length - 2]?.amount || 0)}
+                      </AppText>
+                    </View>
+                  </View>
+                )}
+              </View>
+              {insights.monthlyTrend.length >= 2 && (() => {
+                const thisMonth = stats.monthlyExpenses;
+                const lastMonth = insights.monthlyTrend[insights.monthlyTrend.length - 2]?.amount || 0;
+                const difference = thisMonth - lastMonth;
+                const percentChange = lastMonth > 0 ? ((difference / lastMonth) * 100).toFixed(1) : 0;
+                const isIncrease = difference > 0;
+                
+                if (lastMonth > 0) {
+                  return (
+                    <View style={styles.trendIndicator}>
+                      <Ionicons 
+                        name={isIncrease ? "arrow-up" : "arrow-down"} 
+                        size={16} 
+                        color={isIncrease ? colors.danger : colors.success} 
+                      />
+                      <AppText style={[
+                        styles.trendText,
+                        { color: isIncrease ? colors.danger : colors.success }
+                      ]}>
+                        {isIncrease ? '+' : ''}{formatCurrency(Math.abs(difference))} ({isIncrease ? '+' : ''}{percentChange}%) 
+                        {isIncrease ? 'more' : 'less'} than last month
+                      </AppText>
+                    </View>
+                  );
+                }
+                return null;
+              })()}
+            </View>
+          )}
         </View>
       )}
 
       {/* Balance Summary */}
       {user && balances.length > 0 && (
         <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionTitleContainer}>
+              <AppText style={styles.sectionTitle}>Your Balances</AppText>
+              <AppText style={styles.sectionDescription}>
+                Track who owes what and settle up with your roommates
+              </AppText>
+            </View>
+          </View>
           <BalanceSummary
             balances={balances}
             currentUserId={user._id}
@@ -302,7 +370,12 @@ export const HomeScreen: React.FC = () => {
       {events.length > 0 && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <AppText style={styles.sectionTitle}>Upcoming Events</AppText>
+            <View style={styles.sectionTitleContainer}>
+              <AppText style={styles.sectionTitle}>Upcoming Events</AppText>
+              <AppText style={styles.sectionDescription}>
+                Don't miss important dates and shared activities
+              </AppText>
+            </View>
             <TouchableOpacity onPress={() => navigation.navigate('Calendar')}>
               <AppText style={styles.seeAllText}>See All</AppText>
             </TouchableOpacity>
@@ -317,7 +390,12 @@ export const HomeScreen: React.FC = () => {
       {goals.length > 0 && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <AppText style={styles.sectionTitle}>Active Goals</AppText>
+            <View style={styles.sectionTitleContainer}>
+              <AppText style={styles.sectionTitle}>Active Goals</AppText>
+              <AppText style={styles.sectionDescription}>
+                Shared goals and ideas for your household
+              </AppText>
+            </View>
             <TouchableOpacity onPress={() => navigation.navigate('Goals')}>
               <AppText style={styles.seeAllText}>See All</AppText>
             </TouchableOpacity>
@@ -337,6 +415,23 @@ export const HomeScreen: React.FC = () => {
               currentUserId={user?._id || ''}
             />
           ))}
+        </View>
+      )}
+
+      {/* Quick Tip Card */}
+      {hasData && (
+        <View style={styles.section}>
+          <View style={styles.tipCard}>
+            <Ionicons name="bulb-outline" size={24} color={colors.accent} />
+            <View style={styles.tipContent}>
+              <AppText style={styles.tipTitle}>Quick Tip</AppText>
+              <AppText style={styles.tipText}>
+                {stats.monthlyExpenses > 0 
+                  ? "Review your spending by category to identify areas where you can save money."
+                  : "Start tracking expenses to get personalized insights and better manage your household budget."}
+              </AppText>
+            </View>
+          </View>
         </View>
       )}
     </ScrollView>
@@ -407,14 +502,25 @@ const styles = StyleSheet.create({
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: spacing.lg,
+  },
+  sectionTitleContainer: {
+    flex: 1,
+    flexShrink: 1,
+    paddingRight: spacing.md,
   },
   sectionTitle: {
     fontSize: fontSizes.xl,
     fontWeight: fontWeights.bold,
     color: colors.text,
     letterSpacing: -0.3,
+    marginBottom: spacing.xs,
+  },
+  sectionDescription: {
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
+    lineHeight: lineHeights.sm,
   },
   seeAllText: {
     fontSize: fontSizes.sm,
@@ -436,9 +542,9 @@ const styles = StyleSheet.create({
     ...(shadows.sm as object),
   },
   welcomeIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: scale(80),
+    height: scale(80),
+    borderRadius: scale(40),
     backgroundColor: colors.primaryUltraSoft,
     alignItems: 'center',
     justifyContent: 'center',
@@ -503,6 +609,77 @@ const styles = StyleSheet.create({
   quickActionsRow: {
     flexDirection: 'row',
     gap: spacing.md,
+  },
+  summaryCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+    padding: spacing.lg,
+    marginTop: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    ...(shadows.sm as object),
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    gap: spacing.md,
+  },
+  summaryItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  summaryTextContainer: {
+    flex: 1,
+  },
+  summaryLabel: {
+    fontSize: fontSizes.xs,
+    color: colors.textSecondary,
+    marginBottom: spacing.xxs,
+  },
+  summaryValue: {
+    fontSize: fontSizes.lg,
+    fontWeight: fontWeights.bold,
+    color: colors.text,
+  },
+  trendIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+    gap: spacing.xs,
+  },
+  trendText: {
+    fontSize: fontSizes.sm,
+    fontWeight: fontWeights.medium,
+  },
+  tipCard: {
+    flexDirection: 'row',
+    backgroundColor: colors.accentUltraSoft,
+    borderRadius: radii.lg,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.accentSoft,
+    gap: spacing.md,
+    ...(shadows.xs as object),
+  },
+  tipContent: {
+    flex: 1,
+    flexShrink: 1,
+  },
+  tipTitle: {
+    fontSize: fontSizes.md,
+    fontWeight: fontWeights.semibold,
+    color: colors.text,
+    marginBottom: spacing.xs,
+  },
+  tipText: {
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
+    lineHeight: lineHeights.sm,
   },
 });
 

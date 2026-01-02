@@ -34,7 +34,7 @@ export const ExpenseCard: React.FC<ExpenseCardProps> = ({ expense, onDelete, can
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <AppText style={styles.description}>{expense.description}</AppText>
+        <AppText style={styles.description} numberOfLines={2} ellipsizeMode="tail">{expense.description}</AppText>
         <AppText style={styles.amount}>{formatCurrency(expense.totalAmount)}</AppText>
       </View>
       <View style={styles.metaRow}>
@@ -80,14 +80,17 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: spacing.xs,
+    flexWrap: 'wrap',
+    gap: spacing.xs,
   },
   description: {
     fontSize: fontSizes.md,
     fontWeight: fontWeights.semibold,
     color: colors.text,
     flex: 1,
+    flexShrink: 1,
     marginRight: spacing.sm,
   },
   amount: {
@@ -109,10 +112,12 @@ const styles = StyleSheet.create({
   },
   paidByContainer: {
     flex: 1,
+    flexShrink: 1,
   },
   paidBy: {
     fontSize: fontSizes.sm,
     color: colors.textSecondary,
+    flexShrink: 1,
   },
   sinceDate: {
     fontSize: fontSizes.xs,

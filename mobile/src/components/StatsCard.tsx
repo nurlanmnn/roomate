@@ -24,7 +24,7 @@ export const StatsCard: React.FC<StatsCardProps> = ({
         <View style={styles.icon}>{icon}</View>
       </View>
       <AppText style={styles.value}>{value}</AppText>
-      <AppText style={styles.label}>{label}</AppText>
+      <AppText style={styles.label} numberOfLines={2} ellipsizeMode="tail">{label}</AppText>
     </View>
   );
 };
@@ -63,6 +63,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
     fontWeight: fontWeights.medium,
+    flexShrink: 1,
   },
 });
 

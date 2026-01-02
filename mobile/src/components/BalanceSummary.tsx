@@ -100,10 +100,12 @@ const styles = StyleSheet.create({
   },
   balanceTextContainer: {
     flex: 1,
+    flexShrink: 1,
   },
   balanceText: {
     fontSize: fontSizes.md,
     color: colors.text,
+    flexShrink: 1,
   },
   sinceDate: {
     fontSize: fontSizes.xs,

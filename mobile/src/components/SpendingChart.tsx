@@ -6,10 +6,6 @@ import { colors, fontSizes, fontWeights, spacing, radii, shadows } from '../them
 import { formatCurrency } from '../utils/formatCurrency';
 import { MonthlyTrendChart } from './MonthlyTrendChart';
 
-// #region agent log
-fetch('http://127.0.0.1:7242/ingest/16e3335f-6715-4f8a-beae-87df786dbc1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SpendingChart.tsx:7',message:'SpendingChart importing MonthlyTrendChart',data:{monthlyTrendChartType:typeof MonthlyTrendChart,isUndefined:MonthlyTrendChart === undefined,isFunction:typeof MonthlyTrendChart === 'function',isClass:typeof MonthlyTrendChart === 'function' && MonthlyTrendChart.prototype},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-// #endregion
-
 const screenWidth = Dimensions.get('window').width;
 
 interface CategorySpending {
@@ -143,9 +139,6 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
 
       {/* Monthly Trend - Bar Chart */}
       {monthlyTrend.length > 0 && (
-        // #region agent log
-        (() => {fetch('http://127.0.0.1:7242/ingest/16e3335f-6715-4f8a-beae-87df786dbc1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SpendingChart.tsx:142',message:'Before rendering MonthlyTrendChart',data:{monthlyTrendChartType:typeof MonthlyTrendChart,isUndefined:MonthlyTrendChart === undefined,monthlyTrendLength:monthlyTrend.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{}); return null;})() ||
-        // #endregion
         <MonthlyTrendChart monthlyTrend={monthlyTrend} />
       )}
 

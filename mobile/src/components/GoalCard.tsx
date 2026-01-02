@@ -4,6 +4,7 @@ import { AppText } from './AppText';
 import { Goal } from '../api/goalsApi';
 import { formatDate } from '../utils/dateHelpers';
 import { colors, fontSizes, fontWeights, radii, spacing, shadows } from '../theme';
+import { scaleFont } from '../utils/scaling';
 
 interface GoalCardProps {
   goal: Goal;
@@ -23,7 +24,7 @@ export const GoalCard: React.FC<GoalCardProps> = ({ goal, onUpvote, currentUserI
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <AppText style={styles.title}>{goal.title}</AppText>
+        <AppText style={styles.title} numberOfLines={2} ellipsizeMode="tail">{goal.title}</AppText>
         <View style={[styles.statusBadge, { backgroundColor: statusColors[goal.status] }]}>
           <AppText style={styles.statusText}>{goal.status.replace('_', ' ')}</AppText>
         </View>
@@ -69,6 +70,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeights.semibold,
     color: colors.text,
     flex: 1,
+    flexShrink: 1,
     marginRight: spacing.sm,
   },
   statusBadge: {
@@ -78,7 +80,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: scaleFont(12),
     fontWeight: fontWeights.semibold,
     textTransform: 'capitalize',
   },
@@ -86,6 +88,7 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.sm,
     color: colors.textSecondary,
     marginBottom: spacing.md,
+    flexShrink: 1,
   },
   footer: {
     flexDirection: 'row',

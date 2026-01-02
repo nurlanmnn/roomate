@@ -26,7 +26,7 @@ export const ShoppingItemRow: React.FC<ShoppingItemRowProps> = ({
         </View>
       </TouchableOpacity>
       <View style={styles.content}>
-        <AppText style={[styles.name, item.completed && styles.nameCompleted]}>
+        <AppText style={[styles.name, item.completed && styles.nameCompleted]} numberOfLines={2} ellipsizeMode="tail">
           {item.name}
         </AppText>
         <View style={styles.details}>
@@ -68,7 +68,7 @@ export const ShoppingItemRow: React.FC<ShoppingItemRowProps> = ({
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
     backgroundColor: colors.surface,
@@ -77,12 +77,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     ...(shadows.sm as object),
+    minHeight: 44, // Minimum touch target
   },
   rowCompleted: {
     opacity: 0.6,
   },
   checkboxContainer: {
     marginRight: spacing.md,
+    minHeight: 44, // Minimum touch target
+    justifyContent: 'center',
+    paddingVertical: spacing.xs,
   },
   checkbox: {
     width: 24,
@@ -103,12 +107,14 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    flexShrink: 1,
   },
   name: {
     fontSize: fontSizes.md,
     fontWeight: fontWeights.semibold,
     marginBottom: spacing.xxs,
     color: colors.text,
+    flexShrink: 1,
   },
   nameCompleted: {
     textDecorationLine: 'line-through',
@@ -133,6 +139,10 @@ const styles = StyleSheet.create({
   editButton: {
     padding: spacing.xs,
     marginRight: spacing.xs,
+    minHeight: 44,
+    minWidth: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   sharedBadge: {
     fontSize: fontSizes.xs,
@@ -150,6 +160,10 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     padding: spacing.xs,
+    minHeight: 44,
+    minWidth: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 

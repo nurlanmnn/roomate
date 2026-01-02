@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 52,
+    minHeight: 44, // Minimum touch target for accessibility
   },
   buttonPrimary: {
     backgroundColor: colors.primary,

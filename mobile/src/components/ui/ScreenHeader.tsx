@@ -14,7 +14,7 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({ title, subtitle, rig
   return (
     <View style={styles.container}>
       <View style={styles.left}>
-        <AppText style={styles.title}>{title}</AppText>
+        <AppText style={styles.title} numberOfLines={2} ellipsizeMode="tail">{title}</AppText>
         {!!subtitle && <AppText style={styles.subtitle}>{subtitle}</AppText>}
       </View>
       {!!rightText && !!onRightPress && (
@@ -39,11 +39,13 @@ const styles = StyleSheet.create({
   left: {
     flex: 1,
     paddingRight: spacing.md,
+    flexShrink: 1,
   },
   title: {
     fontSize: fontSizes.xxl,
     fontWeight: fontWeights.extrabold,
     color: colors.text,
+    flexShrink: 1,
   },
   subtitle: {
     marginTop: spacing.xxs,
@@ -53,6 +55,8 @@ const styles = StyleSheet.create({
   right: {
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
+    minHeight: 44, // Minimum touch target
+    justifyContent: 'center',
   },
   rightText: {
     fontSize: fontSizes.sm,
