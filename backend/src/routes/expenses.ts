@@ -48,6 +48,7 @@ router.get('/household/:householdId', authMiddleware, async (req: Request, res: 
     const expenses = await Expense.find({
       householdId: req.params.householdId,
     })
+      .populate('createdBy', 'name email avatarUrl')
       .populate('paidBy', 'name email avatarUrl')
       .populate('participants', 'name email avatarUrl')
       .sort({ date: -1 });
@@ -177,6 +178,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
     // Create expense
     const expense = new Expense({
       householdId: data.householdId,
+      createdBy: userIdObjectId,
       description: data.description,
       totalAmount: data.totalAmount,
       paidBy: data.paidBy,
@@ -191,6 +193,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
     });
     await expense.save();
 
+    await expense.populate('createdBy', 'name email avatarUrl');
     await expense.populate('paidBy', 'name email avatarUrl');
     await expense.populate('participants', 'name email avatarUrl');
 
@@ -257,6 +260,13 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
     const userIdObjectId = new mongoose.Types.ObjectId(userId);
     if (!household.members.some(m => m.equals(userIdObjectId))) {
       return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Only the creator of the expense can delete it.
+    // For legacy expenses that don't have createdBy, fall back to paidBy to avoid blocking deletes.
+    const creatorId = (expense as any).createdBy ? (expense as any).createdBy.toString() : expense.paidBy.toString();
+    if (creatorId !== userId) {
+      return res.status(403).json({ error: 'Only the creator can delete this expense' });
     }
 
     await Expense.deleteOne({ _id: expense._id });

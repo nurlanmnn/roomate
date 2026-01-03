@@ -8,6 +8,7 @@ export interface ExpenseShare {
 export interface Expense {
   _id: string;
   householdId: string;
+  createdBy?: { _id: string; name: string; email: string; avatarUrl?: string } | null;
   description: string;
   totalAmount: number;
   paidBy: { _id: string; name: string; email: string; avatarUrl?: string } | null;

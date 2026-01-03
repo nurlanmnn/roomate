@@ -9,6 +9,7 @@ export interface IExpenseShare {
 
 export interface IExpense extends Document {
   householdId: mongoose.Types.ObjectId;
+  createdBy?: mongoose.Types.ObjectId;
   description: string;
   totalAmount: number;
   paidBy: mongoose.Types.ObjectId;
@@ -37,6 +38,11 @@ const ExpenseSchema = new Schema<IExpense>({
   householdId: {
     type: Schema.Types.ObjectId,
     ref: 'Household',
+    required: true,
+  },
+  createdBy: {
+    type: Schema.Types.ObjectId,
+    ref: 'User',
     required: true,
   },
   description: {

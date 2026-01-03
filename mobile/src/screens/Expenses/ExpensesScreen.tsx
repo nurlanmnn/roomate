@@ -326,26 +326,52 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
           </Text>
         ) : filters.groupBy === 'none' ? (
           filteredAndSortedExpenses.map((expense) => (
+            (() => {
+              const creatorId =
+                (expense as any).createdBy && typeof (expense as any).createdBy === 'object'
+                  ? (expense as any).createdBy?._id
+                  : (expense as any).createdBy;
+              const canDelete =
+                !!user &&
+                ((creatorId && creatorId === user._id) ||
+                  (!creatorId && (expense as any).paidBy?._id === user._id)); // legacy fallback
+
+              return (
             <ExpenseCard
               key={expense._id}
               expense={expense}
               onDelete={handleDeleteExpense}
               onQuickSettle={handleQuickSettle}
-              canDelete={true}
+              canDelete={canDelete}
             />
+              );
+            })()
           ))
         ) : (
           Object.entries(groupedExpenses).map(([groupKey, groupExpenses]) => (
             <View key={groupKey} style={styles.groupSection}>
               <AppText style={styles.groupTitle}>{groupKey}</AppText>
               {groupExpenses.map((expense) => (
+                (() => {
+                  const creatorId =
+                    (expense as any).createdBy && typeof (expense as any).createdBy === 'object'
+                      ? (expense as any).createdBy?._id
+                      : (expense as any).createdBy;
+                  const canDelete =
+                    !!user &&
+                    ((creatorId && creatorId === user._id) ||
+                      (!creatorId && (expense as any).paidBy?._id === user._id)); // legacy fallback
+
+                  return (
                 <ExpenseCard
                   key={expense._id}
                   expense={expense}
                   onDelete={handleDeleteExpense}
                   onQuickSettle={handleQuickSettle}
-                  canDelete={true}
+                  canDelete={canDelete}
                 />
+                  );
+                })()
               ))}
             </View>
           ))

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity, Platform, KeyboardAvoidingView, Modal } from 'react-native';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity, Platform, KeyboardAvoidingView, Modal, Animated, PanResponder, Dimensions } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHousehold } from '../../context/HouseholdContext';
@@ -16,6 +16,10 @@ import { CategoryPicker } from '../../components/CategoryPicker';
 import { EXPENSE_CATEGORIES, getCategoryById } from '../../constants/expenseCategories';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '../../components/AppText';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const EDGE_SWIPE_WIDTH = 24; // iOS-like left edge swipe region
+const EDGE_SWIPE_THRESHOLD = 80; // distance to trigger dismiss
 
 export const CreateExpenseScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { selectedHousehold } = useHousehold();
@@ -36,6 +40,84 @@ export const CreateExpenseScreen: React.FC<{ navigation: any }> = ({ navigation 
   const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
   const [templateName, setTemplateName] = useState('');
   const [loadingTemplates, setLoadingTemplates] = useState(false);
+
+  // Swipe-to-dismiss for the Load Template modal (matches iOS "swipe back" feel)
+  const templateModalTranslateX = useRef(new Animated.Value(0)).current;
+  const templateModalCurrentX = useRef(0);
+  useEffect(() => {
+    // Reset translation whenever the modal is opened
+    if (showTemplatesModal) {
+      templateModalTranslateX.setValue(0);
+      templateModalCurrentX.current = 0;
+    }
+  }, [showTemplatesModal, templateModalTranslateX]);
+
+  const dismissTemplatesModal = () => {
+    Animated.timing(templateModalTranslateX, {
+      toValue: SCREEN_WIDTH,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => {
+      templateModalTranslateX.setValue(0);
+      templateModalCurrentX.current = 0;
+      setShowTemplatesModal(false);
+    });
+  };
+
+  const templatesModalPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: (evt) => {
+        // Only start tracking if touch begins near the left edge (iOS back gesture)
+        const x = evt.nativeEvent.pageX ?? evt.nativeEvent.locationX ?? 9999;
+        return x <= EDGE_SWIPE_WIDTH;
+      },
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        const x0 = evt.nativeEvent.pageX ?? 9999;
+        if (x0 > EDGE_SWIPE_WIDTH) return false;
+        const { dx, dy } = gestureState;
+        // Horizontal intent only; avoid fighting vertical scroll
+        return dx > 10 && Math.abs(dy) < 10;
+      },
+      onPanResponderGrant: () => {
+        templateModalTranslateX.setOffset(templateModalCurrentX.current);
+        templateModalTranslateX.setValue(0);
+      },
+      onPanResponderMove: (_evt, gestureState) => {
+        const dx = Math.max(0, gestureState.dx); // only allow swipe right
+        templateModalTranslateX.setValue(dx);
+      },
+      onPanResponderRelease: (_evt, gestureState) => {
+        const { dx, vx } = gestureState;
+        templateModalTranslateX.flattenOffset();
+        templateModalCurrentX.current = (templateModalTranslateX as any)._value ?? 0;
+
+        const shouldDismiss = dx > EDGE_SWIPE_THRESHOLD || vx > 0.5;
+        if (shouldDismiss) {
+          dismissTemplatesModal();
+        } else {
+          Animated.spring(templateModalTranslateX, {
+            toValue: 0,
+            useNativeDriver: true,
+            tension: 120,
+            friction: 10,
+          }).start(() => {
+            templateModalCurrentX.current = 0;
+          });
+        }
+      },
+      onPanResponderTerminate: () => {
+        templateModalTranslateX.flattenOffset();
+        Animated.spring(templateModalTranslateX, {
+          toValue: 0,
+          useNativeDriver: true,
+          tension: 120,
+          friction: 10,
+        }).start(() => {
+          templateModalCurrentX.current = 0;
+        });
+      },
+    })
+  ).current;
 
   const styles = React.useMemo(() => StyleSheet.create({
     container: {
@@ -432,10 +514,26 @@ export const CreateExpenseScreen: React.FC<{ navigation: any }> = ({ navigation 
     }
   };
 
-  const selectAll = () => {
+  const allMemberIds = useMemo(
+    () => (selectedHousehold ? selectedHousehold.members.map(m => m._id) : []),
+    [selectedHousehold]
+  );
+
+  const allSelected = useMemo(() => {
+    if (allMemberIds.length === 0) return false;
+    if (selectedParticipants.length !== allMemberIds.length) return false;
+    const selectedSet = new Set(selectedParticipants);
+    return allMemberIds.every(id => selectedSet.has(id));
+  }, [allMemberIds, selectedParticipants]);
+
+  const toggleSelectAll = () => {
     if (!selectedHousehold) return;
-    const allIds = selectedHousehold.members.map(m => m._id);
-    setSelectedParticipants(allIds);
+    if (allSelected) {
+      setSelectedParticipants([]);
+      setManualShares({});
+      return;
+    }
+    setSelectedParticipants(allMemberIds);
   };
 
   const calculateEvenShares = (): ExpenseShare[] => {
@@ -630,8 +728,8 @@ export const CreateExpenseScreen: React.FC<{ navigation: any }> = ({ navigation 
 
         <View style={styles.field}>
           <Text style={styles.label}>Participants</Text>
-          <TouchableOpacity onPress={selectAll} style={styles.selectAllButton}>
-            <Text style={styles.selectAllText}>Select All</Text>
+          <TouchableOpacity onPress={toggleSelectAll} style={styles.selectAllButton}>
+            <Text style={styles.selectAllText}>{allSelected ? 'Deselect All' : 'Select All'}</Text>
           </TouchableOpacity>
           {selectedHousehold.members.map((member) => (
             <TouchableOpacity
@@ -715,13 +813,18 @@ export const CreateExpenseScreen: React.FC<{ navigation: any }> = ({ navigation 
       transparent={false}
       onRequestClose={() => setShowTemplatesModal(false)}
     >
-      <SafeAreaView style={styles.modalContainer} edges={['top']}>
-        <ScreenHeader
-          title="Load Template"
-          onBackPress={() => setShowTemplatesModal(false)}
-          showBackButton
-        />
-        <ScrollView style={styles.modalContent}>
+      <View style={styles.modalContainer}>
+        <Animated.View
+          style={{ flex: 1, transform: [{ translateX: templateModalTranslateX }] }}
+          {...templatesModalPanResponder.panHandlers}
+        >
+          <ScreenHeader
+            title="Load Template"
+            onBackPress={dismissTemplatesModal}
+            showBackButton
+            variant="stack"
+          />
+          <ScrollView style={styles.modalContent}>
           {templates.length === 0 ? (
             <View style={styles.emptyTemplates}>
               <Ionicons name="document-text-outline" size={48} color={colors.textTertiary} />
@@ -756,8 +859,9 @@ export const CreateExpenseScreen: React.FC<{ navigation: any }> = ({ navigation 
               </TouchableOpacity>
             ))
           )}
-        </ScrollView>
-      </SafeAreaView>
+          </ScrollView>
+        </Animated.View>
+      </View>
     </Modal>
 
     {/* Save Template Modal */}
