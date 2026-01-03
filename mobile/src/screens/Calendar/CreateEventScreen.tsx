@@ -122,7 +122,10 @@ export const CreateEventScreen: React.FC<{ navigation: any }> = ({ navigation })
 
             <View style={styles.field}>
               <Text style={styles.label}>Date</Text>
-              <TouchableOpacity style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
+              <TouchableOpacity
+                style={styles.dateButton}
+                onPress={() => setShowDatePicker((prev) => !prev)}
+              >
                 <Text style={styles.dateText}>
                   {date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
                 </Text>
@@ -153,7 +156,10 @@ export const CreateEventScreen: React.FC<{ navigation: any }> = ({ navigation })
 
             <View style={styles.field}>
               <Text style={styles.label}>Time</Text>
-              <TouchableOpacity style={styles.dateButton} onPress={() => setShowTimePicker(true)}>
+              <TouchableOpacity
+                style={styles.dateButton}
+                onPress={() => setShowTimePicker((prev) => !prev)}
+              >
                 <Text style={styles.dateText}>
                   {time.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
                 </Text>
@@ -184,7 +190,10 @@ export const CreateEventScreen: React.FC<{ navigation: any }> = ({ navigation })
 
             <View style={styles.field}>
               <Text style={styles.label}>End Date (Optional)</Text>
-              <TouchableOpacity style={styles.dateButton} onPress={() => setShowEndDatePicker(true)}>
+              <TouchableOpacity
+                style={styles.dateButton}
+                onPress={() => setShowEndDatePicker((prev) => !prev)}
+              >
                 <Text style={[styles.dateText, !endDate && styles.placeholderText]}>
                   {endDate
                     ? endDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
@@ -219,7 +228,7 @@ export const CreateEventScreen: React.FC<{ navigation: any }> = ({ navigation })
               <Text style={styles.label}>End Time (Optional)</Text>
               <TouchableOpacity
                 style={styles.dateButton}
-                onPress={() => setShowEndTimePicker(true)}
+                onPress={() => setShowEndTimePicker((prev) => !prev)}
                 disabled={!endDate}
               >
                 <Text style={[styles.dateText, (!endDate || !endTime) && styles.placeholderText]}>

@@ -9,7 +9,7 @@ import { BalanceSummary } from '../../components/BalanceSummary';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
 import { ExpenseFilters, ExpenseFilters as ExpenseFiltersType, SortOption, GroupByOption } from '../../components/ExpenseFilters';
-import { EXPENSE_CATEGORIES, getCategoryById } from '../../constants/expenseCategories';
+import { EXPENSE_CATEGORIES, getCategoryById, getCategoryByName } from '../../constants/expenseCategories';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows } from '../../theme';
 import { LoadingSkeleton, SkeletonCard } from '../../components/LoadingSkeleton';
@@ -149,6 +149,20 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     navigation.navigate('SettleUp');
   };
 
+  const getExpenseCategoryId = (category?: string): string | undefined => {
+    if (!category) return undefined;
+    // Some legacy data might store category as the category id (e.g. 'groceries')
+    if (EXPENSE_CATEGORIES.some((c) => c.id === category)) return category;
+    // Newer data stores category as the category name (e.g. 'Groceries')
+    return getCategoryByName(category)?.id;
+  };
+
+  const getExpenseCategoryName = (category?: string): string | undefined => {
+    if (!category) return undefined;
+    if (EXPENSE_CATEGORIES.some((c) => c.id === category)) return getCategoryById(category)?.name;
+    return category;
+  };
+
   // Filter and sort expenses
   const filteredAndSortedExpenses = useMemo(() => {
     let filtered = [...expenses];
@@ -156,10 +170,11 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     // Search filter
     if (filters.search) {
       const searchLower = filters.search.toLowerCase();
-      filtered = filtered.filter(e => 
-        e.description.toLowerCase().includes(searchLower) ||
-        (e.category && e.category.toLowerCase().includes(searchLower))
-      );
+      filtered = filtered.filter((e) => {
+        const description = (e.description || '').toLowerCase();
+        const category = (e.category || '').toLowerCase();
+        return description.includes(searchLower) || category.includes(searchLower);
+      });
     }
 
     // Date range filter
@@ -174,16 +189,25 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
 
     // Category filter
     if (filters.category) {
-      const categoryName = getCategoryById(filters.category)?.name;
-      filtered = filtered.filter(e => e.category === categoryName);
+      const desiredCategoryId = filters.category;
+      filtered = filtered.filter((e) => getExpenseCategoryId(e.category) === desiredCategoryId);
     }
 
     // Person filter
     if (filters.personId) {
-      filtered = filtered.filter(e => 
-        e.paidBy === filters.personId || 
-        (typeof e.paidBy === 'object' && e.paidBy._id === filters.personId)
-      );
+      filtered = filtered.filter((e) => {
+        const paidById =
+          typeof (e as any).paidBy === 'string'
+            ? (e as any).paidBy
+            : e.paidBy && typeof e.paidBy === 'object'
+              ? e.paidBy._id
+              : null;
+
+        // Users typically expect this filter to mean "involves this person"
+        const isPayer = paidById === filters.personId;
+        const isParticipant = Array.isArray(e.participants) && e.participants.some((p) => p._id === filters.personId);
+        return isPayer || isParticipant;
+      });
     }
 
     // Amount range filter
@@ -233,10 +257,15 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         const date = parseISO(expense.date);
         key = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
       } else if (filters.groupBy === 'category') {
-        key = expense.category || 'Uncategorized';
+        key = getExpenseCategoryName(expense.category) || 'Uncategorized';
       } else if (filters.groupBy === 'person') {
-        const paidBy = typeof expense.paidBy === 'object' ? expense.paidBy._id : expense.paidBy;
-        key = getUserName(paidBy);
+        const paidById =
+          typeof expense.paidBy === 'string'
+            ? expense.paidBy
+            : expense.paidBy && typeof expense.paidBy === 'object'
+              ? expense.paidBy._id
+              : '';
+        key = getUserName(paidById);
       }
 
       if (!groups[key]) {
@@ -267,12 +296,6 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         refreshControl={<RefreshControl refreshing={loading} onRefresh={loadData} />}
       >
       <ScreenHeader title="Expenses" subtitle={selectedHousehold.name} />
-
-      <ExpenseFilters
-        filters={filters}
-        onFiltersChange={setFilters}
-        memberNames={memberNames}
-      />
 
       {user && (
         <View style={styles.section}>
@@ -308,12 +331,22 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
       )}
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>
+        <Text style={[styles.sectionTitle, { marginBottom: spacing.sm }]}>
           {filters.groupBy === 'none' ? 'Recent Expenses' : 'Expenses'}
           {filteredAndSortedExpenses.length !== expenses.length && (
             <Text style={styles.filteredCount}> ({filteredAndSortedExpenses.length})</Text>
           )}
         </Text>
+
+        {/* Filters are for expenses, so keep them right above the expense list */}
+        <View style={{ marginHorizontal: -spacing.md, marginBottom: spacing.sm }}>
+          <ExpenseFilters
+            filters={filters}
+            onFiltersChange={setFilters}
+            memberNames={memberNames}
+          />
+        </View>
+
         {loading && expenses.length === 0 ? (
           <>
             {[1, 2, 3].map((i) => (

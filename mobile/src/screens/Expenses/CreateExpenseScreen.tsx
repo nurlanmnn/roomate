@@ -680,7 +680,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any }> = ({ navigation 
           <Text style={styles.label}>Date</Text>
           <TouchableOpacity
             style={styles.dateButton}
-            onPress={() => setShowDatePicker(true)}
+            onPress={() => setShowDatePicker((prev) => !prev)}
           >
             <Text style={styles.dateText}>
               {date.toLocaleDateString('en-US', {
