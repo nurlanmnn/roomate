@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity, Animated, Dimensions } from 'react-native';
 import { AppText } from './AppText';
-import { colors, fontSizes, fontWeights, spacing, radii, shadows } from '../theme';
+import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows } from '../theme';
 import { formatCurrency } from '../utils/formatCurrency';
 
 // #region agent log
@@ -43,6 +43,7 @@ try {
 // #endregion
 
 const MonthlyTrendChartComponent = ({ monthlyTrend }: MonthlyTrendChartProps) => {
+  const colors = useThemeColors();
   // #region agent log
   try {
     fetch('http://127.0.0.1:7242/ingest/16e3335f-6715-4f8a-beae-87df786dbc1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MonthlyTrendChart.tsx:42',message:'MonthlyTrendChart component entry',data:{appTextType:typeof AppText,appTextIsUndefined:AppText === undefined,appTextIsFunction:typeof AppText === 'function',monthlyTrendLength:monthlyTrend?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'A'})}).catch(()=>{});
@@ -52,6 +53,154 @@ const MonthlyTrendChartComponent = ({ monthlyTrend }: MonthlyTrendChartProps) =>
   // #endregion
   const [selectedRange, setSelectedRange] = useState<MonthRange>(6);
   const [barAnimations, setBarAnimations] = useState<Animated.Value[]>([]);
+
+  const styles = React.useMemo(() => StyleSheet.create({
+    chartSection: {
+      marginBottom: spacing.xl,
+      backgroundColor: colors.surface,
+      borderRadius: radii.lg,
+      padding: spacing.lg,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      ...(shadows.sm as object),
+    },
+    headerRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: spacing.sm,
+    },
+    sectionTitle: {
+      fontSize: fontSizes.lg,
+      fontWeight: fontWeights.bold,
+      color: colors.text,
+      letterSpacing: -0.3,
+    },
+    rangeSelector: {
+      flexDirection: 'row',
+      backgroundColor: colors.background,
+      borderRadius: radii.md,
+      padding: spacing.xxs,
+      gap: spacing.xxs,
+    },
+    rangeButton: {
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+      borderRadius: radii.sm,
+      minWidth: 44,
+      alignItems: 'center',
+    },
+    rangeButtonActive: {
+      backgroundColor: colors.primary,
+    },
+    rangeButtonText: {
+      fontSize: fontSizes.xs,
+      fontWeight: fontWeights.medium,
+      color: colors.textSecondary,
+    },
+    rangeButtonTextActive: {
+      color: colors.surface,
+      fontWeight: fontWeights.semibold,
+    },
+    subheaderRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: spacing.md,
+    },
+    rangeLabelText: {
+      fontSize: fontSizes.sm,
+      color: colors.textSecondary,
+      fontWeight: fontWeights.medium,
+    },
+    summaryText: {
+      fontSize: fontSizes.sm,
+      color: colors.text,
+      fontWeight: fontWeights.semibold,
+    },
+    plotArea: {
+      height: PLOT_HEIGHT,
+      flexDirection: 'row',
+      overflow: 'hidden',
+    },
+    yAxisContainer: {
+      width: Y_AXIS_LABEL_WIDTH,
+      position: 'relative',
+    },
+    yAxisLabel: {
+      position: 'absolute',
+      right: spacing.xs,
+      alignItems: 'flex-end',
+    },
+    yAxisText: {
+      fontSize: fontSizes.xs,
+      color: colors.textTertiary,
+      fontWeight: fontWeights.medium,
+    },
+    plotInner: {
+      flex: 1,
+      position: 'relative',
+      paddingLeft: PLOT_PADDING_LEFT,
+      paddingRight: PLOT_PADDING_RIGHT,
+      paddingTop: PLOT_PADDING_TOP,
+      paddingBottom: PLOT_PADDING_BOTTOM,
+    },
+    gridLines: {
+      position: 'absolute',
+      top: PLOT_PADDING_TOP,
+      left: 0,
+      right: PLOT_PADDING_RIGHT,
+      bottom: PLOT_PADDING_BOTTOM,
+    },
+    gridLine: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      height: 1,
+      backgroundColor: colors.borderLight,
+      opacity: 0.15,
+    },
+    barWrapper: {
+      position: 'absolute',
+      bottom: PLOT_PADDING_BOTTOM,
+      alignItems: 'center',
+      justifyContent: 'flex-end',
+    },
+    bar: {
+      borderRadius: radii.md,
+      minHeight: 0,
+      ...(shadows.xs as object),
+    },
+    barCurrent: {
+      ...(shadows.sm as object),
+    },
+    monthLabelWrapper: {
+      position: 'absolute',
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: 50, // Fixed width for centering
+      transform: [{ translateX: -25 }], // Center the label (half of width)
+    },
+    monthLabel: {
+      fontSize: fontSizes.xs,
+      color: colors.textTertiary,
+      fontWeight: fontWeights.medium,
+    },
+    monthLabelCurrent: {
+      color: colors.text,
+      fontWeight: fontWeights.semibold,
+    },
+    emptyState: {
+      paddingVertical: spacing.xxl,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    emptyText: {
+      fontSize: fontSizes.md,
+      color: colors.textSecondary,
+      textAlign: 'center',
+    },
+  }), [colors]);
 
   // Get the last N months based on selected range
   const displayedData = useMemo(() => {
@@ -364,151 +513,3 @@ try {
 // #endregion
 
 export const MonthlyTrendChart = MonthlyTrendChartComponent;
-
-const styles = StyleSheet.create({
-  chartSection: {
-    marginBottom: spacing.xl,
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    ...(shadows.sm as object),
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  sectionTitle: {
-    fontSize: fontSizes.lg,
-    fontWeight: fontWeights.bold,
-    color: colors.text,
-    letterSpacing: -0.3,
-  },
-  rangeSelector: {
-    flexDirection: 'row',
-    backgroundColor: colors.background,
-    borderRadius: radii.md,
-    padding: spacing.xxs,
-    gap: spacing.xxs,
-  },
-  rangeButton: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radii.sm,
-    minWidth: 44,
-    alignItems: 'center',
-  },
-  rangeButtonActive: {
-    backgroundColor: colors.primary,
-  },
-  rangeButtonText: {
-    fontSize: fontSizes.xs,
-    fontWeight: fontWeights.medium,
-    color: colors.textSecondary,
-  },
-  rangeButtonTextActive: {
-    color: colors.surface,
-    fontWeight: fontWeights.semibold,
-  },
-  subheaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  rangeLabelText: {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
-    fontWeight: fontWeights.medium,
-  },
-  summaryText: {
-    fontSize: fontSizes.sm,
-    color: colors.text,
-    fontWeight: fontWeights.semibold,
-  },
-  plotArea: {
-    height: PLOT_HEIGHT,
-    flexDirection: 'row',
-    overflow: 'hidden',
-  },
-  yAxisContainer: {
-    width: Y_AXIS_LABEL_WIDTH,
-    position: 'relative',
-  },
-  yAxisLabel: {
-    position: 'absolute',
-    right: spacing.xs,
-    alignItems: 'flex-end',
-  },
-  yAxisText: {
-    fontSize: fontSizes.xs,
-    color: colors.textTertiary,
-    fontWeight: fontWeights.medium,
-  },
-  plotInner: {
-    flex: 1,
-    position: 'relative',
-    paddingLeft: PLOT_PADDING_LEFT,
-    paddingRight: PLOT_PADDING_RIGHT,
-    paddingTop: PLOT_PADDING_TOP,
-    paddingBottom: PLOT_PADDING_BOTTOM,
-  },
-  gridLines: {
-    position: 'absolute',
-    top: PLOT_PADDING_TOP,
-    left: 0,
-    right: PLOT_PADDING_RIGHT,
-    bottom: PLOT_PADDING_BOTTOM,
-  },
-  gridLine: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: colors.borderLight,
-    opacity: 0.15,
-  },
-  barWrapper: {
-    position: 'absolute',
-    bottom: PLOT_PADDING_BOTTOM,
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-  },
-  bar: {
-    borderRadius: radii.md,
-    minHeight: 0,
-    ...(shadows.xs as object),
-  },
-  barCurrent: {
-    ...(shadows.sm as object),
-  },
-  monthLabelWrapper: {
-    position: 'absolute',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 50, // Fixed width for centering
-    transform: [{ translateX: -25 }], // Center the label (half of width)
-  },
-  monthLabel: {
-    fontSize: fontSizes.xs,
-    color: colors.textTertiary,
-    fontWeight: fontWeights.medium,
-  },
-  monthLabelCurrent: {
-    color: colors.text,
-    fontWeight: fontWeights.semibold,
-  },
-  emptyState: {
-    paddingVertical: spacing.xxl,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyText: {
-    fontSize: fontSizes.md,
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-});

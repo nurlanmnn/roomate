@@ -4,8 +4,9 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useAuth } from '../context/AuthContext';
 import { useHousehold } from '../context/HouseholdContext';
+import { useThemeColors } from '../theme';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSizes, fontWeights } from '../theme';
+import { fontSizes, fontWeights } from '../theme';
 
 // Auth Screens
 import { LandingScreen } from '../screens/Auth/LandingScreen';
@@ -29,6 +30,7 @@ import { GoalsScreen } from '../screens/Goals/GoalsScreen';
 import { CreateGoalScreen } from '../screens/Goals/CreateGoalScreen';
 import { SettingsScreen } from '../screens/Settings/SettingsScreen';
 import { AccountSettingsScreen } from '../screens/Settings/AccountSettingsScreen';
+import { HouseholdSettingsScreen } from '../screens/Settings/HouseholdSettingsScreen';
 
 const AuthStack = createNativeStackNavigator();
 const MainStack = createNativeStackNavigator();
@@ -46,6 +48,7 @@ const AuthNavigator = () => {
 };
 
 const MainTabs = () => {
+  const colors = useThemeColors();
   return (
     <Tab.Navigator
       screenOptions={{
@@ -171,10 +174,22 @@ const MainTabsWithGuard = () => {
 
 const MainNavigator = () => {
   const { selectedHousehold } = useHousehold();
+  const colors = useThemeColors();
 
   return (
     <MainStack.Navigator
       initialRouteName={selectedHousehold ? 'Main' : 'HouseholdSelect'}
+      screenOptions={{
+        headerStyle: {
+          backgroundColor: colors.background,
+        },
+        headerTitleStyle: {
+          fontWeight: fontWeights.extrabold,
+          fontSize: fontSizes.lg,
+          color: colors.text,
+        },
+        headerTintColor: colors.text,
+      }}
     >
       <MainStack.Screen
         name="HouseholdSelect"
@@ -189,7 +204,19 @@ const MainNavigator = () => {
       <MainStack.Screen
         name="CreateExpense"
         component={CreateExpenseScreen}
-        options={{ title: 'Add Expense', presentation: 'modal' }}
+        options={({ route }) => ({
+          title: 'Add Expense',
+          presentation: 'modal',
+          headerStyle: {
+            backgroundColor: colors.background,
+          },
+          headerTitleStyle: {
+            fontWeight: fontWeights.extrabold,
+            fontSize: fontSizes.lg,
+            color: colors.text,
+          },
+          headerTintColor: colors.text,
+        })}
       />
       <MainStack.Screen
         name="SettleUp"
@@ -202,7 +229,9 @@ const MainNavigator = () => {
           headerTitleStyle: {
             fontWeight: fontWeights.extrabold,
             fontSize: fontSizes.lg,
+            color: colors.text,
           },
+          headerTintColor: colors.text,
           headerBackTitleVisible: false,
         }}
       />
@@ -217,24 +246,77 @@ const MainNavigator = () => {
           headerTitleStyle: {
             fontWeight: fontWeights.extrabold,
             fontSize: fontSizes.lg,
+            color: colors.text,
           },
+          headerTintColor: colors.text,
           headerBackTitleVisible: false,
         }}
       />
       <MainStack.Screen
         name="CreateEvent"
         component={CreateEventScreen}
-        options={{ title: 'Add Event', presentation: 'modal' }}
+        options={{
+          title: 'Add Event',
+          presentation: 'modal',
+          headerStyle: {
+            backgroundColor: colors.background,
+          },
+          headerTitleStyle: {
+            fontWeight: fontWeights.extrabold,
+            fontSize: fontSizes.lg,
+            color: colors.text,
+          },
+          headerTintColor: colors.text,
+        }}
       />
       <MainStack.Screen
         name="CreateGoal"
         component={CreateGoalScreen}
-        options={{ title: 'New Goal', presentation: 'modal' }}
+        options={{
+          title: 'New Goal',
+          presentation: 'modal',
+          headerStyle: {
+            backgroundColor: colors.background,
+          },
+          headerTitleStyle: {
+            fontWeight: fontWeights.extrabold,
+            fontSize: fontSizes.lg,
+            color: colors.text,
+          },
+          headerTintColor: colors.text,
+        }}
       />
       <MainStack.Screen
         name="AccountSettings"
         component={AccountSettingsScreen}
-        options={{ title: 'Account Settings' }}
+        options={{
+          title: 'Account Settings',
+          headerStyle: {
+            backgroundColor: colors.background,
+          },
+          headerTitleStyle: {
+            fontWeight: fontWeights.extrabold,
+            fontSize: fontSizes.lg,
+            color: colors.text,
+          },
+          headerTintColor: colors.text,
+        }}
+      />
+      <MainStack.Screen
+        name="HouseholdSettings"
+        component={HouseholdSettingsScreen}
+        options={{
+          title: 'Household Settings',
+          headerStyle: {
+            backgroundColor: colors.background,
+          },
+          headerTitleStyle: {
+            fontWeight: fontWeights.extrabold,
+            fontSize: fontSizes.lg,
+            color: colors.text,
+          },
+          headerTintColor: colors.text,
+        }}
       />
       <MainStack.Screen
         name="Settings"
@@ -249,10 +331,11 @@ const MainNavigator = () => {
             headerTitleStyle: {
               fontWeight: fontWeights.extrabold,
               fontSize: fontSizes.lg,
+              color: colors.text,
             },
+            headerTintColor: colors.text,
             headerBackTitleVisible: false,
             headerShown: true,
-            // Ensure back button works when coming from HouseholdSelect
             gestureEnabled: true,
             headerBackVisible: true,
           };

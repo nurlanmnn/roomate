@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHousehold } from '../../context/HouseholdContext';
@@ -8,15 +8,102 @@ import { ExpenseCard } from '../../components/ExpenseCard';
 import { BalanceSummary } from '../../components/BalanceSummary';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
+import { ExpenseFilters, ExpenseFilters as ExpenseFiltersType, SortOption, GroupByOption } from '../../components/ExpenseFilters';
+import { EXPENSE_CATEGORIES, getCategoryById } from '../../constants/expenseCategories';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSizes, fontWeights, spacing, radii, shadows } from '../../theme';
+import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows } from '../../theme';
+import { LoadingSkeleton, SkeletonCard } from '../../components/LoadingSkeleton';
+import { AppText } from '../../components/AppText';
+import { parseISO } from 'date-fns';
 
 export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { selectedHousehold } = useHousehold();
   const { user } = useAuth();
+  const colors = useThemeColors();
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          flex: 1,
+          backgroundColor: colors.background,
+        },
+        scrollView: {
+          flex: 1,
+        },
+        emptyContainer: {
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+        },
+        section: {
+          paddingHorizontal: spacing.md,
+          paddingTop: spacing.md,
+          paddingBottom: spacing.xs,
+        },
+        sectionTitle: {
+          fontSize: fontSizes.xl,
+          fontWeight: fontWeights.semibold,
+          marginBottom: spacing.md,
+          color: colors.text,
+        },
+        actions: {
+          paddingHorizontal: spacing.md,
+          paddingTop: spacing.xs,
+          paddingBottom: spacing.md,
+        },
+        spacer: {
+          height: spacing.sm,
+        },
+        emptyText: {
+          fontSize: fontSizes.md,
+          color: colors.muted,
+          textAlign: 'center',
+          padding: spacing.xxl,
+        },
+        infoBanner: {
+          flexDirection: 'row',
+          alignItems: 'flex-start',
+          backgroundColor: colors.primarySoft,
+          marginHorizontal: spacing.md,
+          marginBottom: spacing.md,
+          padding: spacing.md,
+          borderRadius: radii.md,
+          borderWidth: 1,
+          borderColor: colors.primary,
+          gap: spacing.sm,
+        },
+        infoText: {
+          flex: 1,
+          fontSize: fontSizes.sm,
+          color: colors.text,
+          lineHeight: 20,
+        },
+        filteredCount: {
+          fontSize: fontSizes.md,
+          color: colors.textSecondary,
+          fontWeight: fontWeights.normal,
+        },
+        groupSection: {
+          marginBottom: spacing.lg,
+        },
+        groupTitle: {
+          fontSize: fontSizes.lg,
+          fontWeight: fontWeights.bold,
+          color: colors.text,
+          marginBottom: spacing.md,
+          marginTop: spacing.sm,
+        },
+      }),
+    [colors]
+  );
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [balances, setBalances] = useState<PairwiseBalance[]>([]);
   const [loading, setLoading] = useState(false);
+  const [filters, setFilters] = useState<ExpenseFiltersType>({
+    search: '',
+    sortBy: 'newest',
+    groupBy: 'none',
+  });
 
   useEffect(() => {
     if (selectedHousehold) {
@@ -58,6 +145,111 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     }
   };
 
+  const handleQuickSettle = () => {
+    navigation.navigate('SettleUp');
+  };
+
+  // Filter and sort expenses
+  const filteredAndSortedExpenses = useMemo(() => {
+    let filtered = [...expenses];
+
+    // Search filter
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      filtered = filtered.filter(e => 
+        e.description.toLowerCase().includes(searchLower) ||
+        (e.category && e.category.toLowerCase().includes(searchLower))
+      );
+    }
+
+    // Date range filter
+    if (filters.dateFrom) {
+      filtered = filtered.filter(e => parseISO(e.date) >= filters.dateFrom!);
+    }
+    if (filters.dateTo) {
+      const toDate = new Date(filters.dateTo);
+      toDate.setHours(23, 59, 59, 999);
+      filtered = filtered.filter(e => parseISO(e.date) <= toDate);
+    }
+
+    // Category filter
+    if (filters.category) {
+      const categoryName = getCategoryById(filters.category)?.name;
+      filtered = filtered.filter(e => e.category === categoryName);
+    }
+
+    // Person filter
+    if (filters.personId) {
+      filtered = filtered.filter(e => 
+        e.paidBy === filters.personId || 
+        (typeof e.paidBy === 'object' && e.paidBy._id === filters.personId)
+      );
+    }
+
+    // Amount range filter
+    if (filters.amountMin) {
+      const min = parseFloat(filters.amountMin);
+      if (!isNaN(min)) {
+        filtered = filtered.filter(e => e.totalAmount >= min);
+      }
+    }
+    if (filters.amountMax) {
+      const max = parseFloat(filters.amountMax);
+      if (!isNaN(max)) {
+        filtered = filtered.filter(e => e.totalAmount <= max);
+      }
+    }
+
+    // Sort
+    filtered.sort((a, b) => {
+      switch (filters.sortBy) {
+        case 'oldest':
+          return parseISO(a.date).getTime() - parseISO(b.date).getTime();
+        case 'amount':
+          return b.totalAmount - a.totalAmount;
+        case 'category':
+          return (a.category || '').localeCompare(b.category || '');
+        case 'newest':
+        default:
+          return parseISO(b.date).getTime() - parseISO(a.date).getTime();
+      }
+    });
+
+    return filtered;
+  }, [expenses, filters]);
+
+  // Group expenses
+  const groupedExpenses = useMemo(() => {
+    if (filters.groupBy === 'none') {
+      return { 'All': filteredAndSortedExpenses };
+    }
+
+    const groups: Record<string, Expense[]> = {};
+
+    filteredAndSortedExpenses.forEach(expense => {
+      let key = 'Other';
+      
+      if (filters.groupBy === 'date') {
+        const date = parseISO(expense.date);
+        key = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+      } else if (filters.groupBy === 'category') {
+        key = expense.category || 'Uncategorized';
+      } else if (filters.groupBy === 'person') {
+        const paidBy = typeof expense.paidBy === 'object' ? expense.paidBy._id : expense.paidBy;
+        key = getUserName(paidBy);
+      }
+
+      if (!groups[key]) {
+        groups[key] = [];
+      }
+      groups[key].push(expense);
+    });
+
+    return groups;
+  }, [filteredAndSortedExpenses, filters.groupBy]);
+
+  const memberNames = selectedHousehold?.members.map(m => ({ id: m._id, name: m.name })) || [];
+
   if (!selectedHousehold) {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -75,6 +267,12 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         refreshControl={<RefreshControl refreshing={loading} onRefresh={loadData} />}
       >
       <ScreenHeader title="Expenses" subtitle={selectedHousehold.name} />
+
+      <ExpenseFilters
+        filters={filters}
+        onFiltersChange={setFilters}
+        memberNames={memberNames}
+      />
 
       {user && (
         <View style={styles.section}>
@@ -110,17 +308,46 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
       )}
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Recent Expenses</Text>
-        {expenses.length === 0 ? (
-          <Text style={styles.emptyText}>No expenses yet</Text>
-        ) : (
-          expenses.map((expense) => (
+        <Text style={styles.sectionTitle}>
+          {filters.groupBy === 'none' ? 'Recent Expenses' : 'Expenses'}
+          {filteredAndSortedExpenses.length !== expenses.length && (
+            <Text style={styles.filteredCount}> ({filteredAndSortedExpenses.length})</Text>
+          )}
+        </Text>
+        {loading && expenses.length === 0 ? (
+          <>
+            {[1, 2, 3].map((i) => (
+              <SkeletonCard key={i} lines={3} showAvatar={true} />
+            ))}
+          </>
+        ) : filteredAndSortedExpenses.length === 0 ? (
+          <Text style={styles.emptyText}>
+            {expenses.length === 0 ? 'No expenses yet' : 'No expenses match your filters'}
+          </Text>
+        ) : filters.groupBy === 'none' ? (
+          filteredAndSortedExpenses.map((expense) => (
             <ExpenseCard
               key={expense._id}
               expense={expense}
               onDelete={handleDeleteExpense}
+              onQuickSettle={handleQuickSettle}
               canDelete={true}
             />
+          ))
+        ) : (
+          Object.entries(groupedExpenses).map(([groupKey, groupExpenses]) => (
+            <View key={groupKey} style={styles.groupSection}>
+              <AppText style={styles.groupTitle}>{groupKey}</AppText>
+              {groupExpenses.map((expense) => (
+                <ExpenseCard
+                  key={expense._id}
+                  expense={expense}
+                  onDelete={handleDeleteExpense}
+                  onQuickSettle={handleQuickSettle}
+                  canDelete={true}
+                />
+              ))}
+            </View>
           ))
         )}
       </View>
@@ -128,61 +355,3 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  section: {
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.xs,
-  },
-  sectionTitle: {
-    fontSize: fontSizes.xl,
-    fontWeight: fontWeights.semibold,
-    marginBottom: spacing.md,
-    color: colors.text,
-  },
-  actions: {
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.xs,
-    paddingBottom: spacing.md,
-  },
-  spacer: {
-    height: spacing.sm,
-  },
-  emptyText: {
-    fontSize: fontSizes.md,
-    color: colors.muted,
-    textAlign: 'center',
-    padding: spacing.xxl,
-  },
-  infoBanner: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: colors.primarySoft,
-    marginHorizontal: spacing.md,
-    marginBottom: spacing.md,
-    padding: spacing.md,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    gap: spacing.sm,
-  },
-  infoText: {
-    flex: 1,
-    fontSize: fontSizes.sm,
-    color: colors.text,
-    lineHeight: 20,
-  },
-});

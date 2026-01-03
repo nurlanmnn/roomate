@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Alert } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { AppText } from '../../components/AppText';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -17,14 +17,17 @@ import { StatsCard } from '../../components/StatsCard';
 import { QuickActionButton } from '../../components/QuickActionButton';
 import { SpendingChart } from '../../components/SpendingChart';
 import { formatDate } from '../../utils/dateHelpers';
-import { formatCurrency } from '../../utils/formatCurrency';
-import { colors, fontSizes, fontWeights, spacing, lineHeights, radii, shadows } from '../../theme';
+import { formatCompactCurrency, formatCurrency } from '../../utils/formatCurrency';
+import { useThemeColors, fontSizes, fontWeights, spacing, lineHeights, radii, shadows } from '../../theme';
+import { scale } from '../../utils/scaling';
 import { Ionicons } from '@expo/vector-icons';
+import { LoadingSkeleton, SkeletonCard } from '../../components/LoadingSkeleton';
 
 export const HomeScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { selectedHousehold } = useHousehold();
   const { user } = useAuth();
+  const colors = useThemeColors();
   const [events, setEvents] = useState<Event[]>([]);
   const [balances, setBalances] = useState<PairwiseBalance[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -33,6 +36,252 @@ export const HomeScreen: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [insights, setInsights] = useState<any>(null);
+
+  const styles = React.useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    emptyContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: spacing.xxl,
+    },
+    emptyText: {
+      fontSize: fontSizes.md,
+      color: colors.muted,
+    },
+    skeletonStatCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      padding: spacing.md,
+      backgroundColor: colors.surface,
+      borderRadius: radii.md,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+    },
+    skeletonStatContent: {
+      flex: 1,
+    },
+    header: {
+      paddingHorizontal: spacing.xl,
+      paddingTop: spacing.lg,
+      paddingBottom: spacing.xl,
+      backgroundColor: colors.background,
+    },
+    title: {
+      fontSize: fontSizes.xxxl,
+      fontWeight: fontWeights.extrabold,
+      color: colors.text,
+      marginBottom: spacing.xs,
+      lineHeight: lineHeights.xxxl,
+      letterSpacing: -0.5,
+    },
+    address: {
+      fontSize: fontSizes.sm,
+      color: colors.textSecondary,
+      lineHeight: lineHeights.sm,
+    },
+    statsContainer: {
+      flexDirection: 'row',
+      paddingHorizontal: spacing.xl,
+      paddingTop: spacing.lg,
+      paddingBottom: spacing.md,
+      gap: spacing.sm,
+    },
+    section: {
+      paddingHorizontal: spacing.xl,
+      paddingTop: spacing.xl,
+      paddingBottom: spacing.md,
+    },
+    sectionHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      marginBottom: spacing.lg,
+    },
+    sectionTitleContainer: {
+      flex: 1,
+      flexShrink: 1,
+      paddingRight: spacing.md,
+    },
+    sectionTitle: {
+      fontSize: fontSizes.xl,
+      fontWeight: fontWeights.bold,
+      color: colors.text,
+      letterSpacing: -0.3,
+      marginBottom: spacing.xs,
+    },
+    sectionDescription: {
+      fontSize: fontSizes.sm,
+      color: colors.textSecondary,
+      lineHeight: lineHeights.sm,
+    },
+    seeAllText: {
+      fontSize: fontSizes.sm,
+      color: colors.primary,
+      fontWeight: fontWeights.semibold,
+    },
+    emptyStateContainer: {
+      paddingHorizontal: spacing.xl,
+      paddingTop: spacing.lg,
+    },
+    welcomeSection: {
+      padding: spacing.xxl,
+      backgroundColor: colors.surface,
+      borderRadius: radii.lg,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      alignItems: 'center',
+      marginBottom: spacing.xl,
+      ...(shadows.sm as object),
+    },
+    welcomeIconContainer: {
+      width: scale(80),
+      height: scale(80),
+      borderRadius: scale(40),
+      backgroundColor: colors.primaryUltraSoft,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: spacing.lg,
+    },
+    welcomeTitle: {
+      fontSize: fontSizes.xxl,
+      fontWeight: fontWeights.extrabold,
+      color: colors.text,
+      marginBottom: spacing.md,
+      textAlign: 'center',
+      lineHeight: lineHeights.xxl,
+    },
+    welcomeText: {
+      fontSize: fontSizes.md,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      lineHeight: lineHeights.md,
+      paddingHorizontal: spacing.md,
+      marginBottom: spacing.md,
+    },
+    inviteMessageContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.primaryUltraSoft,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderRadius: radii.md,
+      marginTop: spacing.md,
+      gap: spacing.xs,
+      flexWrap: 'wrap',
+    },
+    inviteMessage: {
+      fontSize: fontSizes.sm,
+      color: colors.textSecondary,
+      textAlign: 'center',
+    },
+    joinCodeContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.surface,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+      borderRadius: radii.sm,
+      borderWidth: 1,
+      borderColor: colors.primary,
+      gap: spacing.xs,
+    },
+    joinCode: {
+      fontSize: fontSizes.sm,
+      fontWeight: fontWeights.bold,
+      color: colors.primary,
+      letterSpacing: 1,
+    },
+    copyIcon: {
+      marginLeft: spacing.xxs,
+    },
+    quickActionsContainer: {
+      gap: spacing.md,
+    },
+    quickActionsRow: {
+      flexDirection: 'row',
+      gap: spacing.md,
+    },
+    summaryCard: {
+      backgroundColor: colors.surface,
+      borderRadius: radii.lg,
+      padding: spacing.lg,
+      marginTop: spacing.md,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      ...(shadows.sm as object),
+    },
+    summaryRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      gap: spacing.md,
+    },
+    summaryItem: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    summaryTextContainer: {
+      flex: 1,
+    },
+    summaryLabel: {
+      fontSize: fontSizes.xs,
+      color: colors.textSecondary,
+      marginBottom: spacing.xxs,
+    },
+    summaryValue: {
+      fontSize: fontSizes.lg,
+      fontWeight: fontWeights.bold,
+      color: colors.text,
+    },
+    trendIndicator: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: spacing.md,
+      paddingTop: spacing.md,
+      borderTopWidth: 1,
+      borderTopColor: colors.borderLight,
+      gap: spacing.xs,
+    },
+    trendText: {
+      fontSize: fontSizes.sm,
+      fontWeight: fontWeights.medium,
+    },
+    tipCard: {
+      flexDirection: 'row',
+      backgroundColor: colors.accentUltraSoft,
+      borderRadius: radii.lg,
+      padding: spacing.lg,
+      borderWidth: 1,
+      borderColor: colors.accentSoft,
+      gap: spacing.md,
+      ...(shadows.xs as object),
+    },
+    tipContent: {
+      flex: 1,
+      flexShrink: 1,
+    },
+    tipTitle: {
+      fontSize: fontSizes.md,
+      fontWeight: fontWeights.semibold,
+      color: colors.text,
+      marginBottom: spacing.xs,
+    },
+    tipText: {
+      fontSize: fontSizes.sm,
+      color: colors.textSecondary,
+      lineHeight: lineHeights.sm,
+    },
+  }), [colors]);
 
   useEffect(() => {
     if (selectedHousehold) {
@@ -159,14 +408,33 @@ export const HomeScreen: React.FC = () => {
     );
   }
 
-  // Show loading indicator on initial load
+  // Show loading skeleton on initial load
   if (initialLoading) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <AppText style={styles.loadingText}>Loading...</AppText>
-        </View>
+        <ScrollView style={styles.scrollView}>
+          <View style={styles.header}>
+            <LoadingSkeleton width={200} height={28} style={{ marginBottom: spacing.xs }} />
+            <LoadingSkeleton width={150} height={16} />
+          </View>
+          <View style={styles.statsContainer}>
+            {[1, 2, 3, 4].map((i) => (
+              <View key={i} style={styles.skeletonStatCard}>
+                <LoadingSkeleton width={40} height={40} borderRadius={20} />
+                <View style={styles.skeletonStatContent}>
+                  <LoadingSkeleton width={80} height={14} style={{ marginBottom: spacing.xs }} />
+                  <LoadingSkeleton width={60} height={18} />
+                </View>
+              </View>
+            ))}
+          </View>
+          <View style={styles.section}>
+            <LoadingSkeleton width={150} height={20} style={{ marginBottom: spacing.md }} />
+            {[1, 2, 3].map((i) => (
+              <SkeletonCard key={i} lines={2} showAvatar={true} />
+            ))}
+          </View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -190,9 +458,10 @@ export const HomeScreen: React.FC = () => {
           <StatsCard
             icon={<Ionicons name="cash-outline" size={24} color={colors.primary} />}
             label="This Month"
-            value={formatCurrency(stats.monthlyExpenses)}
+            value={formatCompactCurrency(stats.monthlyExpenses)}
             iconColor={colors.primary}
             iconBgColor={colors.primaryUltraSoft}
+            onPress={() => navigation.navigate('Expenses')}
           />
           <StatsCard
             icon={<Ionicons name="cart-outline" size={24} color={colors.accent} />}
@@ -200,6 +469,7 @@ export const HomeScreen: React.FC = () => {
             value={stats.pendingShopping}
             iconColor={colors.accent}
             iconBgColor={colors.accentUltraSoft}
+            onPress={() => navigation.navigate('Shopping')}
           />
           <StatsCard
             icon={<Ionicons name="calendar-outline" size={24} color={colors.teal} />}
@@ -207,6 +477,7 @@ export const HomeScreen: React.FC = () => {
             value={stats.upcomingEventsCount}
             iconColor={colors.teal}
             iconBgColor={colors.tealUltraSoft}
+            onPress={() => navigation.navigate('Calendar')}
           />
         </View>
       )}
@@ -272,23 +543,17 @@ export const HomeScreen: React.FC = () => {
         </View>
       )}
 
-      {/* Spending Insights & Charts */}
-      {insights && insights.byCategory.length > 0 && (
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <AppText style={styles.sectionTitle}>Spending Insights</AppText>
-          </View>
-          <SpendingChart
-            byCategory={insights.byCategory}
-            monthlyTrend={insights.monthlyTrend}
-            predictions={insights.predictions}
-          />
-        </View>
-      )}
-
       {/* Balance Summary */}
       {user && balances.length > 0 && (
         <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionTitleContainer}>
+              <AppText style={styles.sectionTitle}>Your Balances</AppText>
+              <AppText style={styles.sectionDescription}>
+                Track who owes what and settle up with your roommates
+              </AppText>
+            </View>
+          </View>
           <BalanceSummary
             balances={balances}
             currentUserId={user._id}
@@ -298,11 +563,89 @@ export const HomeScreen: React.FC = () => {
         </View>
       )}
 
+      {/* Spending Insights & Charts */}
+      {insights && insights.byCategory.length > 0 && (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionTitleContainer}>
+              <AppText style={styles.sectionTitle}>Spending Insights</AppText>
+              <AppText style={styles.sectionDescription}>
+                Track your spending patterns and see where your money goes each month
+              </AppText>
+            </View>
+          </View>
+          <SpendingChart
+            byCategory={insights.byCategory}
+            monthlyTrend={insights.monthlyTrend}
+            predictions={insights.predictions}
+          />
+          {/* Spending Summary Card */}
+          {insights.monthlyTrend && insights.monthlyTrend.length > 1 && (
+            <View style={styles.summaryCard}>
+              <View style={styles.summaryRow}>
+                <View style={styles.summaryItem}>
+                  <Ionicons name="trending-up-outline" size={20} color={colors.primary} />
+                  <View style={styles.summaryTextContainer}>
+                    <AppText style={styles.summaryLabel}>This Month</AppText>
+                    <AppText style={styles.summaryValue}>
+                      {formatCurrency(stats.monthlyExpenses)}
+                    </AppText>
+                  </View>
+                </View>
+                {insights.monthlyTrend.length >= 2 && (
+                  <View style={styles.summaryItem}>
+                    <Ionicons name="calendar-outline" size={20} color={colors.textSecondary} />
+                    <View style={styles.summaryTextContainer}>
+                      <AppText style={styles.summaryLabel}>Last Month</AppText>
+                      <AppText style={styles.summaryValue}>
+                        {formatCurrency(insights.monthlyTrend[insights.monthlyTrend.length - 2]?.amount || 0)}
+                      </AppText>
+                    </View>
+                  </View>
+                )}
+              </View>
+              {insights.monthlyTrend.length >= 2 && (() => {
+                const thisMonth = stats.monthlyExpenses;
+                const lastMonth = insights.monthlyTrend[insights.monthlyTrend.length - 2]?.amount || 0;
+                const difference = thisMonth - lastMonth;
+                const percentChange = lastMonth > 0 ? ((difference / lastMonth) * 100).toFixed(1) : 0;
+                const isIncrease = difference > 0;
+                
+                if (lastMonth > 0) {
+                  return (
+                    <View style={styles.trendIndicator}>
+                      <Ionicons 
+                        name={isIncrease ? "arrow-up" : "arrow-down"} 
+                        size={16} 
+                        color={isIncrease ? colors.danger : colors.success} 
+                      />
+                      <AppText style={[
+                        styles.trendText,
+                        { color: isIncrease ? colors.danger : colors.success }
+                      ]}>
+                        {isIncrease ? '+' : ''}{formatCurrency(Math.abs(difference))} ({isIncrease ? '+' : ''}{percentChange}%) 
+                        {isIncrease ? 'more' : 'less'} than last month
+                      </AppText>
+                    </View>
+                  );
+                }
+                return null;
+              })()}
+            </View>
+          )}
+        </View>
+      )}
+
       {/* Upcoming Events */}
       {events.length > 0 && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <AppText style={styles.sectionTitle}>Upcoming Events</AppText>
+            <View style={styles.sectionTitleContainer}>
+              <AppText style={styles.sectionTitle}>Upcoming Events</AppText>
+              <AppText style={styles.sectionDescription}>
+                Don't miss important dates and shared activities
+              </AppText>
+            </View>
             <TouchableOpacity onPress={() => navigation.navigate('Calendar')}>
               <AppText style={styles.seeAllText}>See All</AppText>
             </TouchableOpacity>
@@ -317,7 +660,12 @@ export const HomeScreen: React.FC = () => {
       {goals.length > 0 && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <AppText style={styles.sectionTitle}>Active Goals</AppText>
+            <View style={styles.sectionTitleContainer}>
+              <AppText style={styles.sectionTitle}>Active Goals</AppText>
+              <AppText style={styles.sectionDescription}>
+                Shared goals and ideas for your household
+              </AppText>
+            </View>
             <TouchableOpacity onPress={() => navigation.navigate('Goals')}>
               <AppText style={styles.seeAllText}>See All</AppText>
             </TouchableOpacity>
@@ -339,170 +687,25 @@ export const HomeScreen: React.FC = () => {
           ))}
         </View>
       )}
+
+      {/* Quick Tip Card */}
+      {hasData && (
+        <View style={styles.section}>
+          <View style={styles.tipCard}>
+            <Ionicons name="bulb-outline" size={24} color={colors.accent} />
+            <View style={styles.tipContent}>
+              <AppText style={styles.tipTitle}>Quick Tip</AppText>
+              <AppText style={styles.tipText}>
+                {stats.monthlyExpenses > 0 
+                  ? "Review your spending by category to identify areas where you can save money."
+                  : "Start tracking expenses to get personalized insights and better manage your household budget."}
+              </AppText>
+            </View>
+          </View>
+        </View>
+      )}
     </ScrollView>
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.xxl,
-  },
-  emptyText: {
-    fontSize: fontSizes.md,
-    color: colors.muted,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.xl,
-  },
-  loadingText: {
-    marginTop: spacing.md,
-    fontSize: fontSizes.md,
-    color: colors.textSecondary,
-  },
-  header: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.xl,
-    backgroundColor: colors.background,
-  },
-  title: {
-    fontSize: fontSizes.xxxl,
-    fontWeight: fontWeights.extrabold,
-    color: colors.text,
-    marginBottom: spacing.xs,
-    lineHeight: lineHeights.xxxl,
-    letterSpacing: -0.5,
-  },
-  address: {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
-    lineHeight: lineHeights.sm,
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.md,
-    gap: spacing.sm,
-  },
-  section: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.md,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  sectionTitle: {
-    fontSize: fontSizes.xl,
-    fontWeight: fontWeights.bold,
-    color: colors.text,
-    letterSpacing: -0.3,
-  },
-  seeAllText: {
-    fontSize: fontSizes.sm,
-    color: colors.primary,
-    fontWeight: fontWeights.semibold,
-  },
-  emptyStateContainer: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
-  },
-  welcomeSection: {
-    padding: spacing.xxl,
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    alignItems: 'center',
-    marginBottom: spacing.xl,
-    ...(shadows.sm as object),
-  },
-  welcomeIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.primaryUltraSoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.lg,
-  },
-  welcomeTitle: {
-    fontSize: fontSizes.xxl,
-    fontWeight: fontWeights.extrabold,
-    color: colors.text,
-    marginBottom: spacing.md,
-    textAlign: 'center',
-    lineHeight: lineHeights.xxl,
-  },
-  welcomeText: {
-    fontSize: fontSizes.md,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: lineHeights.md,
-    paddingHorizontal: spacing.md,
-    marginBottom: spacing.md,
-  },
-  inviteMessageContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primaryUltraSoft,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.md,
-    marginTop: spacing.md,
-    gap: spacing.xs,
-    flexWrap: 'wrap',
-  },
-  inviteMessage: {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-  joinCodeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    gap: spacing.xs,
-  },
-  joinCode: {
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.bold,
-    color: colors.primary,
-    letterSpacing: 1,
-  },
-  copyIcon: {
-    marginLeft: spacing.xxs,
-  },
-  quickActionsContainer: {
-    gap: spacing.md,
-  },
-  quickActionsRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-});
 

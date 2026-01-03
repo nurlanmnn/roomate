@@ -10,10 +10,12 @@ import { ScreenHeader } from '../../components/ui/ScreenHeader';
 import { SearchBar } from '../../components/ui/SearchBar';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { formatDate } from '../../utils/dateHelpers';
-import { colors, fontSizes, fontWeights, spacing } from '../../theme';
+import { useThemeColors, fontSizes, fontWeights, spacing } from '../../theme';
 
 export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { selectedHousehold } = useHousehold();
+  const colors = useThemeColors();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -122,7 +124,7 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   scrollView: { flex: 1 },
   topActions: { paddingHorizontal: spacing.md, paddingBottom: spacing.md },

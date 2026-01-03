@@ -2,13 +2,9 @@ import React from 'react';
 import { View, StyleSheet, Dimensions } from 'react-native';
 import { AppText } from './AppText';
 import { PieChart, BarChart } from 'react-native-chart-kit';
-import { colors, fontSizes, fontWeights, spacing, radii, shadows } from '../theme';
+import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows } from '../theme';
 import { formatCurrency } from '../utils/formatCurrency';
 import { MonthlyTrendChart } from './MonthlyTrendChart';
-
-// #region agent log
-fetch('http://127.0.0.1:7242/ingest/16e3335f-6715-4f8a-beae-87df786dbc1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SpendingChart.tsx:7',message:'SpendingChart importing MonthlyTrendChart',data:{monthlyTrendChartType:typeof MonthlyTrendChart,isUndefined:MonthlyTrendChart === undefined,isFunction:typeof MonthlyTrendChart === 'function',isClass:typeof MonthlyTrendChart === 'function' && MonthlyTrendChart.prototype},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-// #endregion
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -55,18 +51,20 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
   monthlyTrend,
   predictions,
 }) => {
+  const colors = useThemeColors();
   // Prepare pie chart data (top 5 categories)
   const topCategories = byCategory.slice(0, 5);
-  const pieData = topCategories.map((cat, index) => ({
+  
+  const pieData = React.useMemo(() => topCategories.map((cat, index) => ({
     name: cat.category.charAt(0).toUpperCase() + cat.category.slice(1),
     amount: cat.amount,
     color: getCategoryColor(index),
     legendFontColor: colors.text,
     legendFontSize: 12,
-  }));
+  })), [topCategories, colors.text]);
 
   // Prepare bar chart data
-  const barData = {
+  const barData = React.useMemo(() => ({
     labels: monthlyTrend.map(m => {
       const [year, month] = m.month.split('-');
       const date = new Date(parseInt(year), parseInt(month) - 1);
@@ -77,9 +75,9 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
         data: monthlyTrend.map(m => m.amount),
       },
     ],
-  };
+  }), [monthlyTrend]);
 
-  const chartConfig = {
+  const chartConfig = React.useMemo(() => ({
     backgroundColor: colors.surface,
     backgroundGradientFrom: colors.surface,
     backgroundGradientTo: colors.surface,
@@ -96,7 +94,109 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
     },
     fillShadowGradient: colors.primary,
     fillShadowGradientOpacity: 0.1,
-  };
+  }), [colors.surface, colors.primary]);
+
+  const styles = React.useMemo(() => StyleSheet.create({
+    container: {
+      padding: spacing.md,
+    },
+    emptyContainer: {
+      padding: spacing.xl,
+      alignItems: 'center',
+    },
+    emptyText: {
+      fontSize: fontSizes.md,
+      color: colors.textSecondary,
+    },
+    chartSection: {
+      marginBottom: spacing.xl,
+      backgroundColor: colors.surface,
+      borderRadius: radii.lg,
+      padding: spacing.lg,
+      paddingTop: spacing.lg,
+      paddingBottom: spacing.lg,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      ...(shadows.sm as object),
+    },
+    sectionTitle: {
+      fontSize: fontSizes.lg,
+      fontWeight: fontWeights.bold,
+      color: colors.text,
+      marginBottom: spacing.md,
+    },
+    pieChartContainer: {
+      alignItems: 'center',
+      marginBottom: spacing.md,
+    },
+    barChartWrapper: {
+      paddingTop: spacing.xl,
+      paddingBottom: spacing.md,
+      marginTop: spacing.sm,
+      marginBottom: spacing.xs,
+    },
+    barChartContainer: {
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    barChart: {
+      marginVertical: 0,
+    },
+    categoryList: {
+      marginTop: spacing.sm,
+    },
+    categoryItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: spacing.xs,
+      gap: spacing.xs,
+    },
+    colorDot: {
+      width: 12,
+      height: 12,
+      borderRadius: 6,
+    },
+    categoryName: {
+      flex: 1,
+      fontSize: fontSizes.sm,
+      color: colors.text,
+      fontWeight: fontWeights.medium,
+    },
+    categoryAmount: {
+      fontSize: fontSizes.sm,
+      color: colors.text,
+      fontWeight: fontWeights.semibold,
+      marginRight: spacing.xs,
+    },
+    categoryPercentage: {
+      fontSize: fontSizes.xs,
+      color: colors.textSecondary,
+    },
+    predictionContainer: {
+      backgroundColor: colors.tealUltraSoft,
+      borderRadius: radii.lg,
+      padding: spacing.lg,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.tealSoft,
+      ...(shadows.xs as object),
+    },
+    predictionTitle: {
+      fontSize: fontSizes.sm,
+      color: colors.textSecondary,
+      marginBottom: spacing.xs,
+    },
+    predictionAmount: {
+      fontSize: fontSizes.xxl,
+      fontWeight: fontWeights.bold,
+      color: colors.text,
+      marginBottom: spacing.xs,
+    },
+    predictionTrend: {
+      fontSize: fontSizes.sm,
+      color: colors.textSecondary,
+    },
+  }), [colors]);
 
   const hasData = byCategory.length > 0 && monthlyTrend.some(m => m.amount > 0);
 
@@ -118,7 +218,7 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
             <PieChart
               data={pieData}
               width={screenWidth - spacing.xl * 2}
-              height={220}
+              height={180}
               chartConfig={chartConfig}
               accessor="amount"
               backgroundColor="transparent"
@@ -143,9 +243,6 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
 
       {/* Monthly Trend - Bar Chart */}
       {monthlyTrend.length > 0 && (
-        // #region agent log
-        (() => {fetch('http://127.0.0.1:7242/ingest/16e3335f-6715-4f8a-beae-87df786dbc1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SpendingChart.tsx:142',message:'Before rendering MonthlyTrendChart',data:{monthlyTrendChartType:typeof MonthlyTrendChart,isUndefined:MonthlyTrendChart === undefined,monthlyTrendLength:monthlyTrend.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{}); return null;})() ||
-        // #endregion
         <MonthlyTrendChart monthlyTrend={monthlyTrend} />
       )}
 
@@ -164,106 +261,4 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    padding: spacing.md,
-  },
-  emptyContainer: {
-    padding: spacing.xl,
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: fontSizes.md,
-    color: colors.textSecondary,
-  },
-  chartSection: {
-    marginBottom: spacing.xl,
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
-    padding: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    ...(shadows.sm as object),
-  },
-  sectionTitle: {
-    fontSize: fontSizes.lg,
-    fontWeight: fontWeights.bold,
-    color: colors.text,
-    marginBottom: spacing.md,
-  },
-  pieChartContainer: {
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  barChartWrapper: {
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.md,
-    marginTop: spacing.sm,
-    marginBottom: spacing.xs,
-  },
-  barChartContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  barChart: {
-    marginVertical: 0,
-  },
-  categoryList: {
-    marginTop: spacing.sm,
-  },
-  categoryItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.xs,
-    gap: spacing.xs,
-  },
-  colorDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-  },
-  categoryName: {
-    flex: 1,
-    fontSize: fontSizes.sm,
-    color: colors.text,
-    fontWeight: fontWeights.medium,
-  },
-  categoryAmount: {
-    fontSize: fontSizes.sm,
-    color: colors.text,
-    fontWeight: fontWeights.semibold,
-    marginRight: spacing.xs,
-  },
-  categoryPercentage: {
-    fontSize: fontSizes.xs,
-    color: colors.textSecondary,
-  },
-  predictionContainer: {
-    backgroundColor: colors.tealUltraSoft,
-    borderRadius: radii.lg,
-    padding: spacing.lg,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.tealSoft,
-    ...(shadows.xs as object),
-  },
-  predictionTitle: {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-  },
-  predictionAmount: {
-    fontSize: fontSizes.xxl,
-    fontWeight: fontWeights.bold,
-    color: colors.text,
-    marginBottom: spacing.xs,
-  },
-  predictionTrend: {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
-  },
-});
 

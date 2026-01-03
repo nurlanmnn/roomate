@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { TouchableOpacity, StyleSheet, Modal, View, TextInput, Alert, Platform, KeyboardAvoidingView } from 'react-native';
 import { AppText } from './AppText';
-import { colors, fontSizes, spacing } from '../theme';
+import { useThemeColors, fontSizes, spacing } from '../theme';
 
 interface QuickAddButtonProps {
   onAddItems: (items: string[]) => void;
@@ -98,8 +98,91 @@ const normalizeWeightUnit = (unit: string): string => {
 };
 
 export const QuickAddButton: React.FC<QuickAddButtonProps> = ({ onAddItems }) => {
+  const colors = useThemeColors();
   const [showTextModal, setShowTextModal] = useState(false);
   const [textInput, setTextInput] = useState('');
+
+  const styles = React.useMemo(() => StyleSheet.create({
+    button: {
+      backgroundColor: colors.primary,
+      padding: 12,
+      borderRadius: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: 44,
+      minWidth: 120,
+    },
+    buttonText: {
+      color: colors.surface,
+      fontSize: fontSizes.md,
+      fontWeight: '600',
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 20,
+    },
+    modalContent: {
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      padding: 24,
+      width: '100%',
+      maxWidth: 400,
+    },
+    modalTitle: {
+      fontSize: 24,
+      fontWeight: '700',
+      marginBottom: 8,
+      color: colors.text,
+    },
+    modalSubtitle: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      marginBottom: 16,
+      lineHeight: 20,
+    },
+    textInput: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      padding: 12,
+      fontSize: 16,
+      minHeight: 120,
+      textAlignVertical: 'top',
+      marginBottom: 16,
+      color: colors.text,
+      backgroundColor: colors.background,
+    },
+    modalActions: {
+      flexDirection: 'row',
+      gap: 12,
+    },
+    modalButton: {
+      flex: 1,
+      padding: 12,
+      borderRadius: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    cancelButton: {
+      backgroundColor: colors.surfaceAlt,
+    },
+    cancelButtonText: {
+      color: colors.textSecondary,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    submitButton: {
+      backgroundColor: colors.primary,
+    },
+    submitButtonText: {
+      color: colors.surface,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+  }), [colors]);
 
   const handleTextSubmit = () => {
     if (!textInput.trim()) {
@@ -198,84 +281,4 @@ export const QuickAddButton: React.FC<QuickAddButtonProps> = ({ onAddItems }) =>
     </>
   );
 };
-
-const styles = StyleSheet.create({
-  button: {
-    backgroundColor: colors.primary,
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 44,
-    minWidth: 120,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: fontSizes.md,
-    fontWeight: '600',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 24,
-    width: '100%',
-    maxWidth: 400,
-  },
-  modalTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 8,
-    color: '#333',
-  },
-  modalSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 16,
-    lineHeight: 20,
-  },
-  textInput: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    minHeight: 120,
-    textAlignVertical: 'top',
-    marginBottom: 16,
-  },
-  modalActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  modalButton: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelButton: {
-    backgroundColor: '#f5f5f5',
-  },
-  cancelButtonText: {
-    color: '#666',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  submitButton: {
-    backgroundColor: '#4CAF50',
-  },
-  submitButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});
 

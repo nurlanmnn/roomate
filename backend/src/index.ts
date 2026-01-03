@@ -5,6 +5,7 @@ import { connectDB } from './config/db';
 import authRoutes from './routes/auth';
 import householdRoutes from './routes/households';
 import expenseRoutes from './routes/expenses';
+import expenseTemplateRoutes from './routes/expenseTemplates';
 import settlementRoutes from './routes/settlements';
 import shoppingRoutes from './routes/shopping';
 import goalRoutes from './routes/goals';
@@ -26,6 +27,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use('/auth', authRoutes);
 app.use('/households', householdRoutes);
 app.use('/expenses', expenseRoutes);
+app.use('/expense-templates', expenseTemplateRoutes);
 app.use('/settlements', settlementRoutes);
 app.use('/shopping', shoppingRoutes);
 app.use('/goals', goalRoutes);
@@ -40,9 +42,10 @@ app.get('/health', (req, res) => {
 const startServer = async () => {
   try {
     await connectDB();
-    app.listen(config.port, '0.0.0.0', () => {
-      console.log(`Server running on port ${config.port}`);
-      console.log(`Accessible at http://localhost:${config.port} or http://192.168.1.187:${config.port}`);
+    const port = typeof config.port === 'string' ? parseInt(config.port, 10) : config.port;
+    app.listen(port, '0.0.0.0', () => {
+      console.log(`Server running on port ${port}`);
+      console.log(`Accessible at http://localhost:${port} or http://192.168.1.187:${port}`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);

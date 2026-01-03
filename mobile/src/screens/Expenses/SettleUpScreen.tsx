@@ -5,7 +5,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
 import { expensesApi, PairwiseBalance } from '../../api/expensesApi';
-import { settlementsApi } from '../../api/settlementsApi';
+import { settlementsApi, Settlement } from '../../api/settlementsApi';
 import { BalanceSummary } from '../../components/BalanceSummary';
 import { FormTextInput } from '../../components/FormTextInput';
 import { PrimaryButton } from '../../components/PrimaryButton';
@@ -14,19 +14,312 @@ import * as Sharing from 'expo-sharing';
 import { Avatar } from '../../components/ui/Avatar';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
+import { useThemeColors, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
 
 export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { selectedHousehold } = useHousehold();
   const { user } = useAuth();
+  const colors = useThemeColors();
   const [balances, setBalances] = useState<PairwiseBalance[]>([]);
+  const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [loading, setLoading] = useState(false);
   const [settleModalVisible, setSettleModalVisible] = useState(false);
   const [selectedBalance, setSelectedBalance] = useState<PairwiseBalance | null>(null);
+  const [selectedProofImage, setSelectedProofImage] = useState<string | null>(null);
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState('');
   const [note, setNote] = useState('');
   const [proofImage, setProofImage] = useState<string | null>(null);
+
+  const styles = React.useMemo(() => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    keyboardAvoid: {
+      flex: 1,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    emptyContainer: {
+      padding: spacing.xxl,
+      alignItems: 'center',
+    },
+    section: {
+      paddingHorizontal: spacing.md,
+      paddingTop: spacing.md,
+      paddingBottom: spacing.xs,
+    },
+    balanceCard: {
+      backgroundColor: colors.surface,
+      padding: spacing.lg,
+      borderRadius: radii.lg,
+      marginBottom: spacing.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      ...(shadows.sm as object),
+    },
+    balanceHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+      marginBottom: spacing.md,
+    },
+    balanceTextContainer: {
+      flex: 1,
+    },
+    balanceText: {
+      fontSize: fontSizes.md,
+      color: colors.text,
+    },
+    userName: {
+      fontWeight: fontWeights.semibold,
+    },
+    amount: {
+      color: colors.danger,
+      fontWeight: fontWeights.extrabold,
+    },
+    actions: {
+      flexDirection: 'row',
+      gap: spacing.xs,
+      flexWrap: 'wrap',
+    },
+    actionButton: {
+      flex: 1,
+      minWidth: 100,
+      padding: spacing.md,
+      borderRadius: radii.md,
+      alignItems: 'center',
+    },
+    netButton: {
+      backgroundColor: colors.warning,
+    },
+    externalButton: {
+      backgroundColor: colors.accent,
+    },
+    markButton: {
+      backgroundColor: colors.primary,
+    },
+    forgiveButton: {
+      backgroundColor: colors.danger,
+    },
+    amountPositive: {
+      color: colors.success,
+      fontWeight: fontWeights.extrabold,
+    },
+    mutualDebtNote: {
+      fontSize: fontSizes.xs,
+      color: colors.warning,
+      fontStyle: 'italic',
+      marginBottom: spacing.xs,
+    },
+    actionButtonText: {
+      color: colors.surface,
+      fontWeight: fontWeights.semibold,
+    },
+    emptyText: {
+      fontSize: fontSizes.lg,
+      color: colors.muted,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    modalContent: {
+      backgroundColor: colors.surface,
+      borderRadius: radii.lg,
+      padding: spacing.xl,
+      width: '90%',
+      maxWidth: 400,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    modalTitle: {
+      fontSize: fontSizes.xl,
+      fontWeight: fontWeights.extrabold,
+      marginBottom: spacing.xs,
+      color: colors.text,
+    },
+    modalSubtitle: {
+      fontSize: fontSizes.sm,
+      color: colors.textSecondary,
+      marginBottom: spacing.md,
+    },
+    modalActions: {
+      flexDirection: 'row',
+      marginTop: spacing.md,
+    },
+    spacer: {
+      width: spacing.sm,
+    },
+    proofSection: {
+      marginBottom: spacing.md,
+    },
+    proofLabel: {
+      fontSize: fontSizes.sm,
+      fontWeight: fontWeights.semibold,
+      color: colors.text,
+      marginBottom: spacing.xs,
+    },
+    proofImageContainer: {
+      position: 'relative',
+      width: '100%',
+      height: 200,
+      borderRadius: radii.md,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    proofImage: {
+      width: '100%',
+      height: '100%',
+      resizeMode: 'cover',
+    },
+    removeProofButton: {
+      position: 'absolute',
+      top: spacing.xs,
+      right: spacing.xs,
+      backgroundColor: colors.surface,
+      borderRadius: radii.full,
+      padding: spacing.xxs,
+    },
+    addProofButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: spacing.xs,
+      padding: spacing.md,
+      borderWidth: 2,
+      borderColor: colors.border,
+      borderStyle: 'dashed',
+      borderRadius: radii.md,
+      backgroundColor: colors.background,
+    },
+    addProofText: {
+      fontSize: fontSizes.sm,
+      color: colors.primary,
+      fontWeight: fontWeights.medium,
+    },
+    scrollContent: {
+      paddingTop: spacing.md,
+      paddingBottom: spacing.xl,
+    },
+    historyButtonContainer: {
+      paddingHorizontal: spacing.lg,
+      marginBottom: spacing.md,
+    },
+    historyButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: spacing.xs,
+      padding: spacing.md,
+      backgroundColor: colors.surface,
+      borderRadius: radii.md,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+    },
+    historyButtonText: {
+      fontSize: fontSizes.sm,
+      color: colors.primary,
+      fontWeight: fontWeights.semibold,
+    },
+    sectionTitle: {
+      fontSize: fontSizes.lg,
+      fontWeight: fontWeights.bold,
+      color: colors.text,
+      marginBottom: spacing.md,
+    },
+    receivedSettlementCard: {
+      backgroundColor: colors.surface,
+      padding: spacing.md,
+      borderRadius: radii.md,
+      marginBottom: spacing.sm,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      ...(shadows.xs as object),
+    },
+    receivedSettlementHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      marginBottom: spacing.xs,
+    },
+    receivedSettlementInfo: {
+      flex: 1,
+    },
+    receivedSettlementText: {
+      fontSize: fontSizes.sm,
+      color: colors.text,
+    },
+    receivedSettlementMethod: {
+      fontSize: fontSizes.xs,
+      color: colors.textSecondary,
+      marginTop: spacing.xxs,
+    },
+    viewReceiptButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      marginTop: spacing.xs,
+      paddingVertical: spacing.xs,
+    },
+    viewReceiptText: {
+      fontSize: fontSizes.sm,
+      color: colors.primary,
+      fontWeight: fontWeights.medium,
+    },
+    proofModalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.9)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    proofModalClose: {
+      position: 'absolute',
+      top: spacing.xl,
+      right: spacing.xl,
+      zIndex: 1,
+    },
+    proofModalImage: {
+      width: '90%',
+      height: '80%',
+    },
+    owedToSection: {
+      paddingHorizontal: spacing.md,
+      paddingTop: spacing.md,
+      paddingBottom: spacing.xs,
+    },
+    owedToBalanceCard: {
+      backgroundColor: colors.surface,
+      padding: spacing.lg,
+      borderRadius: radii.lg,
+      marginBottom: spacing.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      ...(shadows.sm as object),
+    },
+    owedToAmount: {
+      fontSize: fontSizes.lg,
+      fontWeight: fontWeights.extrabold,
+      color: colors.success,
+    },
+    forgiveButton: {
+      backgroundColor: colors.danger,
+      padding: spacing.md,
+      borderRadius: radii.md,
+      alignItems: 'center',
+      marginTop: spacing.sm,
+    },
+    forgiveButtonText: {
+      color: colors.surface,
+      fontSize: fontSizes.sm,
+      fontWeight: fontWeights.semibold,
+    },
+  }), [colors]);
 
   useEffect(() => {
     if (selectedHousehold) {
@@ -39,8 +332,12 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
 
     setLoading(true);
     try {
-      const data = await expensesApi.getBalances(selectedHousehold._id);
-      setBalances(data);
+      const [balancesData, settlementsData] = await Promise.all([
+        expensesApi.getBalances(selectedHousehold._id),
+        settlementsApi.getSettlements(selectedHousehold._id),
+      ]);
+      setBalances(balancesData);
+      setSettlements(settlementsData || []);
     } catch (error) {
       console.error('Failed to load balances:', error);
     } finally {
@@ -201,6 +498,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   }
 
   const userOwedBalances = balances.filter(b => b.fromUserId === user._id);
+  const userOwedToBalances = balances.filter(b => b.toUserId === user._id);
   
   // Find mutual debts (where user owes someone AND that person owes user)
   const mutualDebts = balances.filter(b => {
@@ -210,6 +508,50 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     }
     return false;
   });
+
+  // Get settlements where user received payments (user is toUserId)
+  const receivedSettlements = settlements.filter(s => {
+    const toUserId = typeof s.toUserId === 'object' && s.toUserId !== null ? s.toUserId._id : s.toUserId;
+    return toUserId === user._id && s.proofImageUrl;
+  }).slice(0, 5); // Show last 5 with receipts
+
+  const handleForgiveDebt = async (balance: PairwiseBalance) => {
+    if (!selectedHousehold || !user) return;
+
+    const fromUserName = getUserName(balance.fromUserId);
+    
+    Alert.alert(
+      'Forgive Debt',
+      `Are you sure you want to forgive ${formatCurrency(balance.amount)} that ${fromUserName} owes you? This action cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Forgive',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Create a settlement that cancels the debt
+              // The settlement is from the person who owes (fromUserId) to the person owed (toUserId = user)
+              // This will reduce the debt to zero
+              await settlementsApi.createSettlement({
+                householdId: selectedHousehold._id,
+                fromUserId: balance.fromUserId,
+                toUserId: balance.toUserId,
+                amount: balance.amount,
+                method: 'Forgiven',
+                note: 'Debt forgiven by recipient',
+                date: new Date().toISOString(),
+              });
+              loadBalances();
+              Alert.alert('Success', `You have forgiven ${formatCurrency(balance.amount)} that ${fromUserName} owed you.`);
+            } catch (error: any) {
+              Alert.alert('Error', error.response?.data?.error || 'Failed to forgive debt');
+            }
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -292,6 +634,79 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         </View>
       )}
 
+      {/* Balances where user is owed money */}
+      {userOwedToBalances.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Money Owed to You</Text>
+          {userOwedToBalances.map((balance, index) => {
+            const fromUserName = getUserName(balance.fromUserId);
+            const fromUserAvatar = getUserAvatar(balance.fromUserId);
+            
+            return (
+              <View key={index} style={styles.balanceCard}>
+                <View style={styles.balanceHeader}>
+                  <Avatar name={fromUserName} uri={fromUserAvatar} size={40} />
+                  <View style={styles.balanceTextContainer}>
+                    <Text style={styles.balanceText}>
+                      <Text style={styles.userName}>{fromUserName}</Text> owes you{' '}
+                      <Text style={[styles.amount, styles.amountPositive]}>{formatCurrency(balance.amount)}</Text>
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.actions}>
+                  <TouchableOpacity
+                    style={[styles.actionButton, styles.forgiveButton]}
+                    onPress={() => handleForgiveDebt(balance)}
+                  >
+                    <Ionicons name="close-circle-outline" size={18} color={colors.surface} style={{ marginRight: spacing.xs }} />
+                    <Text style={styles.actionButtonText}>Forgive Debt</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      )}
+
+      {/* Received Payments with Receipts */}
+      {receivedSettlements.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Received Payments with Receipts</Text>
+          {receivedSettlements.map((settlement) => {
+            const fromUserId = typeof settlement.fromUserId === 'object' && settlement.fromUserId !== null
+              ? settlement.fromUserId._id
+              : settlement.fromUserId;
+            const fromUserName = fromUserId ? getUserName(fromUserId) : 'Unknown';
+            const fromUserAvatar = fromUserId ? getUserAvatar(fromUserId) : undefined;
+
+            return (
+              <View key={settlement._id} style={styles.receivedSettlementCard}>
+                <View style={styles.receivedSettlementHeader}>
+                  <Avatar name={fromUserName} uri={fromUserAvatar} size={32} />
+                  <View style={styles.receivedSettlementInfo}>
+                    <Text style={styles.receivedSettlementText}>
+                      <Text style={styles.userName}>{fromUserName}</Text> paid you {formatCurrency(settlement.amount)}
+                    </Text>
+                    {settlement.method && (
+                      <Text style={styles.receivedSettlementMethod}>{settlement.method}</Text>
+                    )}
+                  </View>
+                </View>
+                {settlement.proofImageUrl && (
+                  <TouchableOpacity
+                    style={styles.viewReceiptButton}
+                    onPress={() => setSelectedProofImage(settlement.proofImageUrl || null)}
+                  >
+                    <Ionicons name="receipt-outline" size={18} color={colors.primary} />
+                    <Text style={styles.viewReceiptText}>View Receipt</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            );
+          })}
+        </View>
+      )}
+
       {/* Settlement Modal */}
       <Modal
         visible={settleModalVisible}
@@ -367,200 +782,29 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* Receipt Image Modal */}
+      <Modal
+        visible={selectedProofImage !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedProofImage(null)}
+      >
+        <View style={styles.proofModalOverlay}>
+          <TouchableOpacity
+            style={styles.proofModalClose}
+            onPress={() => setSelectedProofImage(null)}
+          >
+            <Ionicons name="close-circle" size={32} color={colors.surface} />
+          </TouchableOpacity>
+          {selectedProofImage && (
+            <Image source={{ uri: selectedProofImage }} style={styles.proofModalImage} resizeMode="contain" />
+          )}
+        </View>
+      </Modal>
     </ScrollView>
     </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  keyboardAvoid: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  emptyContainer: {
-    padding: spacing.xxl,
-    alignItems: 'center',
-  },
-  section: {
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.xs,
-  },
-  balanceCard: {
-    backgroundColor: colors.surface,
-    padding: spacing.lg,
-    borderRadius: radii.lg,
-    marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    ...(shadows.sm as object),
-  },
-  balanceHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    marginBottom: spacing.md,
-  },
-  balanceTextContainer: {
-    flex: 1,
-  },
-  balanceText: {
-    fontSize: fontSizes.md,
-    color: colors.text,
-  },
-  userName: {
-    fontWeight: fontWeights.semibold,
-  },
-  amount: {
-    color: colors.danger,
-    fontWeight: fontWeights.extrabold,
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-    flexWrap: 'wrap',
-  },
-  actionButton: {
-    flex: 1,
-    minWidth: 100,
-    padding: spacing.md,
-    borderRadius: radii.md,
-    alignItems: 'center',
-  },
-  netButton: {
-    backgroundColor: colors.warning,
-  },
-  externalButton: {
-    backgroundColor: colors.accent,
-  },
-  markButton: {
-    backgroundColor: colors.primary,
-  },
-  mutualDebtNote: {
-    fontSize: fontSizes.xs,
-    color: colors.warning,
-    fontStyle: 'italic',
-    marginBottom: spacing.xs,
-  },
-  actionButtonText: {
-    color: colors.surface,
-    fontWeight: fontWeights.semibold,
-  },
-  emptyText: {
-    fontSize: fontSizes.lg,
-    color: colors.muted,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
-    padding: spacing.xl,
-    width: '90%',
-    maxWidth: 400,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  modalTitle: {
-    fontSize: fontSizes.xl,
-    fontWeight: fontWeights.extrabold,
-    marginBottom: spacing.xs,
-    color: colors.text,
-  },
-  modalSubtitle: {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
-    marginBottom: spacing.md,
-  },
-  modalActions: {
-    flexDirection: 'row',
-    marginTop: spacing.md,
-  },
-  spacer: {
-    width: spacing.sm,
-  },
-  proofSection: {
-    marginBottom: spacing.md,
-  },
-  proofLabel: {
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.semibold,
-    color: colors.text,
-    marginBottom: spacing.xs,
-  },
-  proofImageContainer: {
-    position: 'relative',
-    width: '100%',
-    height: 200,
-    borderRadius: radii.md,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  proofImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  removeProofButton: {
-    position: 'absolute',
-    top: spacing.xs,
-    right: spacing.xs,
-    backgroundColor: colors.surface,
-    borderRadius: radii.full,
-    padding: spacing.xxs,
-  },
-  addProofButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    padding: spacing.md,
-    borderWidth: 2,
-    borderColor: colors.border,
-    borderStyle: 'dashed',
-    borderRadius: radii.md,
-    backgroundColor: colors.background,
-  },
-  addProofText: {
-    fontSize: fontSizes.sm,
-    color: colors.primary,
-    fontWeight: fontWeights.medium,
-  },
-  scrollContent: {
-    paddingTop: spacing.md,
-    paddingBottom: spacing.xl,
-  },
-  historyButtonContainer: {
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.md,
-  },
-  historyButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    padding: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-  },
-  historyButtonText: {
-    fontSize: fontSizes.sm,
-    color: colors.primary,
-    fontWeight: fontWeights.semibold,
-  },
-});
 

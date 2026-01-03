@@ -4,7 +4,7 @@ import { AppText } from './AppText';
 import { PairwiseBalance } from '../api/expensesApi';
 import { formatCurrency } from '../utils/formatCurrency';
 import { formatDateShort } from '../utils/dateHelpers';
-import { colors, fontSizes, fontWeights, radii, spacing, shadows } from '../theme';
+import { useThemeColors, fontSizes, fontWeights, radii, spacing, shadows } from '../theme';
 import { Avatar } from './ui/Avatar';
 
 interface BalanceSummaryProps {
@@ -20,7 +20,67 @@ export const BalanceSummary: React.FC<BalanceSummaryProps> = ({
   getUserName,
   getUserAvatar,
 }) => {
+  const colors = useThemeColors();
   const userBalances = balances.filter(b => b.fromUserId === currentUserId || b.toUserId === currentUserId);
+
+  const styles = React.useMemo(() => StyleSheet.create({
+    container: {
+      backgroundColor: colors.surface,
+      padding: spacing.xl,
+      borderRadius: radii.lg,
+      marginBottom: spacing.lg,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      ...(shadows.sm as object),
+    },
+    title: {
+      fontSize: fontSizes.lg,
+      fontWeight: fontWeights.extrabold,
+      color: colors.text,
+      marginBottom: spacing.md,
+    },
+    balanceRow: {
+      paddingVertical: spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.borderLight,
+    },
+    balanceContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    balanceTextContainer: {
+      flex: 1,
+      flexShrink: 1,
+    },
+    balanceText: {
+      fontSize: fontSizes.md,
+      color: colors.text,
+      flexShrink: 1,
+    },
+    sinceDate: {
+      fontSize: fontSizes.xs,
+      color: colors.textTertiary,
+      marginTop: spacing.xxs,
+    },
+    userName: {
+      fontWeight: fontWeights.semibold,
+    },
+    amountPositive: {
+      color: colors.success,
+      fontWeight: fontWeights.extrabold,
+    },
+    amountNegative: {
+      color: colors.danger,
+      fontWeight: fontWeights.extrabold,
+    },
+    emptyText: {
+      fontSize: fontSizes.md,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      padding: spacing.lg,
+    },
+  }), [colors]);
 
   if (userBalances.length === 0) {
     return (
@@ -71,61 +131,4 @@ export const BalanceSummary: React.FC<BalanceSummaryProps> = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: colors.surface,
-    padding: spacing.xl,
-    borderRadius: radii.lg,
-    marginBottom: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    ...(shadows.sm as object),
-  },
-  title: {
-    fontSize: fontSizes.lg,
-    fontWeight: fontWeights.extrabold,
-    color: colors.text,
-    marginBottom: spacing.md,
-  },
-  balanceRow: {
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-  },
-  balanceContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  balanceTextContainer: {
-    flex: 1,
-  },
-  balanceText: {
-    fontSize: fontSizes.md,
-    color: colors.text,
-  },
-  sinceDate: {
-    fontSize: fontSizes.xs,
-    color: colors.textTertiary,
-    marginTop: spacing.xxs,
-  },
-  userName: {
-    fontWeight: fontWeights.semibold,
-  },
-  amountPositive: {
-    color: colors.success,
-    fontWeight: fontWeights.extrabold,
-  },
-  amountNegative: {
-    color: colors.danger,
-    fontWeight: fontWeights.extrabold,
-  },
-  emptyText: {
-    fontSize: fontSizes.md,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    padding: spacing.lg,
-  },
-});
 

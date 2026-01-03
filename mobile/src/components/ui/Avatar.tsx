@@ -1,7 +1,7 @@
 import React from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import { AppText } from '../AppText';
-import { colors, fontSizes, fontWeights, radii, spacing } from '../../theme';
+import { useThemeColors, fontSizes, fontWeights, radii, spacing } from '../../theme';
 
 type AvatarProps = {
   name?: string;
@@ -18,8 +18,28 @@ const getInitials = (name?: string) => {
 };
 
 export const Avatar: React.FC<AvatarProps> = ({ name, uri, size = 44 }) => {
+  const colors = useThemeColors();
   const initials = getInitials(name);
   const dim = { width: size, height: size, borderRadius: size / 2 };
+
+  const styles = React.useMemo(() => StyleSheet.create({
+    image: {
+      backgroundColor: colors.surfaceAlt,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    fallback: {
+      backgroundColor: colors.primarySoft,
+      borderWidth: 1,
+      borderColor: colors.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    initials: {
+      color: colors.primaryDark,
+      fontWeight: fontWeights.extrabold,
+    },
+  }), [colors]);
 
   if (uri) {
     return (
@@ -36,25 +56,6 @@ export const Avatar: React.FC<AvatarProps> = ({ name, uri, size = 44 }) => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  image: {
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  fallback: {
-    backgroundColor: colors.primarySoft,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  initials: {
-    color: colors.primaryDark,
-    fontWeight: fontWeights.extrabold,
-  },
-});
 
 
 

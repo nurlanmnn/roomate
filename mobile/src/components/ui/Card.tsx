@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, View, ViewProps, ViewStyle } from 'react-native';
-import { colors, radii, spacing, shadows } from '../../theme';
+import { useThemeColors, radii, spacing, shadows } from '../../theme';
 
 type CardProps = ViewProps & {
   variant?: 'default' | 'soft';
@@ -8,6 +8,21 @@ type CardProps = ViewProps & {
 };
 
 export const Card: React.FC<CardProps> = ({ variant = 'default', style, ...props }) => {
+  const colors = useThemeColors();
+  const styles = React.useMemo(() => StyleSheet.create({
+    base: {
+      backgroundColor: colors.surface,
+      borderRadius: radii.lg,
+      padding: spacing.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      ...(shadows.sm as object),
+    },
+    soft: {
+      backgroundColor: colors.surfaceAlt,
+    },
+  }), [colors]);
+
   return (
     <View
       {...props}
@@ -19,20 +34,6 @@ export const Card: React.FC<CardProps> = ({ variant = 'default', style, ...props
     />
   );
 };
-
-const styles = StyleSheet.create({
-  base: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    ...(shadows.sm as object),
-  },
-  soft: {
-    backgroundColor: colors.surfaceAlt,
-  },
-});
 
 
 

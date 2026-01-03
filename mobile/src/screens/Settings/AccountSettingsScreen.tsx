@@ -8,10 +8,12 @@ import { PrimaryButton } from '../../components/PrimaryButton';
 import { useAuth } from '../../context/AuthContext';
 import { authApi } from '../../api/authApi';
 import { Avatar } from '../../components/ui/Avatar';
-import { colors, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
+import { useThemeColors, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
 
 export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { user, refreshUser, logout } = useAuth();
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [name, setName] = useState(user?.name || '');
   const [savingName, setSavingName] = useState(false);
   const [avatarUri, setAvatarUri] = useState<string | null>(user?.avatarUrl || null);
@@ -303,7 +305,7 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,

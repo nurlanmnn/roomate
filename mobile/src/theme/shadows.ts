@@ -1,10 +1,14 @@
 import { Platform } from 'react-native';
-import { colors } from './colors';
+
+// Shadow colors - using static values since shadows don't need to be theme-aware
+// These are the light theme shadow colors
+const shadowColor = 'rgba(0, 0, 0, 0.08)';
+const shadowColorStrong = 'rgba(0, 0, 0, 0.12)';
 
 export const shadows = {
   xs: Platform.select({
     ios: {
-      shadowColor: colors.shadow,
+      shadowColor: shadowColor,
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.8,
       shadowRadius: 4,
@@ -16,7 +20,7 @@ export const shadows = {
   }),
   sm: Platform.select({
     ios: {
-      shadowColor: colors.shadow,
+      shadowColor: shadowColor,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.9,
       shadowRadius: 8,
@@ -28,7 +32,7 @@ export const shadows = {
   }),
   md: Platform.select({
     ios: {
-      shadowColor: colors.shadow,
+      shadowColor: shadowColor,
       shadowOffset: { width: 0, height: 8 },
       shadowOpacity: 1,
       shadowRadius: 16,
@@ -40,7 +44,7 @@ export const shadows = {
   }),
   lg: Platform.select({
     ios: {
-      shadowColor: colors.shadowStrong,
+      shadowColor: shadowColorStrong,
       shadowOffset: { width: 0, height: 12 },
       shadowOpacity: 1,
       shadowRadius: 24,

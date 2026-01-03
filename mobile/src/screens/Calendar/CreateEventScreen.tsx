@@ -7,10 +7,12 @@ import { eventsApi } from '../../api/eventsApi';
 import { FormTextInput } from '../../components/FormTextInput';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
-import { colors, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
+import { useThemeColors, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
 
 export const CreateEventScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { selectedHousehold } = useHousehold();
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [type, setType] = useState<'bill' | 'cleaning' | 'social' | 'other'>('other');
@@ -264,7 +266,7 @@ export const CreateEventScreen: React.FC<{ navigation: any }> = ({ navigation })
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   keyboardAvoid: { flex: 1 },
   scrollView: { flex: 1 },

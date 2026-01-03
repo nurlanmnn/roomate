@@ -9,11 +9,13 @@ import { PrimaryButton } from '../../components/PrimaryButton';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
 import { SearchBar } from '../../components/ui/SearchBar';
 import { EmptyState } from '../../components/ui/EmptyState';
-import { colors, fontSizes, fontWeights, spacing } from '../../theme';
+import { useThemeColors, fontSizes, fontWeights, spacing } from '../../theme';
 
 export const GoalsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { selectedHousehold } = useHousehold();
   const { user } = useAuth();
+  const colors = useThemeColors();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeStatus, setActiveStatus] = useState<'idea' | 'planned' | 'in_progress' | 'done'>('idea');
@@ -105,7 +107,12 @@ export const GoalsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
         <View style={styles.section}>
           {visibleGoals.map((goal) => (
             <View key={goal._id} style={styles.goalWrapper}>
-              <GoalCard goal={goal} onUpvote={() => handleUpvote(goal)} currentUserId={user._id} />
+              <GoalCard 
+                goal={goal} 
+                onUpvote={() => handleUpvote(goal)} 
+                onStatusChange={(newStatus) => handleUpdateStatus(goal, newStatus)}
+                currentUserId={user._id} 
+              />
               <Text style={styles.moveToLabel}>Move to:</Text>
               <View style={styles.statusActions}>
                 {(['idea', 'planned', 'in_progress', 'done'] as const).map((s) => (
@@ -140,7 +147,7 @@ export const GoalsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   scrollView: { flex: 1 },
   topActions: { paddingHorizontal: spacing.md, paddingBottom: spacing.md },

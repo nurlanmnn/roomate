@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSizes, radii, spacing } from '../../theme';
+import { useThemeColors, fontSizes, radii, spacing } from '../../theme';
 
 type SearchBarProps = {
   value: string;
@@ -10,6 +10,27 @@ type SearchBarProps = {
 };
 
 export const SearchBar: React.FC<SearchBarProps> = ({ value, onChangeText, placeholder = 'Search' }) => {
+  const colors = useThemeColors();
+  const styles = React.useMemo(() => StyleSheet.create({
+    container: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.lg,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+    },
+    input: {
+      flex: 1,
+      fontSize: fontSizes.md,
+      color: colors.text,
+      paddingVertical: 0,
+    },
+  }), [colors]);
+
   return (
     <View style={styles.container}>
       <Ionicons name="search" size={18} color={colors.muted} />
@@ -26,26 +47,6 @@ export const SearchBar: React.FC<SearchBarProps> = ({ value, onChangeText, place
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  input: {
-    flex: 1,
-    fontSize: fontSizes.md,
-    color: colors.text,
-    paddingVertical: 0,
-  },
-});
 
 
 

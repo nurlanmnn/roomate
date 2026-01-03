@@ -9,7 +9,7 @@ import { Avatar } from '../../components/ui/Avatar';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { formatDate, formatDateTime } from '../../utils/dateHelpers';
-import { colors, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
+import { useThemeColors, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
 import { Ionicons } from '@expo/vector-icons';
 import { parseISO, subMonths, subYears, startOfMonth, startOfYear } from 'date-fns';
 
@@ -18,6 +18,157 @@ type DateFilter = 'all' | 'month' | '3months' | '6months' | 'year';
 export const SettlementHistoryScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { selectedHousehold } = useHousehold();
   const { user } = useAuth();
+  const colors = useThemeColors();
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          flex: 1,
+          backgroundColor: colors.background,
+        },
+        scrollView: {
+          flex: 1,
+        },
+        scrollContent: {
+          flexGrow: 1,
+        },
+        subtitleContainer: {
+          paddingHorizontal: spacing.xl,
+          paddingTop: spacing.sm,
+          paddingBottom: spacing.xs,
+        },
+        subtitle: {
+          fontSize: fontSizes.sm,
+          color: colors.textSecondary,
+          fontWeight: fontWeights.medium,
+        },
+        filterContainer: {
+          paddingHorizontal: spacing.xl,
+          paddingTop: spacing.md,
+          paddingBottom: spacing.sm,
+        },
+        filterRow: {
+          flexDirection: 'row',
+          backgroundColor: colors.background,
+          borderRadius: radii.md,
+          padding: spacing.xxs,
+          gap: spacing.xxs,
+        },
+        filterButton: {
+          flex: 1,
+          paddingVertical: spacing.xs,
+          paddingHorizontal: spacing.sm,
+          borderRadius: radii.sm,
+          alignItems: 'center',
+          justifyContent: 'center',
+          minWidth: 50,
+        },
+        filterButtonActive: {
+          backgroundColor: colors.primary,
+        },
+        filterButtonText: {
+          fontSize: fontSizes.xs,
+          fontWeight: fontWeights.medium,
+          color: colors.textSecondary,
+        },
+        filterButtonTextActive: {
+          color: colors.surface,
+          fontWeight: fontWeights.semibold,
+        },
+        emptyContainer: {
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: spacing.xl,
+          minHeight: 400,
+        },
+        loadingText: {
+          fontSize: fontSizes.md,
+          color: colors.textSecondary,
+          textAlign: 'center',
+          marginTop: spacing.xl,
+        },
+        section: {
+          padding: spacing.lg,
+        },
+        settlementCard: {
+          backgroundColor: colors.surface,
+          padding: spacing.lg,
+          borderRadius: radii.lg,
+          marginBottom: spacing.md,
+          borderWidth: 1,
+          borderColor: colors.borderLight,
+          ...(shadows.sm as object),
+        },
+        settlementHeader: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: spacing.md,
+        },
+        userInfo: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: spacing.sm,
+          flex: 1,
+        },
+        settlementText: {
+          fontSize: fontSizes.md,
+          color: colors.text,
+          flex: 1,
+        },
+        userName: {
+          fontWeight: fontWeights.semibold,
+        },
+        amount: {
+          fontSize: fontSizes.lg,
+          fontWeight: fontWeights.extrabold,
+          color: colors.primary,
+        },
+        settlementDetails: {
+          gap: spacing.xs,
+        },
+        detailRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: spacing.xs,
+        },
+        detailText: {
+          fontSize: fontSizes.sm,
+          color: colors.textSecondary,
+          flex: 1,
+        },
+        proofButton: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: spacing.xs,
+          marginTop: spacing.xs,
+          paddingVertical: spacing.xs,
+        },
+        proofButtonText: {
+          fontSize: fontSizes.sm,
+          color: colors.primary,
+          fontWeight: fontWeights.medium,
+        },
+        proofModalOverlay: {
+          flex: 1,
+          backgroundColor: 'rgba(0, 0, 0, 0.9)',
+          justifyContent: 'center',
+          alignItems: 'center',
+        },
+        proofModalClose: {
+          position: 'absolute',
+          top: spacing.xl,
+          right: spacing.xl,
+          zIndex: 1,
+        },
+        proofModalImage: {
+          width: '90%',
+          height: '80%',
+        },
+      }),
+    [colors]
+  );
   const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedProofImage, setSelectedProofImage] = useState<string | null>(null);
@@ -262,151 +413,4 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = ({ navigat
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-  },
-  subtitleContainer: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xs,
-  },
-  subtitle: {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
-    fontWeight: fontWeights.medium,
-  },
-  filterContainer: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
-  },
-  filterRow: {
-    flexDirection: 'row',
-    backgroundColor: colors.background,
-    borderRadius: radii.md,
-    padding: spacing.xxs,
-    gap: spacing.xxs,
-  },
-  filterButton: {
-    flex: 1,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radii.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 50,
-  },
-  filterButtonActive: {
-    backgroundColor: colors.primary,
-  },
-  filterButtonText: {
-    fontSize: fontSizes.xs,
-    fontWeight: fontWeights.medium,
-    color: colors.textSecondary,
-  },
-  filterButtonTextActive: {
-    color: colors.surface,
-    fontWeight: fontWeights.semibold,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.xl,
-    minHeight: 400,
-  },
-  loadingText: {
-    fontSize: fontSizes.md,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginTop: spacing.xl,
-  },
-  section: {
-    padding: spacing.lg,
-  },
-  settlementCard: {
-    backgroundColor: colors.surface,
-    padding: spacing.lg,
-    borderRadius: radii.lg,
-    marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    ...(shadows.sm as object),
-  },
-  settlementHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  userInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    flex: 1,
-  },
-  settlementText: {
-    fontSize: fontSizes.md,
-    color: colors.text,
-    flex: 1,
-  },
-  userName: {
-    fontWeight: fontWeights.semibold,
-  },
-  amount: {
-    fontSize: fontSizes.lg,
-    fontWeight: fontWeights.extrabold,
-    color: colors.primary,
-  },
-  settlementDetails: {
-    gap: spacing.xs,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  detailText: {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
-    flex: 1,
-  },
-  proofButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    marginTop: spacing.xs,
-    paddingVertical: spacing.xs,
-  },
-  proofButtonText: {
-    fontSize: fontSizes.sm,
-    color: colors.primary,
-    fontWeight: fontWeights.medium,
-  },
-  proofModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  proofModalClose: {
-    position: 'absolute',
-    top: spacing.xl,
-    right: spacing.xl,
-    zIndex: 1,
-  },
-  proofModalImage: {
-    width: '90%',
-    height: '80%',
-  },
-});
 

@@ -9,7 +9,7 @@ import { ShoppingItemRow } from '../../components/ShoppingItemRow';
 import { QuickAddButton } from '../../components/QuickAddButton';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
-import { colors, fontSizes, fontWeights, radii, spacing } from '../../theme';
+import { useThemeColors, fontSizes, fontWeights, radii, spacing } from '../../theme';
 import { SearchBar } from '../../components/ui/SearchBar';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -18,6 +18,8 @@ const weightUnits: WeightUnit[] = ['lbs', 'kg', 'g', 'oz', 'liter', 'ml', 'fl oz
 export const ShoppingListScreen: React.FC = () => {
   const { selectedHousehold } = useHousehold();
   const { user } = useAuth();
+  const colors = useThemeColors();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
   const [lists, setLists] = useState<ShoppingList[]>([]);
   const [selectedList, setSelectedList] = useState<ShoppingList | null>(null);
   const [items, setItems] = useState<ShoppingItem[]>([]);
@@ -282,6 +284,39 @@ export const ShoppingListScreen: React.FC = () => {
     }
   };
 
+  const handleRestoreAll = async () => {
+    if (!selectedList || completedItems.length === 0) return;
+
+    Alert.alert(
+      'Restore All Items',
+      `Are you sure you want to restore all ${completedItems.length} completed items back to your shopping list?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Restore All',
+          onPress: async () => {
+            try {
+              setLoading(true);
+              await Promise.all(
+                completedItems.map(item =>
+                  shoppingApi.updateShoppingItem(item._id, {
+                    completed: false,
+                  })
+                )
+              );
+              loadItems();
+            } catch (error) {
+              console.error('Failed to restore items:', error);
+              Alert.alert('Error', 'Failed to restore some items. Please try again.');
+            } finally {
+              setLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleDelete = async (item: ShoppingItem) => {
     Alert.alert('Delete Item', 'Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
@@ -478,15 +513,26 @@ export const ShoppingListScreen: React.FC = () => {
 
             {filteredCompletedItems.length > 0 && (
               <View style={styles.section}>
-                <TouchableOpacity
-                  onPress={() => setShowCompleted(!showCompleted)}
-                  style={styles.completedHeader}
-                >
-                  <AppText style={styles.sectionTitle}>
-                    Completed ({filteredCompletedItems.length})
-                  </AppText>
-                  <AppText>{showCompleted ? '▼' : '▶'}</AppText>
-                </TouchableOpacity>
+                <View style={styles.completedHeaderContainer}>
+                  <TouchableOpacity
+                    onPress={() => setShowCompleted(!showCompleted)}
+                    style={styles.completedHeader}
+                  >
+                    <AppText style={styles.sectionTitle}>
+                      Completed ({filteredCompletedItems.length})
+                    </AppText>
+                    <AppText>{showCompleted ? '▼' : '▶'}</AppText>
+                  </TouchableOpacity>
+                  {showCompleted && (
+                    <TouchableOpacity
+                      style={styles.restoreAllButton}
+                      onPress={handleRestoreAll}
+                    >
+                      <Ionicons name="refresh-outline" size={16} color={colors.primary} />
+                      <AppText style={styles.restoreAllText}>Restore All</AppText>
+                    </TouchableOpacity>
+                  )}
+                </View>
                 {showCompleted &&
                   filteredCompletedItems.map((item) => (
                     <ShoppingItemRow
@@ -845,7 +891,7 @@ export const ShoppingListScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -938,11 +984,29 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     color: colors.text,
   },
+  completedHeaderContainer: {
+    marginBottom: spacing.md,
+  },
   completedHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.md,
+    marginBottom: spacing.xs,
+  },
+  restoreAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    alignSelf: 'flex-end',
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.sm,
+    backgroundColor: colors.primaryUltraSoft,
+  },
+  restoreAllText: {
+    fontSize: fontSizes.sm,
+    color: colors.primary,
+    fontWeight: fontWeights.medium,
   },
   emptyText: {
     fontSize: fontSizes.md,

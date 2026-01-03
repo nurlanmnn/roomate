@@ -3,7 +3,8 @@ import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { AppText } from './AppText';
 import { Ionicons } from '@expo/vector-icons';
 import { ShoppingItem } from '../api/shoppingApi';
-import { colors, fontSizes, fontWeights, radii, spacing, shadows } from '../theme';
+import { useThemeColors, fontSizes, fontWeights, radii, spacing, shadows } from '../theme';
+import { SwipeableRow } from './SwipeableRow';
 
 interface ShoppingItemRowProps {
   item: ShoppingItem;
@@ -18,15 +19,108 @@ export const ShoppingItemRow: React.FC<ShoppingItemRowProps> = ({
   onEdit,
   onDelete,
 }) => {
+  const colors = useThemeColors();
+  const styles = React.useMemo(() => StyleSheet.create({
+    row: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.md,
+      backgroundColor: colors.surface,
+      borderRadius: radii.md,
+      marginBottom: spacing.xs,
+      borderWidth: 1,
+      borderColor: colors.border,
+      ...(shadows.xs as object),
+    },
+    rowCompleted: {
+      opacity: 0.6,
+    },
+    checkboxContainer: {
+      marginRight: spacing.md,
+    },
+    checkbox: {
+      width: 24,
+      height: 24,
+      borderRadius: radii.sm,
+      borderWidth: 2,
+      borderColor: colors.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    checkboxChecked: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    checkmark: {
+      color: colors.surface,
+      fontSize: fontSizes.sm,
+      fontWeight: fontWeights.bold,
+    },
+    content: {
+      flex: 1,
+      flexShrink: 1,
+    },
+    name: {
+      fontSize: fontSizes.md,
+      fontWeight: fontWeights.semibold,
+      color: colors.text,
+      marginBottom: spacing.xs,
+    },
+    nameCompleted: {
+      textDecorationLine: 'line-through',
+      color: colors.textSecondary,
+    },
+    details: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      marginBottom: spacing.xs,
+    },
+    detailText: {
+      fontSize: fontSizes.sm,
+      color: colors.textSecondary,
+    },
+    meta: {
+      flexDirection: 'row',
+      gap: spacing.xs,
+    },
+    sharedBadge: {
+      fontSize: fontSizes.xs,
+      color: colors.primary,
+      fontWeight: fontWeights.semibold,
+    },
+    personalBadge: {
+      fontSize: fontSizes.xs,
+      color: colors.textTertiary,
+    },
+    actions: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+      marginLeft: spacing.sm,
+    },
+    editButton: {
+      padding: spacing.xs,
+    },
+    deleteButton: {
+      padding: spacing.xs,
+    },
+  }), [colors]);
+
   return (
-    <View style={[styles.row, item.completed && styles.rowCompleted]}>
+    <SwipeableRow
+      onSwipeRight={!item.completed ? onToggle : undefined}
+      rightActionLabel="Complete"
+      rightActionIcon="checkmark-circle-outline"
+      disabled={item.completed}
+    >
+      <View style={[styles.row, item.completed && styles.rowCompleted]}>
       <TouchableOpacity onPress={onToggle} style={styles.checkboxContainer}>
         <View style={[styles.checkbox, item.completed && styles.checkboxChecked]}>
           {item.completed && <AppText style={styles.checkmark}>✓</AppText>}
         </View>
       </TouchableOpacity>
       <View style={styles.content}>
-        <AppText style={[styles.name, item.completed && styles.nameCompleted]}>
+        <AppText style={[styles.name, item.completed && styles.nameCompleted]} numberOfLines={2} ellipsizeMode="tail">
           {item.name}
         </AppText>
         <View style={styles.details}>
@@ -61,95 +155,8 @@ export const ShoppingItemRow: React.FC<ShoppingItemRowProps> = ({
           </TouchableOpacity>
         )}
       </View>
-    </View>
+      </View>
+    </SwipeableRow>
   );
 };
-
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
-    marginBottom: spacing.xs,
-    borderWidth: 1,
-    borderColor: colors.border,
-    ...(shadows.sm as object),
-  },
-  rowCompleted: {
-    opacity: 0.6,
-  },
-  checkboxContainer: {
-    marginRight: spacing.md,
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderWidth: 2,
-    borderColor: colors.primary,
-    borderRadius: radii.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxChecked: {
-    backgroundColor: colors.primary,
-  },
-  checkmark: {
-    color: colors.surface,
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  content: {
-    flex: 1,
-  },
-  name: {
-    fontSize: fontSizes.md,
-    fontWeight: fontWeights.semibold,
-    marginBottom: spacing.xxs,
-    color: colors.text,
-  },
-  nameCompleted: {
-    textDecorationLine: 'line-through',
-    color: colors.muted,
-  },
-  details: {
-    flexDirection: 'row',
-    marginBottom: spacing.xxs,
-  },
-  detailText: {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
-  },
-  meta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  editButton: {
-    padding: spacing.xs,
-    marginRight: spacing.xs,
-  },
-  sharedBadge: {
-    fontSize: fontSizes.xs,
-    color: colors.accent,
-    backgroundColor: colors.accentSoft,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xxs,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  personalBadge: {
-    fontSize: fontSizes.xs,
-    color: colors.textSecondary,
-  },
-  deleteButton: {
-    padding: spacing.xs,
-  },
-});
 

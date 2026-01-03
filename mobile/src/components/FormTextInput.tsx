@@ -1,6 +1,7 @@
 import React from 'react';
 import { TextInput, StyleSheet, Text, View, Platform } from 'react-native';
-import { colors, fontSizes, fontWeights, radii, spacing } from '../theme';
+import { AppText } from './AppText';
+import { useThemeColors, fontSizes, fontWeights, radii, spacing } from '../theme';
 
 interface FormTextInputProps {
   label?: string;
@@ -29,9 +30,50 @@ export const FormTextInput: React.FC<FormTextInputProps> = ({
   autoCapitalize = 'none',
   helperText,
 }) => {
+  const colors = useThemeColors();
+  const styles = React.useMemo(() => StyleSheet.create({
+    container: {
+      marginBottom: spacing.md,
+    },
+    label: {
+      fontSize: fontSizes.sm,
+      fontWeight: fontWeights.semibold,
+      marginBottom: spacing.xs,
+      color: colors.textSecondary,
+    },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.md,
+      paddingHorizontal: spacing.md,
+      paddingVertical: Platform.select({ ios: spacing.md, android: spacing.sm, default: spacing.md }),
+      fontSize: fontSizes.md,
+      backgroundColor: colors.surface,
+      color: colors.text,
+    },
+    multilineInput: {
+      minHeight: 80,
+      paddingTop: spacing.md,
+      paddingBottom: spacing.md,
+    },
+    inputError: {
+      borderColor: colors.danger,
+    },
+    helperText: {
+      color: colors.muted,
+      fontSize: fontSizes.xs,
+      marginTop: spacing.xs,
+    },
+    errorText: {
+      color: colors.danger,
+      fontSize: fontSizes.xs,
+      marginTop: spacing.xs,
+    },
+  }), [colors]);
+
   return (
     <View style={styles.container}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label && <AppText style={styles.label}>{label}</AppText>}
       <TextInput
         style={[
           styles.input,
@@ -44,52 +86,14 @@ export const FormTextInput: React.FC<FormTextInputProps> = ({
         secureTextEntry={secureTextEntry}
         keyboardType={keyboardType}
         multiline={multiline}
-        numberOfLines={numberOfLines}
+        numberOfLines={multiline ? numberOfLines : undefined}
         autoCapitalize={autoCapitalize}
         placeholderTextColor={colors.muted}
+        textAlignVertical={multiline ? 'top' : 'center'}
       />
-      {!error && !!helperText && <Text style={styles.helperText}>{helperText}</Text>}
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {!error && !!helperText && <AppText style={styles.helperText}>{helperText}</AppText>}
+      {error && <AppText style={styles.errorText}>{error}</AppText>}
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    marginBottom: spacing.md,
-  },
-  label: {
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.semibold,
-    marginBottom: spacing.xs,
-    color: colors.textSecondary,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: Platform.select({ ios: spacing.md, android: spacing.sm, default: spacing.md }),
-    fontSize: fontSizes.md,
-    backgroundColor: colors.surface,
-    color: colors.text,
-  },
-  multilineInput: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
-  inputError: {
-    borderColor: colors.danger,
-  },
-  helperText: {
-    color: colors.muted,
-    fontSize: fontSizes.xs,
-    marginTop: spacing.xs,
-  },
-  errorText: {
-    color: colors.danger,
-    fontSize: fontSizes.xs,
-    marginTop: spacing.xs,
-  },
-});
 

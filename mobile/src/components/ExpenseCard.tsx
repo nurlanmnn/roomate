@@ -4,17 +4,94 @@ import { AppText } from './AppText';
 import { Expense } from '../api/expensesApi';
 import { formatCurrency } from '../utils/formatCurrency';
 import { formatDate, formatDateShort } from '../utils/dateHelpers';
-import { colors, fontSizes, fontWeights, radii, spacing, shadows } from '../theme';
+import { useThemeColors, fontSizes, fontWeights, radii, spacing, shadows } from '../theme';
 import { Avatar } from './ui/Avatar';
+import { SwipeableRow } from './SwipeableRow';
 
 interface ExpenseCardProps {
   expense: Expense;
   onDelete?: (expenseId: string) => void;
+  onQuickSettle?: () => void;
   canDelete?: boolean;
 }
 
-export const ExpenseCard: React.FC<ExpenseCardProps> = ({ expense, onDelete, canDelete = false }) => {
+export const ExpenseCard: React.FC<ExpenseCardProps> = ({ expense, onDelete, onQuickSettle, canDelete = false }) => {
+  const colors = useThemeColors();
   const paidByName = expense.paidBy?.name || 'Unknown';
+
+  const styles = React.useMemo(() => StyleSheet.create({
+    card: {
+      backgroundColor: colors.surface,
+      padding: spacing.lg,
+      borderRadius: radii.lg,
+      marginBottom: spacing.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      ...(shadows.sm as object),
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      marginBottom: spacing.sm,
+    },
+    description: {
+      flex: 1,
+      fontSize: fontSizes.lg,
+      fontWeight: fontWeights.bold,
+      color: colors.text,
+      marginRight: spacing.md,
+    },
+    amount: {
+      fontSize: fontSizes.xl,
+      fontWeight: fontWeights.extrabold,
+      color: colors.primary,
+    },
+    metaRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      marginBottom: spacing.xs,
+    },
+    paidByRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+      gap: spacing.sm,
+    },
+    paidByContainer: {
+      flex: 1,
+    },
+    paidBy: {
+      fontSize: fontSizes.sm,
+      color: colors.textSecondary,
+    },
+    sinceDate: {
+      fontSize: fontSizes.xs,
+      color: colors.textTertiary,
+      marginTop: spacing.xxs,
+    },
+    deleteButton: {
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+      borderRadius: radii.sm,
+      backgroundColor: colors.dangerSoft,
+    },
+    deleteText: {
+      fontSize: fontSizes.sm,
+      color: colors.danger,
+      fontWeight: fontWeights.semibold,
+    },
+    category: {
+      fontSize: fontSizes.sm,
+      color: colors.textSecondary,
+      marginBottom: spacing.xs,
+    },
+    participants: {
+      fontSize: fontSizes.sm,
+      color: colors.textTertiary,
+    },
+  }), [colors]);
 
   const handleDelete = () => {
     Alert.alert(
@@ -32,9 +109,17 @@ export const ExpenseCard: React.FC<ExpenseCardProps> = ({ expense, onDelete, can
   };
 
   return (
-    <View style={styles.card}>
+    <SwipeableRow
+      onSwipeLeft={canDelete && onDelete ? handleDelete : undefined}
+      onSwipeRight={onQuickSettle}
+      leftActionLabel="Delete"
+      rightActionLabel="Settle"
+      leftActionIcon="trash-outline"
+      rightActionIcon="cash-outline"
+    >
+      <View style={styles.card}>
       <View style={styles.header}>
-        <AppText style={styles.description}>{expense.description}</AppText>
+        <AppText style={styles.description} numberOfLines={2} ellipsizeMode="tail">{expense.description}</AppText>
         <AppText style={styles.amount}>{formatCurrency(expense.totalAmount)}</AppText>
       </View>
       <View style={styles.metaRow}>
@@ -63,79 +148,8 @@ export const ExpenseCard: React.FC<ExpenseCardProps> = ({ expense, onDelete, can
       <AppText style={styles.participants}>
         Split among {expense.participants.length} {expense.participants.length === 1 ? 'person' : 'people'}
       </AppText>
-    </View>
+      </View>
+    </SwipeableRow>
   );
 };
-
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.surface,
-    padding: spacing.lg,
-    borderRadius: radii.lg,
-    marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    ...(shadows.sm as object),
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.xs,
-  },
-  description: {
-    fontSize: fontSizes.md,
-    fontWeight: fontWeights.semibold,
-    color: colors.text,
-    flex: 1,
-    marginRight: spacing.sm,
-  },
-  amount: {
-    fontSize: fontSizes.lg,
-    fontWeight: fontWeights.extrabold,
-    color: colors.primary,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.xxs,
-  },
-  paidByRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    flex: 1,
-  },
-  paidByContainer: {
-    flex: 1,
-  },
-  paidBy: {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
-  },
-  sinceDate: {
-    fontSize: fontSizes.xs,
-    color: colors.textTertiary,
-    marginTop: spacing.xxs,
-  },
-  deleteButton: {
-    paddingVertical: spacing.xxs,
-    paddingHorizontal: spacing.sm,
-  },
-  deleteText: {
-    fontSize: fontSizes.sm,
-    color: colors.danger,
-    fontWeight: fontWeights.semibold,
-  },
-  category: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    marginBottom: spacing.xxs,
-  },
-  participants: {
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-  },
-});
 
