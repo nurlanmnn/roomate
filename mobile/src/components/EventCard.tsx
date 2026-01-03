@@ -77,3 +77,45 @@ export const EventCard: React.FC<EventCardProps> = ({ event }) => {
   );
 };
 
+<<<<<<< HEAD
+=======
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: colors.surface,
+    padding: spacing.lg,
+    borderRadius: radii.lg,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...(shadows.sm as object),
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  icon: {
+    marginRight: spacing.md,
+  },
+  content: {
+    flex: 1,
+  },
+  title: {
+    fontSize: fontSizes.md,
+    fontWeight: fontWeights.semibold,
+    color: colors.text,
+    marginBottom: spacing.xxs,
+    flexShrink: 1,
+  },
+  time: {
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
+  },
+  description: {
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
+    marginTop: spacing.sm,
+    flexShrink: 1,
+  },
+});
+
+>>>>>>> 1df1ba5d13d9522aa065c910c9295011455d243d

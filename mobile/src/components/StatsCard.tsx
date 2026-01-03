@@ -75,6 +75,7 @@ export const StatsCard: React.FC<StatsCardProps> = ({
       <View style={[styles.iconContainer, { backgroundColor: finalIconBgColor }]}>
         <View style={styles.icon}>{icon}</View>
       </View>
+<<<<<<< HEAD
       <AppText
         style={styles.value}
         numberOfLines={1}
@@ -86,6 +87,10 @@ export const StatsCard: React.FC<StatsCardProps> = ({
       <AppText style={styles.label} numberOfLines={2} ellipsizeMode="tail">
         {label}
       </AppText>
+=======
+      <AppText style={styles.value}>{value}</AppText>
+      <AppText style={styles.label} numberOfLines={2} ellipsizeMode="tail">{label}</AppText>
+>>>>>>> 1df1ba5d13d9522aa065c910c9295011455d243d
     </View>
   );
 
@@ -105,4 +110,45 @@ export const StatsCard: React.FC<StatsCardProps> = ({
   return Content;
 };
 
+<<<<<<< HEAD
+=======
+const styles = StyleSheet.create({
+  card: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    padding: spacing.lg,
+    borderRadius: radii.lg,
+    alignItems: 'center',
+    marginHorizontal: spacing.xxs,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    ...(shadows.sm as object),
+  },
+  iconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  icon: {
+    // Icon wrapper for proper centering
+  },
+  value: {
+    fontSize: fontSizes.xl,
+    fontWeight: fontWeights.extrabold,
+    color: colors.text,
+    marginBottom: spacing.xxs,
+  },
+  label: {
+    fontSize: fontSizes.xs,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    fontWeight: fontWeights.medium,
+    flexShrink: 1,
+  },
+});
+
+>>>>>>> 1df1ba5d13d9522aa065c910c9295011455d243d
 

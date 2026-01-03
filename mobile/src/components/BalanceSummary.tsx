@@ -132,3 +132,65 @@ export const BalanceSummary: React.FC<BalanceSummaryProps> = ({
   );
 };
 
+<<<<<<< HEAD
+=======
+const styles = StyleSheet.create({
+  container: {
+    backgroundColor: colors.surface,
+    padding: spacing.xl,
+    borderRadius: radii.lg,
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    ...(shadows.sm as object),
+  },
+  title: {
+    fontSize: fontSizes.lg,
+    fontWeight: fontWeights.extrabold,
+    color: colors.text,
+    marginBottom: spacing.md,
+  },
+  balanceRow: {
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  balanceContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  balanceTextContainer: {
+    flex: 1,
+    flexShrink: 1,
+  },
+  balanceText: {
+    fontSize: fontSizes.md,
+    color: colors.text,
+    flexShrink: 1,
+  },
+  sinceDate: {
+    fontSize: fontSizes.xs,
+    color: colors.textTertiary,
+    marginTop: spacing.xxs,
+  },
+  userName: {
+    fontWeight: fontWeights.semibold,
+  },
+  amountPositive: {
+    color: colors.success,
+    fontWeight: fontWeights.extrabold,
+  },
+  amountNegative: {
+    color: colors.danger,
+    fontWeight: fontWeights.extrabold,
+  },
+  emptyText: {
+    fontSize: fontSizes.md,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    padding: spacing.lg,
+  },
+});
+
+>>>>>>> 1df1ba5d13d9522aa065c910c9295011455d243d

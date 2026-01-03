@@ -1,7 +1,11 @@
 import React from 'react';
 import { TextInput, StyleSheet, Text, View, Platform } from 'react-native';
 import { AppText } from './AppText';
+<<<<<<< HEAD
 import { useThemeColors, fontSizes, fontWeights, radii, spacing } from '../theme';
+=======
+import { colors, fontSizes, fontWeights, radii, spacing } from '../theme';
+>>>>>>> 1df1ba5d13d9522aa065c910c9295011455d243d
 
 interface FormTextInputProps {
   label?: string;
@@ -97,3 +101,46 @@ export const FormTextInput: React.FC<FormTextInputProps> = ({
   );
 };
 
+<<<<<<< HEAD
+=======
+const styles = StyleSheet.create({
+  container: {
+    marginBottom: spacing.md,
+  },
+  label: {
+    fontSize: fontSizes.sm,
+    fontWeight: fontWeights.semibold,
+    marginBottom: spacing.xs,
+    color: colors.textSecondary,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: Platform.select({ ios: spacing.md, android: spacing.sm, default: spacing.md }),
+    fontSize: fontSizes.md,
+    backgroundColor: colors.surface,
+    color: colors.text,
+  },
+  multilineInput: {
+    minHeight: 80,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.md,
+  },
+  inputError: {
+    borderColor: colors.danger,
+  },
+  helperText: {
+    color: colors.muted,
+    fontSize: fontSizes.xs,
+    marginTop: spacing.xs,
+  },
+  errorText: {
+    color: colors.danger,
+    fontSize: fontSizes.xs,
+    marginTop: spacing.xs,
+  },
+});
+
+>>>>>>> 1df1ba5d13d9522aa065c910c9295011455d243d

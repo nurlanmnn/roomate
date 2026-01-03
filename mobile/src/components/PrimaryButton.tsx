@@ -103,3 +103,53 @@ export const PrimaryButton: React.FC<PrimaryButtonProps> = ({
   );
 };
 
+<<<<<<< HEAD
+=======
+const styles = StyleSheet.create({
+  buttonBase: {
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44, // Minimum touch target for accessibility
+  },
+  buttonPrimary: {
+    backgroundColor: colors.primary,
+    ...(shadows.sm as object),
+  },
+  buttonSecondary: {
+    backgroundColor: colors.accent,
+    ...(shadows.sm as object),
+  },
+  buttonDanger: {
+    backgroundColor: colors.danger,
+    ...(shadows.sm as object),
+  },
+  buttonOutline: {
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+  },
+  buttonDisabled: {
+    opacity: 0.5,
+  },
+  buttonPressed: {
+    transform: [{ scale: 0.98 }],
+    opacity: 0.9,
+  },
+  buttonText: {
+    color: colors.surface,
+    fontSize: fontSizes.md,
+    fontWeight: fontWeights.semibold,
+    letterSpacing: 0.2,
+  },
+  buttonTextOutline: {
+    color: colors.primary,
+    fontSize: fontSizes.md,
+    fontWeight: fontWeights.semibold,
+    letterSpacing: 0.2,
+  },
+});
+
+>>>>>>> 1df1ba5d13d9522aa065c910c9295011455d243d

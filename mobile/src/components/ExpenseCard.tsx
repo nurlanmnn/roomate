@@ -153,3 +153,83 @@ export const ExpenseCard: React.FC<ExpenseCardProps> = ({ expense, onDelete, onQ
   );
 };
 
+<<<<<<< HEAD
+=======
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: colors.surface,
+    padding: spacing.lg,
+    borderRadius: radii.lg,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...(shadows.sm as object),
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: spacing.xs,
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  description: {
+    fontSize: fontSizes.md,
+    fontWeight: fontWeights.semibold,
+    color: colors.text,
+    flex: 1,
+    flexShrink: 1,
+    marginRight: spacing.sm,
+  },
+  amount: {
+    fontSize: fontSizes.lg,
+    fontWeight: fontWeights.extrabold,
+    color: colors.primary,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.xxs,
+  },
+  paidByRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    flex: 1,
+  },
+  paidByContainer: {
+    flex: 1,
+    flexShrink: 1,
+  },
+  paidBy: {
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
+    flexShrink: 1,
+  },
+  sinceDate: {
+    fontSize: fontSizes.xs,
+    color: colors.textTertiary,
+    marginTop: spacing.xxs,
+  },
+  deleteButton: {
+    paddingVertical: spacing.xxs,
+    paddingHorizontal: spacing.sm,
+  },
+  deleteText: {
+    fontSize: fontSizes.sm,
+    color: colors.danger,
+    fontWeight: fontWeights.semibold,
+  },
+  category: {
+    fontSize: fontSizes.xs,
+    color: colors.muted,
+    marginBottom: spacing.xxs,
+  },
+  participants: {
+    fontSize: fontSizes.xs,
+    color: colors.muted,
+  },
+});
+
+>>>>>>> 1df1ba5d13d9522aa065c910c9295011455d243d

@@ -5,9 +5,19 @@ import { AppText } from '../../components/AppText';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { useAuth } from '../../context/AuthContext';
 import { useHousehold } from '../../context/HouseholdContext';
+<<<<<<< HEAD
 import { useTheme, useThemeColors } from '../../theme';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
 import { ListRow } from '../../components/ui/ListRow';
+=======
+import { householdsApi } from '../../api/householdsApi';
+import { authApi } from '../../api/authApi';
+import { PrimaryButton } from '../../components/PrimaryButton';
+import { FormTextInput } from '../../components/FormTextInput';
+import * as Sharing from 'expo-sharing';
+import { colors, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
+import { scale, scaleFont } from '../../utils/scaling';
+>>>>>>> 1df1ba5d13d9522aa065c910c9295011455d243d
 import { Avatar } from '../../components/ui/Avatar';
 import { Ionicons } from '@expo/vector-icons';
 import { fontSizes, fontWeights, spacing, radii, shadows } from '../../theme';
@@ -177,6 +187,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     ...(shadows.sm as object),
   },
+<<<<<<< HEAD
   profileInfo: {
     flex: 1,
   },
@@ -228,6 +239,28 @@ const styles = StyleSheet.create({
   },
   optionContent: {
     flex: 1,
+=======
+  avatarPreview: {
+    width: scale(52),
+    height: scale(52),
+    borderRadius: scale(26),
+  },
+  avatarOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: scale(24),
+    height: scale(24),
+    borderRadius: scale(12),
+    backgroundColor: colors.primary,
+    borderWidth: 2,
+    borderColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarOverlayText: {
+    fontSize: scaleFont(12),
+>>>>>>> 1df1ba5d13d9522aa065c910c9295011455d243d
   },
   optionTitle: {
     fontSize: fontSizes.md,
@@ -237,5 +270,171 @@ const styles = StyleSheet.create({
   optionDescription: {
     fontSize: fontSizes.sm,
     lineHeight: 18,
+<<<<<<< HEAD
+=======
+    fontSize: fontSizes.sm,
+  },
+  header: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.md,
+    backgroundColor: colors.background,
+  },
+  title: {
+    fontSize: fontSizes.xxl,
+    fontWeight: fontWeights.extrabold,
+    color: colors.text,
+  },
+  section: {
+    backgroundColor: colors.surface,
+    padding: spacing.lg,
+    marginTop: spacing.md,
+    marginHorizontal: spacing.md,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...(shadows.sm as object),
+  },
+  sectionTitle: {
+    fontSize: fontSizes.lg,
+    fontWeight: fontWeights.semibold,
+    marginBottom: spacing.md,
+    color: colors.text,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  infoLabel: {
+    fontSize: fontSizes.md,
+    color: colors.textSecondary,
+  },
+  infoValue: {
+    fontSize: fontSizes.md,
+    fontWeight: fontWeights.medium,
+    color: colors.text,
+  },
+  unverified: {
+    color: colors.danger,
+  },
+  linkRow: {
+    marginTop: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.surfaceAlt,
+  },
+  linkRowText: {
+    fontSize: fontSizes.md,
+    fontWeight: fontWeights.semibold,
+    color: colors.text,
+  },
+  linkRowChevron: {
+    fontSize: scaleFont(22),
+    color: colors.muted,
+    marginLeft: spacing.md,
+  },
+  codeActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: spacing.md,
+  },
+  codeButton: {
+    flex: 1,
+    padding: spacing.md,
+    backgroundColor: colors.accent,
+    borderRadius: radii.md,
+    alignItems: 'center',
+  },
+  codeButtonText: {
+    color: colors.surface,
+    fontWeight: fontWeights.semibold,
+  },
+  membersSection: {
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  membersTitle: {
+    fontSize: fontSizes.md,
+    fontWeight: fontWeights.semibold,
+    color: colors.text,
+    marginBottom: spacing.sm,
+  },
+  memberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    gap: spacing.md,
+  },
+  memberLeft: {
+    flex: 1,
+  },
+  memberName: {
+    fontSize: scaleFont(15),
+    fontWeight: fontWeights.semibold,
+    color: colors.text,
+  },
+  memberEmail: {
+    marginTop: scale(2),
+    fontSize: scaleFont(12),
+    color: colors.muted,
+  },
+  ownerBadge: {
+    paddingHorizontal: scale(10),
+    paddingVertical: scale(6),
+    borderRadius: scale(14),
+    backgroundColor: colors.primarySoft,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  ownerBadgeText: {
+    fontSize: scaleFont(12),
+    fontWeight: fontWeights.bold,
+    color: colors.primaryDark,
+  },
+  ownerNote: {
+    fontSize: scaleFont(12),
+    color: colors.muted,
+    marginTop: spacing.xs,
+    fontStyle: 'italic',
+  },
+  spacer: {
+    height: spacing.sm,
+  },
+  avatarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingBottom: spacing.md,
+    marginBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  avatarMeta: {
+    flex: 1,
+  },
+  avatarName: {
+    fontSize: fontSizes.lg,
+    fontWeight: fontWeights.extrabold,
+    color: colors.text,
+  },
+  avatarEmail: {
+    marginTop: spacing.xxs,
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
+>>>>>>> 1df1ba5d13d9522aa065c910c9295011455d243d
   },
 });

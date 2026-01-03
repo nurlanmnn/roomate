@@ -3,9 +3,14 @@ import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { AppText } from './AppText';
 import { Goal } from '../api/goalsApi';
 import { formatDate } from '../utils/dateHelpers';
+<<<<<<< HEAD
 import { useThemeColors, fontSizes, fontWeights, radii, spacing, shadows } from '../theme';
 import { scaleFont } from '../utils/scaling';
 import { SwipeableRow } from './SwipeableRow';
+=======
+import { colors, fontSizes, fontWeights, radii, spacing, shadows } from '../theme';
+import { scaleFont } from '../utils/scaling';
+>>>>>>> 1df1ba5d13d9522aa065c910c9295011455d243d
 
 interface GoalCardProps {
   goal: Goal;
@@ -135,3 +140,75 @@ export const GoalCard: React.FC<GoalCardProps> = ({ goal, onUpvote, onStatusChan
   );
 };
 
+<<<<<<< HEAD
+=======
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: colors.surface,
+    padding: spacing.lg,
+    borderRadius: radii.lg,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...(shadows.sm as object),
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: spacing.xs,
+  },
+  title: {
+    fontSize: fontSizes.lg,
+    fontWeight: fontWeights.semibold,
+    color: colors.text,
+    flex: 1,
+    flexShrink: 1,
+    marginRight: spacing.sm,
+  },
+  statusBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.pill,
+  },
+  statusText: {
+    color: '#fff',
+    fontSize: scaleFont(12),
+    fontWeight: fontWeights.semibold,
+    textTransform: 'capitalize',
+  },
+  description: {
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
+    flexShrink: 1,
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  upvoteButton: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.pill,
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  upvoteButtonActive: {
+    backgroundColor: colors.accentSoft,
+    borderColor: colors.accent,
+  },
+  upvoteText: {
+    fontSize: fontSizes.sm,
+    fontWeight: fontWeights.semibold,
+    color: colors.text,
+  },
+  targetDate: {
+    fontSize: fontSizes.xs,
+    color: colors.muted,
+  },
+});
+
+>>>>>>> 1df1ba5d13d9522aa065c910c9295011455d243d
