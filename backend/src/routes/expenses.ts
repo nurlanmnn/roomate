@@ -27,6 +27,17 @@ const createExpenseSchema = z.object({
   category: z.string().optional(),
 });
 
+const updateExpenseSchema = z.object({
+  description: z.string().min(1),
+  totalAmount: z.number().min(0.01),
+  paidBy: z.string(),
+  participants: z.array(z.string()).min(1),
+  splitMethod: z.enum(['even', 'manual']),
+  shares: z.array(expenseShareSchema),
+  date: z.string().datetime().or(z.date()),
+  category: z.string().optional(),
+});
+
 // GET /expenses/household/:householdId
 router.get('/household/:householdId', authMiddleware, async (req: Request, res: Response) => {
   try {
@@ -234,6 +245,89 @@ router.get('/household/:householdId/insights', authMiddleware, async (req: Reque
     res.json(insights);
   } catch (error) {
     console.error('Get insights error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PUT /expenses/:id
+router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const expense = await Expense.findById(req.params.id);
+    if (!expense) {
+      return res.status(404).json({ error: 'Expense not found' });
+    }
+
+    const household = await Household.findById(expense.householdId);
+    if (!household) {
+      return res.status(404).json({ error: 'Household not found' });
+    }
+
+    const userIdObjectId = new mongoose.Types.ObjectId(userId);
+    if (!household.members.some(m => m.equals(userIdObjectId))) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const creatorId = (expense as any).createdBy ? (expense as any).createdBy.toString() : expense.paidBy.toString();
+    if (creatorId !== userId) {
+      return res.status(403).json({ error: 'Only the creator can edit this expense' });
+    }
+
+    const data = updateExpenseSchema.parse(req.body);
+
+    const memberIds = household.members.map(m => m.toString());
+    const participantIds = data.participants.map(p => p.toString());
+    for (const pid of participantIds) {
+      if (!memberIds.includes(pid)) {
+        return res.status(400).json({ error: `User ${pid} is not a member of this household` });
+      }
+    }
+
+    if (!memberIds.includes(data.paidBy)) {
+      return res.status(400).json({ error: 'Payer must be a member of the household' });
+    }
+
+    if (data.shares.length !== data.participants.length) {
+      return res.status(400).json({ error: 'Number of shares must match number of participants' });
+    }
+
+    const shareUserIds = data.shares.map(s => s.userId);
+    for (const shareUserId of shareUserIds) {
+      if (!participantIds.includes(shareUserId)) {
+        return res.status(400).json({ error: 'All share userIds must be in participants' });
+      }
+    }
+
+    const sumShares = data.shares.reduce((sum, share) => sum + share.amount, 0);
+    if (Math.abs(sumShares - data.totalAmount) > 0.02) {
+      return res.status(400).json({ error: 'Share amounts must add up to totalAmount' });
+    }
+
+    expense.description = data.description;
+    expense.totalAmount = data.totalAmount;
+    expense.paidBy = data.paidBy as any;
+    expense.participants = data.participants as any;
+    expense.splitMethod = data.splitMethod;
+    expense.shares = data.shares.map(s => ({ userId: s.userId as any, amount: s.amount }));
+    expense.date = new Date(data.date);
+    expense.category = data.category;
+
+    await expense.save();
+
+    await expense.populate('createdBy', 'name email avatarUrl');
+    await expense.populate('paidBy', 'name email avatarUrl');
+    await expense.populate('participants', 'name email avatarUrl');
+
+    res.json(expense);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+    }
+    console.error('Update expense error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

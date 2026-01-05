@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-export type EventType = 'bill' | 'cleaning' | 'social' | 'other';
+export type EventType = 'bill' | 'cleaning' | 'social' | 'meal' | 'meeting' | 'maintenance' | 'shopping' | 'trip' | 'birthday' | 'reminder' | 'other';
 
 export interface IEvent extends Document {
   householdId: mongoose.Types.ObjectId;
@@ -30,7 +30,7 @@ const EventSchema = new Schema<IEvent>({
   },
   type: {
     type: String,
-    enum: ['bill', 'cleaning', 'social', 'other'],
+    enum: ['bill', 'cleaning', 'social', 'meal', 'meeting', 'maintenance', 'shopping', 'trip', 'birthday', 'reminder', 'other'],
     required: true,
   },
   date: {

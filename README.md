@@ -34,3 +34,4 @@ A roommate coordination app to help you and your roommates manage shared living 
 - **Mobile**: React Native (Expo) + TypeScript
 - **Backend**: Node.js + Express + TypeScript + MongoDB
 - **Authentication**: JWT with email verification (OTP)
+

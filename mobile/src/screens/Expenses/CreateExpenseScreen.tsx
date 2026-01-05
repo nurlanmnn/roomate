@@ -4,7 +4,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
-import { expensesApi, ExpenseShare } from '../../api/expensesApi';
+import { expensesApi, Expense, ExpenseShare } from '../../api/expensesApi';
 import { expenseTemplatesApi, ExpenseTemplate } from '../../api/expenseTemplatesApi';
 import { FormTextInput } from '../../components/FormTextInput';
 import { PrimaryButton } from '../../components/PrimaryButton';
@@ -16,15 +16,18 @@ import { CategoryPicker } from '../../components/CategoryPicker';
 import { EXPENSE_CATEGORIES, getCategoryById } from '../../constants/expenseCategories';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '../../components/AppText';
+import { useRoute } from '@react-navigation/native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const EDGE_SWIPE_WIDTH = 24; // iOS-like left edge swipe region
 const EDGE_SWIPE_THRESHOLD = 80; // distance to trigger dismiss
 
-export const CreateExpenseScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
+export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({ navigation, route }) => {
   const { selectedHousehold } = useHousehold();
   const { user } = useAuth();
   const colors = useThemeColors();
+  const editingExpense: Expense | undefined = route?.params?.expense;
+  const isEditing = !!editingExpense;
   const [description, setDescription] = useState('');
   const [totalAmount, setTotalAmount] = useState('');
   const [paidBy, setPaidBy] = useState('');
@@ -40,6 +43,49 @@ export const CreateExpenseScreen: React.FC<{ navigation: any }> = ({ navigation 
   const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
   const [templateName, setTemplateName] = useState('');
   const [loadingTemplates, setLoadingTemplates] = useState(false);
+
+  // Prefill when editing
+  useEffect(() => {
+    if (!editingExpense || !selectedHousehold) return;
+
+    setDescription(editingExpense.description || '');
+    setTotalAmount(editingExpense.totalAmount ? String(editingExpense.totalAmount) : '');
+    setPaidBy(
+      typeof (editingExpense.paidBy as any) === 'string'
+        ? (editingExpense.paidBy as any)
+        : (editingExpense.paidBy as any)?._id || ''
+    );
+    setDate(new Date(editingExpense.date));
+
+    const matchedCategory = EXPENSE_CATEGORIES.find(
+      (c) => c.name === editingExpense.category || c.id === editingExpense.category
+    );
+    setCategory(matchedCategory?.id || '');
+
+    const participantIds = editingExpense.participants.map((p: any) =>
+      typeof p === 'string' ? p : p._id
+    );
+    // Fallback: ensure we include any share userIds (in case participants array is partial)
+    const shareIds = editingExpense.shares
+      .map((s: any) => (typeof s.userId === 'string' ? s.userId : s.userId?._id))
+      .filter(Boolean) as string[];
+    const allIds = Array.from(new Set([...(participantIds || []), ...shareIds]));
+    setSelectedParticipants(allIds);
+
+    setSplitMethod(editingExpense.splitMethod);
+    if (editingExpense.splitMethod === 'manual') {
+      const sharesMap: Record<string, string> = {};
+      editingExpense.shares.forEach((s) => {
+        const uid = typeof s.userId === 'string' ? s.userId : (s.userId as any)?._id;
+        if (uid) {
+          sharesMap[uid] = s.amount.toString();
+        }
+      });
+      setManualShares(sharesMap);
+    } else {
+      setManualShares({});
+    }
+  }, [editingExpense, selectedHousehold]);
 
   // Swipe-to-dismiss for the Load Template modal (matches iOS "swipe back" feel)
   const templateModalTranslateX = useRef(new Animated.Value(0)).current;
@@ -406,12 +452,14 @@ export const CreateExpenseScreen: React.FC<{ navigation: any }> = ({ navigation 
     },
   }), [colors]);
 
+  // Only set default paidBy and participants when creating new (not editing)
   useEffect(() => {
+    if (isEditing) return; // Skip for edit mode
     if (selectedHousehold && user) {
       setPaidBy(user._id);
       setSelectedParticipants([user._id]);
     }
-  }, [selectedHousehold, user]);
+  }, [selectedHousehold, user, isEditing]);
 
   useEffect(() => {
     if (selectedHousehold) {
@@ -581,20 +629,33 @@ export const CreateExpenseScreen: React.FC<{ navigation: any }> = ({ navigation 
 
     setLoading(true);
     try {
-      await expensesApi.createExpense({
-        householdId: selectedHousehold._id,
-        description,
-        totalAmount: parseFloat(totalAmount),
-        paidBy,
-        participants: selectedParticipants,
-        splitMethod,
-        shares,
-        date: date.toISOString(),
-        category: category ? getCategoryById(category)?.name : undefined,
-      });
+      if (isEditing && editingExpense) {
+        await expensesApi.updateExpense(editingExpense._id, {
+          description,
+          totalAmount: parseFloat(totalAmount),
+          paidBy,
+          participants: selectedParticipants,
+          splitMethod,
+          shares,
+          date: date.toISOString(),
+          category: category ? getCategoryById(category)?.name : undefined,
+        });
+      } else {
+        await expensesApi.createExpense({
+          householdId: selectedHousehold._id,
+          description,
+          totalAmount: parseFloat(totalAmount),
+          paidBy,
+          participants: selectedParticipants,
+          splitMethod,
+          shares,
+          date: date.toISOString(),
+          category: category ? getCategoryById(category)?.name : undefined,
+        });
+      }
       navigation.goBack();
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to create expense');
+      Alert.alert('Error', error.response?.data?.error || 'Failed to save expense');
     } finally {
       setLoading(false);
     }
@@ -624,7 +685,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any }> = ({ navigation 
           style={styles.scrollView}
           keyboardShouldPersistTaps="handled"
         >
-      <ScreenHeader title="Add Expense" subtitle={selectedHousehold.name} />
+      <ScreenHeader title={isEditing ? 'Edit Expense' : 'Add Expense'} subtitle={selectedHousehold.name} />
 
       <View style={styles.templateActions}>
         <TouchableOpacity
@@ -797,7 +858,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any }> = ({ navigation 
         )}
 
         <PrimaryButton
-          title="Save Expense"
+          title={isEditing ? 'Update Expense' : 'Save Expense'}
           onPress={handleSubmit}
           loading={loading}
           disabled={!canSubmit}

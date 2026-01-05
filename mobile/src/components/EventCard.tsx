@@ -13,10 +13,17 @@ interface EventCardProps {
 export const EventCard: React.FC<EventCardProps> = ({ event }) => {
   const colors = useThemeColors();
   const typeIcons: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
-    bill: 'cash-outline',
+    bill: 'receipt-outline',
     cleaning: 'sparkles-outline',
-    social: 'balloon-outline',
-    other: 'calendar-outline',
+    social: 'people-outline',
+    meal: 'restaurant-outline',
+    meeting: 'calendar-outline',
+    maintenance: 'hammer-outline',
+    shopping: 'cart-outline',
+    trip: 'car-outline',
+    birthday: 'gift-outline',
+    reminder: 'alarm-outline',
+    other: 'ellipsis-horizontal-outline',
   };
 
   const styles = React.useMemo(() => StyleSheet.create({
@@ -32,9 +39,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event }) => {
     header: {
       flexDirection: 'row',
       alignItems: 'flex-start',
-    },
-    icon: {
-      marginRight: spacing.md,
+      gap: spacing.md,
     },
     content: {
       flex: 1,

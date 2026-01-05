@@ -5,7 +5,7 @@ export interface Event {
   householdId: string;
   title: string;
   description?: string;
-  type: 'bill' | 'cleaning' | 'social' | 'other';
+  type: 'bill' | 'cleaning' | 'social' | 'meal' | 'meeting' | 'maintenance' | 'shopping' | 'trip' | 'birthday' | 'reminder' | 'other';
   date: string;
   endDate?: string;
   createdBy: { _id: string; name: string; email: string };
@@ -16,7 +16,16 @@ export interface CreateEventData {
   householdId: string;
   title: string;
   description?: string;
-  type: 'bill' | 'cleaning' | 'social' | 'other';
+  type: 'bill' | 'cleaning' | 'social' | 'meal' | 'meeting' | 'maintenance' | 'shopping' | 'trip' | 'birthday' | 'reminder' | 'other';
+  date: string;
+  endDate?: string;
+}
+
+export interface UpdateEventData {
+  householdId: string;
+  title: string;
+  description?: string;
+  type: 'bill' | 'cleaning' | 'social' | 'meal' | 'meeting' | 'maintenance' | 'shopping' | 'trip' | 'birthday' | 'reminder' | 'other';
   date: string;
   endDate?: string;
 }
@@ -29,6 +38,11 @@ export const eventsApi = {
 
   createEvent: async (data: CreateEventData): Promise<Event> => {
     const response = await apiClient.instance.post('/events', data);
+    return response.data;
+  },
+
+  updateEvent: async (id: string, data: UpdateEventData): Promise<Event> => {
+    const response = await apiClient.instance.put(`/events/${id}`, data);
     return response.data;
   },
 

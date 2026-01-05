@@ -36,6 +36,7 @@ export const HomeScreen: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [insights, setInsights] = useState<any>(null);
+  const [spendingRange, setSpendingRange] = useState<'week' | 'month' | 'year' | 'all'>('month');
 
   const styles = React.useMemo(() => StyleSheet.create({
     container: {
@@ -398,6 +399,45 @@ export const HomeScreen: React.FC = () => {
   const stats = calculateStats();
   const hasData = expenses.length > 0 || events.length > 0 || goals.length > 0 || shoppingItems.length > 0;
 
+  const spendingRangeStart = React.useMemo(() => {
+    const now = new Date();
+    if (spendingRange === 'week') {
+      return new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+    }
+    if (spendingRange === 'month') {
+      return new Date(now.getFullYear(), now.getMonth(), 1);
+    }
+    if (spendingRange === 'year') {
+      return new Date(now.getFullYear(), 0, 1);
+    }
+    return null; // all time
+  }, [spendingRange]);
+
+  const spendingByCategory = React.useMemo(() => {
+    const start = spendingRangeStart;
+    const filtered = start
+      ? expenses.filter((e) => {
+          const d = new Date(e.date);
+          return d >= start;
+        })
+      : expenses;
+
+    const totals: Record<string, number> = {};
+    filtered.forEach((e) => {
+      const key = (e.category || 'Uncategorized').trim();
+      totals[key] = (totals[key] || 0) + (e.totalAmount || 0);
+    });
+    const totalAmount = Object.values(totals).reduce((sum, v) => sum + v, 0);
+    return Object.entries(totals)
+      .map(([category, amount]) => ({
+        category,
+        amount,
+        percentage: totalAmount > 0 ? (amount / totalAmount) * 100 : 0,
+        count: 0,
+      }))
+      .sort((a, b) => b.amount - a.amount);
+  }, [expenses, spendingRangeStart]);
+
   if (!selectedHousehold) {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -553,17 +593,22 @@ export const HomeScreen: React.FC = () => {
               </AppText>
             </View>
           </View>
-          <BalanceSummary
-            balances={balances}
-            currentUserId={user._id}
-            getUserName={getUserName}
-            getUserAvatar={getUserAvatar}
-          />
+          <TouchableOpacity
+            activeOpacity={0.9}
+            onPress={() => navigation.getParent()?.navigate('SettleUp')}
+          >
+            <BalanceSummary
+              balances={balances}
+              currentUserId={user._id}
+              getUserName={getUserName}
+              getUserAvatar={getUserAvatar}
+            />
+          </TouchableOpacity>
         </View>
       )}
 
       {/* Spending Insights & Charts */}
-      {insights && insights.byCategory.length > 0 && (
+      {(spendingByCategory.length > 0 || (insights && insights.byCategory.length > 0)) && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionTitleContainer}>
@@ -574,9 +619,11 @@ export const HomeScreen: React.FC = () => {
             </View>
           </View>
           <SpendingChart
-            byCategory={insights.byCategory}
-            monthlyTrend={insights.monthlyTrend}
-            predictions={insights.predictions}
+            byCategory={spendingByCategory.length > 0 ? spendingByCategory : insights.byCategory}
+            monthlyTrend={insights?.monthlyTrend || []}
+            predictions={insights?.predictions}
+            selectedRange={spendingRange}
+            onChangeRange={setSpendingRange}
           />
           {/* Spending Summary Card */}
           {insights.monthlyTrend && insights.monthlyTrend.length > 1 && (

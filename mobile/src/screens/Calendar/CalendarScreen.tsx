@@ -3,6 +3,7 @@ import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useHousehold } from '../../context/HouseholdContext';
+import { useAuth } from '../../context/AuthContext';
 import { eventsApi, Event } from '../../api/eventsApi';
 import { EventCard } from '../../components/EventCard';
 import { PrimaryButton } from '../../components/PrimaryButton';
@@ -11,14 +12,18 @@ import { SearchBar } from '../../components/ui/SearchBar';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { formatDate } from '../../utils/dateHelpers';
 import { useThemeColors, fontSizes, fontWeights, spacing } from '../../theme';
+import { Ionicons } from '@expo/vector-icons';
 
 export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { selectedHousehold } = useHousehold();
+  const { user } = useAuth();
   const colors = useThemeColors();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  const isCreator = (event: Event) => event.createdBy?._id === user?._id;
 
   useEffect(() => {
     if (selectedHousehold) loadEvents();
@@ -46,6 +51,10 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     }
   };
 
+  const handleEditEvent = (event: Event) => {
+    navigation.navigate('CreateEvent', { editingEvent: event });
+  };
+
   const handleDeleteEvent = (event: Event) => {
     Alert.alert('Delete Event', 'Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
@@ -56,8 +65,8 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
           try {
             await eventsApi.deleteEvent(event._id);
             loadEvents();
-          } catch (error) {
-            console.error('Failed to delete event:', error);
+          } catch (error: any) {
+            Alert.alert('Error', error.response?.data?.error || 'Failed to delete event');
           }
         },
       },
@@ -111,9 +120,18 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
               {dateEvents.map((event) => (
                 <View key={event._id} style={styles.eventWrapper}>
                   <EventCard event={event} />
-                  <TouchableOpacity style={styles.deleteButton} onPress={() => handleDeleteEvent(event)}>
-                    <Text style={styles.deleteText}>Delete</Text>
-                  </TouchableOpacity>
+                  {isCreator(event) && (
+                    <View style={styles.eventActions}>
+                      <TouchableOpacity style={styles.actionButton} onPress={() => handleEditEvent(event)}>
+                        <Ionicons name="pencil-outline" size={16} color={colors.primary} />
+                        <Text style={styles.editText}>Edit</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.actionButton} onPress={() => handleDeleteEvent(event)}>
+                        <Ionicons name="trash-outline" size={16} color={colors.danger} />
+                        <Text style={styles.deleteText}>Delete</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
                 </View>
               ))}
             </View>
@@ -134,7 +152,19 @@ const createStyles = (colors: any) => StyleSheet.create({
   dateSection: { padding: spacing.md },
   dateHeader: { fontSize: fontSizes.lg, fontWeight: fontWeights.semibold, marginBottom: spacing.md, color: colors.text },
   eventWrapper: { marginBottom: spacing.md },
-  deleteButton: { alignSelf: 'flex-end', padding: spacing.xs, marginTop: spacing.xxs },
+  eventActions: { 
+    flexDirection: 'row', 
+    justifyContent: 'flex-end', 
+    gap: spacing.md, 
+    marginTop: spacing.xs 
+  },
+  actionButton: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: spacing.xxs,
+    padding: spacing.xs,
+  },
+  editText: { color: colors.primary, fontSize: fontSizes.sm },
   deleteText: { color: colors.danger, fontSize: fontSizes.sm },
 });
 

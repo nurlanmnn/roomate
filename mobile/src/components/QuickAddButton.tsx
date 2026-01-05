@@ -254,6 +254,7 @@ export const QuickAddButton: React.FC<QuickAddButtonProps> = ({ onAddItems }) =>
               value={textInput}
               onChangeText={setTextInput}
               placeholder="milk, eggs, 2kg chicken, trash bags..."
+              placeholderTextColor={colors.textSecondary}
               multiline
               numberOfLines={6}
               autoFocus

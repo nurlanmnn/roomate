@@ -145,6 +145,10 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     }
   };
 
+  const handleEditExpense = (expense: Expense) => {
+    navigation.navigate('CreateExpense', { expense, mode: 'edit' });
+  };
+
   const handleQuickSettle = () => {
     navigation.navigate('SettleUp');
   };
@@ -364,10 +368,11 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                 (expense as any).createdBy && typeof (expense as any).createdBy === 'object'
                   ? (expense as any).createdBy?._id
                   : (expense as any).createdBy;
-              const canDelete =
+              const canEdit =
                 !!user &&
                 ((creatorId && creatorId === user._id) ||
                   (!creatorId && (expense as any).paidBy?._id === user._id)); // legacy fallback
+              const canDelete = canEdit;
 
               return (
             <ExpenseCard
@@ -376,6 +381,8 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
               onDelete={handleDeleteExpense}
               onQuickSettle={handleQuickSettle}
               canDelete={canDelete}
+              canEdit={canEdit}
+              onEdit={handleEditExpense}
             />
               );
             })()
@@ -390,10 +397,11 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                     (expense as any).createdBy && typeof (expense as any).createdBy === 'object'
                       ? (expense as any).createdBy?._id
                       : (expense as any).createdBy;
-                  const canDelete =
+                  const canEdit =
                     !!user &&
                     ((creatorId && creatorId === user._id) ||
                       (!creatorId && (expense as any).paidBy?._id === user._id)); // legacy fallback
+                  const canDelete = canEdit;
 
                   return (
                 <ExpenseCard
@@ -402,6 +410,8 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                   onDelete={handleDeleteExpense}
                   onQuickSettle={handleQuickSettle}
                   canDelete={canDelete}
+                  canEdit={canEdit}
+                  onEdit={handleEditExpense}
                 />
                   );
                 })()

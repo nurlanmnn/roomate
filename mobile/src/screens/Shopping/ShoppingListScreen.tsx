@@ -553,6 +553,7 @@ export const ShoppingListScreen: React.FC = () => {
                 value={name}
                 onChangeText={setName}
                 placeholder="Item name"
+                placeholderTextColor={colors.textSecondary}
               />
               <TextInput
                 style={styles.input}
@@ -563,6 +564,7 @@ export const ShoppingListScreen: React.FC = () => {
                   setQuantity(numericValue);
                 }}
                 placeholder="Quantity (optional)"
+                placeholderTextColor={colors.textSecondary}
                 keyboardType="number-pad"
               />
               <View>
@@ -575,6 +577,7 @@ export const ShoppingListScreen: React.FC = () => {
                     setWeight(numericValue);
                   }}
                   placeholder="Weight (optional)"
+                  placeholderTextColor={colors.textSecondary}
                   keyboardType="number-pad"
                 />
                 <View style={styles.dropdownContainer}>
@@ -700,6 +703,7 @@ export const ShoppingListScreen: React.FC = () => {
               value={newListName}
               onChangeText={setNewListName}
               placeholder="List name"
+              placeholderTextColor={colors.textSecondary}
               autoFocus
             />
             <View style={styles.modalActions}>
@@ -753,6 +757,7 @@ export const ShoppingListScreen: React.FC = () => {
                 value={editItemName}
                 onChangeText={setEditItemName}
                 placeholder="Item name"
+                placeholderTextColor={colors.textSecondary}
                 autoFocus
               />
               <TextInput
@@ -764,6 +769,7 @@ export const ShoppingListScreen: React.FC = () => {
                   setEditItemQuantity(numericValue);
                 }}
                 placeholder="Quantity (optional)"
+                placeholderTextColor={colors.textSecondary}
                 keyboardType="number-pad"
               />
               <View>
@@ -776,6 +782,7 @@ export const ShoppingListScreen: React.FC = () => {
                     setEditItemWeight(numericValue);
                   }}
                   placeholder="Weight (optional)"
+                  placeholderTextColor={colors.textSecondary}
                   keyboardType="number-pad"
                 />
                 <View style={styles.dropdownContainer}>

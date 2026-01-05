@@ -32,6 +32,8 @@ export interface CreateExpenseData {
   category?: string;
 }
 
+export type UpdateExpenseData = Omit<CreateExpenseData, 'householdId'>;
+
 export interface PairwiseBalance {
   fromUserId: string;
   toUserId: string;
@@ -52,6 +54,11 @@ export const expensesApi = {
 
   createExpense: async (data: CreateExpenseData): Promise<Expense> => {
     const response = await apiClient.instance.post('/expenses', data);
+    return response.data;
+  },
+
+  updateExpense: async (id: string, data: UpdateExpenseData): Promise<Expense> => {
+    const response = await apiClient.instance.put(`/expenses/${id}`, data);
     return response.data;
   },
 

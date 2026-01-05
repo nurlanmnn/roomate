@@ -1,9 +1,29 @@
-import sgMail from '@sendgrid/mail';
 import { config } from './env';
+import nodemailer from 'nodemailer';
+import type { Transporter } from 'nodemailer';
 
-if (config.sendgridApiKey) {
-  sgMail.setApiKey(config.sendgridApiKey);
-}
+let transporter: Transporter | null = null;
+
+const getTransporter = (): Transporter | null => {
+  if (transporter) return transporter;
+
+  const user = config.brevoSmtpUser?.trim();
+  const pass = config.brevoSmtpPass?.trim();
+
+  if (!user || !pass) {
+    return null;
+  }
+
+  const port = Number(config.brevoSmtpPort || 587);
+  transporter = nodemailer.createTransport({
+    host: config.brevoSmtpHost,
+    port: Number.isFinite(port) ? port : 587,
+    secure: port === 465, // true for 465, false for other ports (STARTTLS)
+    auth: { user, pass },
+  });
+
+  return transporter;
+};
 
 export interface EmailOptions {
   to: string;
@@ -12,27 +32,22 @@ export interface EmailOptions {
 }
 
 export const sendEmail = async (options: EmailOptions): Promise<void> => {
-  if (!config.sendgridApiKey) {
-    console.warn('SendGrid API key not configured. Email would be sent to:', options.to);
+  const tx = getTransporter();
+  if (!tx) {
+    console.warn('Brevo SMTP not configured. Email would be sent to:', options.to);
     console.warn('Subject:', options.subject);
     return;
   }
 
-  if (!config.sendgridFromEmail) {
-    throw new Error('SENDGRID_FROM_EMAIL environment variable is required');
+  if (!config.emailFrom) {
+    throw new Error('EMAIL_FROM environment variable is required');
   }
 
   try {
-    await sgMail.send({
-      from: config.sendgridFromEmail,
-      ...options,
-    });
+    await tx.sendMail({ from: config.emailFrom, ...options });
     console.log('Email sent successfully to:', options.to);
   } catch (error: any) {
     console.error('Error sending email:', error);
-    if (error.response?.body?.errors) {
-      console.error('SendGrid errors:', JSON.stringify(error.response.body.errors, null, 2));
-    }
     throw error;
   }
 };

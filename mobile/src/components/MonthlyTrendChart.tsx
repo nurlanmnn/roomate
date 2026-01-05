@@ -2,11 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity, Animated, Dimensions } from 'react-native';
 import { AppText } from './AppText';
 import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows } from '../theme';
-import { formatCurrency } from '../utils/formatCurrency';
-
-// #region agent log
-fetch('http://127.0.0.1:7242/ingest/16e3335f-6715-4f8a-beae-87df786dbc1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MonthlyTrendChart.tsx:6',message:'MonthlyTrendChart module loading',data:{appTextType:typeof AppText,appTextValue:AppText?.toString?.()?.substring(0,100),isUndefined:AppText === undefined,isFunction:typeof AppText === 'function',isClass:typeof AppText === 'function' && AppText.prototype},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-// #endregion
+import { formatCompactCurrency, formatCurrency } from '../utils/formatCurrency';
 
 const screenWidth = Dimensions.get('window').width;
 const PLOT_HEIGHT = 200;
@@ -34,23 +30,8 @@ const clamp = (value: number, min: number, max: number): number => {
   return Math.max(min, Math.min(max, value));
 };
 
-// #region agent log
-try {
-  fetch('http://127.0.0.1:7242/ingest/16e3335f-6715-4f8a-beae-87df786dbc1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MonthlyTrendChart.tsx:33',message:'Before component definition',data:{appTextType:typeof AppText,appTextIsFunction:typeof AppText === 'function',appTextConstructor:AppText?.constructor?.name,reactType:typeof React,reactCreateElementType:typeof React.createElement},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'D'})}).catch(()=>{});
-} catch(e) {
-  fetch('http://127.0.0.1:7242/ingest/16e3335f-6715-4f8a-beae-87df786dbc1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MonthlyTrendChart.tsx:33',message:'Error before component definition',data:{error:e?.message,stack:e?.stack?.substring(0,200)},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'D'})}).catch(()=>{});
-}
-// #endregion
-
 const MonthlyTrendChartComponent = ({ monthlyTrend }: MonthlyTrendChartProps) => {
   const colors = useThemeColors();
-  // #region agent log
-  try {
-    fetch('http://127.0.0.1:7242/ingest/16e3335f-6715-4f8a-beae-87df786dbc1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MonthlyTrendChart.tsx:42',message:'MonthlyTrendChart component entry',data:{appTextType:typeof AppText,appTextIsUndefined:AppText === undefined,appTextIsFunction:typeof AppText === 'function',monthlyTrendLength:monthlyTrend?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'A'})}).catch(()=>{});
-  } catch(e) {
-    fetch('http://127.0.0.1:7242/ingest/16e3335f-6715-4f8a-beae-87df786dbc1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MonthlyTrendChart.tsx:42',message:'Error in component entry',data:{error:e?.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'A'})}).catch(()=>{});
-  }
-  // #endregion
   const [selectedRange, setSelectedRange] = useState<MonthRange>(6);
   const [barAnimations, setBarAnimations] = useState<Animated.Value[]>([]);
 
@@ -79,22 +60,22 @@ const MonthlyTrendChartComponent = ({ monthlyTrend }: MonthlyTrendChartProps) =>
     rangeSelector: {
       flexDirection: 'row',
       backgroundColor: colors.background,
-      borderRadius: radii.md,
-      padding: spacing.xxs,
-      gap: spacing.xxs,
+      borderRadius: radii.pill,
+      padding: 2,
+      gap: 2,
     },
     rangeButton: {
-      paddingHorizontal: spacing.sm,
-      paddingVertical: spacing.xs,
-      borderRadius: radii.sm,
-      minWidth: 44,
+      paddingHorizontal: spacing.xs,
+      paddingVertical: 6,
+      borderRadius: radii.pill,
+      minWidth: 36,
       alignItems: 'center',
     },
     rangeButtonActive: {
       backgroundColor: colors.primary,
     },
     rangeButtonText: {
-      fontSize: fontSizes.xs,
+      fontSize: 11,
       fontWeight: fontWeights.medium,
       color: colors.textSecondary,
     },
@@ -295,9 +276,25 @@ const MonthlyTrendChartComponent = ({ monthlyTrend }: MonthlyTrendChartProps) =>
 
   // Format Y-axis values (no decimals unless needed)
   const formatYAxisValue = (value: number): string => {
-    if (value === 0) return '$0';
     const rounded = Math.round(value);
-    return `$${rounded.toLocaleString()}`;
+    if (!rounded) return '$0';
+
+    const sign = rounded < 0 ? '-' : '';
+    const abs = Math.abs(rounded);
+
+    const formatWithSuffix = (divisor: number, suffix: string) => {
+      const n = abs / divisor;
+      // 1 decimal for small compact numbers, 0 decimals for larger ones
+      const decimals = n < 100 ? 1 : 0;
+      const formatted = n.toFixed(decimals).replace(/\.0$/, '');
+      return `${sign}$${formatted}${suffix}`;
+    };
+
+    if (abs >= 1_000_000_000) return formatWithSuffix(1_000_000_000, 'B');
+    if (abs >= 1_000_000) return formatWithSuffix(1_000_000, 'M');
+    if (abs >= 1_000) return formatWithSuffix(1_000, 'K');
+
+    return `${sign}$${abs.toLocaleString()}`;
   };
 
   // Generate Y-axis ticks (4-5 including 0)
@@ -315,9 +312,6 @@ const MonthlyTrendChartComponent = ({ monthlyTrend }: MonthlyTrendChartProps) =>
     return (
       <View style={styles.chartSection}>
         <View style={styles.headerRow}>
-          {/* #region agent log */}
-          {(() => {try {fetch('http://127.0.0.1:7242/ingest/16e3335f-6715-4f8a-beae-87df786dbc1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MonthlyTrendChart.tsx:160',message:'Before rendering AppText in empty state',data:{appTextType:typeof AppText,appTextIsUndefined:AppText === undefined,appTextIsFunction:typeof AppText === 'function',appTextToString:AppText?.toString?.()?.substring(0,50)},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'A'})}).catch(()=>{});} catch(e) {fetch('http://127.0.0.1:7242/ingest/16e3335f-6715-4f8a-beae-87df786dbc1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MonthlyTrendChart.tsx:160',message:'Error checking AppText',data:{error:e?.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'A'})}).catch(()=>{});} return null;})()}
-          {/* #endregion */}
           <AppText style={styles.sectionTitle}>Monthly Trend</AppText>
           <View style={styles.rangeSelector}>
             {([1, 3, 6] as MonthRange[]).map((range) => (
@@ -378,15 +372,12 @@ const MonthlyTrendChartComponent = ({ monthlyTrend }: MonthlyTrendChartProps) =>
 
       {/* SubheaderRow: Range label + Summary */}
       <View style={styles.subheaderRow}>
-        {/* #region agent log */}
-        {(() => {try {fetch('http://127.0.0.1:7242/ingest/16e3335f-6715-4f8a-beae-87df786dbc1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MonthlyTrendChart.tsx:220',message:'Before rendering AppText in subheader',data:{appTextType:typeof AppText,appTextIsUndefined:AppText === undefined},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'A'})}).catch(()=>{});} catch(e) {} return null;})()}
-        {/* #endregion */}
         <AppText style={styles.rangeLabelText}>
           {selectedRange === 1 ? 'Last month' : `Last ${selectedRange} months`}
         </AppText>
         {summaryData.total > 0 && (
           <AppText style={styles.summaryText}>
-            Total: {formatCurrency(summaryData.total)}
+            Total: {formatCompactCurrency(summaryData.total)}
           </AppText>
         )}
       </View>
@@ -503,13 +494,5 @@ const MonthlyTrendChartComponent = ({ monthlyTrend }: MonthlyTrendChartProps) =>
     </View>
   );
 };
-
-// #region agent log
-try {
-  fetch('http://127.0.0.1:7242/ingest/16e3335f-6715-4f8a-beae-87df786dbc1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MonthlyTrendChart.tsx:356',message:'Before export statement',data:{componentType:typeof MonthlyTrendChartComponent,isFunction:typeof MonthlyTrendChartComponent === 'function'},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'E'})}).catch(()=>{});
-} catch(e) {
-  fetch('http://127.0.0.1:7242/ingest/16e3335f-6715-4f8a-beae-87df786dbc1e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'MonthlyTrendChart.tsx:356',message:'Error before export',data:{error:e?.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'E'})}).catch(()=>{});
-}
-// #endregion
 
 export const MonthlyTrendChart = MonthlyTrendChartComponent;

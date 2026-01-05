@@ -11,7 +11,7 @@ const createEventSchema = z.object({
   householdId: z.string(),
   title: z.string().min(1),
   description: z.string().optional(),
-  type: z.enum(['bill', 'cleaning', 'social', 'other']),
+  type: z.enum(['bill', 'cleaning', 'social', 'meal', 'meeting', 'maintenance', 'shopping', 'trip', 'birthday', 'reminder', 'other']),
   date: z.string().datetime().or(z.date()),
   endDate: z.string().datetime().or(z.date()).optional(),
 });
@@ -92,7 +92,47 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
   }
 });
 
-// DELETE /events/:id
+// PUT /events/:id (creator only)
+router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const event = await Event.findById(req.params.id);
+    if (!event) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+
+    // Only creator can edit
+    if (event.createdBy?.toString() !== userId) {
+      return res.status(403).json({ error: 'Only the creator can edit this event' });
+    }
+
+    const data = createEventSchema.parse(req.body);
+
+    // Update the event
+    event.title = data.title;
+    event.description = data.description;
+    event.type = data.type;
+    event.date = new Date(data.date);
+    event.endDate = data.endDate ? new Date(data.endDate) : undefined;
+    await event.save();
+
+    await event.populate('createdBy', 'name email avatarUrl');
+
+    res.json(event);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+    }
+    console.error('Update event error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// DELETE /events/:id (creator only)
 router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userId;
@@ -105,14 +145,9 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Event not found' });
     }
 
-    // Verify user is member of household
-    const household = await Household.findById(event.householdId);
-    if (!household) {
-      return res.status(404).json({ error: 'Household not found' });
-    }
-    const userIdObjectId = new mongoose.Types.ObjectId(userId);
-    if (!household.members.some(m => m.equals(userIdObjectId))) {
-      return res.status(403).json({ error: 'Access denied' });
+    // Only creator can delete
+    if (event.createdBy?.toString() !== userId) {
+      return res.status(403).json({ error: 'Only the creator can delete this event' });
     }
 
     await Event.deleteOne({ _id: event._id });

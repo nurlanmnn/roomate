@@ -1,10 +1,10 @@
 import React from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import { View, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
 import { AppText } from './AppText';
-import { PieChart, BarChart } from 'react-native-chart-kit';
 import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows } from '../theme';
-import { formatCurrency } from '../utils/formatCurrency';
+import { formatCompactCurrency, formatCurrency } from '../utils/formatCurrency';
 import { MonthlyTrendChart } from './MonthlyTrendChart';
+import { DonutChart } from './DonutChart';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -27,6 +27,8 @@ interface SpendingChartProps {
     nextMonth: number;
     trend: 'increasing' | 'decreasing' | 'stable';
   };
+  selectedRange?: 'week' | 'month' | 'year' | 'all';
+  onChangeRange?: (range: 'week' | 'month' | 'year' | 'all') => void;
 }
 
 // Modern, softer color palette for categories
@@ -50,51 +52,29 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
   byCategory,
   monthlyTrend,
   predictions,
+  selectedRange = 'month',
+  onChangeRange,
 }) => {
   const colors = useThemeColors();
+  const cardInnerWidth = screenWidth - spacing.xl * 2 - spacing.md * 2 - spacing.lg * 2;
+  const pieSize = Math.min(240, cardInnerWidth - spacing.lg);
+  const rangeOptions: { key: 'week' | 'month' | 'year' | 'all'; label: string }[] = [
+    { key: 'week', label: '1W' },
+    { key: 'month', label: '1M' },
+    { key: 'year', label: '1Y' },
+    { key: 'all', label: 'All' },
+  ];
   // Prepare pie chart data (top 5 categories)
   const topCategories = byCategory.slice(0, 5);
-  
-  const pieData = React.useMemo(() => topCategories.map((cat, index) => ({
-    name: cat.category.charAt(0).toUpperCase() + cat.category.slice(1),
-    amount: cat.amount,
-    color: getCategoryColor(index),
-    legendFontColor: colors.text,
-    legendFontSize: 12,
-  })), [topCategories, colors.text]);
-
-  // Prepare bar chart data
-  const barData = React.useMemo(() => ({
-    labels: monthlyTrend.map(m => {
-      const [year, month] = m.month.split('-');
-      const date = new Date(parseInt(year), parseInt(month) - 1);
-      return date.toLocaleDateString('en-US', { month: 'short' });
-    }),
-    datasets: [
-      {
-        data: monthlyTrend.map(m => m.amount),
-      },
-    ],
-  }), [monthlyTrend]);
-
-  const chartConfig = React.useMemo(() => ({
-    backgroundColor: colors.surface,
-    backgroundGradientFrom: colors.surface,
-    backgroundGradientTo: colors.surface,
-    decimalPlaces: 0,
-    color: (opacity = 1) => `rgba(34, 197, 94, ${opacity})`, // Primary green
-    labelColor: (opacity = 1) => `rgba(26, 28, 33, ${opacity})`, // Text color
-    style: {
-      borderRadius: radii.md,
-    },
-    propsForDots: {
-      r: '5',
-      strokeWidth: '2',
-      stroke: colors.primary,
-    },
-    fillShadowGradient: colors.primary,
-    fillShadowGradientOpacity: 0.1,
-  }), [colors.surface, colors.primary]);
+  const donutData = React.useMemo(
+    () =>
+      topCategories.map((cat, index) => ({
+        value: cat.amount,
+        color: getCategoryColor(index),
+        label: cat.category,
+      })),
+    [topCategories]
+  );
 
   const styles = React.useMemo(() => StyleSheet.create({
     container: {
@@ -118,6 +98,32 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
       borderWidth: 1,
       borderColor: colors.borderLight,
       ...(shadows.sm as object),
+    },
+    rangeRow: {
+      flexDirection: 'row',
+      gap: spacing.xs,
+      marginBottom: spacing.sm,
+    },
+    rangeChip: {
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+      borderRadius: radii.pill,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      backgroundColor: colors.surface,
+    },
+    rangeChipActive: {
+      backgroundColor: colors.primarySoft,
+      borderColor: colors.primary,
+    },
+    rangeChipText: {
+      fontSize: fontSizes.xs,
+      color: colors.textSecondary,
+      fontWeight: fontWeights.medium,
+    },
+    rangeChipTextActive: {
+      color: colors.primaryDark,
+      fontWeight: fontWeights.semibold,
     },
     sectionTitle: {
       fontSize: fontSizes.lg,
@@ -158,15 +164,23 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
     },
     categoryName: {
       flex: 1,
+      minWidth: 0,
+      flexShrink: 1,
       fontSize: fontSizes.sm,
       color: colors.text,
       fontWeight: fontWeights.medium,
+    },
+    categoryRight: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      gap: spacing.xs,
+      flexShrink: 0,
     },
     categoryAmount: {
       fontSize: fontSizes.sm,
       color: colors.text,
       fontWeight: fontWeights.semibold,
-      marginRight: spacing.xs,
+      textAlign: 'right',
     },
     categoryPercentage: {
       fontSize: fontSizes.xs,
@@ -214,27 +228,65 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
       {topCategories.length > 0 && (
         <View style={styles.chartSection}>
           <AppText style={styles.sectionTitle}>Spending by Category</AppText>
+          <View style={styles.rangeRow}>
+            {rangeOptions.map((opt) => {
+              const active = selectedRange === opt.key;
+              return (
+                <TouchableOpacity
+                  key={opt.key}
+                  style={[
+                    styles.rangeChip,
+                    active && styles.rangeChipActive,
+                  ]}
+                  onPress={() => onChangeRange?.(opt.key)}
+                  activeOpacity={0.8}
+                >
+                  <AppText
+                    style={[
+                      styles.rangeChipText,
+                      active && styles.rangeChipTextActive,
+                    ]}
+                  >
+                    {opt.label}
+                  </AppText>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
           <View style={styles.pieChartContainer}>
-            <PieChart
-              data={pieData}
-              width={screenWidth - spacing.xl * 2}
-              height={180}
-              chartConfig={chartConfig}
-              accessor="amount"
-              backgroundColor="transparent"
-              paddingLeft="15"
-              absolute
+            <DonutChart
+              data={donutData}
+              size={pieSize}
+              strokeWidth={28}
+              centerContent={
+                <View style={{ alignItems: 'center' }}>
+                  <AppText style={{ fontSize: fontSizes.sm, color: colors.textSecondary }}>
+                    Total
+                  </AppText>
+                  <AppText
+                    style={{
+                      fontSize: fontSizes.xl,
+                      fontWeight: fontWeights.extrabold,
+                      color: colors.text,
+                    }}
+                  >
+                    {formatCurrency(topCategories.reduce((sum, c) => sum + c.amount, 0))}
+                  </AppText>
+                </View>
+              }
             />
           </View>
           <View style={styles.categoryList}>
             {topCategories.map((cat, index) => (
               <View key={cat.category} style={styles.categoryItem}>
                 <View style={[styles.colorDot, { backgroundColor: getCategoryColor(index) }]} />
-                <AppText style={styles.categoryName}>
+                <AppText style={styles.categoryName} numberOfLines={1} ellipsizeMode="tail">
                   {cat.category.charAt(0).toUpperCase() + cat.category.slice(1)}
                 </AppText>
-                <AppText style={styles.categoryAmount}>{formatCurrency(cat.amount)}</AppText>
-                <AppText style={styles.categoryPercentage}>({cat.percentage.toFixed(1)}%)</AppText>
+                <View style={styles.categoryRight}>
+                  <AppText style={styles.categoryAmount}>{formatCompactCurrency(cat.amount)}</AppText>
+                  <AppText style={styles.categoryPercentage}>({cat.percentage.toFixed(1)}%)</AppText>
+                </View>
               </View>
             ))}
           </View>

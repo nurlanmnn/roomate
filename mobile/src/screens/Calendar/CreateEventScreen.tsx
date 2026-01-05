@@ -1,21 +1,42 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHousehold } from '../../context/HouseholdContext';
-import { eventsApi } from '../../api/eventsApi';
+import { eventsApi, Event } from '../../api/eventsApi';
 import { FormTextInput } from '../../components/FormTextInput';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
 import { useThemeColors, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
+import { Ionicons } from '@expo/vector-icons';
 
-export const CreateEventScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
+// Event types with icons
+const EVENT_TYPES = [
+  { id: 'bill', label: 'Bill', icon: 'receipt-outline' },
+  { id: 'cleaning', label: 'Cleaning', icon: 'sparkles-outline' },
+  { id: 'social', label: 'Social', icon: 'people-outline' },
+  { id: 'meal', label: 'Meal', icon: 'restaurant-outline' },
+  { id: 'meeting', label: 'Meeting', icon: 'calendar-outline' },
+  { id: 'maintenance', label: 'Maintenance', icon: 'hammer-outline' },
+  { id: 'shopping', label: 'Shopping', icon: 'cart-outline' },
+  { id: 'trip', label: 'Trip', icon: 'car-outline' },
+  { id: 'birthday', label: 'Birthday', icon: 'gift-outline' },
+  { id: 'reminder', label: 'Reminder', icon: 'alarm-outline' },
+  { id: 'other', label: 'Other', icon: 'ellipsis-horizontal-outline' },
+] as const;
+
+type EventType = typeof EVENT_TYPES[number]['id'];
+
+export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ navigation, route }) => {
+  const editingEvent: Event | undefined = route.params?.editingEvent;
+  const isEditing = !!editingEvent;
+  
   const { selectedHousehold } = useHousehold();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [type, setType] = useState<'bill' | 'cleaning' | 'social' | 'other'>('other');
+  const [type, setType] = useState<EventType>('other');
   const [date, setDate] = useState(new Date());
   const [time, setTime] = useState(new Date());
   const [endDate, setEndDate] = useState<Date | null>(null);
@@ -26,9 +47,26 @@ export const CreateEventScreen: React.FC<{ navigation: any }> = ({ navigation })
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // Pre-fill form when editing
+  useEffect(() => {
+    if (editingEvent) {
+      setTitle(editingEvent.title);
+      setDescription(editingEvent.description || '');
+      setType(editingEvent.type);
+      const eventDate = new Date(editingEvent.date);
+      setDate(eventDate);
+      setTime(eventDate);
+      if (editingEvent.endDate) {
+        const eventEndDate = new Date(editingEvent.endDate);
+        setEndDate(eventEndDate);
+        setEndTime(eventEndDate);
+      }
+    }
+  }, [editingEvent]);
+
   const canSubmit = useMemo(() => title.trim().length > 0, [title]);
 
-  const handleCreate = async () => {
+  const handleSave = async () => {
     if (!selectedHousehold) return;
     if (!canSubmit) {
       Alert.alert('Error', 'Please enter a title');
@@ -52,19 +90,25 @@ export const CreateEventScreen: React.FC<{ navigation: any }> = ({ navigation })
       endDateTime.setMilliseconds(0);
     }
 
+    const eventData = {
+      householdId: selectedHousehold._id,
+      title: title.trim(),
+      description: description || undefined,
+      type,
+      date: dateTime.toISOString(),
+      endDate: endDateTime?.toISOString(),
+    };
+
     try {
       setSaving(true);
-      await eventsApi.createEvent({
-        householdId: selectedHousehold._id,
-        title: title.trim(),
-        description: description || undefined,
-        type,
-        date: dateTime.toISOString(),
-        endDate: endDateTime?.toISOString(),
-      });
+      if (isEditing && editingEvent) {
+        await eventsApi.updateEvent(editingEvent._id, eventData);
+      } else {
+        await eventsApi.createEvent(eventData);
+      }
       navigation.goBack();
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to create event');
+      Alert.alert('Error', error.response?.data?.error || `Failed to ${isEditing ? 'update' : 'create'} event`);
     } finally {
       setSaving(false);
     }
@@ -88,7 +132,7 @@ export const CreateEventScreen: React.FC<{ navigation: any }> = ({ navigation })
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         <ScrollView style={styles.scrollView} keyboardShouldPersistTaps="handled">
-          <ScreenHeader title="Add Event" subtitle={selectedHousehold.name} />
+          <ScreenHeader title={isEditing ? 'Edit Event' : 'Add Event'} subtitle={selectedHousehold.name} />
 
           <View style={styles.card}>
             <FormTextInput
@@ -107,17 +151,24 @@ export const CreateEventScreen: React.FC<{ navigation: any }> = ({ navigation })
 
             <View style={styles.field}>
               <Text style={styles.label}>Type</Text>
-              {(['bill', 'cleaning', 'social', 'other'] as const).map((eventType) => (
-                <TouchableOpacity
-                  key={eventType}
-                  style={[styles.option, type === eventType && styles.optionActive]}
-                  onPress={() => setType(eventType)}
-                >
-                  <Text style={[styles.optionText, type === eventType && styles.optionTextActive]}>
-                    {eventType.charAt(0).toUpperCase() + eventType.slice(1)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              <View style={styles.typeGrid}>
+                {EVENT_TYPES.map((eventType) => (
+                  <TouchableOpacity
+                    key={eventType.id}
+                    style={[styles.typeOption, type === eventType.id && styles.typeOptionActive]}
+                    onPress={() => setType(eventType.id)}
+                  >
+                    <Ionicons
+                      name={eventType.icon as any}
+                      size={20}
+                      color={type === eventType.id ? colors.primary : colors.textSecondary}
+                    />
+                    <Text style={[styles.typeOptionText, type === eventType.id && styles.typeOptionTextActive]}>
+                      {eventType.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
 
             <View style={styles.field}>
@@ -227,16 +278,19 @@ export const CreateEventScreen: React.FC<{ navigation: any }> = ({ navigation })
             <View style={styles.field}>
               <Text style={styles.label}>End Time (Optional)</Text>
               <TouchableOpacity
-                style={styles.dateButton}
-                onPress={() => setShowEndTimePicker((prev) => !prev)}
-                disabled={!endDate}
+                style={[styles.dateButton, !endDate && styles.dateButtonDisabled]}
+                onPress={() => {
+                  if (!endDate) {
+                    // Auto-set end date to start date if not set
+                    setEndDate(date);
+                  }
+                  setShowEndTimePicker((prev) => !prev);
+                }}
               >
                 <Text style={[styles.dateText, (!endDate || !endTime) && styles.placeholderText]}>
-                  {!endDate
-                    ? 'Select end date first'
-                    : endTime
-                      ? endTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-                      : 'Select end time'}
+                  {endTime
+                    ? endTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+                    : 'Select end time'}
                 </Text>
               </TouchableOpacity>
               {showEndTimePicker && (
@@ -266,7 +320,7 @@ export const CreateEventScreen: React.FC<{ navigation: any }> = ({ navigation })
             <View style={styles.actions}>
               <PrimaryButton title="Cancel" onPress={() => navigation.goBack()} variant="secondary" />
               <View style={styles.spacer} />
-              <PrimaryButton title="Create" onPress={handleCreate} disabled={!canSubmit} loading={saving} />
+              <PrimaryButton title={isEditing ? 'Save' : 'Create'} onPress={handleSave} disabled={!canSubmit} loading={saving} />
             </View>
           </View>
         </ScrollView>
@@ -294,18 +348,34 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   field: { marginBottom: spacing.md },
   label: { fontSize: fontSizes.sm, fontWeight: fontWeights.semibold, color: colors.textSecondary, marginBottom: spacing.xs },
-  option: {
-    paddingVertical: spacing.md,
+  typeGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  typeOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
-    borderRadius: radii.lg,
+    borderRadius: radii.pill,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
-    marginBottom: spacing.xs,
+    gap: spacing.xs,
   },
-  optionActive: { backgroundColor: colors.accentSoft, borderColor: colors.accent },
-  optionText: { fontSize: fontSizes.md, color: colors.text },
-  optionTextActive: { color: colors.text, fontWeight: fontWeights.semibold },
+  typeOptionActive: {
+    backgroundColor: colors.primaryUltraSoft,
+    borderColor: colors.primary,
+  },
+  typeOptionText: {
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
+  },
+  typeOptionTextActive: {
+    color: colors.primary,
+    fontWeight: fontWeights.semibold,
+  },
   dateButton: {
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
@@ -313,6 +383,9 @@ const createStyles = (colors: any) => StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
+  },
+  dateButtonDisabled: {
+    opacity: 0.5,
   },
   dateText: { fontSize: fontSizes.md, color: colors.text },
   placeholderText: { color: colors.muted },

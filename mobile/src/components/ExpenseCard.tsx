@@ -13,9 +13,18 @@ interface ExpenseCardProps {
   onDelete?: (expenseId: string) => void;
   onQuickSettle?: () => void;
   canDelete?: boolean;
+  canEdit?: boolean;
+  onEdit?: (expense: Expense) => void;
 }
 
-export const ExpenseCard: React.FC<ExpenseCardProps> = ({ expense, onDelete, onQuickSettle, canDelete = false }) => {
+export const ExpenseCard: React.FC<ExpenseCardProps> = ({
+  expense,
+  onDelete,
+  onQuickSettle,
+  canDelete = false,
+  canEdit = false,
+  onEdit,
+}) => {
   const colors = useThemeColors();
   const paidByName = expense.paidBy?.name || 'Unknown';
 
@@ -77,9 +86,21 @@ export const ExpenseCard: React.FC<ExpenseCardProps> = ({ expense, onDelete, onQ
       borderRadius: radii.sm,
       backgroundColor: colors.dangerSoft,
     },
+    editButton: {
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+      borderRadius: radii.sm,
+      backgroundColor: colors.surfaceAlt,
+      marginRight: spacing.xs,
+    },
     deleteText: {
       fontSize: fontSizes.sm,
       color: colors.danger,
+      fontWeight: fontWeights.semibold,
+    },
+    editText: {
+      fontSize: fontSizes.sm,
+      color: colors.text,
       fontWeight: fontWeights.semibold,
     },
     category: {
@@ -136,10 +157,19 @@ export const ExpenseCard: React.FC<ExpenseCardProps> = ({ expense, onDelete, onQ
             )}
           </View>
         </View>
-        {canDelete && onDelete && (
-          <TouchableOpacity onPress={handleDelete} style={styles.deleteButton}>
-            <AppText style={styles.deleteText}>Delete</AppText>
-          </TouchableOpacity>
+        {(canEdit || canDelete) && (
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            {canEdit && onEdit && (
+              <TouchableOpacity onPress={() => onEdit(expense)} style={styles.editButton}>
+                <AppText style={styles.editText}>Edit</AppText>
+              </TouchableOpacity>
+            )}
+            {canDelete && onDelete && (
+              <TouchableOpacity onPress={handleDelete} style={styles.deleteButton}>
+                <AppText style={styles.deleteText}>Delete</AppText>
+              </TouchableOpacity>
+            )}
+          </View>
         )}
       </View>
       {expense.category && (
