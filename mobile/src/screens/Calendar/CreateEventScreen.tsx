@@ -29,6 +29,7 @@ type EventType = typeof EVENT_TYPES[number]['id'];
 
 export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ navigation, route }) => {
   const editingEvent: Event | undefined = route.params?.editingEvent;
+  const preselectedDate: string | undefined = route.params?.preselectedDate;
   const isEditing = !!editingEvent;
   
   const { selectedHousehold } = useHousehold();
@@ -37,7 +38,7 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [type, setType] = useState<EventType>('other');
-  const [date, setDate] = useState(new Date());
+  const [date, setDate] = useState(preselectedDate ? new Date(preselectedDate) : new Date());
   const [time, setTime] = useState(new Date());
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [endTime, setEndTime] = useState<Date | null>(null);

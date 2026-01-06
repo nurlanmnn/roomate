@@ -108,9 +108,14 @@ export const ShoppingItemRow: React.FC<ShoppingItemRowProps> = ({
 
   return (
     <SwipeableRow
+      onSwipeLeft={onDelete}
       onSwipeRight={!item.completed ? onToggle : undefined}
+      leftActionLabel="Delete"
+      leftActionIcon="trash-outline"
+      leftActionColor={colors.danger}
       rightActionLabel="Complete"
       rightActionIcon="checkmark-circle-outline"
+      rightActionColor={colors.primary}
       disabled={item.completed}
     >
       <View style={[styles.row, item.completed && styles.rowCompleted]}>

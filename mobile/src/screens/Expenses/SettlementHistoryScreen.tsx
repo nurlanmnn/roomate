@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Modal, RefreshControl } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
 import { settlementsApi, Settlement } from '../../api/settlementsApi';
@@ -19,6 +19,7 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = ({ navigat
   const { selectedHousehold } = useHousehold();
   const { user } = useAuth();
   const colors = useThemeColors();
+  const insets = useSafeAreaInsets();
   const styles = useMemo(
     () =>
       StyleSheet.create({
@@ -158,9 +159,9 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = ({ navigat
         },
         proofModalClose: {
           position: 'absolute',
-          top: spacing.xl,
-          right: spacing.xl,
-          zIndex: 1,
+          right: spacing.lg,
+          zIndex: 10,
+          padding: spacing.sm,
         },
         proofModalImage: {
           width: '90%',
@@ -400,10 +401,10 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = ({ navigat
       >
         <View style={styles.proofModalOverlay}>
           <TouchableOpacity
-            style={styles.proofModalClose}
+            style={[styles.proofModalClose, { top: insets.top + spacing.md }]}
             onPress={() => setSelectedProofImage(null)}
           >
-            <Ionicons name="close-circle" size={32} color={colors.surface} />
+            <Ionicons name="close-circle" size={40} color={colors.surface} />
           </TouchableOpacity>
           {selectedProofImage && (
             <Image source={{ uri: selectedProofImage }} style={styles.proofModalImage} resizeMode="contain" />

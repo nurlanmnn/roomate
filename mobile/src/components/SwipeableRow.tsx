@@ -1,11 +1,11 @@
-import React, { useRef, useEffect } from 'react';
-import { View, StyleSheet, Animated, TouchableOpacity, Dimensions, PanResponder } from 'react-native';
+import React, { useRef, useCallback } from 'react';
+import { View, StyleSheet, Animated, Dimensions, PanResponder, PanResponderGestureState } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useThemeColors, spacing, radii, fontSizes } from '../theme';
+import { useThemeColors, spacing, fontSizes } from '../theme';
 import { AppText } from './AppText';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const SWIPE_THRESHOLD = 80; // Minimum swipe distance to trigger action
+const SWIPE_THRESHOLD = 70;
 
 interface SwipeableRowProps {
   children: React.ReactNode;
@@ -34,160 +34,184 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
 }) => {
   const colors = useThemeColors();
   const translateX = useRef(new Animated.Value(0)).current;
-  const currentValue = useRef(0);
-  
+  const isSwipingRef = useRef(false);
+
   const finalLeftActionColor = leftActionColor || colors.danger;
   const finalRightActionColor = rightActionColor || colors.primary;
 
-  useEffect(() => {
-    // Reset position when disabled
-    if (disabled) {
-      Animated.spring(translateX, {
-        toValue: 0,
-        useNativeDriver: true,
-      }).start();
-      currentValue.current = 0;
-    }
-  }, [disabled, translateX]);
+  // Refs for latest callback values
+  const callbacksRef = useRef({ onSwipeLeft, onSwipeRight, disabled });
+  callbacksRef.current = { onSwipeLeft, onSwipeRight, disabled };
 
-  // Use PanResponder for gesture handling
+  const resetPosition = useCallback(() => {
+    isSwipingRef.current = false;
+    Animated.spring(translateX, {
+      toValue: 0,
+      useNativeDriver: true,
+      tension: 100,
+      friction: 10,
+    }).start();
+  }, [translateX]);
+
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => !disabled,
-      onMoveShouldSetPanResponder: (evt, gestureState) => {
-        return !disabled && Math.abs(gestureState.dx) > 10;
+      // Immediately claim when touch starts if we're already swiping
+      onStartShouldSetPanResponder: () => false,
+      
+      // Check if we should capture this gesture
+      onMoveShouldSetPanResponder: (_, gs) => {
+        if (callbacksRef.current.disabled) return false;
+        // Only claim if horizontal movement is dominant
+        const isHorizontal = Math.abs(gs.dx) > Math.abs(gs.dy) * 1.2;
+        const hasMoved = Math.abs(gs.dx) > 8;
+        return isHorizontal && hasMoved;
       },
+      
+      // Capture gesture more aggressively for horizontal swipes
+      onMoveShouldSetPanResponderCapture: (_, gs) => {
+        if (callbacksRef.current.disabled) return false;
+        const isStrongHorizontal = Math.abs(gs.dx) > Math.abs(gs.dy) * 2;
+        const hasMovedEnough = Math.abs(gs.dx) > 15;
+        return isStrongHorizontal && hasMovedEnough;
+      },
+
       onPanResponderGrant: () => {
-        translateX.setOffset(currentValue.current);
+        isSwipingRef.current = true;
+        translateX.stopAnimation();
         translateX.setValue(0);
       },
-      onPanResponderMove: (evt, gestureState) => {
-        if (disabled) return;
 
-        const { dx } = gestureState;
-        let newValue = dx + currentValue.current;
+      onPanResponderMove: (_, gs: PanResponderGestureState) => {
+        if (callbacksRef.current.disabled) return;
 
-        // Limit swipe range
-        const maxLeft = onSwipeLeft ? -SWIPE_THRESHOLD * 2 : 0;
-        const maxRight = onSwipeRight ? SWIPE_THRESHOLD * 2 : 0;
+        let { dx } = gs;
+        const { onSwipeLeft: swLeft, onSwipeRight: swRight } = callbacksRef.current;
 
-        if (newValue < maxLeft) newValue = maxLeft;
-        if (newValue > maxRight) newValue = maxRight;
+        // Block if no handler
+        if (dx < 0 && !swLeft) dx = 0;
+        if (dx > 0 && !swRight) dx = 0;
+
+        // Rubber band resistance
+        const limit = SWIPE_THRESHOLD * 1.6;
+        if (Math.abs(dx) > limit) {
+          const overflow = Math.abs(dx) - limit;
+          dx = (dx > 0 ? 1 : -1) * (limit + overflow * 0.08);
+        }
 
         translateX.setValue(dx);
       },
-      onPanResponderRelease: (evt, gestureState) => {
-        if (disabled) return;
 
-        const { dx, vx } = gestureState;
-        const finalValue = dx + currentValue.current;
-        const shouldTriggerLeft = finalValue < -SWIPE_THRESHOLD && onSwipeLeft;
-        const shouldTriggerRight = finalValue > SWIPE_THRESHOLD && onSwipeRight;
+      onPanResponderRelease: (_, gs: PanResponderGestureState) => {
+        if (callbacksRef.current.disabled) {
+          resetPosition();
+          return;
+        }
 
-        translateX.flattenOffset();
-        currentValue.current = translateX._value;
+        const { dx, vx } = gs;
+        const { onSwipeLeft: swLeft, onSwipeRight: swRight } = callbacksRef.current;
 
-        if (shouldTriggerLeft || (vx < -0.5 && onSwipeLeft)) {
-          // Trigger left action
+        const triggerLeft = (dx < -SWIPE_THRESHOLD || vx < -0.8) && swLeft;
+        const triggerRight = (dx > SWIPE_THRESHOLD || vx > 0.8) && swRight;
+
+        if (triggerLeft) {
           Animated.timing(translateX, {
             toValue: -SCREEN_WIDTH,
-            duration: 200,
+            duration: 180,
             useNativeDriver: true,
           }).start(() => {
-            onSwipeLeft?.();
+            swLeft?.();
             translateX.setValue(0);
-            currentValue.current = 0;
+            isSwipingRef.current = false;
           });
-        } else if (shouldTriggerRight || (vx > 0.5 && onSwipeRight)) {
-          // Trigger right action
+        } else if (triggerRight) {
           Animated.timing(translateX, {
             toValue: SCREEN_WIDTH,
-            duration: 200,
+            duration: 180,
             useNativeDriver: true,
           }).start(() => {
-            onSwipeRight?.();
+            swRight?.();
             translateX.setValue(0);
-            currentValue.current = 0;
+            isSwipingRef.current = false;
           });
         } else {
-          // Snap back
-          Animated.spring(translateX, {
-            toValue: 0,
-            useNativeDriver: true,
-            tension: 100,
-            friction: 8,
-          }).start();
-          currentValue.current = 0;
+          resetPosition();
         }
       },
+
       onPanResponderTerminate: () => {
-        translateX.flattenOffset();
-        currentValue.current = translateX._value;
-        Animated.spring(translateX, {
-          toValue: 0,
-          useNativeDriver: true,
-          tension: 100,
-          friction: 8,
-        }).start();
-        currentValue.current = 0;
+        resetPosition();
       },
+
+      // Don't let parent take over once we've started
+      onPanResponderTerminationRequest: () => !isSwipingRef.current,
     })
   ).current;
 
-  const leftActionOpacity = translateX.interpolate({
-    inputRange: [-SWIPE_THRESHOLD * 2, 0],
-    outputRange: [1, 0],
+  // Interpolations
+  const leftOpacity = translateX.interpolate({
+    inputRange: [-SWIPE_THRESHOLD * 1.5, -20, 0],
+    outputRange: [1, 0.3, 0],
     extrapolate: 'clamp',
   });
 
-  const rightActionOpacity = translateX.interpolate({
-    inputRange: [0, SWIPE_THRESHOLD * 2],
-    outputRange: [0, 1],
+  const leftScale = translateX.interpolate({
+    inputRange: [-SWIPE_THRESHOLD, -20, 0],
+    outputRange: [1, 0.6, 0.4],
+    extrapolate: 'clamp',
+  });
+
+  const rightOpacity = translateX.interpolate({
+    inputRange: [0, 20, SWIPE_THRESHOLD * 1.5],
+    outputRange: [0, 0.3, 1],
+    extrapolate: 'clamp',
+  });
+
+  const rightScale = translateX.interpolate({
+    inputRange: [0, 20, SWIPE_THRESHOLD],
+    outputRange: [0.4, 0.6, 1],
     extrapolate: 'clamp',
   });
 
   return (
     <View style={styles.container}>
-      {/* Background Actions */}
-      <View style={styles.backgroundActions}>
+      {/* Background actions */}
+      <View style={styles.actionsContainer}>
         {onSwipeLeft && (
           <Animated.View
             style={[
-              styles.leftAction,
-              { backgroundColor: finalLeftActionColor, opacity: leftActionOpacity },
+              styles.actionLeft,
+              {
+                backgroundColor: finalLeftActionColor,
+                opacity: leftOpacity,
+                transform: [{ scale: leftScale }],
+              },
             ]}
           >
-            <Ionicons name={leftActionIcon} size={24} color={colors.surface} />
-            {leftActionLabel && (
-              <AppText style={[styles.actionLabel, { color: colors.surface }]}>{leftActionLabel}</AppText>
-            )}
+            <Ionicons name={leftActionIcon} size={22} color="#fff" />
+            {leftActionLabel && <AppText style={styles.label}>{leftActionLabel}</AppText>}
           </Animated.View>
         )}
         {onSwipeRight && (
           <Animated.View
             style={[
-              styles.rightAction,
-              { backgroundColor: finalRightActionColor, opacity: rightActionOpacity },
+              styles.actionRight,
+              {
+                backgroundColor: finalRightActionColor,
+                opacity: rightOpacity,
+                transform: [{ scale: rightScale }],
+              },
             ]}
           >
-            <Ionicons name={rightActionIcon} size={24} color={colors.surface} />
-            {rightActionLabel && (
-              <AppText style={[styles.actionLabel, { color: colors.surface }]}>{rightActionLabel}</AppText>
-            )}
+            <Ionicons name={rightActionIcon} size={22} color="#fff" />
+            {rightActionLabel && <AppText style={styles.label}>{rightActionLabel}</AppText>}
           </Animated.View>
         )}
       </View>
 
-      {/* Content */}
+      {/* Main content */}
       <Animated.View
-        style={[
-          styles.content,
-          { backgroundColor: colors.surface },
-          {
-            transform: [{ translateX }],
-          },
-        ]}
         {...panResponder.panHandlers}
+        style={{ transform: [{ translateX }] }}
       >
         {children}
       </Animated.View>
@@ -200,37 +224,38 @@ const styles = StyleSheet.create({
     position: 'relative',
     overflow: 'hidden',
   },
-  backgroundActions: {
+  actionsContainer: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  actionLeft: {
     position: 'absolute',
     top: 0,
-    left: 0,
-    right: 0,
     bottom: 0,
+    right: 0,
+    width: '50%',
     flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  leftAction: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'flex-end',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
     paddingRight: spacing.lg,
-    flexDirection: 'row',
-    gap: spacing.sm,
+    gap: spacing.xs,
+    borderRadius: 8,
   },
-  rightAction: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'flex-start',
+  actionRight: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    width: '50%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
     paddingLeft: spacing.lg,
-    flexDirection: 'row',
-    gap: spacing.sm,
+    gap: spacing.xs,
+    borderRadius: 8,
   },
-  actionLabel: {
-    fontSize: fontSizes.md,
+  label: {
+    color: '#fff',
+    fontSize: fontSizes.sm,
     fontWeight: '600',
   },
-  content: {
-    // backgroundColor will be set dynamically
-  },
 });
-

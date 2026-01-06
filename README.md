@@ -6,32 +6,40 @@ A roommate coordination app to help you and your roommates manage shared living 
 
 ### Expense Management
 - Track shared expenses with flexible splitting (even or manual)
-- See who owes what with automatic balance calculations
-- Settle up and track payments
+- Automatic balance calculations showing who owes what
+- Settle up with payment proof attachments (receipts/screenshots)
+- Settlement history with proof viewing
+- Forgive debts or net mutual balances
 
-### Shopping List
-- Create shared shopping lists
-- Mark items as completed
-- Voice input support
+### Spending Insights
+- Pie chart breakdown by category
+- Monthly spending trends
+- Filter by week, month, year, or all time
+
+### Shopping Lists
+- Multiple shopping lists per household
+- Quick add with natural language parsing
+- Swipe gestures: left to delete, right to complete
+- Shared or personal items
 
 ### Calendar
-- Schedule household events (bills, cleaning, social activities)
-- Set start and end dates/times
-- Never miss important dates
+- Interactive monthly calendar with event dots
+- Tap dates to view/add events
+- Event types: bills, cleaning, social, meals, meetings, etc.
+- View upcoming, past, or all events
 
 ### Goals Board
 - Create and track household goals
-- Organize by status (idea, planned, in progress, done)
-- Upvote goals you want to prioritize
+- Status tracking: idea → planned → in progress → done
+- Upvote goals to prioritize
 
 ### Household Management
 - Create or join households with invite codes
 - Manage multiple households
-- See all members and their contributions
+- Member avatars and profiles
 
 ## Tech Stack
 
 - **Mobile**: React Native (Expo) + TypeScript
 - **Backend**: Node.js + Express + TypeScript + MongoDB
 - **Authentication**: JWT with email verification (OTP)
-
