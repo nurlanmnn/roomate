@@ -161,7 +161,9 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = ({ navigat
           position: 'absolute',
           right: spacing.lg,
           zIndex: 10,
-          padding: spacing.sm,
+          padding: spacing.xs,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          borderRadius: 20,
         },
         proofModalImage: {
           width: '90%',
@@ -404,7 +406,7 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = ({ navigat
             style={[styles.proofModalClose, { top: insets.top + spacing.md }]}
             onPress={() => setSelectedProofImage(null)}
           >
-            <Ionicons name="close-circle" size={40} color={colors.surface} />
+            <Ionicons name="close-circle" size={40} color="#FFFFFF" />
           </TouchableOpacity>
           {selectedProofImage && (
             <Image source={{ uri: selectedProofImage }} style={styles.proofModalImage} resizeMode="contain" />

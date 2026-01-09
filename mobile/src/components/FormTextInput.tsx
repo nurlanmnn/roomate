@@ -15,6 +15,8 @@ interface FormTextInputProps {
   numberOfLines?: number;
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   helperText?: string;
+  onFocus?: () => void;
+  onBlur?: () => void;
 }
 
 export const FormTextInput: React.FC<FormTextInputProps> = ({
@@ -29,6 +31,8 @@ export const FormTextInput: React.FC<FormTextInputProps> = ({
   numberOfLines,
   autoCapitalize = 'none',
   helperText,
+  onFocus,
+  onBlur,
 }) => {
   const colors = useThemeColors();
   const styles = React.useMemo(() => StyleSheet.create({
@@ -90,6 +94,8 @@ export const FormTextInput: React.FC<FormTextInputProps> = ({
         autoCapitalize={autoCapitalize}
         placeholderTextColor={colors.muted}
         textAlignVertical={multiline ? 'top' : 'center'}
+        onFocus={onFocus}
+        onBlur={onBlur}
       />
       {!error && !!helperText && <AppText style={styles.helperText}>{helperText}</AppText>}
       {error && <AppText style={styles.errorText}>{error}</AppText>}

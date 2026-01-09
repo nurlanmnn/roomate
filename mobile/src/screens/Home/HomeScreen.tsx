@@ -18,14 +18,14 @@ import { QuickActionButton } from '../../components/QuickActionButton';
 import { SpendingChart } from '../../components/SpendingChart';
 import { formatDate } from '../../utils/dateHelpers';
 import { formatCompactCurrency, formatCurrency } from '../../utils/formatCurrency';
-import { useThemeColors, fontSizes, fontWeights, spacing, lineHeights, radii, shadows } from '../../theme';
+import { useThemeColors, fontSizes, fontWeights, spacing, lineHeights, radii, shadows, TAB_BAR_HEIGHT } from '../../theme';
 import { scale } from '../../utils/scaling';
 import { Ionicons } from '@expo/vector-icons';
 import { LoadingSkeleton, SkeletonCard } from '../../components/LoadingSkeleton';
 
 export const HomeScreen: React.FC = () => {
   const navigation = useNavigation<any>();
-  const { selectedHousehold } = useHousehold();
+  const { selectedHousehold, setSelectedHousehold } = useHousehold();
   const { user } = useAuth();
   const colors = useThemeColors();
   const [events, setEvents] = useState<Event[]>([]);
@@ -340,8 +340,13 @@ export const HomeScreen: React.FC = () => {
       setExpenses(expensesData);
       setShoppingItems(allShoppingItems);
       setInsights(insightsData);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to load home data:', error);
+      // If we get a 403, the user is no longer a member of this household
+      // Clear the selection and they'll be redirected to household select
+      if (error?.response?.status === 403) {
+        setSelectedHousehold(null);
+      }
     } finally {
       setLoading(false);
       setInitialLoading(false);
@@ -483,6 +488,7 @@ export const HomeScreen: React.FC = () => {
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
         style={styles.scrollView}
+        contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT + spacing.xl }}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={loadData} />}
       >
       <View style={styles.header}>

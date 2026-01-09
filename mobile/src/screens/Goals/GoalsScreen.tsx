@@ -9,10 +9,10 @@ import { PrimaryButton } from '../../components/PrimaryButton';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
 import { SearchBar } from '../../components/ui/SearchBar';
 import { EmptyState } from '../../components/ui/EmptyState';
-import { useThemeColors, fontSizes, fontWeights, spacing } from '../../theme';
+import { useThemeColors, fontSizes, fontWeights, spacing, TAB_BAR_HEIGHT } from '../../theme';
 
 export const GoalsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
-  const { selectedHousehold } = useHousehold();
+  const { selectedHousehold, setSelectedHousehold } = useHousehold();
   const { user } = useAuth();
   const colors = useThemeColors();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
@@ -31,8 +31,11 @@ export const GoalsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
     try {
       const data = await goalsApi.getGoals(selectedHousehold._id);
       setGoals(data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to load goals:', error);
+      if (error?.response?.status === 403) {
+        setSelectedHousehold(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -81,7 +84,7 @@ export const GoalsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView style={styles.scrollView}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT + spacing.xl }}>
         <ScreenHeader title="Goals" subtitle={selectedHousehold.name} />
         <View style={styles.topActions}>
           <PrimaryButton title="+ New Goal" onPress={() => navigation.navigate('CreateGoal')} />

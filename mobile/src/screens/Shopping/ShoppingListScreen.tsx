@@ -9,14 +9,14 @@ import { ShoppingItemRow } from '../../components/ShoppingItemRow';
 import { QuickAddButton } from '../../components/QuickAddButton';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
-import { useThemeColors, fontSizes, fontWeights, radii, spacing } from '../../theme';
+import { useThemeColors, fontSizes, fontWeights, radii, spacing, TAB_BAR_HEIGHT } from '../../theme';
 import { SearchBar } from '../../components/ui/SearchBar';
 import { Ionicons } from '@expo/vector-icons';
 
 const weightUnits: WeightUnit[] = ['lbs', 'kg', 'g', 'oz', 'liter', 'ml', 'fl oz', 'cup', 'pint', 'quart', 'gallon'];
 
 export const ShoppingListScreen: React.FC = () => {
-  const { selectedHousehold } = useHousehold();
+  const { selectedHousehold, setSelectedHousehold } = useHousehold();
   const { user } = useAuth();
   const colors = useThemeColors();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
@@ -45,6 +45,7 @@ export const ShoppingListScreen: React.FC = () => {
   const [showUnitDropdown, setShowUnitDropdown] = useState(false);
   const [showEditUnitDropdown, setShowEditUnitDropdown] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [addingItem, setAddingItem] = useState(false);
 
   useEffect(() => {
     if (selectedHousehold) {
@@ -73,8 +74,11 @@ export const ShoppingListScreen: React.FC = () => {
       if (allLists.length > 0 && !selectedList) {
         setSelectedList(allLists[0]);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to load shopping lists:', error);
+      if (error?.response?.status === 403) {
+        setSelectedHousehold(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -210,8 +214,13 @@ export const ShoppingListScreen: React.FC = () => {
       // Reload to ensure we have the latest data from server
       loadItems();
     } catch (error: any) {
+      // If item was deleted by another user, just refresh silently
+      if (error.response?.status === 404) {
+        loadItems();
+        return;
+      }
       // If update fails, reload to revert optimistic update
-      Alert.alert('Error', error.response?.data?.error || 'Failed to update item');
+      Alert.alert('Error', error.response?.data?.error || 'Failed to update item. It may have been modified by another user.');
       loadItems();
     }
   };
@@ -239,6 +248,8 @@ export const ShoppingListScreen: React.FC = () => {
   };
 
   const handleAddItem = async () => {
+    if (addingItem) return; // Prevent double submission
+    
     if (!selectedHousehold || !user || !selectedList || !name.trim()) {
       Alert.alert('Error', 'Please enter an item name');
       return;
@@ -249,6 +260,7 @@ export const ShoppingListScreen: React.FC = () => {
       return;
     }
 
+    setAddingItem(true);
     try {
       await shoppingApi.createShoppingItem({
         householdId: selectedHousehold._id,
@@ -270,17 +282,34 @@ export const ShoppingListScreen: React.FC = () => {
       loadItems();
     } catch (error: any) {
       Alert.alert('Error', error.response?.data?.error || 'Failed to add item');
+    } finally {
+      setAddingItem(false);
     }
   };
 
   const handleToggleComplete = async (item: ShoppingItem) => {
+    // Optimistic update - remove from current list immediately
+    if (item.completed) {
+      setCompletedItems(prev => prev.filter(i => i._id !== item._id));
+    } else {
+      setItems(prev => prev.filter(i => i._id !== item._id));
+    }
+
     try {
       await shoppingApi.updateShoppingItem(item._id, {
         completed: !item.completed,
       });
       loadItems();
-    } catch (error) {
+    } catch (error: any) {
+      // If item was already deleted/modified by another user, just refresh
+      if (error.response?.status === 404) {
+        // Item no longer exists - another user likely deleted it
+        loadItems();
+        return;
+      }
       console.error('Failed to update item:', error);
+      // Revert optimistic update on other errors
+      loadItems();
     }
   };
 
@@ -297,17 +326,29 @@ export const ShoppingListScreen: React.FC = () => {
           onPress: async () => {
             try {
               setLoading(true);
-              await Promise.all(
+              // Use allSettled to handle partial failures gracefully
+              const results = await Promise.allSettled(
                 completedItems.map(item =>
                   shoppingApi.updateShoppingItem(item._id, {
                     completed: false,
                   })
                 )
               );
+              
+              // Check if any failed (excluding 404s which mean item was already deleted)
+              const realFailures = results.filter(r => 
+                r.status === 'rejected' && 
+                (r.reason as any)?.response?.status !== 404
+              );
+              
+              if (realFailures.length > 0) {
+                console.error('Some items failed to restore:', realFailures);
+              }
+              
               loadItems();
             } catch (error) {
               console.error('Failed to restore items:', error);
-              Alert.alert('Error', 'Failed to restore some items. Please try again.');
+              loadItems(); // Still refresh to show current state
             } finally {
               setLoading(false);
             }
@@ -324,11 +365,22 @@ export const ShoppingListScreen: React.FC = () => {
         text: 'Delete',
         style: 'destructive',
         onPress: async () => {
+          // Optimistic update - remove from list immediately
+          setItems(prev => prev.filter(i => i._id !== item._id));
+          setCompletedItems(prev => prev.filter(i => i._id !== item._id));
+
           try {
             await shoppingApi.deleteShoppingItem(item._id);
             loadItems();
-          } catch (error) {
+          } catch (error: any) {
+            // If item was already deleted by another user, just refresh silently
+            if (error.response?.status === 404) {
+              loadItems();
+              return;
+            }
             console.error('Failed to delete item:', error);
+            Alert.alert('Error', 'Failed to delete item. It may have been modified by another user.');
+            loadItems();
           }
         },
       },
@@ -434,6 +486,7 @@ export const ShoppingListScreen: React.FC = () => {
       >
         <ScrollView
           style={styles.scrollView}
+          contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT + 220 }}
           refreshControl={<RefreshControl refreshing={loading} onRefresh={loadLists} />}
           keyboardShouldPersistTaps="handled"
         >
@@ -630,7 +683,7 @@ export const ShoppingListScreen: React.FC = () => {
                 </View>
               </View>
               <View style={styles.toggleRow}>
-                <AppText>Shared</AppText>
+                <AppText style={styles.toggleLabel}>Shared</AppText>
                 <TouchableOpacity
                   style={[styles.toggle, isShared && styles.toggleActive]}
                   onPress={() => {
@@ -653,7 +706,7 @@ export const ShoppingListScreen: React.FC = () => {
               </View>
               {!isShared && (
                 <View style={styles.ownerSelect}>
-                  <AppText style={styles.label}>Owner</AppText>
+                  <AppText style={styles.ownerLabel}>Owner</AppText>
                   {selectedHousehold.members.map((member) => (
                     <TouchableOpacity
                       key={member._id}
@@ -663,12 +716,12 @@ export const ShoppingListScreen: React.FC = () => {
                       ]}
                       onPress={() => setOwnerId(member._id)}
                     >
-                      <AppText>{member.name}</AppText>
+                      <AppText style={styles.ownerOptionText}>{member.name}</AppText>
                     </TouchableOpacity>
                   ))}
                 </View>
               )}
-              <PrimaryButton title="Add Item" onPress={handleAddItem} />
+              <PrimaryButton title={addingItem ? "Adding..." : "Add Item"} onPress={handleAddItem} disabled={addingItem} />
             </View>
           </>
         ) : (
@@ -835,7 +888,7 @@ export const ShoppingListScreen: React.FC = () => {
                 </View>
               </View>
               <View style={styles.toggleRow}>
-                <AppText>Shared</AppText>
+                <AppText style={styles.toggleLabel}>Shared</AppText>
                 <TouchableOpacity
                   style={[styles.toggle, editItemIsShared && styles.toggleActive]}
                   onPress={() => {
@@ -858,7 +911,7 @@ export const ShoppingListScreen: React.FC = () => {
               </View>
               {!editItemIsShared && selectedHousehold && (
                 <View style={styles.ownerSelect}>
-                  <AppText style={styles.label}>Owner</AppText>
+                  <AppText style={styles.ownerLabel}>Owner</AppText>
                   {selectedHousehold.members.map((member) => (
                     <TouchableOpacity
                       key={member._id}
@@ -868,7 +921,7 @@ export const ShoppingListScreen: React.FC = () => {
                       ]}
                       onPress={() => setEditItemOwnerId(member._id)}
                     >
-                      <AppText>{member.name}</AppText>
+                      <AppText style={styles.ownerOptionText}>{member.name}</AppText>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -1114,27 +1167,41 @@ const createStyles = (colors: any) => StyleSheet.create({
     marginBottom: spacing.md,
     gap: 12,
   },
+  toggleLabel: {
+    fontSize: fontSizes.md,
+    fontWeight: fontWeights.semibold,
+    color: colors.text,
+  },
   toggle: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceAlt,
+    borderWidth: 2,
+    borderColor: colors.textSecondary,
+    backgroundColor: 'transparent',
   },
   toggleActive: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
   toggleText: {
-    color: colors.textSecondary,
+    color: colors.text,
+    fontWeight: fontWeights.semibold,
+    fontSize: fontSizes.md,
   },
   toggleTextActive: {
     color: colors.surface,
-    fontWeight: fontWeights.semibold,
+    fontWeight: fontWeights.bold,
+    fontSize: fontSizes.md,
   },
   ownerSelect: {
     marginBottom: 12,
+  },
+  ownerLabel: {
+    fontSize: fontSizes.md,
+    fontWeight: fontWeights.bold,
+    marginBottom: spacing.sm,
+    color: colors.text,
   },
   label: {
     fontSize: fontSizes.sm,
@@ -1144,15 +1211,20 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   ownerOption: {
     padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderWidth: 2,
+    borderColor: colors.textSecondary,
     borderRadius: radii.lg,
     marginBottom: spacing.xs,
-    backgroundColor: colors.surface,
+    backgroundColor: 'transparent',
   },
   ownerOptionSelected: {
-    backgroundColor: colors.primarySoft,
+    backgroundColor: colors.primaryUltraSoft,
     borderColor: colors.primary,
+  },
+  ownerOptionText: {
+    fontSize: fontSizes.md,
+    fontWeight: fontWeights.medium,
+    color: colors.text,
   },
   modalOverlay: {
     flex: 1,

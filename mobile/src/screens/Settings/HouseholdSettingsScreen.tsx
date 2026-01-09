@@ -9,7 +9,6 @@ import { householdsApi, getOwnerIdString } from '../../api/householdsApi';
 import { Avatar } from '../../components/ui/Avatar';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
 import * as Clipboard from 'expo-clipboard';
-import * as Sharing from 'expo-sharing';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows } from '../../theme';
 
@@ -84,23 +83,6 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
     }
   };
 
-  const handleShareCode = async () => {
-    if (!selectedHousehold) return;
-
-    const message = `Join my household "${selectedHousehold.name}" using code: ${selectedHousehold.joinCode}`;
-
-    try {
-      const isAvailable = await Sharing.isAvailableAsync();
-      if (isAvailable) {
-        await Sharing.shareAsync(message);
-      } else {
-        Alert.alert('Share', message);
-      }
-    } catch (error) {
-      console.error('Failed to share:', error);
-    }
-  };
-
   const handleSwitchHousehold = () => {
     // Clear selection first so the MainTabs guard can't bounce us back into tabs
     setSelectedHousehold(null);
@@ -114,7 +96,19 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
   const handleLeaveHousehold = async () => {
     if (!selectedHousehold) return;
 
-    Alert.alert('Leave Household', 'Are you sure you want to leave this household?', [
+    const memberCount = selectedHousehold.members.length;
+    let message = 'Are you sure you want to leave this household?';
+    
+    if (isOwner) {
+      if (memberCount === 1) {
+        message = 'You are the only member. Leaving will delete this household and all its data.';
+      } else {
+        const nextOwner = selectedHousehold.members.find(m => m._id !== user?._id);
+        message = `You are the owner. If you leave, ${nextOwner?.name || 'the next member'} will become the new owner.`;
+      }
+    }
+
+    Alert.alert('Leave Household', message, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Leave',
@@ -291,12 +285,6 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
               onPress={handleCopyCode}
               variant="secondary"
             />
-            <View style={styles.spacer} />
-            <PrimaryButton
-              title="Share Code"
-              onPress={handleShareCode}
-              variant="secondary"
-            />
           </View>
         </View>
 
@@ -344,16 +332,12 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
             title="Switch Household"
             onPress={handleSwitchHousehold}
           />
-          {!isOwner && (
-            <>
-              <View style={styles.spacer} />
-              <PrimaryButton
-                title="Leave Household"
-                onPress={handleLeaveHousehold}
-                variant="danger"
-              />
-            </>
-          )}
+          <View style={styles.spacer} />
+          <PrimaryButton
+            title="Leave Household"
+            onPress={handleLeaveHousehold}
+            variant="danger"
+          />
           {isOwner && (
             <>
               <View style={styles.spacer} />
@@ -365,7 +349,7 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
               <View style={styles.ownerNoteContainer}>
                 <Ionicons name="information-circle-outline" size={20} color={colors.warning} />
                 <AppText style={styles.ownerNote}>
-                  Deleting this household will permanently remove all data including expenses, shopping lists, and events.
+                  As the owner, leaving will transfer ownership to the next member. Use "Delete Household" to permanently remove all data.
                 </AppText>
               </View>
             </>

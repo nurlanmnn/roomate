@@ -7,7 +7,7 @@ import { eventsApi, Event } from '../../api/eventsApi';
 import { FormTextInput } from '../../components/FormTextInput';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
-import { useThemeColors, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
+import { useThemeColors, useTheme, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
 import { Ionicons } from '@expo/vector-icons';
 
 // Event types with icons
@@ -34,6 +34,7 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
   
   const { selectedHousehold } = useHousehold();
   const colors = useThemeColors();
+  const { theme } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -187,6 +188,7 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
                   value={date}
                   mode="date"
                   display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  themeVariant={theme}
                   onChange={(event, selectedDate) => {
                     setShowDatePicker(Platform.OS === 'ios');
                     if (selectedDate) setDate(selectedDate);
@@ -221,6 +223,7 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
                   value={time}
                   mode="time"
                   display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  themeVariant={theme}
                   onChange={(event, selectedTime) => {
                     setShowTimePicker(Platform.OS === 'ios');
                     if (selectedTime) setTime(selectedTime);
@@ -257,6 +260,7 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
                   value={endDate || new Date()}
                   mode="date"
                   display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  themeVariant={theme}
                   onChange={(event, selectedDate) => {
                     setShowEndDatePicker(Platform.OS === 'ios');
                     if (selectedDate) setEndDate(selectedDate);
@@ -299,6 +303,7 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
                   value={endTime || new Date()}
                   mode="time"
                   display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  themeVariant={theme}
                   onChange={(event, selectedTime) => {
                     setShowEndTimePicker(Platform.OS === 'ios');
                     if (selectedTime) setEndTime(selectedTime);

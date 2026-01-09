@@ -8,7 +8,7 @@ import { Avatar } from '../../components/ui/Avatar';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
 import { useAuth } from '../../context/AuthContext';
 import { useHousehold } from '../../context/HouseholdContext';
-import { fontSizes, fontWeights, radii, shadows, spacing, useTheme, useThemeColors } from '../../theme';
+import { fontSizes, fontWeights, radii, shadows, spacing, useTheme, useThemeColors, TAB_BAR_HEIGHT } from '../../theme';
 
 type SettingsScreenProps = {
   navigation: any;
@@ -25,7 +25,7 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
       flex: 1,
     },
     scrollContent: {
-      paddingBottom: spacing.xl,
+      paddingBottom: TAB_BAR_HEIGHT + spacing.xl,
     },
     profileCard: {
       flexDirection: 'row',

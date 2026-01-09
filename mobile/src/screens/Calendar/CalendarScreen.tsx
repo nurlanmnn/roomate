@@ -11,14 +11,14 @@ import { ScreenHeader } from '../../components/ui/ScreenHeader';
 import { CalendarView } from '../../components/CalendarView';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { formatDate } from '../../utils/dateHelpers';
-import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows } from '../../theme';
+import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows, TAB_BAR_HEIGHT } from '../../theme';
 import { Ionicons } from '@expo/vector-icons';
 import { format, isSameDay, parseISO } from 'date-fns';
 
 type ViewMode = 'upcoming' | 'past' | 'all';
 
 export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
-  const { selectedHousehold } = useHousehold();
+  const { selectedHousehold, setSelectedHousehold } = useHousehold();
   const { user } = useAuth();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -48,8 +48,11 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     try {
       const data = await eventsApi.getEvents(selectedHousehold._id);
       setEvents(data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to load events:', error);
+      if (error?.response?.status === 403) {
+        setSelectedHousehold(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -129,6 +132,7 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
         style={styles.scrollView}
+        contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT + spacing.xl }}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={loadEvents} />}
       >
         {/* Header with view mode selector */}

@@ -7,11 +7,12 @@ import { goalsApi } from '../../api/goalsApi';
 import { FormTextInput } from '../../components/FormTextInput';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
-import { useThemeColors, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
+import { useThemeColors, useTheme, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
 
 export const CreateGoalScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { selectedHousehold } = useHousehold();
   const colors = useThemeColors();
+  const { theme } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -111,6 +112,7 @@ export const CreateGoalScreen: React.FC<{ navigation: any }> = ({ navigation }) 
                   mode="date"
                   display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                   minimumDate={new Date()}
+                  themeVariant={theme}
                   onChange={(event, selectedDate) => {
                     setShowTargetDatePicker(Platform.OS === 'ios');
                     if (selectedDate) setTargetDate(selectedDate);

@@ -60,7 +60,7 @@ export const householdsApi = {
     return response.data;
   },
 
-  leaveHousehold: async (id: string): Promise<{ success: boolean }> => {
+  leaveHousehold: async (id: string): Promise<{ success: boolean; deleted?: boolean; newOwnerId?: string }> => {
     const response = await apiClient.instance.post(`/households/${id}/leave`);
     return response.data;
   },

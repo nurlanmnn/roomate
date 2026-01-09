@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, KeyboardAvoidingView, Platform, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, KeyboardAvoidingView, Platform, Image, Keyboard } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { useHousehold } from '../../context/HouseholdContext';
@@ -10,7 +10,6 @@ import { BalanceSummary } from '../../components/BalanceSummary';
 import { FormTextInput } from '../../components/FormTextInput';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { formatCurrency } from '../../utils/formatCurrency';
-import * as Sharing from 'expo-sharing';
 import { Avatar } from '../../components/ui/Avatar';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,9 +24,12 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [loading, setLoading] = useState(false);
   const [settleModalVisible, setSettleModalVisible] = useState(false);
+  const [forgiveModalVisible, setForgiveModalVisible] = useState(false);
   const [selectedBalance, setSelectedBalance] = useState<PairwiseBalance | null>(null);
+  const [selectedForgiveBalance, setSelectedForgiveBalance] = useState<PairwiseBalance | null>(null);
   const [selectedProofImage, setSelectedProofImage] = useState<string | null>(null);
   const [amount, setAmount] = useState('');
+  const [forgiveAmount, setForgiveAmount] = useState('');
   const [method, setMethod] = useState('');
   const [note, setNote] = useState('');
   const [proofImage, setProofImage] = useState<string | null>(null);
@@ -95,9 +97,6 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     },
     netButton: {
       backgroundColor: colors.warning,
-    },
-    externalButton: {
-      backgroundColor: colors.accent,
     },
     markButton: {
       backgroundColor: colors.primary,
@@ -283,7 +282,9 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
       position: 'absolute',
       right: spacing.lg,
       zIndex: 10,
-      padding: spacing.sm,
+      padding: spacing.xs,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      borderRadius: 20,
     },
     proofModalImage: {
       width: '90%',
@@ -319,6 +320,53 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
       color: colors.surface,
       fontSize: fontSizes.sm,
       fontWeight: fontWeights.semibold,
+    },
+    forgiveAmountOptions: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+      marginBottom: spacing.md,
+    },
+    forgiveAmountOption: {
+      flex: 1,
+      padding: spacing.md,
+      borderRadius: radii.md,
+      borderWidth: 2,
+      borderColor: colors.border,
+      alignItems: 'center',
+    },
+    forgiveAmountOptionSelected: {
+      borderColor: colors.primary,
+      backgroundColor: colors.primaryUltraSoft,
+    },
+    forgiveAmountOptionText: {
+      fontSize: fontSizes.sm,
+      fontWeight: fontWeights.semibold,
+      color: colors.text,
+    },
+    forgiveAmountOptionTextSelected: {
+      color: colors.primary,
+    },
+    forgiveAmountOptionValue: {
+      fontSize: fontSizes.xs,
+      color: colors.textSecondary,
+      marginTop: spacing.xxs,
+    },
+    customAmountContainer: {
+      marginBottom: spacing.md,
+    },
+    forgiveWarning: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      padding: spacing.md,
+      backgroundColor: colors.warningUltraSoft,
+      borderRadius: radii.md,
+      marginBottom: spacing.md,
+    },
+    forgiveWarningText: {
+      flex: 1,
+      fontSize: fontSizes.sm,
+      color: colors.text,
     },
   }), [colors]);
 
@@ -358,22 +406,6 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     return member?.avatarUrl;
   };
 
-  const handlePayExternally = async (balance: PairwiseBalance) => {
-    const toUserName = getUserName(balance.toUserId);
-    const message = `Hey ${toUserName}, I owe you ${formatCurrency(balance.amount)} for our apartment expenses.`;
-
-    try {
-      const isAvailable = await Sharing.isAvailableAsync();
-      if (isAvailable) {
-        await Sharing.shareAsync(message);
-      } else {
-        Alert.alert('Share', message);
-      }
-    } catch (error) {
-      console.error('Failed to share:', error);
-    }
-  };
-
   const handleMarkAsPaid = (balance: PairwiseBalance) => {
     setSelectedBalance(balance);
     setAmount(balance.amount.toFixed(2));
@@ -384,6 +416,9 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   };
 
   const handlePickProofImage = async () => {
+    // Dismiss keyboard before opening image picker
+    Keyboard.dismiss();
+    
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
@@ -392,7 +427,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,
@@ -516,42 +551,47 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     return toUserId === user._id && s.proofImageUrl;
   }).slice(0, 5); // Show last 5 with receipts
 
-  const handleForgiveDebt = async (balance: PairwiseBalance) => {
-    if (!selectedHousehold || !user) return;
+  const handleForgiveDebt = (balance: PairwiseBalance) => {
+    setSelectedForgiveBalance(balance);
+    setForgiveAmount(balance.amount.toFixed(2)); // Default to full amount
+    setForgiveModalVisible(true);
+  };
 
-    const fromUserName = getUserName(balance.fromUserId);
-    
-    Alert.alert(
-      'Forgive Debt',
-      `Are you sure you want to forgive ${formatCurrency(balance.amount)} that ${fromUserName} owes you? This action cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Forgive',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              // Create a settlement that cancels the debt
-              // The settlement is from the person who owes (fromUserId) to the person owed (toUserId = user)
-              // This will reduce the debt to zero
-              await settlementsApi.createSettlement({
-                householdId: selectedHousehold._id,
-                fromUserId: balance.fromUserId,
-                toUserId: balance.toUserId,
-                amount: balance.amount,
-                method: 'Forgiven',
-                note: 'Debt forgiven by recipient',
-                date: new Date().toISOString(),
-              });
-              loadBalances();
-              Alert.alert('Success', `You have forgiven ${formatCurrency(balance.amount)} that ${fromUserName} owed you.`);
-            } catch (error: any) {
-              Alert.alert('Error', error.response?.data?.error || 'Failed to forgive debt');
-            }
-          },
-        },
-      ]
-    );
+  const handleSubmitForgive = async () => {
+    if (!selectedHousehold || !user || !selectedForgiveBalance) return;
+
+    const amountToForgive = parseFloat(forgiveAmount);
+    if (isNaN(amountToForgive) || amountToForgive <= 0) {
+      Alert.alert('Error', 'Please enter a valid amount');
+      return;
+    }
+
+    if (amountToForgive > selectedForgiveBalance.amount) {
+      Alert.alert('Error', 'Amount cannot exceed the debt');
+      return;
+    }
+
+    const fromUserName = getUserName(selectedForgiveBalance.fromUserId);
+
+    try {
+      // Create a settlement that cancels the debt (or part of it)
+      await settlementsApi.createSettlement({
+        householdId: selectedHousehold._id,
+        fromUserId: selectedForgiveBalance.fromUserId,
+        toUserId: selectedForgiveBalance.toUserId,
+        amount: amountToForgive,
+        method: 'Forgiven',
+        note: amountToForgive < selectedForgiveBalance.amount 
+          ? `Partial debt forgiven by recipient (${formatCurrency(amountToForgive)} of ${formatCurrency(selectedForgiveBalance.amount)})`
+          : 'Debt forgiven by recipient',
+        date: new Date().toISOString(),
+      });
+      setForgiveModalVisible(false);
+      loadBalances();
+      Alert.alert('Success', `You have forgiven ${formatCurrency(amountToForgive)} that ${fromUserName} owed you.`);
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.error || 'Failed to forgive debt');
+    }
   };
 
   return (
@@ -616,12 +656,6 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                       <Text style={styles.actionButtonText}>Net Balance</Text>
                     </TouchableOpacity>
                   )}
-                  <TouchableOpacity
-                    style={[styles.actionButton, styles.externalButton]}
-                    onPress={() => handlePayExternally(balance)}
-                  >
-                    <Text style={styles.actionButtonText}>Pay Externally</Text>
-                  </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.actionButton, styles.markButton]}
                     onPress={() => handleMarkAsPaid(balance)}
@@ -784,6 +818,98 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         </KeyboardAvoidingView>
       </Modal>
 
+      {/* Forgive Debt Modal */}
+      <Modal
+        visible={forgiveModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setForgiveModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Forgive Debt</Text>
+            {selectedForgiveBalance && (
+              <Text style={styles.modalSubtitle}>
+                {getUserName(selectedForgiveBalance.fromUserId)} owes you {formatCurrency(selectedForgiveBalance.amount)}
+              </Text>
+            )}
+            
+            {/* Amount options */}
+            {selectedForgiveBalance && (
+              <View style={styles.forgiveAmountOptions}>
+                <TouchableOpacity
+                  style={[
+                    styles.forgiveAmountOption,
+                    forgiveAmount === selectedForgiveBalance.amount.toFixed(2) && styles.forgiveAmountOptionSelected,
+                  ]}
+                  onPress={() => setForgiveAmount(selectedForgiveBalance.amount.toFixed(2))}
+                >
+                  <Text style={[
+                    styles.forgiveAmountOptionText,
+                    forgiveAmount === selectedForgiveBalance.amount.toFixed(2) && styles.forgiveAmountOptionTextSelected,
+                  ]}>Full Amount</Text>
+                  <Text style={styles.forgiveAmountOptionValue}>
+                    {formatCurrency(selectedForgiveBalance.amount)}
+                  </Text>
+                </TouchableOpacity>
+                
+                {selectedForgiveBalance.amount > 1 && (
+                  <TouchableOpacity
+                    style={[
+                      styles.forgiveAmountOption,
+                      forgiveAmount === (selectedForgiveBalance.amount / 2).toFixed(2) && styles.forgiveAmountOptionSelected,
+                    ]}
+                    onPress={() => setForgiveAmount((selectedForgiveBalance.amount / 2).toFixed(2))}
+                  >
+                    <Text style={[
+                      styles.forgiveAmountOptionText,
+                      forgiveAmount === (selectedForgiveBalance.amount / 2).toFixed(2) && styles.forgiveAmountOptionTextSelected,
+                    ]}>Half</Text>
+                    <Text style={styles.forgiveAmountOptionValue}>
+                      {formatCurrency(selectedForgiveBalance.amount / 2)}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+            
+            <View style={styles.customAmountContainer}>
+              <FormTextInput
+                label="Custom Amount"
+                value={forgiveAmount}
+                onChangeText={setForgiveAmount}
+                placeholder="0.00"
+                keyboardType="numeric"
+              />
+            </View>
+            
+            <View style={styles.forgiveWarning}>
+              <Ionicons name="warning-outline" size={20} color={colors.warning} />
+              <Text style={styles.forgiveWarningText}>
+                This action cannot be undone. The forgiven amount will be recorded as settled.
+              </Text>
+            </View>
+            
+            <View style={styles.modalActions}>
+              <PrimaryButton
+                title="Cancel"
+                onPress={() => setForgiveModalVisible(false)}
+              />
+              <View style={styles.spacer} />
+              <PrimaryButton
+                title="Forgive"
+                onPress={handleSubmitForgive}
+                variant="danger"
+              />
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
       {/* Receipt Image Modal */}
       <Modal
         visible={selectedProofImage !== null}
@@ -796,7 +922,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
             style={[styles.proofModalClose, { top: insets.top + spacing.md }]}
             onPress={() => setSelectedProofImage(null)}
           >
-            <Ionicons name="close-circle" size={40} color={colors.surface} />
+            <Ionicons name="close-circle" size={40} color="#FFFFFF" />
           </TouchableOpacity>
           {selectedProofImage && (
             <Image source={{ uri: selectedProofImage }} style={styles.proofModalImage} resizeMode="contain" />

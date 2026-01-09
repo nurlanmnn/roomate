@@ -11,7 +11,7 @@ import { PrimaryButton } from '../../components/PrimaryButton';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
 import { Avatar } from '../../components/ui/Avatar';
-import { useThemeColors, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
+import { useThemeColors, useTheme, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
 import { CategoryPicker } from '../../components/CategoryPicker';
 import { EXPENSE_CATEGORIES, getCategoryById } from '../../constants/expenseCategories';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,6 +26,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
   const { selectedHousehold } = useHousehold();
   const { user } = useAuth();
   const colors = useThemeColors();
+  const { theme } = useTheme();
   const editingExpense: Expense | undefined = route?.params?.expense;
   const isEditing = !!editingExpense;
   const [description, setDescription] = useState('');
@@ -41,8 +42,11 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
   const [templates, setTemplates] = useState<ExpenseTemplate[]>([]);
   const [showTemplatesModal, setShowTemplatesModal] = useState(false);
   const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
+  const [showEditTemplateModal, setShowEditTemplateModal] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<ExpenseTemplate | null>(null);
   const [templateName, setTemplateName] = useState('');
   const [loadingTemplates, setLoadingTemplates] = useState(false);
+  const [deletingTemplateId, setDeletingTemplateId] = useState<string | null>(null);
 
   // Prefill when editing
   useEffect(() => {
@@ -381,7 +385,6 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
       backgroundColor: colors.surface,
       borderRadius: radii.lg,
       padding: spacing.lg,
-      marginBottom: spacing.md,
       borderWidth: 1,
       borderColor: colors.borderLight,
       ...(shadows.sm as object),
@@ -420,6 +423,28 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
     templateCardInfo: {
       fontSize: fontSizes.sm,
       color: colors.textTertiary,
+    },
+    templateCardContainer: {
+      marginBottom: spacing.md,
+    },
+    templateCardActions: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      gap: spacing.md,
+      marginTop: spacing.xs,
+      paddingTop: spacing.xs,
+    },
+    templateActionButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xxs,
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.sm,
+    },
+    templateActionText: {
+      fontSize: fontSizes.sm,
+      fontWeight: fontWeights.medium,
+      color: colors.primary,
     },
     saveTemplateModalOverlay: {
       flex: 1,
@@ -549,6 +574,61 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
     } catch (error: any) {
       Alert.alert('Error', error.response?.data?.error || 'Failed to save template');
     }
+  };
+
+  const handleEditTemplate = (template: ExpenseTemplate) => {
+    setEditingTemplate(template);
+    setTemplateName(template.name);
+    // Close templates modal first, then open edit modal after a short delay
+    setShowTemplatesModal(false);
+    setTimeout(() => {
+      setShowEditTemplateModal(true);
+    }, 100);
+  };
+
+  const handleUpdateTemplate = async () => {
+    if (!editingTemplate || !templateName.trim()) {
+      Alert.alert('Error', 'Please enter a template name');
+      return;
+    }
+
+    try {
+      await expenseTemplatesApi.updateTemplate(editingTemplate._id, {
+        name: templateName.trim(),
+      });
+      Alert.alert('Success', 'Template updated successfully');
+      setShowEditTemplateModal(false);
+      setEditingTemplate(null);
+      setTemplateName('');
+      await loadTemplates();
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.error || 'Failed to update template');
+    }
+  };
+
+  const handleDeleteTemplate = (template: ExpenseTemplate) => {
+    Alert.alert(
+      'Delete Template',
+      `Are you sure you want to delete "${template.name}"? This action cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setDeletingTemplateId(template._id);
+            try {
+              await expenseTemplatesApi.deleteTemplate(template._id);
+              await loadTemplates();
+            } catch (error: any) {
+              Alert.alert('Error', error.response?.data?.error || 'Failed to delete template');
+            } finally {
+              setDeletingTemplateId(null);
+            }
+          },
+        },
+      ]
+    );
   };
 
 
@@ -761,6 +841,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
               mode="date"
               display={Platform.OS === 'ios' ? 'spinner' : 'default'}
               maximumDate={new Date()}
+              themeVariant={theme}
               onChange={(event, selectedDate) => {
                 setShowDatePicker(Platform.OS === 'ios');
                 if (selectedDate) {
@@ -899,30 +980,55 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
               </AppText>
             </View>
           ) : (
-            templates.map((template) => (
-              <TouchableOpacity
-                key={template._id}
-                style={styles.templateCard}
-                onPress={() => handleLoadTemplate(template)}
-              >
-                <View style={styles.templateCardHeader}>
-                  <AppText style={styles.templateCardName}>{template.name}</AppText>
-                  {template.category && (
-                    <View style={styles.templateCategoryBadge}>
-                      <AppText style={styles.templateCategoryText}>{template.category}</AppText>
+            templates.map((template) => {
+              const isCreator = user && template.userId === user._id;
+              return (
+                <View key={template._id} style={styles.templateCardContainer}>
+                  <TouchableOpacity
+                    style={styles.templateCard}
+                    onPress={() => handleLoadTemplate(template)}
+                  >
+                    <View style={styles.templateCardHeader}>
+                      <AppText style={styles.templateCardName}>{template.name}</AppText>
+                      {template.category && (
+                        <View style={styles.templateCategoryBadge}>
+                          <AppText style={styles.templateCategoryText}>{template.category}</AppText>
+                        </View>
+                      )}
+                    </View>
+                    {template.description && (
+                      <AppText style={styles.templateCardDescription}>{template.description}</AppText>
+                    )}
+                    <View style={styles.templateCardFooter}>
+                      <AppText style={styles.templateCardInfo}>
+                        {template.splitMethod === 'even' ? 'Even split' : 'Manual split'} • {template.defaultParticipants.length} participant{template.defaultParticipants.length !== 1 ? 's' : ''}
+                      </AppText>
+                    </View>
+                  </TouchableOpacity>
+                  {isCreator && (
+                    <View style={styles.templateCardActions}>
+                      <TouchableOpacity
+                        style={styles.templateActionButton}
+                        onPress={() => handleEditTemplate(template)}
+                      >
+                        <Ionicons name="pencil-outline" size={18} color={colors.primary} />
+                        <AppText style={styles.templateActionText}>Edit</AppText>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.templateActionButton}
+                        onPress={() => handleDeleteTemplate(template)}
+                        disabled={deletingTemplateId === template._id}
+                      >
+                        <Ionicons name="trash-outline" size={18} color={colors.danger} />
+                        <AppText style={[styles.templateActionText, { color: colors.danger }]}>
+                          {deletingTemplateId === template._id ? 'Deleting...' : 'Delete'}
+                        </AppText>
+                      </TouchableOpacity>
                     </View>
                   )}
                 </View>
-                {template.description && (
-                  <AppText style={styles.templateCardDescription}>{template.description}</AppText>
-                )}
-                <View style={styles.templateCardFooter}>
-                  <AppText style={styles.templateCardInfo}>
-                    {template.splitMethod === 'even' ? 'Even split' : 'Manual split'} • {template.defaultParticipants.length} participant{template.defaultParticipants.length !== 1 ? 's' : ''}
-                  </AppText>
-                </View>
-              </TouchableOpacity>
-            ))
+              );
+            })
           )}
           </ScrollView>
         </Animated.View>
@@ -961,6 +1067,49 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
             <PrimaryButton
               title="Save Template"
               onPress={handleSaveTemplate}
+            />
+          </View>
+        </View>
+      </View>
+    </Modal>
+
+    {/* Edit Template Modal */}
+    <Modal
+      visible={showEditTemplateModal}
+      animationType="slide"
+      transparent={true}
+      onRequestClose={() => {
+        setShowEditTemplateModal(false);
+        setEditingTemplate(null);
+        setTemplateName('');
+      }}
+    >
+      <View style={styles.saveTemplateModalOverlay}>
+        <View style={styles.saveTemplateModalContent}>
+          <AppText style={styles.saveTemplateModalTitle}>Edit Template</AppText>
+          <AppText style={styles.saveTemplateModalDescription}>
+            Update the template name
+          </AppText>
+          <FormTextInput
+            label="Template Name"
+            value={templateName}
+            onChangeText={setTemplateName}
+            placeholder="e.g., Monthly WiFi Bill"
+          />
+          <View style={styles.saveTemplateModalActions}>
+            <PrimaryButton
+              title="Cancel"
+              onPress={() => {
+                setShowEditTemplateModal(false);
+                setEditingTemplate(null);
+                setTemplateName('');
+              }}
+              variant="secondary"
+            />
+            <View style={styles.spacer} />
+            <PrimaryButton
+              title="Update"
+              onPress={handleUpdateTemplate}
             />
           </View>
         </View>

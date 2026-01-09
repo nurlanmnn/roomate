@@ -6,7 +6,7 @@ import { PrimaryButton } from './PrimaryButton';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { EXPENSE_CATEGORIES } from '../constants/expenseCategories';
-import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows } from '../theme';
+import { useThemeColors, useTheme, fontSizes, fontWeights, spacing, radii, shadows } from '../theme';
 import { Platform } from 'react-native';
 
 export type SortOption = 'newest' | 'oldest' | 'amount' | 'category';
@@ -36,6 +36,7 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
   memberNames,
 }) => {
   const colors = useThemeColors();
+  const { theme } = useTheme();
   const [showFilters, setShowFilters] = useState(false);
   const [showDateFromPicker, setShowDateFromPicker] = useState(false); // Android dialog
   const [showDateToPicker, setShowDateToPicker] = useState(false); // Android dialog
@@ -522,6 +523,7 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
                         }
                         mode="date"
                         display="spinner"
+                        themeVariant={theme}
                         onChange={(_event, date) => {
                           if (!date) return;
                           updateFilter(iosActiveDatePicker === 'from' ? 'dateFrom' : 'dateTo', date);
@@ -622,6 +624,7 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
           value={filters.dateFrom || new Date()}
           mode="date"
           display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          themeVariant={theme}
           onChange={(event, date) => {
             setShowDateFromPicker(false);
             if (date) updateFilter('dateFrom', date);
@@ -633,6 +636,7 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
           value={filters.dateTo || new Date()}
           mode="date"
           display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          themeVariant={theme}
           onChange={(event, date) => {
             setShowDateToPicker(false);
             if (date) updateFilter('dateTo', date);

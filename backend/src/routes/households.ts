@@ -218,12 +218,28 @@ router.post('/:id/leave', authMiddleware, async (req: Request, res: Response) =>
       return res.status(403).json({ error: 'Not a member of this household' });
     }
 
-    // Check if user is owner
-    if (household.ownerId.toString() === userId) {
-      return res.status(400).json({ error: 'Owner cannot leave the household' });
+    const isOwner = household.ownerId.toString() === userId;
+
+    if (isOwner) {
+      // Owner is leaving - transfer ownership or delete household
+      if (household.members.length === 1) {
+        // Owner is the only member - delete the household
+        await Household.findByIdAndDelete(req.params.id);
+        return res.json({ success: true, deleted: true });
+      }
+
+      // Transfer ownership to the next member (2nd person who joined)
+      const remainingMembers = household.members.filter(m => m.toString() !== userId);
+      const newOwner = remainingMembers[0]; // First remaining member becomes owner
+      
+      household.ownerId = newOwner;
+      household.members = remainingMembers;
+      await household.save();
+
+      return res.json({ success: true, newOwnerId: newOwner.toString() });
     }
 
-    // Remove user from members
+    // Regular member leaving
     household.members = household.members.filter(m => m.toString() !== userId);
     await household.save();
 

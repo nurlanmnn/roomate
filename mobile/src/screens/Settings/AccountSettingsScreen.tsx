@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View, TouchableOpacity, Image } from 'react-native';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View, TouchableOpacity, Image, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -25,6 +25,36 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
 
   const [deletePassword, setDeletePassword] = useState('');
   const [deleting, setDeleting] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  
+  const scrollViewRef = useRef<ScrollView>(null);
+  const inputPositions = useRef<Record<string, number>>({});
+
+  useEffect(() => {
+    const showSubscription = Keyboard.addListener('keyboardDidShow', () => {
+      setKeyboardVisible(true);
+    });
+    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardVisible(false);
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
+
+  const handleInputLayout = (inputName: string, y: number) => {
+    inputPositions.current[inputName] = y;
+  };
+
+  const scrollToInput = (inputName: string) => {
+    const y = inputPositions.current[inputName];
+    if (y !== undefined && scrollViewRef.current) {
+      // Scroll so the input is roughly in the upper third of the screen
+      scrollViewRef.current.scrollTo({ y: Math.max(0, y - 150), animated: true });
+    }
+  };
 
   const canSaveName = useMemo(() => {
     const trimmed = name.trim();
@@ -204,12 +234,19 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <KeyboardAvoidingView
-        style={styles.container}
+        style={styles.keyboardAvoid}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <Text style={styles.title}>Account Settings</Text>
+        <ScrollView 
+          ref={scrollViewRef}
+          contentContainerStyle={styles.content} 
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <TouchableOpacity activeOpacity={1} onPress={Keyboard.dismiss}>
+            <Text style={styles.title}>Account Settings</Text>
+          </TouchableOpacity>
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Profile</Text>
@@ -251,17 +288,28 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
               />
             )}
             <View style={styles.spacer} />
-            <FormTextInput
-              label="Name"
-              value={name}
-              onChangeText={setName}
-              placeholder="Your name"
-              autoCapitalize="words"
-            />
+            <View onLayout={(e) => handleInputLayout('name', e.nativeEvent.layout.y)}>
+              <FormTextInput
+                label="Name"
+                value={name}
+                onChangeText={setName}
+                placeholder="Your name"
+                autoCapitalize="words"
+                onFocus={() => scrollToInput('name')}
+              />
+            </View>
             <PrimaryButton title="Save Name" onPress={handleSaveName} disabled={!canSaveName} loading={savingName} />
           </View>
 
-          <View style={styles.section}>
+          <View 
+            style={styles.section}
+            onLayout={(e) => {
+              // Store base Y of the password section
+              const baseY = e.nativeEvent.layout.y;
+              handleInputLayout('currentPassword', baseY + 60);
+              handleInputLayout('newPassword', baseY + 140);
+            }}
+          >
             <Text style={styles.sectionTitle}>Change Password</Text>
             <FormTextInput
               label="Current Password"
@@ -269,6 +317,7 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
               onChangeText={setCurrentPassword}
               placeholder="Current password"
               secureTextEntry
+              onFocus={() => scrollToInput('currentPassword')}
             />
             <FormTextInput
               label="New Password"
@@ -276,6 +325,7 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
               onChangeText={setNewPassword}
               placeholder="New password (min 6 chars)"
               secureTextEntry
+              onFocus={() => scrollToInput('newPassword')}
             />
             <PrimaryButton
               title="Change Password"
@@ -285,7 +335,10 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
             />
           </View>
 
-          <View style={[styles.section, styles.dangerSection]}>
+          <View 
+            style={[styles.section, styles.dangerSection]}
+            onLayout={(e) => handleInputLayout('deletePassword', e.nativeEvent.layout.y + 80)}
+          >
             <Text style={[styles.sectionTitle, styles.dangerTitle]}>Danger Zone</Text>
             <Text style={styles.dangerText}>
               To delete your account, confirm your password. If you own a household, you must transfer/delete it first.
@@ -296,10 +349,22 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
               onChangeText={setDeletePassword}
               placeholder="Password"
               secureTextEntry
+              onFocus={() => scrollToInput('deletePassword')}
             />
-            <PrimaryButton title="Delete Account" onPress={handleDeleteAccount} loading={deleting} />
+            <PrimaryButton title="Delete Account" onPress={handleDeleteAccount} loading={deleting} variant="danger" />
           </View>
+          {/* Extra space at bottom for keyboard */}
+          <View style={styles.keyboardSpacer} />
         </ScrollView>
+        {keyboardVisible && (
+          <TouchableOpacity 
+            style={styles.doneButton} 
+            onPress={Keyboard.dismiss}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.doneButtonText}>Done</Text>
+          </TouchableOpacity>
+        )}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -310,8 +375,31 @@ const createStyles = (colors: any) => StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  keyboardAvoid: {
+    flex: 1,
+  },
   content: {
     padding: spacing.md,
+    flexGrow: 1,
+  },
+  keyboardSpacer: {
+    height: 200,
+  },
+  doneButton: {
+    position: 'absolute',
+    right: spacing.md,
+    bottom: Platform.OS === 'ios' ? 8 : spacing.sm,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: radii.full,
+    ...(shadows.lg as object),
+    zIndex: 100,
+  },
+  doneButtonText: {
+    color: '#FFFFFF',
+    fontSize: fontSizes.md,
+    fontWeight: fontWeights.bold,
   },
   title: {
     fontSize: fontSizes.xxl,
