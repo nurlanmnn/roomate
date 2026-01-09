@@ -17,7 +17,7 @@
     "@react-navigation/native-stack": "^6.9.17",
     "axios": "^1.6.2",
     "date-fns": "^3.0.0",
-    "expo": "~54.0.30",
+    "expo": "54.0.31",
     "expo-camera": "~17.0.10",
     "expo-clipboard": "^8.0.8",
     "expo-file-system": "~19.0.21",

@@ -153,6 +153,53 @@ router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
   }
 });
 
+// PUT /households/:id - Update household (owner only)
+const updateHouseholdSchema = z.object({
+  name: z.string().min(1).optional(),
+  address: z.string().optional(),
+});
+
+router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const household = await Household.findById(req.params.id);
+    if (!household) {
+      return res.status(404).json({ error: 'Household not found' });
+    }
+
+    // Only owner can update household
+    if (household.ownerId.toString() !== userId) {
+      return res.status(403).json({ error: 'Only the owner can update household settings' });
+    }
+
+    const updates = updateHouseholdSchema.parse(req.body);
+
+    if (updates.name !== undefined) {
+      household.name = updates.name;
+    }
+    if (updates.address !== undefined) {
+      household.address = updates.address;
+    }
+
+    await household.save();
+
+    await household.populate('ownerId', 'name email avatarUrl');
+    await household.populate('members', 'name email avatarUrl');
+
+    res.json(household);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+    }
+    console.error('Update household error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // POST /households/:id/leave
 router.post('/:id/leave', authMiddleware, async (req: Request, res: Response) => {
   try {
@@ -183,6 +230,76 @@ router.post('/:id/leave', authMiddleware, async (req: Request, res: Response) =>
     res.json({ success: true });
   } catch (error) {
     console.error('Leave household error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// DELETE /households/:id/members/:memberId - Remove a member (owner only)
+router.delete('/:id/members/:memberId', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { id, memberId } = req.params;
+    const household = await Household.findById(id);
+    if (!household) {
+      return res.status(404).json({ error: 'Household not found' });
+    }
+
+    // Only owner can remove members
+    if (household.ownerId.toString() !== userId) {
+      return res.status(403).json({ error: 'Only the owner can remove members' });
+    }
+
+    // Prevent removing the owner from the members list
+    if (household.ownerId.toString() === memberId) {
+      return res.status(400).json({ error: 'Owner cannot be removed from the household' });
+    }
+
+    const beforeCount = household.members.length;
+    household.members = household.members.filter((m) => m.toString() !== memberId);
+
+    // If no change, member was not found
+    if (household.members.length === beforeCount) {
+      return res.status(404).json({ error: 'Member not found in this household' });
+    }
+
+    await household.save();
+    await household.populate('ownerId', 'name email avatarUrl');
+    await household.populate('members', 'name email avatarUrl');
+
+    res.json(household);
+  } catch (error) {
+    console.error('Remove member error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// DELETE /households/:id - Delete household (owner only)
+router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const household = await Household.findById(req.params.id);
+    if (!household) {
+      return res.status(404).json({ error: 'Household not found' });
+    }
+
+    // Only owner can delete household
+    if (household.ownerId.toString() !== userId) {
+      return res.status(403).json({ error: 'Only the owner can delete the household' });
+    }
+
+    await Household.findByIdAndDelete(req.params.id);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete household error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

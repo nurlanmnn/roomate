@@ -201,20 +201,24 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
       gap: spacing.sm,
       paddingVertical: spacing.md,
       paddingHorizontal: spacing.md,
-      borderWidth: 1,
-      borderColor: colors.border,
+      borderWidth: 2,
+      borderColor: colors.textSecondary,
       borderRadius: radii.lg,
       marginBottom: spacing.xs,
       backgroundColor: colors.surface,
-      ...(shadows.sm as object),
     },
     radioSelected: {
-      backgroundColor: colors.accentSoft,
-      borderColor: colors.accent,
+      backgroundColor: colors.primarySoft,
+      borderColor: colors.primary,
     },
     radioText: {
       fontSize: fontSizes.md,
+      fontWeight: fontWeights.medium,
       color: colors.text,
+    },
+    radioTextSelected: {
+      color: colors.primary,
+      fontWeight: fontWeights.bold,
     },
     checkboxOption: {
       flexDirection: 'row',
@@ -810,13 +814,13 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
             style={[styles.radioOption, splitMethod === 'even' && styles.radioSelected]}
             onPress={() => setSplitMethod('even')}
           >
-            <Text>Split Evenly</Text>
+            <Text style={[styles.radioText, splitMethod === 'even' && styles.radioTextSelected]}>Split Evenly</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.radioOption, splitMethod === 'manual' && styles.radioSelected]}
             onPress={() => setSplitMethod('manual')}
           >
-            <Text>Split Manually</Text>
+            <Text style={[styles.radioText, splitMethod === 'manual' && styles.radioTextSelected]}>Split Manually</Text>
           </TouchableOpacity>
         </View>
 

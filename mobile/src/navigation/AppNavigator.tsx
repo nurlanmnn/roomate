@@ -2,11 +2,13 @@ import React, { useEffect } from 'react';
 import { NavigationContainer, useNavigation } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { View, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { useHousehold } from '../context/HouseholdContext';
-import { useThemeColors } from '../theme';
+import { spacing, useThemeColors } from '../theme';
 import { Ionicons } from '@expo/vector-icons';
-import { fontSizes, fontWeights } from '../theme';
+import { fontSizes, fontWeights, radii } from '../theme';
 
 // Auth Screens
 import { LandingScreen } from '../screens/Auth/LandingScreen';
@@ -47,36 +49,54 @@ const AuthNavigator = () => {
   );
 };
 
+const withAlpha = (hexColor: string, alpha: number) => {
+  // expects #RRGGBB; falls back to original if format unexpected
+  if (!hexColor || hexColor[0] !== '#' || (hexColor.length !== 7 && hexColor.length !== 9)) {
+    return hexColor;
+  }
+  const clean = hexColor.slice(1, 7);
+  const a = Math.round(Math.min(Math.max(alpha, 0), 1) * 255)
+    .toString(16)
+    .padStart(2, '0');
+  return `#${clean}${a}`;
+};
+
 const MainTabs = () => {
   const colors = useThemeColors();
+  const insets = useSafeAreaInsets();
+  const horizontal = spacing.md;
+  const bottomInset = Math.max(insets.bottom, spacing.sm);
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.primary,
+        tabBarActiveTintColor: colors.text,
         tabBarInactiveTintColor: colors.textTertiary,
         tabBarStyle: { 
-          borderTopColor: colors.borderLight,
-          borderTopWidth: 1,
-          backgroundColor: colors.surface,
-          paddingTop: 6,
-          paddingBottom: 6,
-          paddingHorizontal: 4,
-          height: 70,
-          elevation: 8,
+          position: 'absolute',
+          left: horizontal,
+          right: horizontal,
+          bottom: bottomInset,
+          borderRadius: 24,
+          backgroundColor: withAlpha(colors.surface, 0.84),
+          paddingTop: 8,
+          paddingBottom: Math.max(8, bottomInset / 2),
+          paddingHorizontal: 6,
+          height: 76,
+          borderTopWidth: 0,
+          elevation: 14,
           shadowColor: colors.shadow,
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 8,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.18,
+          shadowRadius: 12,
         },
         tabBarLabelStyle: {
           fontSize: 10,
-          fontWeight: '600',
-          marginTop: 2,
-          marginBottom: 2,
+          fontWeight: '500',
+          marginTop: 4,
         },
         tabBarItemStyle: {
-          paddingVertical: 4,
+          paddingVertical: 2,
         },
       }}
     >
@@ -132,7 +152,18 @@ const MainTabs = () => {
   );
 };
 
+// Telegram-style tab icon colors
+const TAB_COLORS: Record<string, string> = {
+  home: '#3478F6',      // Blue
+  dollar: '#34C759',    // Green
+  cart: '#FF9500',      // Orange
+  calendar: '#AF52DE',  // Purple
+  target: '#FF3B30',    // Red
+  settings: '#8E8E93',  // Gray
+};
+
 const TabIcon: React.FC<{ name: string; color: string; focused: boolean }> = ({ name, color, focused }) => {
+  const colors = useThemeColors();
   const icons: Record<string, { outline: React.ComponentProps<typeof Ionicons>['name']; filled: React.ComponentProps<typeof Ionicons>['name'] }> = {
     home: { outline: 'home-outline', filled: 'home' },
     dollar: { outline: 'cash-outline', filled: 'cash' },
@@ -142,8 +173,31 @@ const TabIcon: React.FC<{ name: string; color: string; focused: boolean }> = ({ 
     settings: { outline: 'settings-outline', filled: 'settings' },
   };
   const iconSet = icons[name] || { outline: 'ellipse-outline', filled: 'ellipse' };
-  return <Ionicons name={focused ? iconSet.filled : iconSet.outline} size={22} color={color} />;
+  const bgColor = TAB_COLORS[name] || colors.textTertiary;
+  
+  return (
+    <View style={[
+      tabIconStyles.container,
+      { backgroundColor: focused ? bgColor : `${bgColor}20` }
+    ]}>
+      <Ionicons 
+        name={focused ? iconSet.filled : iconSet.outline} 
+        size={18} 
+        color={focused ? '#FFFFFF' : bgColor} 
+      />
+    </View>
+  );
 };
+
+const tabIconStyles = StyleSheet.create({
+  container: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
 
 // Wrapper component for MainTabs that redirects if no household
 const MainTabsWithGuard = () => {
