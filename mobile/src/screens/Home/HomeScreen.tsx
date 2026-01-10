@@ -6,6 +6,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { eventsApi, Event } from '../../api/eventsApi';
 import { expensesApi, PairwiseBalance, Expense } from '../../api/expensesApi';
 import { goalsApi, Goal } from '../../api/goalsApi';
@@ -28,6 +29,7 @@ export const HomeScreen: React.FC = () => {
   const { selectedHousehold, setSelectedHousehold } = useHousehold();
   const { user } = useAuth();
   const colors = useThemeColors();
+  const { t } = useLanguage();
   const [events, setEvents] = useState<Event[]>([]);
   const [balances, setBalances] = useState<PairwiseBalance[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -447,7 +449,7 @@ export const HomeScreen: React.FC = () => {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.emptyContainer}>
-          <AppText style={styles.emptyText}>Please select a household</AppText>
+          <AppText style={styles.emptyText}>{t('home.pleaseSelectHousehold')}</AppText>
         </View>
       </SafeAreaView>
     );
@@ -503,7 +505,7 @@ export const HomeScreen: React.FC = () => {
         <View style={styles.statsContainer}>
           <StatsCard
             icon={<Ionicons name="cash-outline" size={24} color={colors.primary} />}
-            label="This Month"
+            label={t('home.thisMonth')}
             value={formatCompactCurrency(stats.monthlyExpenses)}
             iconColor={colors.primary}
             iconBgColor={colors.primaryUltraSoft}
@@ -511,7 +513,7 @@ export const HomeScreen: React.FC = () => {
           />
           <StatsCard
             icon={<Ionicons name="cart-outline" size={24} color={colors.accent} />}
-            label="Shopping"
+            label={t('tabs.shopping')}
             value={stats.pendingShopping}
             iconColor={colors.accent}
             iconBgColor={colors.accentUltraSoft}
@@ -519,7 +521,7 @@ export const HomeScreen: React.FC = () => {
           />
           <StatsCard
             icon={<Ionicons name="calendar-outline" size={24} color={colors.teal} />}
-            label="Events"
+            label={t('home.events')}
             value={stats.upcomingEventsCount}
             iconColor={colors.teal}
             iconBgColor={colors.tealUltraSoft}
@@ -535,20 +537,20 @@ export const HomeScreen: React.FC = () => {
             <View style={styles.welcomeIconContainer}>
               <Ionicons name="home-outline" size={48} color={colors.primary} />
             </View>
-            <AppText style={styles.welcomeTitle}>Welcome to {selectedHousehold.name}! 👋</AppText>
+            <AppText style={styles.welcomeTitle}>{t('home.welcomeTo')} {selectedHousehold.name}! 👋</AppText>
             <AppText style={styles.welcomeText}>
-              Get started by adding your first expense, creating a shopping list, or setting up a goal.
+              {t('home.getStarted')}
             </AppText>
             {selectedHousehold.members.length === 1 && selectedHousehold.joinCode && (
               <View style={styles.inviteMessageContainer}>
                 <Ionicons name="people-outline" size={20} color={colors.primary} />
                 <AppText style={styles.inviteMessage}>
-                  Invite your roommates using the code:{' '}
+                  {t('home.inviteRoommates')}{' '}
                 </AppText>
                 <TouchableOpacity
                   onPress={async () => {
                     await Clipboard.setStringAsync(selectedHousehold.joinCode);
-                    Alert.alert('Copied!', 'Join code copied to clipboard');
+                    Alert.alert(t('common.copied'), t('householdSettingsScreen.codeCopied'));
                   }}
                   style={styles.joinCodeContainer}
                 >
@@ -562,26 +564,26 @@ export const HomeScreen: React.FC = () => {
             <View style={styles.quickActionsRow}>
               <QuickActionButton
                 icon={<Ionicons name="add-circle-outline" size={24} color={colors.primary} />}
-                label="Add Expense"
+                label={t('home.addExpense')}
                 onPress={() => {
                   navigation.getParent()?.navigate('CreateExpense');
                 }}
               />
               <QuickActionButton
                 icon={<Ionicons name="cart-outline" size={24} color={colors.primary} />}
-                label="Shopping List"
+                label={t('home.shoppingList')}
                 onPress={() => navigation.navigate('Shopping')}
               />
             </View>
             <View style={styles.quickActionsRow}>
               <QuickActionButton
                 icon={<Ionicons name="flag-outline" size={24} color={colors.primary} />}
-                label="New Goal"
+                label={t('home.newGoal')}
                 onPress={() => navigation.navigate('Goals')}
               />
               <QuickActionButton
                 icon={<Ionicons name="calendar-outline" size={24} color={colors.primary} />}
-                label="Add Event"
+                label={t('home.addEvent')}
                 onPress={() => navigation.navigate('Calendar')}
               />
             </View>
@@ -593,9 +595,9 @@ export const HomeScreen: React.FC = () => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionTitleContainer}>
-              <AppText style={styles.sectionTitle}>Your Balances</AppText>
+              <AppText style={styles.sectionTitle}>{t('home.balanceSummary')}</AppText>
               <AppText style={styles.sectionDescription}>
-                Track who owes what and settle up with your roommates
+                {t('home.balanceDescription')}
               </AppText>
             </View>
           </View>
@@ -618,9 +620,9 @@ export const HomeScreen: React.FC = () => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionTitleContainer}>
-              <AppText style={styles.sectionTitle}>Spending Insights</AppText>
+              <AppText style={styles.sectionTitle}>{t('home.spendingInsights')}</AppText>
               <AppText style={styles.sectionDescription}>
-                Track your spending patterns and see where your money goes each month
+                {t('home.spendingDescription')}
               </AppText>
             </View>
           </View>
@@ -638,7 +640,7 @@ export const HomeScreen: React.FC = () => {
                 <View style={styles.summaryItem}>
                   <Ionicons name="trending-up-outline" size={20} color={colors.primary} />
                   <View style={styles.summaryTextContainer}>
-                    <AppText style={styles.summaryLabel}>This Month</AppText>
+                    <AppText style={styles.summaryLabel}>{t('home.thisMonth')}</AppText>
                     <AppText style={styles.summaryValue}>
                       {formatCurrency(stats.monthlyExpenses)}
                     </AppText>
@@ -648,7 +650,7 @@ export const HomeScreen: React.FC = () => {
                   <View style={styles.summaryItem}>
                     <Ionicons name="calendar-outline" size={20} color={colors.textSecondary} />
                     <View style={styles.summaryTextContainer}>
-                      <AppText style={styles.summaryLabel}>Last Month</AppText>
+                      <AppText style={styles.summaryLabel}>{t('home.lastMonth')}</AppText>
                       <AppText style={styles.summaryValue}>
                         {formatCurrency(insights.monthlyTrend[insights.monthlyTrend.length - 2]?.amount || 0)}
                       </AppText>
@@ -676,7 +678,7 @@ export const HomeScreen: React.FC = () => {
                         { color: isIncrease ? colors.danger : colors.success }
                       ]}>
                         {isIncrease ? '+' : ''}{formatCurrency(Math.abs(difference))} ({isIncrease ? '+' : ''}{percentChange}%) 
-                        {isIncrease ? 'more' : 'less'} than last month
+                        {isIncrease ? t('home.moreThanLastMonth') : t('home.lessThanLastMonth')}
                       </AppText>
                     </View>
                   );
@@ -693,13 +695,13 @@ export const HomeScreen: React.FC = () => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionTitleContainer}>
-              <AppText style={styles.sectionTitle}>Upcoming Events</AppText>
+              <AppText style={styles.sectionTitle}>{t('home.upcomingEvents')}</AppText>
               <AppText style={styles.sectionDescription}>
-                Don't miss important dates and shared activities
+                {t('home.upcomingEventsDescription')}
               </AppText>
             </View>
             <TouchableOpacity onPress={() => navigation.navigate('Calendar')}>
-              <AppText style={styles.seeAllText}>See All</AppText>
+              <AppText style={styles.seeAllText}>{t('common.seeAll')}</AppText>
             </TouchableOpacity>
           </View>
           {events.slice(0, 3).map((event) => (
@@ -713,13 +715,13 @@ export const HomeScreen: React.FC = () => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionTitleContainer}>
-              <AppText style={styles.sectionTitle}>Active Goals</AppText>
+              <AppText style={styles.sectionTitle}>{t('home.activeGoals')}</AppText>
               <AppText style={styles.sectionDescription}>
-                Shared goals and ideas for your household
+                {t('home.activeGoalsDescription')}
               </AppText>
             </View>
             <TouchableOpacity onPress={() => navigation.navigate('Goals')}>
-              <AppText style={styles.seeAllText}>See All</AppText>
+              <AppText style={styles.seeAllText}>{t('common.seeAll')}</AppText>
             </TouchableOpacity>
           </View>
           {goals.map((goal) => (
@@ -746,11 +748,11 @@ export const HomeScreen: React.FC = () => {
           <View style={styles.tipCard}>
             <Ionicons name="bulb-outline" size={24} color={colors.accent} />
             <View style={styles.tipContent}>
-              <AppText style={styles.tipTitle}>Quick Tip</AppText>
+              <AppText style={styles.tipTitle}>{t('home.quickTip')}</AppText>
               <AppText style={styles.tipText}>
                 {stats.monthlyExpenses > 0 
-                  ? "Review your spending by category to identify areas where you can save money."
-                  : "Start tracking expenses to get personalized insights and better manage your household budget."}
+                  ? t('home.tipReview')
+                  : t('home.tipStart')}
               </AppText>
             </View>
           </View>

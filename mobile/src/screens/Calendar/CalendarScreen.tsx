@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { eventsApi, Event } from '../../api/eventsApi';
 import { EventCard } from '../../components/EventCard';
 import { PrimaryButton } from '../../components/PrimaryButton';
@@ -20,6 +21,7 @@ type ViewMode = 'upcoming' | 'past' | 'all';
 export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { selectedHousehold, setSelectedHousehold } = useHousehold();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [events, setEvents] = useState<Event[]>([]);
@@ -63,17 +65,17 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   };
 
   const handleDeleteEvent = (event: Event) => {
-    Alert.alert('Delete Event', 'Are you sure?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('common.delete'), t('calendar.deleteEventConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
           try {
             await eventsApi.deleteEvent(event._id);
             loadEvents();
           } catch (error: any) {
-            Alert.alert('Error', error.response?.data?.error || 'Failed to delete event');
+            Alert.alert(t('common.error'), error.response?.data?.error || t('alerts.somethingWentWrong'));
           }
         },
       },
@@ -122,7 +124,7 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>Please select a household</Text>
+          <Text style={styles.emptyText}>{t('alerts.selectHousehold')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -146,11 +148,11 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
             }}
           >
             <Text style={styles.viewModeText}>
-              {viewMode === 'upcoming' ? 'Upcoming' : viewMode === 'past' ? 'Past' : 'All'}
+              {viewMode === 'upcoming' ? t('calendar.upcoming') : viewMode === 'past' ? t('time.lastMonth') : t('time.all')}
             </Text>
             <Ionicons name="chevron-down" size={16} color={colors.text} />
           </TouchableOpacity>
-          <Text style={styles.eventCount}>{filteredEvents.length} Total</Text>
+          <Text style={styles.eventCount}>{filteredEvents.length}</Text>
         </View>
 
         {/* Calendar */}
@@ -182,11 +184,11 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                   <View style={styles.eventActions}>
                     <TouchableOpacity style={styles.actionButton} onPress={() => handleEditEvent(event)}>
                       <Ionicons name="pencil-outline" size={16} color={colors.primary} />
-                      <Text style={styles.editText}>Edit</Text>
+                      <Text style={styles.editText}>{t('common.edit')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.actionButton} onPress={() => handleDeleteEvent(event)}>
                       <Ionicons name="trash-outline" size={16} color={colors.danger} />
-                      <Text style={styles.deleteText}>Delete</Text>
+                      <Text style={styles.deleteText}>{t('common.delete')}</Text>
                     </TouchableOpacity>
                   </View>
                 )}
@@ -203,14 +205,14 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
               {format(selectedDate, 'EEEE, MMM d')}
             </Text>
             <Text style={styles.emptyDateText}>
-              No events on this day
+              {t('calendar.noEvents')}
             </Text>
             <TouchableOpacity
               style={styles.addEventHintButton}
               onPress={() => handleAddEventOnDate(selectedDate)}
             >
               <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
-              <Text style={styles.addEventHintText}>Add Event</Text>
+              <Text style={styles.addEventHintText}>{t('calendar.addEvent')}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -219,10 +221,10 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         <View style={styles.allEventsSection}>
           <View style={styles.allEventsHeader}>
             <Text style={styles.sectionTitle}>
-              {viewMode === 'upcoming' ? 'Upcoming Events' : viewMode === 'past' ? 'Past Events' : 'All Events'}
+              {viewMode === 'upcoming' ? t('home.upcomingEvents') : viewMode === 'past' ? t('time.lastMonth') : t('home.events')}
             </Text>
             <PrimaryButton
-              title="+ Add Event"
+              title={`+ ${t('calendar.addEvent')}`}
               onPress={() => navigation.navigate('CreateEvent')}
             />
           </View>
@@ -230,8 +232,8 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
           {Object.keys(eventsByDate).length === 0 ? (
             <EmptyState
               icon="calendar-outline"
-              title={viewMode === 'upcoming' ? 'No upcoming events' : viewMode === 'past' ? 'No past events' : 'No events yet'}
-              message="Tap on any date to add an event, or use the button above."
+              title={t('calendar.noEvents')}
+              message={t('calendar.longPressToAdd')}
               variant="minimal"
             />
           ) : (
@@ -245,11 +247,11 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                       <View style={styles.eventActions}>
                         <TouchableOpacity style={styles.actionButton} onPress={() => handleEditEvent(event)}>
                           <Ionicons name="pencil-outline" size={16} color={colors.primary} />
-                          <Text style={styles.editText}>Edit</Text>
+                          <Text style={styles.editText}>{t('common.edit')}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.actionButton} onPress={() => handleDeleteEvent(event)}>
                           <Ionicons name="trash-outline" size={16} color={colors.danger} />
-                          <Text style={styles.deleteText}>Delete</Text>
+                          <Text style={styles.deleteText}>{t('common.delete')}</Text>
                         </TouchableOpacity>
                       </View>
                     )}

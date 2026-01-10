@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { goalsApi, Goal } from '../../api/goalsApi';
 import { GoalCard } from '../../components/GoalCard';
 import { PrimaryButton } from '../../components/PrimaryButton';
@@ -14,6 +15,7 @@ import { useThemeColors, fontSizes, fontWeights, spacing, TAB_BAR_HEIGHT } from 
 export const GoalsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { selectedHousehold, setSelectedHousehold } = useHousehold();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const colors = useThemeColors();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -63,7 +65,7 @@ export const GoalsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>Please select a household</Text>
+          <Text style={styles.emptyText}>{t('home.pleaseSelectHousehold')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -82,15 +84,23 @@ export const GoalsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
     ? goalsByStatus[activeStatus].filter((g) => `${g.title} ${g.description || ''}`.toLowerCase().includes(q))
     : goalsByStatus[activeStatus];
 
+  const getStatusLabel = (s: string) => {
+    if (s === 'idea') return t('goals.status.idea');
+    if (s === 'planned') return t('goals.status.planned');
+    if (s === 'in_progress') return t('goals.status.inProgress');
+    if (s === 'done') return t('goals.status.done');
+    return s;
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT + spacing.xl }}>
-        <ScreenHeader title="Goals" subtitle={selectedHousehold.name} />
+        <ScreenHeader title={t('goals.title')} subtitle={selectedHousehold.name} />
         <View style={styles.topActions}>
-          <PrimaryButton title="+ New Goal" onPress={() => navigation.navigate('CreateGoal')} />
+          <PrimaryButton title={`+ ${t('goals.addGoal')}`} onPress={() => navigation.navigate('CreateGoal')} />
         </View>
         <View style={styles.searchWrap}>
-          <SearchBar value={searchQuery} onChangeText={setSearchQuery} placeholder="Search goals" />
+          <SearchBar value={searchQuery} onChangeText={setSearchQuery} placeholder={t('common.search')} />
         </View>
 
         <View style={styles.filterRow}>
@@ -101,7 +111,7 @@ export const GoalsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
               onPress={() => setActiveStatus(s)}
             >
               <Text style={[styles.filterText, activeStatus === s && styles.filterTextActive]}>
-                {s.replace('_', ' ')}
+                {getStatusLabel(s)}
               </Text>
             </TouchableOpacity>
           ))}
@@ -116,7 +126,7 @@ export const GoalsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
                 onStatusChange={(newStatus) => handleUpdateStatus(goal, newStatus)}
                 currentUserId={user._id} 
               />
-              <Text style={styles.moveToLabel}>Move to:</Text>
+              <Text style={styles.moveToLabel}>{t('common.to')}:</Text>
               <View style={styles.statusActions}>
                 {(['idea', 'planned', 'in_progress', 'done'] as const).map((s) => (
                   <TouchableOpacity
@@ -125,7 +135,7 @@ export const GoalsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
                     onPress={() => handleUpdateStatus(goal, s)}
                   >
                     <Text style={[styles.statusButtonText, goal.status === s && styles.statusButtonTextActive]}>
-                      {s.replace('_', ' ')}
+                      {getStatusLabel(s)}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -137,11 +147,11 @@ export const GoalsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
         {visibleGoals.length === 0 && (
           <EmptyState
             icon="flag-outline"
-            title="No goals yet"
+            title={t('goals.noGoals')}
             message={goals.length === 0 
-              ? "Set a goal together with your roommates. Plan home improvements, savings targets, or shared activities."
-              : `No goals in "${activeStatus.replace('_', ' ')}" status. Try a different filter or create a new goal.`}
-            actionLabel={goals.length === 0 ? "+ New Goal" : undefined}
+              ? t('goals.noGoalsDescription')
+              : `${t('goals.noGoalsDescription')}`}
+            actionLabel={goals.length === 0 ? `+ ${t('goals.addGoal')}` : undefined}
             onAction={goals.length === 0 ? () => navigation.navigate('CreateGoal') : undefined}
           />
         )}

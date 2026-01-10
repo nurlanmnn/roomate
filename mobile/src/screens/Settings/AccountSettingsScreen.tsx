@@ -6,12 +6,14 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { FormTextInput } from '../../components/FormTextInput';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { authApi } from '../../api/authApi';
 import { Avatar } from '../../components/ui/Avatar';
 import { useThemeColors, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
 
 export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { user, refreshUser, logout } = useAuth();
+  const { t } = useLanguage();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [name, setName] = useState(user?.name || '');
@@ -75,10 +77,10 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
       setSavingName(true);
       await authApi.updateProfile({ name: name.trim() });
       await refreshUser();
-      Alert.alert('Saved', 'Your name has been updated.');
+      Alert.alert(t('common.success'), t('accountSettingsScreen.profileUpdated'));
       navigation.goBack();
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to update name');
+      Alert.alert(t('common.error'), error.response?.data?.error || t('alerts.somethingWentWrong'));
     } finally {
       setSavingName(false);
     }
@@ -245,11 +247,11 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
           showsVerticalScrollIndicator={false}
         >
           <TouchableOpacity activeOpacity={1} onPress={Keyboard.dismiss}>
-            <Text style={styles.title}>Account Settings</Text>
+            <Text style={styles.title}>{t('accountSettingsScreen.title')}</Text>
           </TouchableOpacity>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Profile</Text>
+            <Text style={styles.sectionTitle}>{t('accountSettingsScreen.profileSection')}</Text>
             <View style={styles.avatarRow}>
               <TouchableOpacity onPress={handlePickImage} activeOpacity={0.7}>
                 <View style={styles.avatarContainer}>
@@ -269,11 +271,11 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
               </View>
             </View>
             <Text style={styles.helperText}>
-              Tap the photo to select a new profile picture from your device
+              {t('accountSettingsScreen.changeAvatar')}
             </Text>
             {avatarUri && avatarUri !== user?.avatarUrl && (
               <PrimaryButton
-                title="Save Photo"
+                title={t('common.save')}
                 onPress={handleSaveAvatar}
                 disabled={!canSaveAvatar}
                 loading={savingAvatar}
@@ -282,7 +284,7 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
             )}
             {(!avatarUri || avatarUri === user?.avatarUrl) && (
               <PrimaryButton
-                title="Change Photo"
+                title={t('accountSettingsScreen.changeAvatar')}
                 onPress={handlePickImage}
                 variant="secondary"
               />
@@ -290,15 +292,15 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
             <View style={styles.spacer} />
             <View onLayout={(e) => handleInputLayout('name', e.nativeEvent.layout.y)}>
               <FormTextInput
-                label="Name"
+                label={t('accountSettingsScreen.name')}
                 value={name}
                 onChangeText={setName}
-                placeholder="Your name"
+                placeholder={t('accountSettingsScreen.name')}
                 autoCapitalize="words"
                 onFocus={() => scrollToInput('name')}
               />
             </View>
-            <PrimaryButton title="Save Name" onPress={handleSaveName} disabled={!canSaveName} loading={savingName} />
+            <PrimaryButton title={t('common.save')} onPress={handleSaveName} disabled={!canSaveName} loading={savingName} />
           </View>
 
           <View 
@@ -310,25 +312,25 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
               handleInputLayout('newPassword', baseY + 140);
             }}
           >
-            <Text style={styles.sectionTitle}>Change Password</Text>
+            <Text style={styles.sectionTitle}>{t('accountSettingsScreen.changePassword')}</Text>
             <FormTextInput
-              label="Current Password"
+              label={t('accountSettingsScreen.currentPassword')}
               value={currentPassword}
               onChangeText={setCurrentPassword}
-              placeholder="Current password"
+              placeholder={t('accountSettingsScreen.currentPassword')}
               secureTextEntry
               onFocus={() => scrollToInput('currentPassword')}
             />
             <FormTextInput
-              label="New Password"
+              label={t('accountSettingsScreen.newPassword')}
               value={newPassword}
               onChangeText={setNewPassword}
-              placeholder="New password (min 6 chars)"
+              placeholder={t('accountSettingsScreen.newPassword')}
               secureTextEntry
               onFocus={() => scrollToInput('newPassword')}
             />
             <PrimaryButton
-              title="Change Password"
+              title={t('accountSettingsScreen.changePassword')}
               onPress={handleChangePassword}
               disabled={!canChangePassword}
               loading={changingPassword}
@@ -339,19 +341,19 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
             style={[styles.section, styles.dangerSection]}
             onLayout={(e) => handleInputLayout('deletePassword', e.nativeEvent.layout.y + 80)}
           >
-            <Text style={[styles.sectionTitle, styles.dangerTitle]}>Danger Zone</Text>
+            <Text style={[styles.sectionTitle, styles.dangerTitle]}>{t('accountSettingsScreen.dangerZone')}</Text>
             <Text style={styles.dangerText}>
-              To delete your account, confirm your password. If you own a household, you must transfer/delete it first.
+              {t('accountSettingsScreen.deleteAccountConfirm')}
             </Text>
             <FormTextInput
-              label="Password"
+              label={t('auth.password')}
               value={deletePassword}
               onChangeText={setDeletePassword}
-              placeholder="Password"
+              placeholder={t('auth.password')}
               secureTextEntry
               onFocus={() => scrollToInput('deletePassword')}
             />
-            <PrimaryButton title="Delete Account" onPress={handleDeleteAccount} loading={deleting} variant="danger" />
+            <PrimaryButton title={t('accountSettingsScreen.deleteAccount')} onPress={handleDeleteAccount} loading={deleting} variant="danger" />
           </View>
           {/* Extra space at bottom for keyboard */}
           <View style={styles.keyboardSpacer} />
@@ -362,7 +364,7 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
             onPress={Keyboard.dismiss}
             activeOpacity={0.8}
           >
-            <Text style={styles.doneButtonText}>Done</Text>
+            <Text style={styles.doneButtonText}>{t('common.done')}</Text>
           </TouchableOpacity>
         )}
       </KeyboardAvoidingView>

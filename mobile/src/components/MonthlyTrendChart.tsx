@@ -3,6 +3,7 @@ import { View, StyleSheet, TouchableOpacity, Animated, Dimensions } from 'react-
 import { AppText } from './AppText';
 import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows } from '../theme';
 import { formatCompactCurrency, formatCurrency } from '../utils/formatCurrency';
+import { useLanguage } from '../context/LanguageContext';
 
 const screenWidth = Dimensions.get('window').width;
 const PLOT_HEIGHT = 200;
@@ -32,6 +33,7 @@ const clamp = (value: number, min: number, max: number): number => {
 
 const MonthlyTrendChartComponent = ({ monthlyTrend }: MonthlyTrendChartProps) => {
   const colors = useThemeColors();
+  const { t } = useLanguage();
   const [selectedRange, setSelectedRange] = useState<MonthRange>(6);
   const [barAnimations, setBarAnimations] = useState<Animated.Value[]>([]);
 
@@ -312,7 +314,7 @@ const MonthlyTrendChartComponent = ({ monthlyTrend }: MonthlyTrendChartProps) =>
     return (
       <View style={styles.chartSection}>
         <View style={styles.headerRow}>
-          <AppText style={styles.sectionTitle}>Monthly Trend</AppText>
+          <AppText style={styles.sectionTitle}>{t('monthlyTrend.title')}</AppText>
           <View style={styles.rangeSelector}>
             {([1, 3, 6] as MonthRange[]).map((range) => (
               <TouchableOpacity
@@ -336,7 +338,7 @@ const MonthlyTrendChartComponent = ({ monthlyTrend }: MonthlyTrendChartProps) =>
           </View>
         </View>
         <View style={styles.emptyState}>
-          <AppText style={styles.emptyText}>No spending data for this period</AppText>
+          <AppText style={styles.emptyText}>{t('monthlyTrend.noSpendingPeriod')}</AppText>
         </View>
       </View>
     );
@@ -346,7 +348,7 @@ const MonthlyTrendChartComponent = ({ monthlyTrend }: MonthlyTrendChartProps) =>
     <View style={styles.chartSection}>
       {/* HeaderRow: Title + Range Selector */}
       <View style={styles.headerRow}>
-        <AppText style={styles.sectionTitle}>Monthly Trend</AppText>
+        <AppText style={styles.sectionTitle}>{t('monthlyTrend.title')}</AppText>
         <View style={styles.rangeSelector}>
           {([1, 3, 6] as MonthRange[]).map((range) => (
             <TouchableOpacity
@@ -373,11 +375,11 @@ const MonthlyTrendChartComponent = ({ monthlyTrend }: MonthlyTrendChartProps) =>
       {/* SubheaderRow: Range label + Summary */}
       <View style={styles.subheaderRow}>
         <AppText style={styles.rangeLabelText}>
-          {selectedRange === 1 ? 'Last month' : `Last ${selectedRange} months`}
+          {selectedRange === 1 ? t('monthlyTrend.lastMonth') : t('monthlyTrend.lastNMonths').replace('{{count}}', String(selectedRange))}
         </AppText>
         {summaryData.total > 0 && (
           <AppText style={styles.summaryText}>
-            Total: {formatCompactCurrency(summaryData.total)}
+            {t('spendingChart.total')}: {formatCompactCurrency(summaryData.total)}
           </AppText>
         )}
       </View>

@@ -3,9 +3,11 @@ import { z } from 'zod';
 import { Expense, IExpenseShare } from '../models/Expense';
 import { Settlement } from '../models/Settlement';
 import { Household } from '../models/Household';
+import { User } from '../models/User';
 import { authMiddleware } from '../middleware/auth';
 import { computeBalances } from '../utils/balances';
 import { calculateExpenseInsights } from '../utils/expenseInsights';
+import { notificationService } from '../services/notificationService';
 import mongoose from 'mongoose';
 
 const router = express.Router();
@@ -207,6 +209,19 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
     await expense.populate('createdBy', 'name email avatarUrl');
     await expense.populate('paidBy', 'name email avatarUrl');
     await expense.populate('participants', 'name email avatarUrl');
+
+    // Send notification to household members
+    const creator = await User.findById(userId);
+    if (creator) {
+      notificationService.notifyExpenseAdded(
+        household.members.map(m => m.toString()),
+        userId,
+        creator.name,
+        data.description,
+        data.totalAmount,
+        data.householdId
+      ).catch(err => console.error('Notification error:', err));
+    }
 
     res.status(201).json(expense);
   } catch (error) {

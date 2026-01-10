@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Roomate",
-    "slug": "roommate-app",
+    "slug": "roomate-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -29,6 +29,11 @@
     },
     "plugins": [
       "expo-secure-store"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "fd1b9880-afd9-4ea4-863f-1fd639fbf8cf"
+      }
+    }
   }
 }

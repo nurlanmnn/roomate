@@ -6,6 +6,7 @@ import { formatCurrency } from '../utils/formatCurrency';
 import { formatDateShort } from '../utils/dateHelpers';
 import { useThemeColors, fontSizes, fontWeights, radii, spacing, shadows } from '../theme';
 import { Avatar } from './ui/Avatar';
+import { useLanguage } from '../context/LanguageContext';
 
 interface BalanceSummaryProps {
   balances: PairwiseBalance[];
@@ -21,6 +22,7 @@ export const BalanceSummary: React.FC<BalanceSummaryProps> = ({
   getUserAvatar,
 }) => {
   const colors = useThemeColors();
+  const { t } = useLanguage();
   const userBalances = balances.filter(b => b.fromUserId === currentUserId || b.toUserId === currentUserId);
 
   const styles = React.useMemo(() => StyleSheet.create({
@@ -85,14 +87,14 @@ export const BalanceSummary: React.FC<BalanceSummaryProps> = ({
   if (userBalances.length === 0) {
     return (
       <View style={styles.container}>
-        <AppText style={styles.emptyText}>All settled up! 🎉</AppText>
+        <AppText style={styles.emptyText}>{t('home.allSettled')} 🎉</AppText>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <AppText style={styles.title}>Your Balances</AppText>
+      <AppText style={styles.title}>{t('home.balanceSummary')}</AppText>
       {userBalances.map((balance, index) => {
         const isOwed = balance.toUserId === currentUserId;
         const otherUserId = isOwed ? balance.fromUserId : balance.toUserId;
@@ -108,19 +110,19 @@ export const BalanceSummary: React.FC<BalanceSummaryProps> = ({
                 {isOwed ? (
                   <AppText style={styles.balanceText}>
                     <AppText style={styles.userName}>{otherUserName}</AppText>
-                    {' owes you '}
+                    {' '}{t('settleUp.owesYou').toLowerCase()}{' '}
                     <AppText style={styles.amountPositive}>{formatCurrency(balance.amount)}</AppText>
                   </AppText>
                 ) : (
                   <AppText style={styles.balanceText}>
-                    You owe <AppText style={styles.userName}>{otherUserName}</AppText>
+                    {t('home.youOwe')} <AppText style={styles.userName}>{otherUserName}</AppText>
                     {' '}
                     <AppText style={styles.amountNegative}>{formatCurrency(balance.amount)}</AppText>
                   </AppText>
                 )}
                 {balance.sinceDate && (
                   <AppText style={styles.sinceDate}>
-                    since {formatDateShort(balance.sinceDate)}
+                    {t('time.since')} {formatDateShort(balance.sinceDate)}
                   </AppText>
                 )}
               </View>

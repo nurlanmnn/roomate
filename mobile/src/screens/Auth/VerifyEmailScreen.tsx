@@ -3,9 +3,11 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, KeyboardAvo
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { authApi } from '../../api/authApi';
+import { useLanguage } from '../../context/LanguageContext';
 
 export const VerifyEmailScreen: React.FC<{ navigation: any; route: any }> = ({ navigation, route }) => {
   const { email } = route.params;
+  const { t } = useLanguage();
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
@@ -57,18 +59,18 @@ export const VerifyEmailScreen: React.FC<{ navigation: any; route: any }> = ({ n
   const handleVerify = async () => {
     const otpString = otp.join('');
     if (otpString.length !== 6) {
-      Alert.alert('Error', 'Please enter the complete 6-digit OTP');
+      Alert.alert(t('common.error'), t('alerts.somethingWentWrong'));
       return;
     }
 
     setLoading(true);
     try {
       await authApi.verifyEmail(email, otpString);
-      Alert.alert('Success', 'Email verified successfully!', [
-        { text: 'OK', onPress: () => navigation.navigate('Login') },
+      Alert.alert(t('common.success'), t('common.success'), [
+        { text: t('common.ok'), onPress: () => navigation.navigate('Login') },
       ]);
     } catch (error: any) {
-      Alert.alert('Verification Failed', error.response?.data?.error || 'Invalid or expired OTP');
+      Alert.alert(t('common.error'), error.response?.data?.error || t('alerts.somethingWentWrong'));
       // Clear OTP on error
       setOtp(['', '', '', '', '', '']);
       inputRefs.current[0]?.focus();
@@ -81,11 +83,11 @@ export const VerifyEmailScreen: React.FC<{ navigation: any; route: any }> = ({ n
     setResendLoading(true);
     try {
       await authApi.resendVerification(email);
-      Alert.alert('Success', 'A new OTP has been sent to your email');
+      Alert.alert(t('common.success'), t('auth.codeSent'));
       setOtp(['', '', '', '', '', '']);
       inputRefs.current[0]?.focus();
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to resend OTP');
+      Alert.alert(t('common.error'), error.response?.data?.error || t('alerts.somethingWentWrong'));
     } finally {
       setResendLoading(false);
     }
@@ -99,9 +101,9 @@ export const VerifyEmailScreen: React.FC<{ navigation: any; route: any }> = ({ n
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         <View style={styles.content}>
-        <Text style={styles.title}>Verify Your Email</Text>
+        <Text style={styles.title}>{t('auth.verifyEmail')}</Text>
         <Text style={styles.subtitle}>
-          We've sent a 6-digit code to{'\n'}
+          {t('auth.enterCode')}{'\n'}
           <Text style={styles.email}>{email}</Text>
         </Text>
 
@@ -130,17 +132,17 @@ export const VerifyEmailScreen: React.FC<{ navigation: any; route: any }> = ({ n
         </View>
 
         <PrimaryButton
-          title="Verify Email"
+          title={t('auth.verifyEmail')}
           onPress={handleVerify}
           loading={loading}
           disabled={otp.join('').length !== 6}
         />
 
         <View style={styles.resendContainer}>
-          <Text style={styles.resendText}>Didn't receive the code? </Text>
+          <Text style={styles.resendText}>{t('auth.noAccount')} </Text>
           <TouchableOpacity onPress={handleResend} disabled={resendLoading}>
             <Text style={[styles.resendLink, resendLoading && styles.resendLinkDisabled]}>
-              {resendLoading ? 'Sending...' : 'Resend OTP'}
+              {resendLoading ? t('common.loading') : t('auth.resendCode')}
             </Text>
           </TouchableOpacity>
         </View>

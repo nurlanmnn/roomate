@@ -5,6 +5,7 @@ import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows } from 
 import { formatCompactCurrency, formatCurrency } from '../utils/formatCurrency';
 import { MonthlyTrendChart } from './MonthlyTrendChart';
 import { DonutChart } from './DonutChart';
+import { useLanguage } from '../context/LanguageContext';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -56,6 +57,7 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
   onChangeRange,
 }) => {
   const colors = useThemeColors();
+  const { t } = useLanguage();
   const cardInnerWidth = screenWidth - spacing.xl * 2 - spacing.md * 2 - spacing.lg * 2;
   const pieSize = Math.min(240, cardInnerWidth - spacing.lg);
   const rangeOptions: { key: 'week' | 'month' | 'year' | 'all'; label: string }[] = [
@@ -68,12 +70,17 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
   const topCategories = byCategory.slice(0, 5);
   const donutData = React.useMemo(
     () =>
-      topCategories.map((cat, index) => ({
-        value: cat.amount,
-        color: getCategoryColor(index),
-        label: cat.category,
-      })),
-    [topCategories]
+      topCategories.map((cat, index) => {
+        const categoryKey = `categories.${cat.category.toLowerCase().replace(/[^a-z]/g, '')}`;
+        const translatedCategory = t(categoryKey);
+        const displayName = translatedCategory !== categoryKey ? translatedCategory : (cat.category.charAt(0).toUpperCase() + cat.category.slice(1));
+        return {
+          value: cat.amount,
+          color: getCategoryColor(index),
+          label: displayName,
+        };
+      }),
+    [topCategories, t]
   );
 
   const styles = React.useMemo(() => StyleSheet.create({
@@ -217,7 +224,7 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
   if (!hasData) {
     return (
       <View style={styles.emptyContainer}>
-        <AppText style={styles.emptyText}>No spending data available yet</AppText>
+        <AppText style={styles.emptyText}>{t('spendingChart.noSpendingData')}</AppText>
       </View>
     );
   }
@@ -227,7 +234,7 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
       {/* Category Breakdown - Pie Chart */}
       {topCategories.length > 0 && (
         <View style={styles.chartSection}>
-          <AppText style={styles.sectionTitle}>Spending by Category</AppText>
+          <AppText style={styles.sectionTitle}>{t('spendingChart.spendingByCategory')}</AppText>
           <View style={styles.rangeRow}>
             {rangeOptions.map((opt) => {
               const active = selectedRange === opt.key;
@@ -261,7 +268,7 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
               centerContent={
                 <View style={{ alignItems: 'center' }}>
                   <AppText style={{ fontSize: fontSizes.sm, color: colors.textSecondary }}>
-                    Total
+                    {t('spendingChart.total')}
                   </AppText>
                   <AppText
                     style={{
@@ -277,18 +284,23 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
             />
           </View>
           <View style={styles.categoryList}>
-            {topCategories.map((cat, index) => (
+            {topCategories.map((cat, index) => {
+              const categoryKey = `categories.${cat.category.toLowerCase().replace(/[^a-z]/g, '')}`;
+              const translatedCategory = t(categoryKey);
+              const displayName = translatedCategory !== categoryKey ? translatedCategory : (cat.category.charAt(0).toUpperCase() + cat.category.slice(1));
+              return (
               <View key={cat.category} style={styles.categoryItem}>
                 <View style={[styles.colorDot, { backgroundColor: getCategoryColor(index) }]} />
                 <AppText style={styles.categoryName} numberOfLines={1} ellipsizeMode="tail">
-                  {cat.category.charAt(0).toUpperCase() + cat.category.slice(1)}
+                  {displayName}
                 </AppText>
                 <View style={styles.categoryRight}>
                   <AppText style={styles.categoryAmount}>{formatCompactCurrency(cat.amount)}</AppText>
                   <AppText style={styles.categoryPercentage}>({cat.percentage.toFixed(1)}%)</AppText>
                 </View>
               </View>
-            ))}
+              );
+            })}
           </View>
         </View>
       )}
@@ -301,12 +313,12 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
       {/* Predictions */}
       {predictions && (
         <View style={styles.predictionContainer}>
-          <AppText style={styles.predictionTitle}>Next Month Prediction</AppText>
+          <AppText style={styles.predictionTitle}>{t('spendingChart.nextMonthPrediction')}</AppText>
           <AppText style={styles.predictionAmount}>{formatCurrency(predictions.nextMonth)}</AppText>
           <AppText style={styles.predictionTrend}>
-            Trend: {predictions.trend === 'increasing' ? '📈 Increasing' : 
-                   predictions.trend === 'decreasing' ? '📉 Decreasing' : 
-                   '➡️ Stable'}
+            {t('spendingChart.trend')}: {predictions.trend === 'increasing' ? `📈 ${t('spendingChart.increasing')}` : 
+                   predictions.trend === 'decreasing' ? `📉 ${t('spendingChart.decreasing')}` : 
+                   `➡️ ${t('spendingChart.stable')}`}
           </AppText>
         </View>
       )}

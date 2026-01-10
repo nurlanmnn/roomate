@@ -4,6 +4,7 @@ import { AppText } from '../../components/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { shoppingApi, ShoppingItem, ShoppingList, WeightUnit } from '../../api/shoppingApi';
 import { ShoppingItemRow } from '../../components/ShoppingItemRow';
 import { QuickAddButton } from '../../components/QuickAddButton';
@@ -18,6 +19,7 @@ const weightUnits: WeightUnit[] = ['lbs', 'kg', 'g', 'oz', 'liter', 'ml', 'fl oz
 export const ShoppingListScreen: React.FC = () => {
   const { selectedHousehold, setSelectedHousehold } = useHousehold();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const colors = useThemeColors();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
   const [lists, setLists] = useState<ShoppingList[]>([]);
@@ -226,10 +228,10 @@ export const ShoppingListScreen: React.FC = () => {
   };
 
   const handleDeleteList = async (list: ShoppingList) => {
-    Alert.alert('Delete List', `Are you sure you want to delete "${list.name}"? This will delete all items in the list.`, [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('shoppingList.deleteList'), t('shoppingList.deleteListConfirm').replace('{{name}}', list.name), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
           try {
@@ -491,12 +493,12 @@ export const ShoppingListScreen: React.FC = () => {
           keyboardShouldPersistTaps="handled"
         >
         <View style={styles.topHeader}>
-          <ScreenHeader title="Shopping" subtitle={selectedHousehold.name} />
+          <ScreenHeader title={t('shopping.title')} subtitle={selectedHousehold.name} />
           <View style={styles.topHeaderActions}>
-            <PrimaryButton title="+ New List" onPress={() => setShowListModal(true)} />
+            <PrimaryButton title={`+ ${t('common.add')}`} onPress={() => setShowListModal(true)} />
           </View>
           <View style={styles.searchWrap}>
-            <SearchBar value={searchQuery} onChangeText={setSearchQuery} placeholder="Search lists & items" />
+            <SearchBar value={searchQuery} onChangeText={setSearchQuery} placeholder={t('common.search')} />
           </View>
         </View>
 
@@ -548,9 +550,9 @@ export const ShoppingListScreen: React.FC = () => {
             </View>
 
             <View style={styles.section}>
-              <AppText style={styles.sectionTitle}>To Buy</AppText>
+              <AppText style={styles.sectionTitle}>{t('shoppingList.toBuy')}</AppText>
               {filteredItems.length === 0 ? (
-                <AppText style={styles.emptyText}>No items to buy</AppText>
+                <AppText style={styles.emptyText}>{t('shoppingList.noItemsToBuy')}</AppText>
               ) : (
                 filteredItems.map((item) => (
                   <ShoppingItemRow
@@ -600,12 +602,12 @@ export const ShoppingListScreen: React.FC = () => {
             )}
 
             <View style={styles.addSection}>
-              <AppText style={styles.addSectionTitle}>Add Item</AppText>
+              <AppText style={styles.addSectionTitle}>{t('shopping.addItem')}</AppText>
               <TextInput
                 style={styles.input}
                 value={name}
                 onChangeText={setName}
-                placeholder="Item name"
+                placeholder={t('shopping.itemName')}
                 placeholderTextColor={colors.textSecondary}
               />
               <TextInput
@@ -616,7 +618,7 @@ export const ShoppingListScreen: React.FC = () => {
                   const numericValue = text.replace(/[^0-9]/g, '');
                   setQuantity(numericValue);
                 }}
-                placeholder="Quantity (optional)"
+                placeholder={`${t('shopping.quantity')} (${t('common.optional')})`}
                 placeholderTextColor={colors.textSecondary}
                 keyboardType="number-pad"
               />
@@ -629,7 +631,7 @@ export const ShoppingListScreen: React.FC = () => {
                     const numericValue = text.replace(/[^0-9]/g, '');
                     setWeight(numericValue);
                   }}
-                  placeholder="Weight (optional)"
+                  placeholder={`${t('shopping.unit')} (${t('common.optional')})`}
                   placeholderTextColor={colors.textSecondary}
                   keyboardType="number-pad"
                 />
@@ -639,7 +641,7 @@ export const ShoppingListScreen: React.FC = () => {
                     onPress={() => setShowUnitDropdown(!showUnitDropdown)}
                   >
                     <AppText style={[styles.dropdownButtonText, !weightUnit && styles.dropdownPlaceholder]}>
-                      {weightUnit || 'Select Unit'}
+                      {weightUnit || t('shopping.selectUnit')}
                     </AppText>
                     <AppText style={styles.dropdownArrow}>{showUnitDropdown ? '▲' : '▼'}</AppText>
                   </TouchableOpacity>
@@ -675,7 +677,7 @@ export const ShoppingListScreen: React.FC = () => {
                             setShowUnitDropdown(false);
                           }}
                         >
-                          <AppText style={styles.dropdownItemText}>None</AppText>
+                          <AppText style={styles.dropdownItemText}>{t('expenses.none')}</AppText>
                         </TouchableOpacity>
                       </ScrollView>
                     </View>
@@ -683,7 +685,7 @@ export const ShoppingListScreen: React.FC = () => {
                 </View>
               </View>
               <View style={styles.toggleRow}>
-                <AppText style={styles.toggleLabel}>Shared</AppText>
+                <AppText style={styles.toggleLabel}>{t('shopping.shared')}</AppText>
                 <TouchableOpacity
                   style={[styles.toggle, isShared && styles.toggleActive]}
                   onPress={() => {
@@ -692,7 +694,7 @@ export const ShoppingListScreen: React.FC = () => {
                   }}
                 >
                   <AppText style={isShared ? styles.toggleTextActive : styles.toggleText}>
-                    Yes
+                    {t('common.yes')}
                   </AppText>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -700,13 +702,13 @@ export const ShoppingListScreen: React.FC = () => {
                   onPress={() => setIsShared(false)}
                 >
                   <AppText style={!isShared ? styles.toggleTextActive : styles.toggleText}>
-                    No
+                    {t('common.no')}
                   </AppText>
                 </TouchableOpacity>
               </View>
               {!isShared && (
                 <View style={styles.ownerSelect}>
-                  <AppText style={styles.ownerLabel}>Owner</AppText>
+                  <AppText style={styles.ownerLabel}>{t('shopping.assignedTo')}</AppText>
                   {selectedHousehold.members.map((member) => (
                     <TouchableOpacity
                       key={member._id}
@@ -721,12 +723,12 @@ export const ShoppingListScreen: React.FC = () => {
                   ))}
                 </View>
               )}
-              <PrimaryButton title={addingItem ? "Adding..." : "Add Item"} onPress={handleAddItem} disabled={addingItem} />
+              <PrimaryButton title={addingItem ? t('common.loading') : t('shopping.addItem')} onPress={handleAddItem} disabled={addingItem} />
             </View>
           </>
         ) : (
           <View style={styles.emptyContainer}>
-            <AppText style={styles.emptyText}>No shopping lists yet. Create one to get started!</AppText>
+            <AppText style={styles.emptyText}>{t('shopping.noItemsDescription')}</AppText>
           </View>
         )}
       </ScrollView>
@@ -749,19 +751,19 @@ export const ShoppingListScreen: React.FC = () => {
         >
           <View style={styles.modalContent}>
             <AppText style={styles.modalTitle}>
-              {editingList ? 'Edit List' : 'Create New List'}
+              {editingList ? t('common.edit') : t('common.create')}
             </AppText>
             <TextInput
               style={styles.input}
               value={newListName}
               onChangeText={setNewListName}
-              placeholder="List name"
+              placeholder={t('shopping.title')}
               placeholderTextColor={colors.textSecondary}
               autoFocus
             />
             <View style={styles.modalActions}>
               <PrimaryButton
-                title="Cancel"
+                title={t('common.cancel')}
                 onPress={() => {
                   setShowListModal(false);
                   setEditingList(null);
@@ -770,7 +772,7 @@ export const ShoppingListScreen: React.FC = () => {
               />
               <View style={styles.spacer} />
               <PrimaryButton
-                title={editingList ? 'Update' : 'Create'}
+                title={editingList ? t('common.update') : t('common.create')}
                 onPress={editingList ? handleUpdateList : handleCreateList}
               />
             </View>
@@ -804,12 +806,12 @@ export const ShoppingListScreen: React.FC = () => {
             keyboardShouldPersistTaps="handled"
           >
             <View style={styles.modalContent}>
-              <AppText style={styles.modalTitle}>Edit Item</AppText>
+              <AppText style={styles.modalTitle}>{t('shopping.editItem')}</AppText>
               <TextInput
                 style={styles.input}
                 value={editItemName}
                 onChangeText={setEditItemName}
-                placeholder="Item name"
+                placeholder={t('shopping.itemName')}
                 placeholderTextColor={colors.textSecondary}
                 autoFocus
               />
@@ -821,7 +823,7 @@ export const ShoppingListScreen: React.FC = () => {
                   const numericValue = text.replace(/[^0-9]/g, '');
                   setEditItemQuantity(numericValue);
                 }}
-                placeholder="Quantity (optional)"
+                placeholder={`${t('shopping.quantity')} (${t('common.optional')})`}
                 placeholderTextColor={colors.textSecondary}
                 keyboardType="number-pad"
               />
@@ -834,7 +836,7 @@ export const ShoppingListScreen: React.FC = () => {
                     const numericValue = text.replace(/[^0-9]/g, '');
                     setEditItemWeight(numericValue);
                   }}
-                  placeholder="Weight (optional)"
+                  placeholder={`${t('shopping.unit')} (${t('common.optional')})`}
                   placeholderTextColor={colors.textSecondary}
                   keyboardType="number-pad"
                 />
@@ -844,7 +846,7 @@ export const ShoppingListScreen: React.FC = () => {
                     onPress={() => setShowEditUnitDropdown(!showEditUnitDropdown)}
                   >
                     <AppText style={[styles.dropdownButtonText, !editItemWeightUnit && styles.dropdownPlaceholder]}>
-                      {editItemWeightUnit || 'Select Unit'}
+                      {editItemWeightUnit || t('shopping.selectUnit')}
                     </AppText>
                     <AppText style={styles.dropdownArrow}>{showEditUnitDropdown ? '▲' : '▼'}</AppText>
                   </TouchableOpacity>
@@ -880,7 +882,7 @@ export const ShoppingListScreen: React.FC = () => {
                             setShowEditUnitDropdown(false);
                           }}
                         >
-                          <AppText style={styles.dropdownItemText}>None</AppText>
+                          <AppText style={styles.dropdownItemText}>{t('expenses.none')}</AppText>
                         </TouchableOpacity>
                       </ScrollView>
                     </View>
@@ -888,7 +890,7 @@ export const ShoppingListScreen: React.FC = () => {
                 </View>
               </View>
               <View style={styles.toggleRow}>
-                <AppText style={styles.toggleLabel}>Shared</AppText>
+                <AppText style={styles.toggleLabel}>{t('shopping.shared')}</AppText>
                 <TouchableOpacity
                   style={[styles.toggle, editItemIsShared && styles.toggleActive]}
                   onPress={() => {
@@ -897,7 +899,7 @@ export const ShoppingListScreen: React.FC = () => {
                   }}
                 >
                   <AppText style={editItemIsShared ? styles.toggleTextActive : styles.toggleText}>
-                    Yes
+                    {t('common.yes')}
                   </AppText>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -905,13 +907,13 @@ export const ShoppingListScreen: React.FC = () => {
                   onPress={() => setEditItemIsShared(false)}
                 >
                   <AppText style={!editItemIsShared ? styles.toggleTextActive : styles.toggleText}>
-                    No
+                    {t('common.no')}
                   </AppText>
                 </TouchableOpacity>
               </View>
               {!editItemIsShared && selectedHousehold && (
                 <View style={styles.ownerSelect}>
-                  <AppText style={styles.ownerLabel}>Owner</AppText>
+                  <AppText style={styles.ownerLabel}>{t('shopping.assignedTo')}</AppText>
                   {selectedHousehold.members.map((member) => (
                     <TouchableOpacity
                       key={member._id}
@@ -928,7 +930,7 @@ export const ShoppingListScreen: React.FC = () => {
               )}
               <View style={styles.modalActions}>
                 <PrimaryButton
-                  title="Cancel"
+                  title={t('common.cancel')}
                   onPress={() => {
                     setEditingItem(null);
                     setEditItemName('');
@@ -940,7 +942,7 @@ export const ShoppingListScreen: React.FC = () => {
                   }}
                 />
                 <View style={styles.spacer} />
-                <PrimaryButton title="Update" onPress={handleUpdateItem} />
+                <PrimaryButton title={t('common.update')} onPress={handleUpdateItem} />
               </View>
             </View>
           </ScrollView>

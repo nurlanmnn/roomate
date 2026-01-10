@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { householdsApi, Household } from '../../api/householdsApi';
 import { useHousehold } from '../../context/HouseholdContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { FormTextInput } from '../../components/FormTextInput';
 import { EmptyState } from '../../components/ui/EmptyState';
@@ -12,6 +13,7 @@ import { AppText } from '../../components/AppText';
 
 export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const colors = useThemeColors();
+  const { t } = useLanguage();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
   const [households, setHouseholds] = useState<Household[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,7 +33,7 @@ export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigatio
       const data = await householdsApi.getHouseholds();
       setHouseholds(data);
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to load households');
+      Alert.alert(t('common.error'), error.response?.data?.error || t('alerts.somethingWentWrong'));
     } finally {
       setLoading(false);
     }
@@ -39,7 +41,7 @@ export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigatio
 
   const handleCreateHousehold = async () => {
     if (!householdName.trim()) {
-      Alert.alert('Error', 'Please enter a household name');
+      Alert.alert(t('common.error'), t('household.householdName'));
       return;
     }
 
@@ -52,17 +54,17 @@ export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigatio
       setCreateModalVisible(false);
       setHouseholdName('');
       setHouseholdAddress('');
-      Alert.alert('Success', `Household created! Join code: ${household.joinCode}`, [
-        { text: 'OK', onPress: () => handleSelectHousehold(household) },
+      Alert.alert(t('common.success'), `${t('household.householdCreated')}! ${t('householdSettingsScreen.inviteCode')}: ${household.joinCode}`, [
+        { text: t('common.ok'), onPress: () => handleSelectHousehold(household) },
       ]);
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to create household');
+      Alert.alert(t('common.error'), error.response?.data?.error || t('alerts.somethingWentWrong'));
     }
   };
 
   const handleJoinHousehold = async () => {
     if (!joinCode.trim()) {
-      Alert.alert('Error', 'Please enter a join code');
+      Alert.alert(t('common.error'), t('household.enterCode'));
       return;
     }
 
@@ -73,7 +75,7 @@ export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigatio
       setJoinCode('');
       handleSelectHousehold(household);
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.error || 'Invalid join code');
+      Alert.alert(t('common.error'), error.response?.data?.error || t('household.invalidCode'));
     }
   };
 
@@ -87,7 +89,7 @@ export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigatio
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <ScrollView style={styles.scrollView}>
       <View style={styles.header}>
-        <AppText style={styles.title}>Select Household</AppText>
+        <AppText style={styles.title}>{t('household.selectHousehold')}</AppText>
         <TouchableOpacity
           style={styles.settingsButton}
           onPress={() => navigation.navigate('Settings', { fromHouseholdSelect: true })}
@@ -98,7 +100,7 @@ export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigatio
 
       {households.length > 0 ? (
         <View style={styles.section}>
-          <AppText style={styles.sectionTitle}>Your Households</AppText>
+          <AppText style={styles.sectionTitle}>{t('household.yourHouseholds')}</AppText>
           {households.map((household) => (
             <TouchableOpacity
               key={household._id}
@@ -109,7 +111,7 @@ export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigatio
               {household.address && (
                 <AppText style={styles.householdAddress}>{household.address}</AppText>
               )}
-              <AppText style={styles.joinCode}>Code: {household.joinCode}</AppText>
+              <AppText style={styles.joinCode}>{t('householdSettingsScreen.inviteCode')}: {household.joinCode}</AppText>
             </TouchableOpacity>
           ))}
         </View>
@@ -117,8 +119,8 @@ export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigatio
         <View style={styles.emptyStateContainer}>
           <EmptyState
             icon="home-outline"
-            title="No Household Yet"
-            message="You're not part of any household. Create a new one or join an existing household using a code."
+            title={t('household.noHouseholds')}
+            message={t('household.createOrJoin')}
             variant="minimal"
           />
         </View>
@@ -126,12 +128,12 @@ export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigatio
 
       <View style={styles.actions}>
         <PrimaryButton
-          title="Create New Household"
+          title={t('household.createHousehold')}
           onPress={() => setCreateModalVisible(true)}
           style={styles.actionButton}
         />
         <PrimaryButton
-          title="Join Household with Code"
+          title={t('household.joinWithCode')}
           onPress={() => setJoinModalVisible(true)}
           variant="secondary"
           style={styles.actionButton}
@@ -151,29 +153,29 @@ export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigatio
           keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
           <View style={styles.modalContent}>
-            <AppText style={styles.modalTitle}>Create Household</AppText>
+            <AppText style={styles.modalTitle}>{t('household.createHousehold')}</AppText>
             <FormTextInput
-              label="Name"
+              label={t('householdSettingsScreen.householdName')}
               value={householdName}
               onChangeText={setHouseholdName}
               placeholder="e.g., Alafaya Commons 203"
             />
             <FormTextInput
-              label="Address (Optional)"
+              label={t('household.householdLocation')}
               value={householdAddress}
               onChangeText={setHouseholdAddress}
               placeholder="Orlando, FL"
             />
             <View style={styles.modalActions}>
               <PrimaryButton
-                title="Cancel"
+                title={t('common.cancel')}
                 onPress={() => setCreateModalVisible(false)}
                 variant="secondary"
                 style={styles.modalButton}
               />
               <View style={styles.buttonSpacer} />
               <PrimaryButton
-                title="Create"
+                title={t('common.create')}
                 onPress={handleCreateHousehold}
                 style={styles.modalButton}
               />
@@ -195,23 +197,23 @@ export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigatio
           keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
           <View style={styles.modalContent}>
-            <AppText style={styles.modalTitle}>Join Household</AppText>
+            <AppText style={styles.modalTitle}>{t('household.joinHousehold')}</AppText>
             <FormTextInput
-              label="Join Code"
+              label={t('householdSettingsScreen.inviteCode')}
               value={joinCode}
               onChangeText={setJoinCode}
-              placeholder="Enter 6-character code"
+              placeholder={t('household.enterCode')}
             />
             <View style={styles.modalActions}>
               <PrimaryButton
-                title="Cancel"
+                title={t('common.cancel')}
                 onPress={() => setJoinModalVisible(false)}
                 variant="secondary"
                 style={styles.modalButton}
               />
               <View style={styles.buttonSpacer} />
               <PrimaryButton
-                title="Join"
+                title={t('household.joinHousehold')}
                 onPress={handleJoinHousehold}
                 style={styles.modalButton}
               />

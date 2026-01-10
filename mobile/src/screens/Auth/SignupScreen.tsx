@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FormTextInput } from '../../components/FormTextInput';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 export const SignupScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const [name, setName] = useState('');
@@ -12,20 +13,21 @@ export const SignupScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { signup } = useAuth();
+  const { t } = useLanguage();
 
   const handleSignup = async () => {
     if (!name || !email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert(t('common.error'), t('alerts.somethingWentWrong'));
       return;
     }
 
     if (password.length < 8) {
-      Alert.alert('Error', 'Password must be at least 8 characters');
+      Alert.alert(t('common.error'), t('auth.weakPassword'));
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      Alert.alert(t('common.error'), t('alerts.somethingWentWrong'));
       return;
     }
 
@@ -35,7 +37,7 @@ export const SignupScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
       // Navigate to OTP verification screen
       navigation.navigate('VerifyEmail', { email });
     } catch (error: any) {
-      Alert.alert('Signup Failed', error.response?.data?.error || 'Failed to create account');
+      Alert.alert(t('common.error'), error.response?.data?.error || t('alerts.somethingWentWrong'));
     } finally {
       setLoading(false);
     }
@@ -57,21 +59,21 @@ export const SignupScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
         style={styles.backButton}
         onPress={() => navigation.navigate('Landing')}
       >
-        <Text style={styles.backButtonText}>← Back</Text>
+        <Text style={styles.backButtonText}>← {t('common.back')}</Text>
       </TouchableOpacity>
       
-      <Text style={styles.title}>Create Account</Text>
-      <Text style={styles.subtitle}>Sign up to get started</Text>
+      <Text style={styles.title}>{t('auth.createAccount')}</Text>
+      <Text style={styles.subtitle}>{t('auth.getStarted')}</Text>
 
       <FormTextInput
-        label="Name"
+        label={t('auth.name')}
         value={name}
         onChangeText={setName}
-        placeholder="Your name"
+        placeholder={t('auth.name')}
       />
 
       <FormTextInput
-        label="Email"
+        label={t('auth.email')}
         value={email}
         onChangeText={setEmail}
         placeholder="your@email.com"
@@ -79,27 +81,27 @@ export const SignupScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
       />
 
       <FormTextInput
-        label="Password"
+        label={t('auth.password')}
         value={password}
         onChangeText={setPassword}
-        placeholder="At least 8 characters"
+        placeholder={t('auth.password')}
         secureTextEntry
       />
 
       <FormTextInput
-        label="Confirm Password"
+        label={t('accountSettingsScreen.confirmPassword')}
         value={confirmPassword}
         onChangeText={setConfirmPassword}
-        placeholder="Confirm your password"
+        placeholder={t('accountSettingsScreen.confirmPassword')}
         secureTextEntry
       />
 
-      <PrimaryButton title="Sign Up" onPress={handleSignup} loading={loading} />
+      <PrimaryButton title={t('auth.signup')} onPress={handleSignup} loading={loading} />
       
       <View style={styles.footer}>
-        <Text style={styles.footerText}>Already have an account? </Text>
+        <Text style={styles.footerText}>{t('auth.haveAccount')} </Text>
         <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-          <Text style={styles.linkText}>Sign In</Text>
+          <Text style={styles.linkText}>{t('auth.login')}</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>

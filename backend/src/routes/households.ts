@@ -1,7 +1,9 @@
 import express, { Request, Response } from 'express';
 import { z } from 'zod';
 import { Household } from '../models/Household';
+import { User } from '../models/User';
 import { authMiddleware } from '../middleware/auth';
+import { notificationService } from '../services/notificationService';
 import mongoose from 'mongoose';
 import crypto from 'crypto';
 
@@ -115,6 +117,18 @@ router.post('/join', authMiddleware, async (req: Request, res: Response) => {
     await household.populate('ownerId', 'name email avatarUrl');
     await household.populate('members', 'name email avatarUrl');
 
+    // Notify existing members about new member
+    const newMember = await User.findById(userId);
+    if (newMember) {
+      notificationService.notifyMemberAdded(
+        household.members.map(m => m._id?.toString() || m.toString()),
+        userId,
+        newMember.name,
+        household.name,
+        household._id.toString()
+      ).catch(err => console.error('Notification error:', err));
+    }
+
     res.json(household);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -189,6 +203,14 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
 
     await household.populate('ownerId', 'name email avatarUrl');
     await household.populate('members', 'name email avatarUrl');
+
+    // Notify members about household update
+    notificationService.notifyHouseholdUpdated(
+      household.members.map(m => m._id?.toString() || m.toString()),
+      userId,
+      household.name,
+      household._id.toString()
+    ).catch(err => console.error('Notification error:', err));
 
     res.json(household);
   } catch (error) {
@@ -286,6 +308,12 @@ router.delete('/:id/members/:memberId', authMiddleware, async (req: Request, res
     await household.populate('ownerId', 'name email avatarUrl');
     await household.populate('members', 'name email avatarUrl');
 
+    // Notify the removed member
+    notificationService.notifyMemberRemoved(
+      memberId,
+      household.name
+    ).catch(err => console.error('Notification error:', err));
+
     res.json(household);
   } catch (error) {
     console.error('Remove member error:', error);
@@ -311,7 +339,18 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
       return res.status(403).json({ error: 'Only the owner can delete the household' });
     }
 
+    // Notify all members before deletion
+    const memberIds = household.members.map(m => m.toString());
+    const householdName = household.name;
+
     await Household.findByIdAndDelete(req.params.id);
+
+    // Notify members about deletion
+    notificationService.notifyHouseholdDeleted(
+      memberIds,
+      userId,
+      householdName
+    ).catch(err => console.error('Notification error:', err));
 
     res.json({ success: true });
   } catch (error) {

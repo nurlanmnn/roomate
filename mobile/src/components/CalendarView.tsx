@@ -3,6 +3,7 @@ import { View, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { AppText } from './AppText';
 import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows } from '../theme';
 import { Ionicons } from '@expo/vector-icons';
+import { useLanguage } from '../context/LanguageContext';
 import {
   format,
   startOfMonth,
@@ -35,6 +36,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   onAddEvent,
 }) => {
   const colors = useThemeColors();
+  const { t } = useLanguage();
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const styles = useMemo(
@@ -178,7 +180,15 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     onAddEvent?.(day);
   };
 
-  const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const weekDays = [
+    t('weekDays.sun'),
+    t('weekDays.mon'),
+    t('weekDays.tue'),
+    t('weekDays.wed'),
+    t('weekDays.thu'),
+    t('weekDays.fri'),
+    t('weekDays.sat'),
+  ];
 
   return (
     <View style={styles.container}>

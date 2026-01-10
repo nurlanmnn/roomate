@@ -12,6 +12,7 @@ import { formatDate, formatDateTime } from '../../utils/dateHelpers';
 import { useThemeColors, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
 import { Ionicons } from '@expo/vector-icons';
 import { parseISO, subMonths, subYears, startOfMonth, startOfYear } from 'date-fns';
+import { useLanguage } from '../../context/LanguageContext';
 
 type DateFilter = 'all' | 'month' | '3months' | '6months' | 'year';
 
@@ -20,6 +21,7 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = ({ navigat
   const { user } = useAuth();
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
+  const { t } = useLanguage();
   const styles = useMemo(
     () =>
       StyleSheet.create({
@@ -260,7 +262,7 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = ({ navigat
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.emptyContainer}>
-          <Text>Please select a household</Text>
+          <Text>{t('alerts.selectHousehold')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -296,7 +298,7 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = ({ navigat
                     dateFilter === filter && styles.filterButtonTextActive,
                   ]}
                 >
-                  {filter === 'all' ? 'All' : filter === 'month' ? '1M' : filter === '3months' ? '3M' : filter === '6months' ? '6M' : '1Y'}
+                  {filter === 'all' ? t('time.all') : filter === 'month' ? '1M' : filter === '3months' ? '3M' : filter === '6months' ? '6M' : '1Y'}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -305,16 +307,16 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = ({ navigat
 
         {loading ? (
           <View style={styles.emptyContainer}>
-            <Text style={styles.loadingText}>Loading settlements...</Text>
+            <Text style={styles.loadingText}>{t('settlementHistory.loading')}</Text>
           </View>
         ) : filteredSettlements.length === 0 ? (
           <View style={styles.emptyContainer}>
             <EmptyState
               icon="receipt-outline"
-              title={settlements.length === 0 ? "No settlements yet" : "No settlements in this period"}
+              title={settlements.length === 0 ? t('settlementHistory.noSettlements') : t('settlementHistory.noSettlementsInPeriod')}
               message={settlements.length === 0 
-                ? "When you mark payments as paid in the Settle Up screen, they'll appear here with all the details."
-                : "Try selecting a different time period to see more settlements."}
+                ? t('settlementHistory.noSettlementsDescription')
+                : t('settlementHistory.tryDifferentPeriod')}
               variant="minimal"
             />
           </View>
@@ -353,7 +355,7 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = ({ navigat
                       <Avatar name={fromUserName} uri={fromUserAvatar} size={32} />
                       <Text style={styles.settlementText}>
                         <Text style={styles.userName}>{fromUserName}</Text>
-                        {' paid '}
+                        {` ${t('settlementHistory.paid')} `}
                         <Text style={styles.userName}>{toUserName}</Text>
                       </Text>
                     </View>
@@ -383,7 +385,7 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = ({ navigat
                         onPress={() => setSelectedProofImage(settlement.proofImageUrl || null)}
                       >
                         <Ionicons name="image-outline" size={16} color={colors.primary} />
-                        <Text style={styles.proofButtonText}>View Proof</Text>
+                        <Text style={styles.proofButtonText}>{t('settlementHistory.viewProof')}</Text>
                       </TouchableOpacity>
                     )}
                   </View>

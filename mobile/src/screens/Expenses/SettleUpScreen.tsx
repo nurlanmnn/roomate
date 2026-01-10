@@ -14,12 +14,14 @@ import { Avatar } from '../../components/ui/Avatar';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
+import { useLanguage } from '../../context/LanguageContext';
 
 export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { selectedHousehold } = useHousehold();
   const { user } = useAuth();
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
+  const { t } = useLanguage();
   const [balances, setBalances] = useState<PairwiseBalance[]>([]);
   const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [loading, setLoading] = useState(false);
@@ -422,7 +424,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission needed', 'We need access to your photos to add proof of payment.');
+        Alert.alert(t('alerts.permissionDenied'), t('alerts.photoPermissionNeeded'));
         return;
       }
 
@@ -445,7 +447,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
       }
     } catch (error) {
       console.error('Error picking image:', error);
-      Alert.alert('Error', 'Failed to pick image');
+      Alert.alert(t('common.error'), t('alerts.somethingWentWrong'));
     }
   };
 
@@ -462,7 +464,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     );
 
     if (!reverseBalance) {
-      Alert.alert('Error', 'No mutual debt found to net');
+      Alert.alert(t('common.error'), t('alerts.noMutualDebt'));
       return;
     }
 
@@ -470,24 +472,26 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     const userOwes = balance.amount;
     const otherOwes = reverseBalance.amount;
     const netAmount = Math.abs(userOwes - otherOwes);
+    const debtor = userOwes >= otherOwes ? t('home.youOwe').split(' ')[0] : otherUserName;
+    const creditor = userOwes >= otherOwes ? otherUserName : t('home.youOwe').split(' ')[0];
 
     Alert.alert(
-      'Net Balance',
-      `You owe ${otherUserName} ${formatCurrency(userOwes)} and ${otherUserName} owes you ${formatCurrency(otherOwes)}.\n\nThis will create a settlement to simplify the balance. After netting, ${userOwes >= otherOwes ? 'you' : otherUserName} will owe ${formatCurrency(netAmount)} to ${userOwes >= otherOwes ? otherUserName : 'you'}.\n\nContinue?`,
+      t('settleUp.netBalance'),
+      `${t('home.youOwe')} ${otherUserName} ${formatCurrency(userOwes)} ${t('common.and')} ${otherUserName} ${t('settleUp.owesYou').toLowerCase()} ${formatCurrency(otherOwes)}.\n\n${debtor} ${t('settleUp.willOwe')} ${formatCurrency(netAmount)} ${t('common.to')} ${creditor}.\n\n${t('common.continue')}?`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Net Balance',
+          text: t('settleUp.netBalance'),
           onPress: async () => {
             try {
               await settlementsApi.netBalance({
                 householdId: selectedHousehold._id,
                 otherUserId: balance.toUserId,
               });
-              Alert.alert('Success', 'Balance has been netted successfully!');
+              Alert.alert(t('common.success'), t('alerts.balanceNetted'));
               loadBalances();
             } catch (error: any) {
-              Alert.alert('Error', error.response?.data?.error || 'Failed to net balance');
+              Alert.alert(t('common.error'), error.response?.data?.error || t('alerts.somethingWentWrong'));
             }
           },
         },
@@ -499,7 +503,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     if (!selectedHousehold || !user || !selectedBalance) return;
 
     if (!amount || !method) {
-      Alert.alert('Error', 'Please fill in amount and method');
+      Alert.alert(t('common.error'), t('alerts.fillRequiredFields'));
       return;
     }
 
@@ -519,7 +523,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
       loadBalances();
       navigation.goBack();
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to create settlement');
+      Alert.alert(t('common.error'), error.response?.data?.error || t('alerts.somethingWentWrong'));
     }
   };
 
@@ -527,7 +531,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.emptyContainer}>
-          <Text>Please select a household</Text>
+          <Text>{t('alerts.selectHousehold')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -562,12 +566,12 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
 
     const amountToForgive = parseFloat(forgiveAmount);
     if (isNaN(amountToForgive) || amountToForgive <= 0) {
-      Alert.alert('Error', 'Please enter a valid amount');
+      Alert.alert(t('common.error'), t('alerts.invalidAmount'));
       return;
     }
 
     if (amountToForgive > selectedForgiveBalance.amount) {
-      Alert.alert('Error', 'Amount cannot exceed the debt');
+      Alert.alert(t('common.error'), t('alerts.amountExceedsDebt'));
       return;
     }
 
@@ -580,17 +584,17 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         fromUserId: selectedForgiveBalance.fromUserId,
         toUserId: selectedForgiveBalance.toUserId,
         amount: amountToForgive,
-        method: 'Forgiven',
+        method: t('settleUp.forgiven'),
         note: amountToForgive < selectedForgiveBalance.amount 
-          ? `Partial debt forgiven by recipient (${formatCurrency(amountToForgive)} of ${formatCurrency(selectedForgiveBalance.amount)})`
-          : 'Debt forgiven by recipient',
+          ? `${t('settleUp.partialDebtForgiven')} (${formatCurrency(amountToForgive)} / ${formatCurrency(selectedForgiveBalance.amount)})`
+          : t('settleUp.debtForgivenNote'),
         date: new Date().toISOString(),
       });
       setForgiveModalVisible(false);
       loadBalances();
-      Alert.alert('Success', `You have forgiven ${formatCurrency(amountToForgive)} that ${fromUserName} owed you.`);
+      Alert.alert(t('common.success'), t('alerts.debtForgiven', { amount: formatCurrency(amountToForgive), user: fromUserName }));
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to forgive debt');
+      Alert.alert(t('common.error'), error.response?.data?.error || t('alerts.somethingWentWrong'));
     }
   };
 
@@ -612,15 +616,15 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
           onPress={() => navigation.navigate('SettlementHistory')}
         >
           <Ionicons name="receipt-outline" size={20} color={colors.primary} />
-          <Text style={styles.historyButtonText}>View Settlement History</Text>
+          <Text style={styles.historyButtonText}>{t('expenses.viewSettlementHistory')}</Text>
         </TouchableOpacity>
       </View>
 
       {userOwedBalances.length === 0 ? (
         <EmptyState
           icon="checkmark-circle-outline"
-          title="All settled up! 🎉"
-          message="You're all caught up with your roommates. No outstanding balances to settle."
+          title={`${t('home.allSettled')} 🎉`}
+          message={t('settleUp.noBalances')}
           variant="minimal"
         />
       ) : (
@@ -637,14 +641,14 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                   <Avatar name={toUserName} uri={toUserAvatar} size={40} />
                   <View style={styles.balanceTextContainer}>
                     <Text style={styles.balanceText}>
-                      You owe <Text style={styles.userName}>{toUserName}</Text>{' '}
+                      {t('home.youOwe')} <Text style={styles.userName}>{toUserName}</Text>{' '}
                       <Text style={styles.amount}>{formatCurrency(balance.amount)}</Text>
                     </Text>
                   </View>
                 </View>
                 {hasMutualDebt && (
                   <Text style={styles.mutualDebtNote}>
-                    💡 {toUserName} also owes you money. You can net the balances.
+                    💡 {toUserName} {t('settleUp.alsoOwesYou')}
                   </Text>
                 )}
                 <View style={styles.actions}>
@@ -653,14 +657,14 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                       style={[styles.actionButton, styles.netButton]}
                       onPress={() => handleNetBalance(balance)}
                     >
-                      <Text style={styles.actionButtonText}>Net Balance</Text>
+                      <Text style={styles.actionButtonText}>{t('settleUp.netBalance')}</Text>
                     </TouchableOpacity>
                   )}
                   <TouchableOpacity
                     style={[styles.actionButton, styles.markButton]}
                     onPress={() => handleMarkAsPaid(balance)}
                   >
-                    <Text style={styles.actionButtonText}>Mark as Paid</Text>
+                    <Text style={styles.actionButtonText}>{t('settleUp.markAsPaid')}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -672,7 +676,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
       {/* Balances where user is owed money */}
       {userOwedToBalances.length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Money Owed to You</Text>
+          <Text style={styles.sectionTitle}>{t('settleUp.moneyOwedToYou')}</Text>
           {userOwedToBalances.map((balance, index) => {
             const fromUserName = getUserName(balance.fromUserId);
             const fromUserAvatar = getUserAvatar(balance.fromUserId);
@@ -683,7 +687,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                   <Avatar name={fromUserName} uri={fromUserAvatar} size={40} />
                   <View style={styles.balanceTextContainer}>
                     <Text style={styles.balanceText}>
-                      <Text style={styles.userName}>{fromUserName}</Text> owes you{' '}
+                      <Text style={styles.userName}>{fromUserName}</Text> {t('settleUp.owesYou').toLowerCase()}{' '}
                       <Text style={[styles.amount, styles.amountPositive]}>{formatCurrency(balance.amount)}</Text>
                     </Text>
                   </View>
@@ -694,7 +698,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                     onPress={() => handleForgiveDebt(balance)}
                   >
                     <Ionicons name="close-circle-outline" size={18} color={colors.surface} style={{ marginRight: spacing.xs }} />
-                    <Text style={styles.actionButtonText}>Forgive Debt</Text>
+                    <Text style={styles.actionButtonText}>{t('settleUp.forgiveDebt')}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -706,7 +710,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
       {/* Received Payments with Receipts */}
       {receivedSettlements.length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Received Payments with Receipts</Text>
+          <Text style={styles.sectionTitle}>{t('settleUp.receivedSettlements')}</Text>
           {receivedSettlements.map((settlement) => {
             const fromUserId = typeof settlement.fromUserId === 'object' && settlement.fromUserId !== null
               ? settlement.fromUserId._id
@@ -720,7 +724,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                   <Avatar name={fromUserName} uri={fromUserAvatar} size={32} />
                   <View style={styles.receivedSettlementInfo}>
                     <Text style={styles.receivedSettlementText}>
-                      <Text style={styles.userName}>{fromUserName}</Text> paid you {formatCurrency(settlement.amount)}
+                      <Text style={styles.userName}>{fromUserName}</Text> {t('settleUp.paidYou')} {formatCurrency(settlement.amount)}
                     </Text>
                     {settlement.method && (
                       <Text style={styles.receivedSettlementMethod}>{settlement.method}</Text>
@@ -733,7 +737,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                     onPress={() => setSelectedProofImage(settlement.proofImageUrl || null)}
                   >
                     <Ionicons name="receipt-outline" size={18} color={colors.primary} />
-                    <Text style={styles.viewReceiptText}>View Receipt</Text>
+                    <Text style={styles.viewReceiptText}>{t('settleUp.viewReceipt')}</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -755,34 +759,34 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
           keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Mark as Paid</Text>
+            <Text style={styles.modalTitle}>{t('settleUp.markAsPaid')}</Text>
             {selectedBalance && (
               <Text style={styles.modalSubtitle}>
-                Paying {getUserName(selectedBalance.toUserId)}
+                {t('settleUp.paying')} {getUserName(selectedBalance.toUserId)}
               </Text>
             )}
             <FormTextInput
-              label="Amount"
+              label={t('expenses.amount')}
               value={amount}
               onChangeText={setAmount}
               placeholder="0.00"
               keyboardType="numeric"
             />
             <FormTextInput
-              label="Method"
+              label={t('settleUp.method')}
               value={method}
               onChangeText={setMethod}
-              placeholder="e.g., Venmo, Zelle, Cash"
+              placeholder={t('settleUp.methodPlaceholder')}
             />
             <FormTextInput
-              label="Note (Optional)"
+              label={t('settleUp.note')}
               value={note}
               onChangeText={setNote}
-              placeholder="Add a note"
+              placeholder={t('settleUp.notePlaceholder')}
               multiline
             />
             <View style={styles.proofSection}>
-              <Text style={styles.proofLabel}>Proof of Payment (Optional)</Text>
+              <Text style={styles.proofLabel}>{t('settleUp.proofOptional')}</Text>
               {proofImage ? (
                 <View style={styles.proofImageContainer}>
                   <Image source={{ uri: proofImage }} style={styles.proofImage} />
@@ -799,18 +803,18 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                   onPress={handlePickProofImage}
                 >
                   <Ionicons name="camera-outline" size={24} color={colors.primary} />
-                  <Text style={styles.addProofText}>Add Photo</Text>
+                  <Text style={styles.addProofText}>{t('settleUp.addProof')}</Text>
                 </TouchableOpacity>
               )}
             </View>
             <View style={styles.modalActions}>
               <PrimaryButton
-                title="Cancel"
+                title={t('common.cancel')}
                 onPress={() => setSettleModalVisible(false)}
               />
               <View style={styles.spacer} />
               <PrimaryButton
-                title="Save"
+                title={t('common.save')}
                 onPress={handleSubmitSettlement}
               />
             </View>
@@ -831,10 +835,10 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
           keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Forgive Debt</Text>
+            <Text style={styles.modalTitle}>{t('settleUp.forgiveDebt')}</Text>
             {selectedForgiveBalance && (
               <Text style={styles.modalSubtitle}>
-                {getUserName(selectedForgiveBalance.fromUserId)} owes you {formatCurrency(selectedForgiveBalance.amount)}
+                {getUserName(selectedForgiveBalance.fromUserId)} {t('settleUp.owesYou').toLowerCase()} {formatCurrency(selectedForgiveBalance.amount)}
               </Text>
             )}
             
@@ -851,7 +855,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                   <Text style={[
                     styles.forgiveAmountOptionText,
                     forgiveAmount === selectedForgiveBalance.amount.toFixed(2) && styles.forgiveAmountOptionTextSelected,
-                  ]}>Full Amount</Text>
+                  ]}>{t('settleUp.fullAmount')}</Text>
                   <Text style={styles.forgiveAmountOptionValue}>
                     {formatCurrency(selectedForgiveBalance.amount)}
                   </Text>
@@ -868,7 +872,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                     <Text style={[
                       styles.forgiveAmountOptionText,
                       forgiveAmount === (selectedForgiveBalance.amount / 2).toFixed(2) && styles.forgiveAmountOptionTextSelected,
-                    ]}>Half</Text>
+                    ]}>{t('settleUp.halfAmount')}</Text>
                     <Text style={styles.forgiveAmountOptionValue}>
                       {formatCurrency(selectedForgiveBalance.amount / 2)}
                     </Text>
@@ -879,7 +883,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
             
             <View style={styles.customAmountContainer}>
               <FormTextInput
-                label="Custom Amount"
+                label={t('settleUp.customAmount')}
                 value={forgiveAmount}
                 onChangeText={setForgiveAmount}
                 placeholder="0.00"
@@ -890,18 +894,18 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
             <View style={styles.forgiveWarning}>
               <Ionicons name="warning-outline" size={20} color={colors.warning} />
               <Text style={styles.forgiveWarningText}>
-                This action cannot be undone. The forgiven amount will be recorded as settled.
+                {t('alerts.forgiveWarning')}
               </Text>
             </View>
             
             <View style={styles.modalActions}>
               <PrimaryButton
-                title="Cancel"
+                title={t('common.cancel')}
                 onPress={() => setForgiveModalVisible(false)}
               />
               <View style={styles.spacer} />
               <PrimaryButton
-                title="Forgive"
+                title={t('settleUp.forgive')}
                 onPress={handleSubmitForgive}
                 variant="danger"
               />

@@ -8,11 +8,13 @@ import { FormTextInput } from '../../components/FormTextInput';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
 import { useThemeColors, useTheme, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
+import { useLanguage } from '../../context/LanguageContext';
 
 export const CreateGoalScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { selectedHousehold } = useHousehold();
   const colors = useThemeColors();
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -26,7 +28,7 @@ export const CreateGoalScreen: React.FC<{ navigation: any }> = ({ navigation }) 
   const handleCreate = async () => {
     if (!selectedHousehold) return;
     if (!canSubmit) {
-      Alert.alert('Error', 'Please enter a title');
+      Alert.alert(t('common.error'), t('goals.enterTitle'));
       return;
     }
 
@@ -41,7 +43,7 @@ export const CreateGoalScreen: React.FC<{ navigation: any }> = ({ navigation }) 
       });
       navigation.goBack();
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to create goal');
+      Alert.alert(t('common.error'), error.response?.data?.error || t('alerts.somethingWentWrong'));
     } finally {
       setSaving(false);
     }
@@ -51,7 +53,7 @@ export const CreateGoalScreen: React.FC<{ navigation: any }> = ({ navigation }) 
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>Please select a household</Text>
+          <Text style={styles.emptyText}>{t('alerts.selectHousehold')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -65,25 +67,25 @@ export const CreateGoalScreen: React.FC<{ navigation: any }> = ({ navigation }) 
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         <ScrollView style={styles.scrollView} keyboardShouldPersistTaps="handled">
-          <ScreenHeader title="New Goal" subtitle={selectedHousehold.name} />
+          <ScreenHeader title={t('goals.addGoal')} subtitle={selectedHousehold.name} />
 
           <View style={styles.card}>
             <FormTextInput
-              label="Title"
+              label={t('goals.goalTitle')}
               value={title}
               onChangeText={setTitle}
-              placeholder="e.g., Get a big living room rug"
+              placeholder={t('goals.titlePlaceholder')}
             />
             <FormTextInput
-              label="Description (Optional)"
+              label={`${t('goals.goalDescription')} (${t('common.optional')})`}
               value={description}
               onChangeText={setDescription}
-              placeholder="Add details"
+              placeholder={t('goals.descriptionPlaceholder')}
               multiline
             />
 
             <View style={styles.field}>
-              <Text style={styles.label}>Status</Text>
+              <Text style={styles.label}>{t('goals.statusLabel')}</Text>
               {(['idea', 'planned', 'in_progress', 'done'] as const).map((s) => (
                 <TouchableOpacity
                   key={s}
@@ -91,19 +93,19 @@ export const CreateGoalScreen: React.FC<{ navigation: any }> = ({ navigation }) 
                   onPress={() => setStatus(s)}
                 >
                   <Text style={[styles.optionText, status === s && styles.optionTextActive]}>
-                    {s.charAt(0).toUpperCase() + s.replace('_', ' ').slice(1)}
+                    {s === 'idea' ? t('goals.status.idea') : s === 'planned' ? t('goals.status.planned') : s === 'in_progress' ? t('goals.status.inProgress') : t('goals.status.done')}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
 
             <View style={styles.field}>
-              <Text style={styles.label}>Target Date (Optional)</Text>
+              <Text style={styles.label}>{t('goals.targetDate')} ({t('common.optional')})</Text>
               <TouchableOpacity style={styles.dateButton} onPress={() => setShowTargetDatePicker(true)}>
                 <Text style={[styles.dateText, !targetDate && styles.placeholderText]}>
                   {targetDate
                     ? targetDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-                    : 'Select date'}
+                    : t('goals.selectDate')}
                 </Text>
               </TouchableOpacity>
               {showTargetDatePicker && (
@@ -122,9 +124,9 @@ export const CreateGoalScreen: React.FC<{ navigation: any }> = ({ navigation }) 
             </View>
 
             <View style={styles.actions}>
-              <PrimaryButton title="Cancel" onPress={() => navigation.goBack()} variant="secondary" />
+              <PrimaryButton title={t('common.cancel')} onPress={() => navigation.goBack()} variant="secondary" />
               <View style={styles.spacer} />
-              <PrimaryButton title="Create" onPress={handleCreate} disabled={!canSubmit} loading={saving} />
+              <PrimaryButton title={t('common.create')} onPress={handleCreate} disabled={!canSubmit} loading={saving} />
             </View>
           </View>
         </ScrollView>

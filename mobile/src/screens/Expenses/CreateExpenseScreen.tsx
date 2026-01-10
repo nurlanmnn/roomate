@@ -17,6 +17,7 @@ import { EXPENSE_CATEGORIES, getCategoryById } from '../../constants/expenseCate
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '../../components/AppText';
 import { useRoute } from '@react-navigation/native';
+import { useLanguage } from '../../context/LanguageContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const EDGE_SWIPE_WIDTH = 24; // iOS-like left edge swipe region
@@ -27,6 +28,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
   const { user } = useAuth();
   const colors = useThemeColors();
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const editingExpense: Expense | undefined = route?.params?.expense;
   const isEditing = !!editingExpense;
   const [description, setDescription] = useState('');
@@ -540,12 +542,12 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
 
   const handleSaveTemplate = async () => {
     if (!templateName.trim()) {
-      Alert.alert('Error', 'Please enter a template name');
+      Alert.alert(t('common.error'), t('alerts.enterTemplateName'));
       return;
     }
 
     if (!description.trim() || selectedParticipants.length === 0) {
-      Alert.alert('Error', 'Please fill in description and select participants before saving as template');
+      Alert.alert(t('common.error'), t('alerts.fillDescriptionAndParticipants'));
       return;
     }
 
@@ -567,12 +569,12 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
         defaultShares,
       });
 
-      Alert.alert('Success', 'Template saved successfully');
+      Alert.alert(t('common.success'), t('expenses.templateSaved'));
       setShowSaveTemplateModal(false);
       setTemplateName('');
       await loadTemplates();
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to save template');
+      Alert.alert(t('common.error'), error.response?.data?.error || t('alerts.somethingWentWrong'));
     }
   };
 
@@ -588,7 +590,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
 
   const handleUpdateTemplate = async () => {
     if (!editingTemplate || !templateName.trim()) {
-      Alert.alert('Error', 'Please enter a template name');
+      Alert.alert(t('common.error'), t('alerts.enterTemplateName'));
       return;
     }
 
@@ -596,24 +598,24 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
       await expenseTemplatesApi.updateTemplate(editingTemplate._id, {
         name: templateName.trim(),
       });
-      Alert.alert('Success', 'Template updated successfully');
+      Alert.alert(t('common.success'), t('expenses.templateUpdated'));
       setShowEditTemplateModal(false);
       setEditingTemplate(null);
       setTemplateName('');
       await loadTemplates();
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to update template');
+      Alert.alert(t('common.error'), error.response?.data?.error || t('alerts.somethingWentWrong'));
     }
   };
 
   const handleDeleteTemplate = (template: ExpenseTemplate) => {
     Alert.alert(
-      'Delete Template',
-      `Are you sure you want to delete "${template.name}"? This action cannot be undone.`,
+      t('expenses.deleteTemplate'),
+      t('alerts.deleteTemplateConfirm', { name: template.name }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             setDeletingTemplateId(template._id);
@@ -621,7 +623,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
               await expenseTemplatesApi.deleteTemplate(template._id);
               await loadTemplates();
             } catch (error: any) {
-              Alert.alert('Error', error.response?.data?.error || 'Failed to delete template');
+              Alert.alert(t('common.error'), error.response?.data?.error || t('alerts.somethingWentWrong'));
             } finally {
               setDeletingTemplateId(null);
             }
@@ -691,7 +693,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
     if (!selectedHousehold || !user) return;
 
     if (!description.trim() || !totalAmount || selectedParticipants.length === 0) {
-      Alert.alert('Error', 'Please fill in all required fields');
+      Alert.alert(t('common.error'), t('alerts.fillRequiredFields'));
       return;
     }
 
@@ -706,7 +708,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
 
       const remaining = getRemainingAmount();
       if (Math.abs(remaining) > 0.01) {
-        Alert.alert('Error', `Share amounts must add up to total. Remaining: ${formatCurrency(remaining)}`);
+        Alert.alert(t('common.error'), t('alerts.sharesMustMatch', { amount: formatCurrency(remaining) }));
         return;
       }
     }
@@ -749,7 +751,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.emptyContainer}>
-          <Text>Please select a household</Text>
+          <Text>{t('alerts.selectHousehold')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -769,7 +771,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
           style={styles.scrollView}
           keyboardShouldPersistTaps="handled"
         >
-      <ScreenHeader title={isEditing ? 'Edit Expense' : 'Add Expense'} subtitle={selectedHousehold.name} />
+      <ScreenHeader title={isEditing ? t('expenses.editExpense') : t('expenses.addExpense')} subtitle={selectedHousehold.name} />
 
       <View style={styles.templateActions}>
         <TouchableOpacity
@@ -779,7 +781,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
         >
           <Ionicons name="document-text-outline" size={20} color={colors.primary} />
           <AppText style={styles.templateButtonText}>
-            {templates.length > 0 ? `Load Template (${templates.length})` : 'Load Template'}
+            {templates.length > 0 ? `${t('expenses.loadTemplate')} (${templates.length})` : t('expenses.loadTemplate')}
           </AppText>
         </TouchableOpacity>
         <TouchableOpacity
@@ -787,20 +789,20 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
           onPress={() => setShowSaveTemplateModal(true)}
         >
           <Ionicons name="bookmark-outline" size={20} color={colors.accent} />
-          <AppText style={styles.templateButtonText}>Save as Template</AppText>
+          <AppText style={styles.templateButtonText}>{t('expenses.saveAsTemplate')}</AppText>
         </TouchableOpacity>
       </View>
 
       <View style={styles.form}>
         <FormTextInput
-          label="Description"
+          label={t('expenses.description')}
           value={description}
           onChangeText={setDescription}
-          placeholder="e.g., WiFi - January"
+          placeholder={t('expenses.descriptionPlaceholder')}
         />
 
         <FormTextInput
-          label="Total Amount"
+          label={t('expenses.totalAmount')}
           value={totalAmount}
           onChangeText={setTotalAmount}
           placeholder="0.00"
@@ -808,7 +810,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
         />
 
         <View style={styles.field}>
-          <Text style={styles.label}>Paid By</Text>
+          <Text style={styles.label}>{t('expenses.paidBy')}</Text>
           {selectedHousehold.members.map((member) => (
             <TouchableOpacity
               key={member._id}
@@ -822,7 +824,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
         </View>
 
         <View style={styles.field}>
-          <Text style={styles.label}>Date</Text>
+          <Text style={styles.label}>{t('expenses.date')}</Text>
           <TouchableOpacity
             style={styles.dateButton}
             onPress={() => setShowDatePicker((prev) => !prev)}
@@ -857,14 +859,14 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
                 onPress={() => setShowDatePicker(false)}
                 activeOpacity={0.7}
               >
-                <Text style={styles.datePickerButtonText}>Done</Text>
+                <Text style={styles.datePickerButtonText}>{t('common.done')}</Text>
               </TouchableOpacity>
             </View>
           )}
         </View>
 
         <View style={styles.field}>
-          <Text style={styles.label}>Category (Optional)</Text>
+          <Text style={styles.label}>{t('expenses.categoryOptional')}</Text>
           <CategoryPicker
             selectedCategory={category}
             onSelectCategory={setCategory}
@@ -873,9 +875,9 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
         </View>
 
         <View style={styles.field}>
-          <Text style={styles.label}>Participants</Text>
+          <Text style={styles.label}>{t('expenses.participants')}</Text>
           <TouchableOpacity onPress={toggleSelectAll} style={styles.selectAllButton}>
-            <Text style={styles.selectAllText}>{allSelected ? 'Deselect All' : 'Select All'}</Text>
+            <Text style={styles.selectAllText}>{allSelected ? t('common.deselectAll') : t('common.selectAll')}</Text>
           </TouchableOpacity>
           {selectedHousehold.members.map((member) => (
             <TouchableOpacity
@@ -890,24 +892,24 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
         </View>
 
         <View style={styles.field}>
-          <Text style={styles.label}>Split Method</Text>
+          <Text style={styles.label}>{t('expenses.splitMethod')}</Text>
           <TouchableOpacity
             style={[styles.radioOption, splitMethod === 'even' && styles.radioSelected]}
             onPress={() => setSplitMethod('even')}
           >
-            <Text style={[styles.radioText, splitMethod === 'even' && styles.radioTextSelected]}>Split Evenly</Text>
+            <Text style={[styles.radioText, splitMethod === 'even' && styles.radioTextSelected]}>{t('expenses.splitEvenly')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.radioOption, splitMethod === 'manual' && styles.radioSelected]}
             onPress={() => setSplitMethod('manual')}
           >
-            <Text style={[styles.radioText, splitMethod === 'manual' && styles.radioTextSelected]}>Split Manually</Text>
+            <Text style={[styles.radioText, splitMethod === 'manual' && styles.radioTextSelected]}>{t('expenses.splitManually')}</Text>
           </TouchableOpacity>
         </View>
 
         {splitMethod === 'even' && selectedParticipants.length > 0 && totalAmount && (
           <View style={styles.sharesPreview}>
-            <Text style={styles.sharesTitle}>Shares (Even Split):</Text>
+            <Text style={styles.sharesTitle}>{t('expenses.shares')} ({t('expenses.evenSplit')}):</Text>
             {calculateEvenShares().map((share, index) => {
               const member = selectedHousehold.members.find(m => m._id === share.userId);
               return (
@@ -921,7 +923,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
 
         {splitMethod === 'manual' && (
           <View style={styles.field}>
-            <Text style={styles.label}>Manual Shares</Text>
+            <Text style={styles.label}>{t('expenses.manualShares')}</Text>
             {selectedParticipants.map((userId) => {
               const member = selectedHousehold.members.find(m => m._id === userId);
               return (
@@ -937,13 +939,13 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
               );
             })}
             <Text style={[styles.remaining, remaining !== 0 && styles.remainingError]}>
-              Remaining to assign: {formatCurrency(remaining)}
+              {t('expenses.remainingToAssign')}: {formatCurrency(remaining)}
             </Text>
           </View>
         )}
 
         <PrimaryButton
-          title={isEditing ? 'Update Expense' : 'Save Expense'}
+          title={isEditing ? t('expenses.updateExpense') : t('expenses.saveExpense')}
           onPress={handleSubmit}
           loading={loading}
           disabled={!canSubmit}
@@ -965,7 +967,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
           {...templatesModalPanResponder.panHandlers}
         >
           <ScreenHeader
-            title="Load Template"
+            title={t('expenses.loadTemplate')}
             onBackPress={dismissTemplatesModal}
             showBackButton
             variant="stack"
@@ -974,9 +976,9 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
           {templates.length === 0 ? (
             <View style={styles.emptyTemplates}>
               <Ionicons name="document-text-outline" size={48} color={colors.textTertiary} />
-              <AppText style={styles.emptyTemplatesText}>No templates available</AppText>
+              <AppText style={styles.emptyTemplatesText}>{t('expenses.noTemplates')}</AppText>
               <AppText style={styles.emptyTemplatesSubtext}>
-                Save an expense as a template to quickly reuse it later
+                {t('expenses.noTemplatesDescription')}
               </AppText>
             </View>
           ) : (
@@ -1001,7 +1003,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
                     )}
                     <View style={styles.templateCardFooter}>
                       <AppText style={styles.templateCardInfo}>
-                        {template.splitMethod === 'even' ? 'Even split' : 'Manual split'} • {template.defaultParticipants.length} participant{template.defaultParticipants.length !== 1 ? 's' : ''}
+                        {template.splitMethod === 'even' ? t('expenses.evenSplit') : t('expenses.splitManually')} • {template.defaultParticipants.length} {template.defaultParticipants.length !== 1 ? t('expenses.participantPlural') : t('expenses.participant')}
                       </AppText>
                     </View>
                   </TouchableOpacity>
@@ -1012,7 +1014,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
                         onPress={() => handleEditTemplate(template)}
                       >
                         <Ionicons name="pencil-outline" size={18} color={colors.primary} />
-                        <AppText style={styles.templateActionText}>Edit</AppText>
+                        <AppText style={styles.templateActionText}>{t('common.edit')}</AppText>
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={styles.templateActionButton}
@@ -1021,7 +1023,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
                       >
                         <Ionicons name="trash-outline" size={18} color={colors.danger} />
                         <AppText style={[styles.templateActionText, { color: colors.danger }]}>
-                          {deletingTemplateId === template._id ? 'Deleting...' : 'Delete'}
+                          {deletingTemplateId === template._id ? t('expenses.deleting') : t('common.delete')}
                         </AppText>
                       </TouchableOpacity>
                     </View>
@@ -1044,19 +1046,19 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
     >
       <View style={styles.saveTemplateModalOverlay}>
         <View style={styles.saveTemplateModalContent}>
-          <AppText style={styles.saveTemplateModalTitle}>Save as Template</AppText>
+          <AppText style={styles.saveTemplateModalTitle}>{t('expenses.saveAsTemplate')}</AppText>
           <AppText style={styles.saveTemplateModalDescription}>
-            Save the current expense configuration as a template for quick reuse
+            {t('expenses.saveTemplateDescription')}
           </AppText>
           <FormTextInput
-            label="Template Name"
+            label={t('expenses.templateName')}
             value={templateName}
             onChangeText={setTemplateName}
-            placeholder="e.g., Monthly WiFi Bill"
+            placeholder={t('expenses.templateNamePlaceholder')}
           />
           <View style={styles.saveTemplateModalActions}>
             <PrimaryButton
-              title="Cancel"
+              title={t('common.cancel')}
               onPress={() => {
                 setShowSaveTemplateModal(false);
                 setTemplateName('');
@@ -1065,7 +1067,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
             />
             <View style={styles.spacer} />
             <PrimaryButton
-              title="Save Template"
+              title={t('expenses.saveAsTemplate')}
               onPress={handleSaveTemplate}
             />
           </View>
@@ -1086,19 +1088,19 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
     >
       <View style={styles.saveTemplateModalOverlay}>
         <View style={styles.saveTemplateModalContent}>
-          <AppText style={styles.saveTemplateModalTitle}>Edit Template</AppText>
+          <AppText style={styles.saveTemplateModalTitle}>{t('expenses.editTemplate')}</AppText>
           <AppText style={styles.saveTemplateModalDescription}>
-            Update the template name
+            {t('expenses.updateTemplateDescription')}
           </AppText>
           <FormTextInput
-            label="Template Name"
+            label={t('expenses.templateName')}
             value={templateName}
             onChangeText={setTemplateName}
-            placeholder="e.g., Monthly WiFi Bill"
+            placeholder={t('expenses.templateNamePlaceholder')}
           />
           <View style={styles.saveTemplateModalActions}>
             <PrimaryButton
-              title="Cancel"
+              title={t('common.cancel')}
               onPress={() => {
                 setShowEditTemplateModal(false);
                 setEditingTemplate(null);
@@ -1108,7 +1110,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
             />
             <View style={styles.spacer} />
             <PrimaryButton
-              title="Update"
+              title={t('common.update')}
               onPress={handleUpdateTemplate}
             />
           </View>

@@ -7,6 +7,7 @@ import { formatDate, formatDateShort } from '../utils/dateHelpers';
 import { useThemeColors, fontSizes, fontWeights, radii, spacing, shadows } from '../theme';
 import { Avatar } from './ui/Avatar';
 import { SwipeableRow } from './SwipeableRow';
+import { useLanguage } from '../context/LanguageContext';
 
 interface ExpenseCardProps {
   expense: Expense;
@@ -26,6 +27,7 @@ export const ExpenseCard: React.FC<ExpenseCardProps> = ({
   onEdit,
 }) => {
   const colors = useThemeColors();
+  const { t } = useLanguage();
   const paidByName = expense.paidBy?.name || 'Unknown';
 
   const styles = React.useMemo(() => StyleSheet.create({
@@ -116,12 +118,12 @@ export const ExpenseCard: React.FC<ExpenseCardProps> = ({
 
   const handleDelete = () => {
     Alert.alert(
-      'Delete Expense',
-      `Are you sure you want to delete "${expense.description}"? This action cannot be undone.`,
+      t('expenses.deleteExpense'),
+      t('alerts.deleteExpenseConfirm', { description: expense.description }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: () => onDelete?.(expense._id),
         },
@@ -133,8 +135,8 @@ export const ExpenseCard: React.FC<ExpenseCardProps> = ({
     <SwipeableRow
       onSwipeLeft={canDelete && onDelete ? handleDelete : undefined}
       onSwipeRight={onQuickSettle}
-      leftActionLabel="Delete"
-      rightActionLabel="Settle"
+      leftActionLabel={t('common.delete')}
+      rightActionLabel={t('expenses.settleUp')}
       leftActionIcon="trash-outline"
       rightActionIcon="cash-outline"
     >
@@ -148,11 +150,11 @@ export const ExpenseCard: React.FC<ExpenseCardProps> = ({
           <Avatar name={paidByName} uri={expense.paidBy?.avatarUrl} size={20} />
           <View style={styles.paidByContainer}>
             <AppText style={styles.paidBy}>
-              Paid by {paidByName} • {formatDate(expense.date)}
+              {t('expenses.paidBy')} {paidByName} • {formatDate(expense.date)}
             </AppText>
             {expense.createdAt && (
               <AppText style={styles.sinceDate}>
-                Added since {formatDateShort(expense.createdAt)}
+                {t('time.addedSince')} {formatDateShort(expense.createdAt)}
               </AppText>
             )}
           </View>
@@ -161,22 +163,22 @@ export const ExpenseCard: React.FC<ExpenseCardProps> = ({
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             {canEdit && onEdit && (
               <TouchableOpacity onPress={() => onEdit(expense)} style={styles.editButton}>
-                <AppText style={styles.editText}>Edit</AppText>
+                <AppText style={styles.editText}>{t('common.edit')}</AppText>
               </TouchableOpacity>
             )}
             {canDelete && onDelete && (
               <TouchableOpacity onPress={handleDelete} style={styles.deleteButton}>
-                <AppText style={styles.deleteText}>Delete</AppText>
+                <AppText style={styles.deleteText}>{t('common.delete')}</AppText>
               </TouchableOpacity>
             )}
           </View>
         )}
       </View>
       {expense.category && (
-        <AppText style={styles.category}>{expense.category}</AppText>
+        <AppText style={styles.category}>{t(`categories.${expense.category.toLowerCase().replace(/[^a-z]/g, '')}`) !== `categories.${expense.category.toLowerCase().replace(/[^a-z]/g, '')}` ? t(`categories.${expense.category.toLowerCase().replace(/[^a-z]/g, '')}`) : expense.category}</AppText>
       )}
       <AppText style={styles.participants}>
-        Split among {expense.participants.length} {expense.participants.length === 1 ? 'person' : 'people'}
+        {t('expenses.splitAmong', { count: expense.participants.length })}
       </AppText>
       </View>
     </SwipeableRow>

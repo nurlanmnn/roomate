@@ -4,16 +4,18 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FormTextInput } from '../../components/FormTextInput';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 export const LoginScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
+  const { t } = useLanguage();
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert(t('common.error'), t('alerts.somethingWentWrong'));
       return;
     }
 
@@ -21,7 +23,7 @@ export const LoginScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
     try {
       await login(email, password);
     } catch (error: any) {
-      Alert.alert('Login Failed', error.response?.data?.error || 'Invalid email or password');
+      Alert.alert(t('common.error'), error.response?.data?.error || t('auth.invalidCredentials'));
     } finally {
       setLoading(false);
     }
@@ -43,14 +45,14 @@ export const LoginScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
         style={styles.backButton}
         onPress={() => navigation.navigate('Landing')}
       >
-        <Text style={styles.backButtonText}>← Back</Text>
+        <Text style={styles.backButtonText}>← {t('common.back')}</Text>
       </TouchableOpacity>
       
-      <Text style={styles.title}>Welcome Back</Text>
-      <Text style={styles.subtitle}>Sign in to your account</Text>
+      <Text style={styles.title}>{t('auth.welcomeBack')}</Text>
+      <Text style={styles.subtitle}>{t('auth.login')}</Text>
 
       <FormTextInput
-        label="Email"
+        label={t('auth.email')}
         value={email}
         onChangeText={setEmail}
         placeholder="your@email.com"
@@ -58,19 +60,19 @@ export const LoginScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
       />
 
       <FormTextInput
-        label="Password"
+        label={t('auth.password')}
         value={password}
         onChangeText={setPassword}
-        placeholder="Enter your password"
+        placeholder={t('auth.password')}
         secureTextEntry
       />
 
-      <PrimaryButton title="Sign In" onPress={handleLogin} loading={loading} />
+      <PrimaryButton title={t('auth.login')} onPress={handleLogin} loading={loading} />
       
       <View style={styles.footer}>
-        <Text style={styles.footerText}>Don't have an account? </Text>
+        <Text style={styles.footerText}>{t('auth.noAccount')} </Text>
         <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
-          <Text style={styles.linkText}>Sign Up</Text>
+          <Text style={styles.linkText}>{t('auth.signup')}</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>

@@ -70,5 +70,15 @@ export const authApi = {
   logout: async (): Promise<void> => {
     await apiClient.clearToken();
   },
+
+  registerPushToken: async (pushToken: string): Promise<{ success: boolean }> => {
+    const response = await apiClient.instance.post('/auth/push-token', { pushToken });
+    return response.data;
+  },
+
+  removePushToken: async (): Promise<{ success: boolean }> => {
+    const response = await apiClient.instance.delete('/auth/push-token');
+    return response.data;
+  },
 };
 

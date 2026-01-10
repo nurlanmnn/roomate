@@ -9,20 +9,21 @@ import { PrimaryButton } from '../../components/PrimaryButton';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
 import { useThemeColors, useTheme, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
 import { Ionicons } from '@expo/vector-icons';
+import { useLanguage } from '../../context/LanguageContext';
 
 // Event types with icons
 const EVENT_TYPES = [
-  { id: 'bill', label: 'Bill', icon: 'receipt-outline' },
-  { id: 'cleaning', label: 'Cleaning', icon: 'sparkles-outline' },
-  { id: 'social', label: 'Social', icon: 'people-outline' },
-  { id: 'meal', label: 'Meal', icon: 'restaurant-outline' },
-  { id: 'meeting', label: 'Meeting', icon: 'calendar-outline' },
-  { id: 'maintenance', label: 'Maintenance', icon: 'hammer-outline' },
-  { id: 'shopping', label: 'Shopping', icon: 'cart-outline' },
-  { id: 'trip', label: 'Trip', icon: 'car-outline' },
-  { id: 'birthday', label: 'Birthday', icon: 'gift-outline' },
-  { id: 'reminder', label: 'Reminder', icon: 'alarm-outline' },
-  { id: 'other', label: 'Other', icon: 'ellipsis-horizontal-outline' },
+  { id: 'bill', labelKey: 'eventTypes.bill', icon: 'receipt-outline' },
+  { id: 'cleaning', labelKey: 'eventTypes.cleaning', icon: 'sparkles-outline' },
+  { id: 'social', labelKey: 'eventTypes.social', icon: 'people-outline' },
+  { id: 'meal', labelKey: 'eventTypes.meal', icon: 'restaurant-outline' },
+  { id: 'meeting', labelKey: 'eventTypes.meeting', icon: 'calendar-outline' },
+  { id: 'maintenance', labelKey: 'eventTypes.maintenance', icon: 'hammer-outline' },
+  { id: 'shopping', labelKey: 'eventTypes.shopping', icon: 'cart-outline' },
+  { id: 'trip', labelKey: 'eventTypes.trip', icon: 'car-outline' },
+  { id: 'birthday', labelKey: 'eventTypes.birthday', icon: 'gift-outline' },
+  { id: 'reminder', labelKey: 'eventTypes.reminder', icon: 'alarm-outline' },
+  { id: 'other', labelKey: 'eventTypes.other', icon: 'ellipsis-horizontal-outline' },
 ] as const;
 
 type EventType = typeof EVENT_TYPES[number]['id'];
@@ -35,6 +36,7 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
   const { selectedHousehold } = useHousehold();
   const colors = useThemeColors();
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -71,7 +73,7 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
   const handleSave = async () => {
     if (!selectedHousehold) return;
     if (!canSubmit) {
-      Alert.alert('Error', 'Please enter a title');
+      Alert.alert(t('common.error'), t('events.enterTitle'));
       return;
     }
 
@@ -110,7 +112,7 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
       }
       navigation.goBack();
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.error || `Failed to ${isEditing ? 'update' : 'create'} event`);
+      Alert.alert(t('common.error'), error.response?.data?.error || t('alerts.somethingWentWrong'));
     } finally {
       setSaving(false);
     }
@@ -120,7 +122,7 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>Please select a household</Text>
+          <Text style={styles.emptyText}>{t('alerts.selectHousehold')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -134,25 +136,25 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         <ScrollView style={styles.scrollView} keyboardShouldPersistTaps="handled">
-          <ScreenHeader title={isEditing ? 'Edit Event' : 'Add Event'} subtitle={selectedHousehold.name} />
+          <ScreenHeader title={isEditing ? t('events.editEvent') : t('events.addEvent')} subtitle={selectedHousehold.name} />
 
           <View style={styles.card}>
             <FormTextInput
-              label="Title"
+              label={t('events.eventTitle')}
               value={title}
               onChangeText={setTitle}
-              placeholder="e.g., Rent due"
+              placeholder={t('events.titlePlaceholder')}
             />
             <FormTextInput
-              label="Description (Optional)"
+              label={`${t('events.eventDescription')} (${t('common.optional')})`}
               value={description}
               onChangeText={setDescription}
-              placeholder="Add details"
+              placeholder={t('events.descriptionPlaceholder')}
               multiline
             />
 
             <View style={styles.field}>
-              <Text style={styles.label}>Type</Text>
+              <Text style={styles.label}>{t('events.eventType')}</Text>
               <View style={styles.typeGrid}>
                 {EVENT_TYPES.map((eventType) => (
                   <TouchableOpacity
@@ -166,7 +168,7 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
                       color={type === eventType.id ? colors.primary : colors.textSecondary}
                     />
                     <Text style={[styles.typeOptionText, type === eventType.id && styles.typeOptionTextActive]}>
-                      {eventType.label}
+                      {t(eventType.labelKey)}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -174,7 +176,7 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
             </View>
 
             <View style={styles.field}>
-              <Text style={styles.label}>Date</Text>
+              <Text style={styles.label}>{t('events.date')}</Text>
               <TouchableOpacity
                 style={styles.dateButton}
                 onPress={() => setShowDatePicker((prev) => !prev)}
@@ -202,14 +204,14 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
                     onPress={() => setShowDatePicker(false)}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.datePickerButtonText}>Done</Text>
+                    <Text style={styles.datePickerButtonText}>{t('common.done')}</Text>
                   </TouchableOpacity>
                 </View>
               )}
             </View>
 
             <View style={styles.field}>
-              <Text style={styles.label}>Time</Text>
+              <Text style={styles.label}>{t('events.time')}</Text>
               <TouchableOpacity
                 style={styles.dateButton}
                 onPress={() => setShowTimePicker((prev) => !prev)}
@@ -237,14 +239,14 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
                     onPress={() => setShowTimePicker(false)}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.datePickerButtonText}>Done</Text>
+                    <Text style={styles.datePickerButtonText}>{t('common.done')}</Text>
                   </TouchableOpacity>
                 </View>
               )}
             </View>
 
             <View style={styles.field}>
-              <Text style={styles.label}>End Date (Optional)</Text>
+              <Text style={styles.label}>{t('events.endDate')} ({t('common.optional')})</Text>
               <TouchableOpacity
                 style={styles.dateButton}
                 onPress={() => setShowEndDatePicker((prev) => !prev)}
@@ -252,7 +254,7 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
                 <Text style={[styles.dateText, !endDate && styles.placeholderText]}>
                   {endDate
                     ? endDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-                    : 'Select end date'}
+                    : t('events.selectEndDate')}
                 </Text>
               </TouchableOpacity>
               {showEndDatePicker && (
@@ -274,14 +276,14 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
                     onPress={() => setShowEndDatePicker(false)}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.datePickerButtonText}>Done</Text>
+                    <Text style={styles.datePickerButtonText}>{t('common.done')}</Text>
                   </TouchableOpacity>
                 </View>
               )}
             </View>
 
             <View style={styles.field}>
-              <Text style={styles.label}>End Time (Optional)</Text>
+              <Text style={styles.label}>{t('events.endTime')} ({t('common.optional')})</Text>
               <TouchableOpacity
                 style={[styles.dateButton, !endDate && styles.dateButtonDisabled]}
                 onPress={() => {
@@ -295,7 +297,7 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
                 <Text style={[styles.dateText, (!endDate || !endTime) && styles.placeholderText]}>
                   {endTime
                     ? endTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-                    : 'Select end time'}
+                    : t('events.selectEndTime')}
                 </Text>
               </TouchableOpacity>
               {showEndTimePicker && (
@@ -317,16 +319,16 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
                     onPress={() => setShowEndTimePicker(false)}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.datePickerButtonText}>Done</Text>
+                    <Text style={styles.datePickerButtonText}>{t('common.done')}</Text>
                   </TouchableOpacity>
                 </View>
               )}
             </View>
 
             <View style={styles.actions}>
-              <PrimaryButton title="Cancel" onPress={() => navigation.goBack()} variant="secondary" />
+              <PrimaryButton title={t('common.cancel')} onPress={() => navigation.goBack()} variant="secondary" />
               <View style={styles.spacer} />
-              <PrimaryButton title={isEditing ? 'Save' : 'Create'} onPress={handleSave} disabled={!canSubmit} loading={saving} />
+              <PrimaryButton title={isEditing ? t('common.save') : t('common.create')} onPress={handleSave} disabled={!canSubmit} loading={saving} />
             </View>
           </View>
         </ScrollView>

@@ -8,6 +8,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { EXPENSE_CATEGORIES } from '../constants/expenseCategories';
 import { useThemeColors, useTheme, fontSizes, fontWeights, spacing, radii, shadows } from '../theme';
 import { Platform } from 'react-native';
+import { useLanguage } from '../context/LanguageContext';
 
 export type SortOption = 'newest' | 'oldest' | 'amount' | 'category';
 export type GroupByOption = 'none' | 'date' | 'category' | 'person';
@@ -37,6 +38,7 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
 }) => {
   const colors = useThemeColors();
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const [showFilters, setShowFilters] = useState(false);
   const [showDateFromPicker, setShowDateFromPicker] = useState(false); // Android dialog
   const [showDateToPicker, setShowDateToPicker] = useState(false); // Android dialog
@@ -275,7 +277,7 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
         >
           <Ionicons name="filter-outline" size={18} color={hasActiveFilters ? colors.surface : colors.text} />
           <AppText style={[styles.filterButtonText, hasActiveFilters && styles.filterButtonTextActive]}>
-            Filters
+            {t('expenses.filters')}
           </AppText>
           {hasActiveFilters && <View style={styles.filterBadge} />}
         </TouchableOpacity>
@@ -286,9 +288,9 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
           >
             <Ionicons name="swap-vertical-outline" size={18} color={colors.text} />
             <AppText style={styles.sortButtonText}>
-              {filters.sortBy === 'newest' ? 'Newest' : 
-               filters.sortBy === 'oldest' ? 'Oldest' :
-               filters.sortBy === 'amount' ? 'Amount' : 'Category'}
+              {filters.sortBy === 'newest' ? t('expenses.newest') : 
+               filters.sortBy === 'oldest' ? t('expenses.oldest') :
+               filters.sortBy === 'amount' ? t('expenses.amount') : t('expenses.category')}
             </AppText>
           </TouchableOpacity>
         </View>
@@ -319,12 +321,12 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
                 )}
                 <AppText style={styles.modalTitle}>
                   {activePicker === 'category'
-                    ? 'Select Category'
+                    ? t('expenses.selectCategory')
                     : activePicker === 'person'
-                      ? 'Select Person'
+                      ? t('expenses.selectPerson')
                       : activePicker === 'groupBy'
-                        ? 'Group By'
-                        : 'Filters'}
+                        ? t('expenses.groupBy')
+                        : t('expenses.filters')}
                 </AppText>
               </View>
               <TouchableOpacity
@@ -350,7 +352,7 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
                         setActivePicker(null);
                       }}
                     >
-                      <AppText style={styles.optionText}>All Categories</AppText>
+                      <AppText style={styles.optionText}>{t('expenses.allCategories')}</AppText>
                     </TouchableOpacity>
                     {EXPENSE_CATEGORIES.map((cat) => (
                       <TouchableOpacity
@@ -382,7 +384,7 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
                         setActivePicker(null);
                       }}
                     >
-                      <AppText style={styles.optionText}>All People</AppText>
+                      <AppText style={styles.optionText}>{t('expenses.allPeople')}</AppText>
                     </TouchableOpacity>
                     {memberNames.map((member) => (
                       <TouchableOpacity
@@ -416,9 +418,9 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
                         }}
                       >
                         <AppText style={styles.optionText}>
-                          {option === 'none' ? 'None' :
-                            option === 'date' ? 'Date' :
-                              option === 'category' ? 'Category' : 'Person'}
+                          {option === 'none' ? t('expenses.none') :
+                            option === 'date' ? t('expenses.byDate') :
+                              option === 'category' ? t('expenses.byCategory') : t('expenses.byPerson')}
                         </AppText>
                         {filters.groupBy === option && (
                           <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
@@ -435,15 +437,15 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
                 keyboardShouldPersistTaps="handled"
               >
                 <FormTextInput
-                  label="Search"
+                  label={t('common.search')}
                   value={filters.search}
                   onChangeText={(text) => updateFilter('search', text)}
-                  placeholder="Search expenses..."
+                  placeholder={t('expenses.searchExpenses')}
                   autoCapitalize="none"
                 />
 
                 <View style={styles.filterSection}>
-                  <AppText style={styles.filterLabel}>Date Range</AppText>
+                  <AppText style={styles.filterLabel}>{t('expenses.dateRange')}</AppText>
                   <View style={styles.dateRow}>
                     <TouchableOpacity
                       style={styles.dateButton}
@@ -471,7 +473,7 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
                     >
                       <Ionicons name="calendar-outline" size={18} color={colors.textSecondary} />
                       <AppText style={styles.dateButtonText}>
-                        {filters.dateFrom ? filters.dateFrom.toLocaleDateString() : 'From'}
+                        {filters.dateFrom ? filters.dateFrom.toLocaleDateString() : t('time.from')}
                       </AppText>
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -499,7 +501,7 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
                     >
                       <Ionicons name="calendar-outline" size={18} color={colors.textSecondary} />
                       <AppText style={styles.dateButtonText}>
-                        {filters.dateTo ? filters.dateTo.toLocaleDateString() : 'To'}
+                        {filters.dateTo ? filters.dateTo.toLocaleDateString() : t('time.to')}
                       </AppText>
                     </TouchableOpacity>
                   </View>
@@ -509,10 +511,10 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
                     <View style={styles.iosDatePickerContainer}>
                       <View style={styles.iosDatePickerHeader}>
                         <AppText style={styles.iosDatePickerTitle}>
-                          {iosActiveDatePicker === 'from' ? 'From date' : 'To date'}
+                          {iosActiveDatePicker === 'from' ? t('expenses.fromDate') : t('expenses.toDate')}
                         </AppText>
                         <TouchableOpacity onPress={() => setIosActiveDatePicker(null)} activeOpacity={0.7}>
-                          <AppText style={styles.iosDatePickerDone}>Done</AppText>
+                          <AppText style={styles.iosDatePickerDone}>{t('common.done')}</AppText>
                         </TouchableOpacity>
                       </View>
                       <DateTimePicker
@@ -534,47 +536,47 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
                 </View>
 
                 <View style={styles.filterSection}>
-                  <AppText style={styles.filterLabel}>Category</AppText>
+                  <AppText style={styles.filterLabel}>{t('expenses.category')}</AppText>
                   <TouchableOpacity
                     style={styles.pickerButton}
                     activeOpacity={0.7}
                     onPress={() => setActivePicker('category')}
                   >
                     <AppText style={styles.pickerButtonText}>
-                      {filters.category ? EXPENSE_CATEGORIES.find(c => c.id === filters.category)?.name : 'All Categories'}
+                      {filters.category ? EXPENSE_CATEGORIES.find(c => c.id === filters.category)?.name : t('expenses.allCategories')}
                     </AppText>
                     <Ionicons name="chevron-forward-outline" size={20} color={colors.textSecondary} />
                   </TouchableOpacity>
                 </View>
 
                 <View style={styles.filterSection}>
-                  <AppText style={styles.filterLabel}>Person</AppText>
+                  <AppText style={styles.filterLabel}>{t('expenses.person')}</AppText>
                   <TouchableOpacity
                     style={styles.pickerButton}
                     activeOpacity={0.7}
                     onPress={() => setActivePicker('person')}
                   >
                     <AppText style={styles.pickerButtonText}>
-                      {filters.personId ? memberNames.find(m => m.id === filters.personId)?.name : 'All People'}
+                      {filters.personId ? memberNames.find(m => m.id === filters.personId)?.name : t('expenses.allPeople')}
                     </AppText>
                     <Ionicons name="chevron-forward-outline" size={20} color={colors.textSecondary} />
                   </TouchableOpacity>
                 </View>
 
                 <View style={styles.filterSection}>
-                  <AppText style={styles.filterLabel}>Amount Range</AppText>
+                  <AppText style={styles.filterLabel}>{t('expenses.amountRange')}</AppText>
                   <View style={styles.amountRow}>
                     <FormTextInput
                       value={filters.amountMin || ''}
                       onChangeText={(text) => updateFilter('amountMin', text)}
-                      placeholder="Min"
+                      placeholder={t('expenses.min')}
                       keyboardType="numeric"
                       style={styles.amountInput}
                     />
                     <FormTextInput
                       value={filters.amountMax || ''}
                       onChangeText={(text) => updateFilter('amountMax', text)}
-                      placeholder="Max"
+                      placeholder={t('expenses.max')}
                       keyboardType="numeric"
                       style={styles.amountInput}
                     />
@@ -582,16 +584,16 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
                 </View>
 
                 <View style={styles.filterSection}>
-                  <AppText style={styles.filterLabel}>Group By</AppText>
+                  <AppText style={styles.filterLabel}>{t('expenses.groupBy')}</AppText>
                   <TouchableOpacity
                     style={styles.pickerButton}
                     activeOpacity={0.7}
                     onPress={() => setActivePicker('groupBy')}
                   >
                     <AppText style={styles.pickerButtonText}>
-                      {filters.groupBy === 'none' ? 'None' :
-                        filters.groupBy === 'date' ? 'Date' :
-                          filters.groupBy === 'category' ? 'Category' : 'Person'}
+                      {filters.groupBy === 'none' ? t('expenses.none') :
+                        filters.groupBy === 'date' ? t('expenses.byDate') :
+                          filters.groupBy === 'category' ? t('expenses.byCategory') : t('expenses.byPerson')}
                     </AppText>
                     <Ionicons name="chevron-forward-outline" size={20} color={colors.textSecondary} />
                   </TouchableOpacity>
@@ -599,13 +601,13 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
 
                 <View style={styles.modalActions}>
                   <PrimaryButton
-                    title="Clear All"
+                    title={t('expenses.clearAll')}
                     onPress={clearFilters}
                     variant="outline"
                   />
                   <View style={styles.spacer} />
                   <PrimaryButton
-                    title="Apply"
+                    title={t('expenses.apply')}
                     onPress={() => {
                       setActivePicker(null);
                       setShowFilters(false);
@@ -654,7 +656,7 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <AppText style={styles.modalTitle}>Sort By</AppText>
+              <AppText style={styles.modalTitle}>{t('expenses.sortBy')}</AppText>
               <TouchableOpacity onPress={() => setShowSortPicker(false)}>
                 <Ionicons name="close-outline" size={24} color={colors.text} />
               </TouchableOpacity>
@@ -671,9 +673,9 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
                   }}
                 >
                   <AppText style={styles.optionText}>
-                    {option === 'newest' ? 'Newest First' :
-                     option === 'oldest' ? 'Oldest First' :
-                     option === 'amount' ? 'Amount (High to Low)' : 'Category'}
+                    {option === 'newest' ? t('expenses.newestFirst') :
+                     option === 'oldest' ? t('expenses.oldestFirst') :
+                     option === 'amount' ? t('expenses.amountHighToLow') : t('expenses.category')}
                   </AppText>
                   {filters.sortBy === option && (
                     <Ionicons name="checkmark-circle" size={20} color={colors.primary} />

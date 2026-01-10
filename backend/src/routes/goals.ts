@@ -2,7 +2,9 @@ import express, { Request, Response } from 'express';
 import { z } from 'zod';
 import { Goal } from '../models/Goal';
 import { Household } from '../models/Household';
+import { User } from '../models/User';
 import { authMiddleware } from '../middleware/auth';
+import { notificationService } from '../services/notificationService';
 import mongoose from 'mongoose';
 
 const router = express.Router();
@@ -91,6 +93,18 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
     await goal.populate('createdBy', 'name email avatarUrl');
     await goal.populate('upvotes', 'name email avatarUrl');
 
+    // Send notification to household members
+    const creator = await User.findById(userId);
+    if (creator) {
+      notificationService.notifyGoalAdded(
+        household.members.map(m => m.toString()),
+        userId,
+        creator.name,
+        data.title,
+        data.householdId
+      ).catch(err => console.error('Notification error:', err));
+    }
+
     res.status(201).json(goal);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -126,6 +140,8 @@ router.patch('/:id', authMiddleware, async (req: Request, res: Response) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
+    const previousStatus = goal.status;
+
     // Update fields
     if (data.title !== undefined) goal.title = data.title;
     if (data.description !== undefined) goal.description = data.description;
@@ -138,6 +154,27 @@ router.patch('/:id', authMiddleware, async (req: Request, res: Response) => {
 
     await goal.populate('createdBy', 'name email avatarUrl');
     await goal.populate('upvotes', 'name email avatarUrl');
+
+    // Send notification
+    const updater = await User.findById(userId);
+    if (updater) {
+      // Check if goal was just completed
+      if (data.status === 'done' && previousStatus !== 'done') {
+        notificationService.notifyGoalCompleted(
+          household.members.map(m => m.toString()),
+          goal.title,
+          goal.householdId.toString()
+        ).catch(err => console.error('Notification error:', err));
+      } else {
+        notificationService.notifyGoalUpdated(
+          household.members.map(m => m.toString()),
+          userId,
+          updater.name,
+          goal.title,
+          goal.householdId.toString()
+        ).catch(err => console.error('Notification error:', err));
+      }
+    }
 
     res.json(goal);
   } catch (error) {

@@ -3,7 +3,9 @@ import { z } from 'zod';
 import mongoose from 'mongoose';
 import { Event } from '../models/Event';
 import { Household } from '../models/Household';
+import { User } from '../models/User';
 import { authMiddleware } from '../middleware/auth';
+import { notificationService } from '../services/notificationService';
 
 const router = express.Router();
 
@@ -82,6 +84,19 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
 
     await event.populate('createdBy', 'name email avatarUrl');
 
+    // Send notification to household members
+    const creator = await User.findById(userId);
+    if (creator) {
+      notificationService.notifyEventAdded(
+        household.members.map(m => m.toString()),
+        userId,
+        creator.name,
+        data.title,
+        new Date(data.date),
+        data.householdId
+      ).catch(err => console.error('Notification error:', err));
+    }
+
     res.status(201).json(event);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -121,6 +136,19 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
     await event.save();
 
     await event.populate('createdBy', 'name email avatarUrl');
+
+    // Send notification to household members
+    const household = await Household.findById(event.householdId);
+    const updater = await User.findById(userId);
+    if (household && updater) {
+      notificationService.notifyEventUpdated(
+        household.members.map(m => m.toString()),
+        userId,
+        updater.name,
+        data.title,
+        event.householdId.toString()
+      ).catch(err => console.error('Notification error:', err));
+    }
 
     res.json(event);
   } catch (error) {

@@ -6,6 +6,7 @@ import { View, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { useHousehold } from '../context/HouseholdContext';
+import { useLanguage } from '../context/LanguageContext';
 import { spacing, useThemeColors } from '../theme';
 import { Ionicons } from '@expo/vector-icons';
 import { fontSizes, fontWeights, radii } from '../theme';
@@ -64,6 +65,7 @@ const withAlpha = (hexColor: string, alpha: number) => {
 const MainTabs = () => {
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
+  const { t } = useLanguage();
   const horizontal = spacing.md;
   const bottomInset = Math.max(insets.bottom, spacing.sm);
   return (
@@ -104,7 +106,7 @@ const MainTabs = () => {
         name="Home"
         component={HomeScreen}
         options={{
-          tabBarLabel: 'Home',
+          tabBarLabel: t('tabs.home'),
           tabBarIcon: ({ color, focused }) => <TabIcon name="home" color={color} focused={focused} />,
         }}
       />
@@ -112,7 +114,7 @@ const MainTabs = () => {
         name="Expenses"
         component={ExpensesScreen}
         options={{
-          tabBarLabel: 'Expenses',
+          tabBarLabel: t('tabs.expenses'),
           tabBarIcon: ({ color, focused }) => <TabIcon name="dollar" color={color} focused={focused} />,
         }}
       />
@@ -120,7 +122,7 @@ const MainTabs = () => {
         name="Shopping"
         component={ShoppingListScreen}
         options={{
-          tabBarLabel: 'Shopping',
+          tabBarLabel: t('tabs.shopping'),
           tabBarIcon: ({ color, focused }) => <TabIcon name="cart" color={color} focused={focused} />,
         }}
       />
@@ -128,7 +130,7 @@ const MainTabs = () => {
         name="Calendar"
         component={CalendarScreen}
         options={{
-          tabBarLabel: 'Calendar',
+          tabBarLabel: t('tabs.calendar'),
           tabBarIcon: ({ color, focused }) => <TabIcon name="calendar" color={color} focused={focused} />,
         }}
       />
@@ -136,7 +138,7 @@ const MainTabs = () => {
         name="Goals"
         component={GoalsScreen}
         options={{
-          tabBarLabel: 'Goals',
+          tabBarLabel: t('tabs.goals'),
           tabBarIcon: ({ color, focused }) => <TabIcon name="target" color={color} focused={focused} />,
         }}
       />
@@ -144,7 +146,7 @@ const MainTabs = () => {
         name="Settings"
         component={SettingsScreen}
         options={{
-          tabBarLabel: 'Settings',
+          tabBarLabel: t('settings.title'),
           tabBarIcon: ({ color, focused }) => <TabIcon name="settings" color={color} focused={focused} />,
         }}
       />
@@ -229,6 +231,7 @@ const MainTabsWithGuard = () => {
 const MainNavigator = () => {
   const { selectedHousehold } = useHousehold();
   const colors = useThemeColors();
+  const { t } = useLanguage();
 
   return (
     <MainStack.Navigator
@@ -259,7 +262,7 @@ const MainNavigator = () => {
         name="CreateExpense"
         component={CreateExpenseScreen}
         options={({ route }) => ({
-          title: 'Add Expense',
+          title: t('expenses.addExpense'),
           presentation: 'modal',
           headerStyle: {
             backgroundColor: colors.background,
@@ -276,7 +279,7 @@ const MainNavigator = () => {
         name="SettleUp"
         component={SettleUpScreen}
         options={{
-          title: 'Settle Up',
+          title: t('expenses.settleUp'),
           headerStyle: {
             backgroundColor: colors.background,
           },
@@ -293,7 +296,7 @@ const MainNavigator = () => {
         name="SettlementHistory"
         component={SettlementHistoryScreen}
         options={{ 
-          title: 'Settlement History',
+          title: t('expenses.settlementHistory'),
           headerStyle: {
             backgroundColor: colors.background,
           },
@@ -310,7 +313,7 @@ const MainNavigator = () => {
         name="CreateEvent"
         component={CreateEventScreen}
         options={{
-          title: 'Add Event',
+          title: t('events.addEvent'),
           presentation: 'modal',
           headerStyle: {
             backgroundColor: colors.background,
@@ -327,7 +330,7 @@ const MainNavigator = () => {
         name="CreateGoal"
         component={CreateGoalScreen}
         options={{
-          title: 'New Goal',
+          title: t('goals.addGoal'),
           presentation: 'modal',
           headerStyle: {
             backgroundColor: colors.background,
@@ -344,7 +347,7 @@ const MainNavigator = () => {
         name="AccountSettings"
         component={AccountSettingsScreen}
         options={{
-          title: 'Account Settings',
+          title: t('accountSettingsScreen.title'),
           headerStyle: {
             backgroundColor: colors.background,
           },
@@ -360,7 +363,7 @@ const MainNavigator = () => {
         name="HouseholdSettings"
         component={HouseholdSettingsScreen}
         options={{
-          title: 'Household Settings',
+          title: t('householdSettingsScreen.title'),
           headerStyle: {
             backgroundColor: colors.background,
           },
@@ -378,7 +381,7 @@ const MainNavigator = () => {
         options={({ navigation, route }) => {
           const fromHouseholdSelect = route.params?.fromHouseholdSelect;
           return {
-            title: 'Settings',
+            title: t('settings.title'),
             headerStyle: {
               backgroundColor: colors.background,
             },

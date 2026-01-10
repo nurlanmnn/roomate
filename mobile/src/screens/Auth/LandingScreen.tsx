@@ -2,8 +2,11 @@ import React from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { useLanguage } from '../../context/LanguageContext';
 
 export const LandingScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
+  const { t } = useLanguage();
+  
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.content}>
@@ -13,16 +16,16 @@ export const LandingScreen: React.FC<{ navigation: any }> = ({ navigation }) => 
           resizeMode="contain"
         />
         <Text style={styles.title}>Roomate</Text>
-        <Text style={styles.subtitle}>Manage your shared living space</Text>
+        <Text style={styles.subtitle}>{t('auth.appTagline')}</Text>
         
         <View style={styles.buttonContainer}>
           <PrimaryButton
-            title="Sign In"
+            title={t('auth.login')}
             onPress={() => navigation.navigate('Login')}
           />
           <View style={styles.spacer} />
           <PrimaryButton
-            title="Create Account"
+            title={t('auth.createAccount')}
             onPress={() => navigation.navigate('Signup')}
             variant="outline"
           />

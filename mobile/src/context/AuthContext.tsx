@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, authApi } from '../api/authApi';
 import * as SecureStore from 'expo-secure-store';
+import { registerPushTokenWithBackend, removePushTokenFromBackend, addNotificationListeners } from '../utils/notifications';
 
 interface AuthContextType {
   user: User | null;
@@ -27,6 +28,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (token) {
         const currentUser = await authApi.getMe();
         setUser(currentUser);
+        // Register push token after auth check succeeds
+        registerPushTokenWithBackend().catch(console.error);
       }
     } catch (error) {
       console.error('Auth check failed:', error);
@@ -36,9 +39,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  // Set up notification listeners
+  useEffect(() => {
+    const cleanup = addNotificationListeners(
+      (notification) => {
+        // Handle received notification (app is in foreground)
+        console.log('Notification received in foreground:', notification.request.content.title);
+      },
+      (response) => {
+        // Handle notification tap (navigate to relevant screen)
+        const data = response.notification.request.content.data;
+        console.log('User tapped notification with data:', data);
+        // Navigation can be handled here based on notification type
+      }
+    );
+
+    return cleanup;
+  }, []);
+
   const login = async (email: string, password: string) => {
     const response = await authApi.login({ email, password });
     setUser(response.user);
+    // Register push token after login
+    registerPushTokenWithBackend().catch(console.error);
   };
 
   const signup = async (name: string, email: string, password: string) => {
@@ -47,6 +70,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const logout = async () => {
+    // Remove push token before logout
+    await removePushTokenFromBackend().catch(console.error);
     await authApi.logout();
     setUser(null);
   };

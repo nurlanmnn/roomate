@@ -378,5 +378,48 @@ router.post('/resend-verification', async (req: Request, res: Response) => {
   }
 });
 
+// POST /auth/push-token - Register push notification token
+const pushTokenSchema = z.object({
+  pushToken: z.string().min(1),
+});
+
+router.post('/push-token', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { pushToken } = pushTokenSchema.parse(req.body);
+
+    await User.findByIdAndUpdate(userId, { pushToken });
+
+    res.json({ success: true });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+    }
+    console.error('Push token error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// DELETE /auth/push-token - Remove push notification token (logout)
+router.delete('/push-token', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    await User.findByIdAndUpdate(userId, { $unset: { pushToken: 1 } });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Remove push token error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;
 

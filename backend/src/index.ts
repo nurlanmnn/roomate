@@ -10,6 +10,7 @@ import settlementRoutes from './routes/settlements';
 import shoppingRoutes from './routes/shopping';
 import goalRoutes from './routes/goals';
 import eventRoutes from './routes/events';
+import { schedulerService } from './services/schedulerService';
 
 const app = express();
 
@@ -46,6 +47,9 @@ const startServer = async () => {
     app.listen(port, '0.0.0.0', () => {
       console.log(`Server running on port ${port}`);
       console.log(`Accessible at http://localhost:${port} or http://192.168.1.187:${port}`);
+      
+      // Start notification scheduler
+      schedulerService.start();
     });
   } catch (error) {
     console.error('Failed to start server:', error);

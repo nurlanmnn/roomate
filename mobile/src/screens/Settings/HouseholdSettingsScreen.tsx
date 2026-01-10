@@ -5,6 +5,7 @@ import { AppText } from '../../components/AppText';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { householdsApi, getOwnerIdString } from '../../api/householdsApi';
 import { Avatar } from '../../components/ui/Avatar';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
@@ -15,6 +16,7 @@ import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows } from 
 export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { selectedHousehold, setSelectedHousehold } = useHousehold();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const colors = useThemeColors();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
   const [isOwner, setIsOwner] = useState(false);
@@ -56,7 +58,7 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
 
   const handleSaveChanges = async () => {
     if (!selectedHousehold || !editName.trim()) {
-      Alert.alert('Error', 'Household name is required');
+      Alert.alert(t('common.error'), t('household.householdName'));
       return;
     }
 
@@ -68,9 +70,9 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
       });
       setSelectedHousehold(updated);
       setIsEditing(false);
-      Alert.alert('Success', 'Household updated successfully');
+      Alert.alert(t('common.success'), t('common.success'));
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to update household');
+      Alert.alert(t('common.error'), error.response?.data?.error || t('alerts.somethingWentWrong'));
     } finally {
       setIsSaving(false);
     }
@@ -79,7 +81,7 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
   const handleCopyCode = async () => {
     if (selectedHousehold) {
       await Clipboard.setStringAsync(selectedHousehold.joinCode);
-      Alert.alert('Copied', 'Join code copied to clipboard');
+      Alert.alert(t('common.copied'), t('householdSettingsScreen.codeCopied'));
     }
   };
 
@@ -202,15 +204,15 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        <ScreenHeader title="Household Settings" subtitle={selectedHousehold.name} />
+        <ScreenHeader title={t('householdSettingsScreen.title')} subtitle={selectedHousehold.name} />
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <AppText style={styles.sectionTitle}>Household Information</AppText>
+            <AppText style={styles.sectionTitle}>{t('householdSettingsScreen.householdInfo')}</AppText>
             {isOwner && !isEditing && (
               <TouchableOpacity onPress={handleStartEditing} style={styles.editButton}>
                 <Ionicons name="pencil" size={18} color={colors.primary} />
-                <AppText style={styles.editButtonText}>Edit</AppText>
+                <AppText style={styles.editButtonText}>{t('common.edit')}</AppText>
               </TouchableOpacity>
             )}
           </View>
@@ -218,22 +220,22 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
           {isEditing ? (
             <>
               <View style={styles.inputGroup}>
-                <AppText style={styles.inputLabel}>Name</AppText>
+                <AppText style={styles.inputLabel}>{t('householdSettingsScreen.householdName')}</AppText>
                 <TextInput
                   style={styles.textInput}
                   value={editName}
                   onChangeText={setEditName}
-                  placeholder="Household name"
+                  placeholder={t('household.householdName')}
                   placeholderTextColor={colors.textSecondary}
                 />
               </View>
               <View style={styles.inputGroup}>
-                <AppText style={styles.inputLabel}>Address (optional)</AppText>
+                <AppText style={styles.inputLabel}>{t('household.householdLocation')}</AppText>
                 <TextInput
                   style={styles.textInput}
                   value={editAddress}
                   onChangeText={setEditAddress}
-                  placeholder="Address or location"
+                  placeholder={t('householdSettingsScreen.householdLocation')}
                   placeholderTextColor={colors.textSecondary}
                 />
               </View>
@@ -243,26 +245,26 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
                   onPress={handleCancelEditing}
                   disabled={isSaving}
                 >
-                  <AppText style={styles.cancelButtonText}>Cancel</AppText>
+                  <AppText style={styles.cancelButtonText}>{t('common.cancel')}</AppText>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.editActionButton, styles.saveButton, isSaving && styles.disabledButton]}
                   onPress={handleSaveChanges}
                   disabled={isSaving}
                 >
-                  <AppText style={styles.saveButtonText}>{isSaving ? 'Saving...' : 'Save'}</AppText>
+                  <AppText style={styles.saveButtonText}>{isSaving ? t('common.loading') : t('common.save')}</AppText>
                 </TouchableOpacity>
               </View>
             </>
           ) : (
             <>
               <View style={styles.infoRow}>
-                <AppText style={styles.infoLabel}>Name</AppText>
+                <AppText style={styles.infoLabel}>{t('householdSettingsScreen.householdName')}</AppText>
                 <AppText style={styles.infoValue}>{selectedHousehold.name}</AppText>
               </View>
               {selectedHousehold.address && (
                 <View style={styles.infoRow}>
-                  <AppText style={styles.infoLabel}>Address</AppText>
+                  <AppText style={styles.infoLabel}>{t('householdSettingsScreen.householdLocation')}</AppText>
                   <AppText style={styles.infoValue}>{selectedHousehold.address}</AppText>
                 </View>
               )}
@@ -270,7 +272,7 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
           )}
 
           <View style={styles.infoRow}>
-            <AppText style={styles.infoLabel}>Join Code</AppText>
+            <AppText style={styles.infoLabel}>{t('householdSettingsScreen.inviteCode')}</AppText>
             <View style={styles.joinCodeRow}>
               <AppText style={styles.infoValue}>{selectedHousehold.joinCode}</AppText>
               <TouchableOpacity onPress={handleCopyCode} style={styles.copyButton}>
@@ -281,7 +283,7 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
 
           <View style={styles.codeActions}>
             <PrimaryButton
-              title="Copy Code"
+              title={t('householdSettingsScreen.copyCode')}
               onPress={handleCopyCode}
               variant="secondary"
             />
@@ -289,7 +291,7 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
         </View>
 
         <View style={styles.section}>
-          <AppText style={styles.sectionTitle}>Members</AppText>
+          <AppText style={styles.sectionTitle}>{t('householdSettingsScreen.members')}</AppText>
           {selectedHousehold.members.map((m) => {
             const ownerIdStr = getOwnerIdString(selectedHousehold);
             const isOwnerMember = m._id === ownerIdStr;
@@ -303,7 +305,7 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
                 </View>
                 {isOwnerMember && (
                   <View style={styles.ownerBadge}>
-                    <AppText style={styles.ownerBadgeText}>Owner</AppText>
+                    <AppText style={styles.ownerBadgeText}>{t('householdSettingsScreen.owner')}</AppText>
                   </View>
                 )}
                 {canRemove && (
@@ -326,15 +328,15 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <AppText style={styles.sectionTitle}>Actions</AppText>
+            <AppText style={styles.sectionTitle}>{t('householdSettingsScreen.actions')}</AppText>
           </View>
           <PrimaryButton
-            title="Switch Household"
+            title={t('household.selectHousehold')}
             onPress={handleSwitchHousehold}
           />
           <View style={styles.spacer} />
           <PrimaryButton
-            title="Leave Household"
+            title={t('householdSettingsScreen.leaveHousehold')}
             onPress={handleLeaveHousehold}
             variant="danger"
           />
@@ -342,14 +344,14 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
             <>
               <View style={styles.spacer} />
               <PrimaryButton
-                title="Delete Household"
+                title={t('householdSettingsScreen.deleteHousehold')}
                 onPress={handleDeleteHousehold}
                 variant="danger"
               />
               <View style={styles.ownerNoteContainer}>
                 <Ionicons name="information-circle-outline" size={20} color={colors.warning} />
                 <AppText style={styles.ownerNote}>
-                  As the owner, leaving will transfer ownership to the next member. Use "Delete Household" to permanently remove all data.
+                  {t('householdSettingsScreen.ownershipTransfer')}
                 </AppText>
               </View>
             </>

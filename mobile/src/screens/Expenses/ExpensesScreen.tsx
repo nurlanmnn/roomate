@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, A
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { expensesApi, Expense, PairwiseBalance } from '../../api/expensesApi';
 import { ExpenseCard } from '../../components/ExpenseCard';
 import { BalanceSummary } from '../../components/BalanceSummary';
@@ -19,6 +20,7 @@ import { parseISO } from 'date-fns';
 export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { selectedHousehold, setSelectedHousehold } = useHousehold();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const colors = useThemeColors();
   const styles = useMemo(
     () =>
@@ -144,7 +146,7 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
       // Reload expenses and balances after deletion
       await loadData();
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to delete expense');
+      Alert.alert(t('common.error'), error.response?.data?.error || t('alerts.somethingWentWrong'));
     }
   };
 
@@ -290,7 +292,7 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>Please select a household</Text>
+          <Text style={styles.emptyText}>{t('home.pleaseSelectHousehold')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -303,7 +305,7 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT + spacing.xl }}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={loadData} />}
       >
-      <ScreenHeader title="Expenses" subtitle={selectedHousehold.name} />
+      <ScreenHeader title={t('expenses.title')} subtitle={selectedHousehold.name} />
 
       {user && (
         <View style={styles.section}>
@@ -317,13 +319,13 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
 
       <View style={styles.actions}>
         <PrimaryButton
-          title="+ Add Expense"
+          title={`+ ${t('expenses.addExpense')}`}
           onPress={() => navigation.navigate('CreateExpense')}
         />
         <View style={styles.spacer} />
         <PrimaryButton
           variant="secondary"
-          title="Settle Up"
+          title={t('expenses.settleUp')}
           onPress={() => navigation.navigate('SettleUp')}
         />
       </View>
@@ -340,7 +342,7 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
 
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, { marginBottom: spacing.sm }]}>
-          {filters.groupBy === 'none' ? 'Recent Expenses' : 'Expenses'}
+          {t('expenses.title')}
           {filteredAndSortedExpenses.length !== expenses.length && (
             <Text style={styles.filteredCount}> ({filteredAndSortedExpenses.length})</Text>
           )}
@@ -363,7 +365,7 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
           </>
         ) : filteredAndSortedExpenses.length === 0 ? (
           <Text style={styles.emptyText}>
-            {expenses.length === 0 ? 'No expenses yet' : 'No expenses match your filters'}
+            {expenses.length === 0 ? t('expenses.noExpenses') : t('common.noResults')}
           </Text>
         ) : filters.groupBy === 'none' ? (
           filteredAndSortedExpenses.map((expense) => (
