@@ -9,7 +9,7 @@ interface FormTextInputProps {
   onChangeText: (text: string) => void;
   placeholder?: string;
   secureTextEntry?: boolean;
-  keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad';
+  keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad' | 'number-pad';
   error?: string;
   multiline?: boolean;
   numberOfLines?: number;

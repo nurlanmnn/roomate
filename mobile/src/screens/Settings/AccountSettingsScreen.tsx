@@ -116,7 +116,7 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
       // Request permissions
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Please grant camera roll permissions to select a photo.');
+        Alert.alert(t('accountSettingsScreen.permissionNeeded'), t('accountSettingsScreen.grantPhotoPermission'));
         return;
       }
 
@@ -153,7 +153,7 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
       }
     } catch (error) {
       console.error('Error picking image:', error);
-      Alert.alert('Error', 'Failed to pick image');
+      Alert.alert(t('common.error'), t('accountSettingsScreen.failedToPickImage'));
     }
   };
 
@@ -163,9 +163,9 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
       setSavingAvatar(true);
       await authApi.updateProfile({ avatarUrl: avatarUri });
       await refreshUser();
-      Alert.alert('Saved', 'Your profile photo has been updated.');
+      Alert.alert(t('common.saved'), t('accountSettingsScreen.photoSaved'));
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to update profile photo');
+      Alert.alert(t('common.error'), error.response?.data?.error || t('accountSettingsScreen.failedToUpdatePhoto'));
     } finally {
       setSavingAvatar(false);
     }
@@ -173,7 +173,7 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
 
   const handleChangePassword = async () => {
     if (!canChangePassword) {
-      Alert.alert('Error', 'New password must be at least 8 characters.');
+      Alert.alert(t('common.error'), t('accountSettingsScreen.passwordMinLength'));
       return;
     }
 
@@ -191,9 +191,9 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
               await authApi.changePassword({ currentPassword, newPassword });
               setCurrentPassword('');
               setNewPassword('');
-              Alert.alert('Success', 'Password changed.');
+              Alert.alert(t('common.success'), t('accountSettingsScreen.passwordChanged'));
             } catch (error: any) {
-              Alert.alert('Error', error.response?.data?.error || 'Failed to change password');
+              Alert.alert(t('common.error'), error.response?.data?.error || t('accountSettingsScreen.failedToChangePassword'));
             } finally {
               setChangingPassword(false);
             }
@@ -205,7 +205,7 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
 
   const handleDeleteAccount = async () => {
     if (!deletePassword) {
-      Alert.alert('Error', 'Please enter your password to confirm.');
+      Alert.alert(t('common.error'), t('accountSettingsScreen.enterPassword'));
       return;
     }
 
@@ -223,7 +223,7 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
               await authApi.deleteAccount({ password: deletePassword });
               await logout();
             } catch (error: any) {
-              Alert.alert('Error', error.response?.data?.error || 'Failed to delete account');
+              Alert.alert(t('common.error'), error.response?.data?.error || t('accountSettingsScreen.failedToDeleteAccount'));
             } finally {
               setDeleting(false);
             }

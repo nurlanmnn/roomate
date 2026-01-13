@@ -10,9 +10,11 @@ import { ShoppingItemRow } from '../../components/ShoppingItemRow';
 import { QuickAddButton } from '../../components/QuickAddButton';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
-import { useThemeColors, fontSizes, fontWeights, radii, spacing, TAB_BAR_HEIGHT } from '../../theme';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { useThemeColors, fontSizes, fontWeights, radii, spacing, TAB_BAR_HEIGHT, shadows } from '../../theme';
 import { SearchBar } from '../../components/ui/SearchBar';
 import { Ionicons } from '@expo/vector-icons';
+import { FormTextInput } from '../../components/FormTextInput';
 
 const weightUnits: WeightUnit[] = ['lbs', 'kg', 'g', 'oz', 'liter', 'ml', 'fl oz', 'cup', 'pint', 'quart', 'gallon'];
 
@@ -35,6 +37,7 @@ export const ShoppingListScreen: React.FC = () => {
   const [ownerId, setOwnerId] = useState('');
   const [showCompleted, setShowCompleted] = useState(false);
   const [showListModal, setShowListModal] = useState(false);
+  const [showAddItemModal, setShowAddItemModal] = useState(false);
   const [newListName, setNewListName] = useState('');
   const [editingList, setEditingList] = useState<ShoppingList | null>(null);
   const [editingItem, setEditingItem] = useState<ShoppingItem | null>(null);
@@ -106,7 +109,7 @@ export const ShoppingListScreen: React.FC = () => {
 
   const handleCreateList = async () => {
     if (!selectedHousehold || !newListName.trim()) {
-      Alert.alert('Error', 'Please enter a list name');
+      Alert.alert(t('common.error'), t('shoppingList.enterListName'));
       return;
     }
 
@@ -120,7 +123,7 @@ export const ShoppingListScreen: React.FC = () => {
       await loadLists();
       setSelectedList(newList);
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to create list');
+      Alert.alert(t('common.error'), error.response?.data?.error || t('shoppingList.failedToCreateList'));
     }
   };
 
@@ -132,7 +135,7 @@ export const ShoppingListScreen: React.FC = () => {
 
   const handleUpdateList = async () => {
     if (!editingList || !newListName.trim()) {
-      Alert.alert('Error', 'Please enter a list name');
+      Alert.alert(t('common.error'), t('shoppingList.enterListName'));
       return;
     }
 
@@ -149,7 +152,7 @@ export const ShoppingListScreen: React.FC = () => {
         setSelectedList(updatedList);
       }
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to update list');
+      Alert.alert(t('common.error'), error.response?.data?.error || t('shoppingList.failedToUpdateList'));
     }
   };
 
@@ -165,12 +168,12 @@ export const ShoppingListScreen: React.FC = () => {
 
   const handleUpdateItem = async () => {
     if (!editingItem || !editItemName.trim()) {
-      Alert.alert('Error', 'Please enter an item name');
+      Alert.alert(t('common.error'), t('shoppingList.enterItemName'));
       return;
     }
 
     if (!editItemIsShared && !editItemOwnerId) {
-      Alert.alert('Error', 'Please select an owner for personal items');
+      Alert.alert(t('common.error'), t('shoppingList.selectOwnerForPersonal'));
       return;
     }
 
@@ -222,13 +225,13 @@ export const ShoppingListScreen: React.FC = () => {
         return;
       }
       // If update fails, reload to revert optimistic update
-      Alert.alert('Error', error.response?.data?.error || 'Failed to update item. It may have been modified by another user.');
+      Alert.alert(t('common.error'), error.response?.data?.error || t('shoppingList.failedToUpdateItem'));
       loadItems();
     }
   };
 
   const handleDeleteList = async (list: ShoppingList) => {
-    Alert.alert(t('shoppingList.deleteList'), t('shoppingList.deleteListConfirm').replace('{{name}}', list.name), [
+    Alert.alert(t('shoppingList.deleteList'), t('shoppingList.deleteListConfirm', { name: list.name }), [
       { text: t('common.cancel'), style: 'cancel' },
       {
         text: t('common.delete'),
@@ -242,7 +245,7 @@ export const ShoppingListScreen: React.FC = () => {
             await loadLists();
           } catch (error) {
             console.error('Failed to delete list:', error);
-            Alert.alert('Error', 'Failed to delete list');
+            Alert.alert(t('common.error'), t('shoppingList.failedToDeleteList'));
           }
         },
       },
@@ -253,12 +256,12 @@ export const ShoppingListScreen: React.FC = () => {
     if (addingItem) return; // Prevent double submission
     
     if (!selectedHousehold || !user || !selectedList || !name.trim()) {
-      Alert.alert('Error', 'Please enter an item name');
+      Alert.alert(t('common.error'), t('shoppingList.enterItemName'));
       return;
     }
 
     if (!isShared && !ownerId) {
-      Alert.alert('Error', 'Please select an owner for personal items');
+      Alert.alert(t('common.error'), t('shoppingList.selectOwnerForPersonal'));
       return;
     }
 
@@ -281,9 +284,10 @@ export const ShoppingListScreen: React.FC = () => {
       setShowUnitDropdown(false);
       setIsShared(true);
       setOwnerId('');
+      setShowAddItemModal(false);
       loadItems();
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to add item');
+      Alert.alert(t('common.error'), error.response?.data?.error || t('shoppingList.failedToAddItem'));
     } finally {
       setAddingItem(false);
     }
@@ -319,12 +323,12 @@ export const ShoppingListScreen: React.FC = () => {
     if (!selectedList || completedItems.length === 0) return;
 
     Alert.alert(
-      'Restore All Items',
-      `Are you sure you want to restore all ${completedItems.length} completed items back to your shopping list?`,
+      t('shopping.restoreAll'),
+      t('shopping.restoreAllConfirm', { count: completedItems.length }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Restore All',
+          text: t('shopping.restoreAll'),
           onPress: async () => {
             try {
               setLoading(true);
@@ -361,10 +365,10 @@ export const ShoppingListScreen: React.FC = () => {
   };
 
   const handleDelete = async (item: ShoppingItem) => {
-    Alert.alert('Delete Item', 'Are you sure?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('shoppingList.deleteItem'), t('shoppingList.deleteItemConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
           // Optimistic update - remove from list immediately
@@ -381,7 +385,7 @@ export const ShoppingListScreen: React.FC = () => {
               return;
             }
             console.error('Failed to delete item:', error);
-            Alert.alert('Error', 'Failed to delete item. It may have been modified by another user.');
+            Alert.alert(t('common.error'), t('shoppingList.failedToDeleteItem'));
             loadItems();
           }
         },
@@ -454,15 +458,30 @@ export const ShoppingListScreen: React.FC = () => {
       loadItems();
     } catch (error: any) {
       console.error('Failed to add items:', error);
-      Alert.alert('Error', error.response?.data?.error || 'Failed to add items');
+      Alert.alert(t('common.error'), error.response?.data?.error || t('shoppingList.failedToAddItems'));
     }
+  };
+
+  const resetAddItemForm = () => {
+    setName('');
+    setQuantity('');
+    setWeight('');
+    setWeightUnit('');
+    setShowUnitDropdown(false);
+    setIsShared(true);
+    setOwnerId('');
   };
 
   if (!selectedHousehold) {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.emptyContainer}>
-          <AppText style={styles.emptyText}>Please select a household</AppText>
+          <EmptyState
+            icon="home-outline"
+            title={t('alerts.selectHousehold')}
+            message={t('household.selectHousehold')}
+            variant="minimal"
+          />
         </View>
       </SafeAreaView>
     );
@@ -486,468 +505,698 @@ export const ShoppingListScreen: React.FC = () => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT + 220 }}
-          refreshControl={<RefreshControl refreshing={loading} onRefresh={loadLists} />}
-          keyboardShouldPersistTaps="handled"
-        >
-        <View style={styles.topHeader}>
+        {/* Header */}
+        <View style={styles.header}>
           <ScreenHeader title={t('shopping.title')} subtitle={selectedHousehold.name} />
-          <View style={styles.topHeaderActions}>
-            <PrimaryButton title={`+ ${t('common.add')}`} onPress={() => setShowListModal(true)} />
-          </View>
-          <View style={styles.searchWrap}>
+          <View style={styles.headerActions}>
             <SearchBar value={searchQuery} onChangeText={setSearchQuery} placeholder={t('common.search')} />
           </View>
         </View>
 
         {/* List Selection */}
         <View style={styles.listSection}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.listScroll}>
-            {filteredLists.map((list) => (
-              <TouchableOpacity
-                key={list._id}
-                style={[
-                  styles.listCard,
-                  selectedList?._id === list._id && styles.listCardSelected,
-                ]}
-                onPress={() => setSelectedList(list)}
-                onLongPress={() => handleEditList(list)}
-              >
-                <AppText
+          <View style={styles.listSectionHeader}>
+            <AppText style={styles.listSectionTitle}>{t('shopping.title')}</AppText>
+            <TouchableOpacity
+              style={styles.createListButton}
+              onPress={() => {
+                setEditingList(null);
+                setNewListName('');
+                setShowListModal(true);
+              }}
+            >
+              <Ionicons name="add" size={20} color={colors.primary} />
+              <AppText style={styles.createListButtonText}>{t('shopping.createList')}</AppText>
+            </TouchableOpacity>
+          </View>
+          {lists.length > 0 && (
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false} 
+              contentContainerStyle={styles.listScrollContent}
+            >
+              {filteredLists.map((list) => (
+                <TouchableOpacity
+                  key={list._id}
                   style={[
-                    styles.listCardText,
-                    selectedList?._id === list._id && styles.listCardTextSelected,
+                    styles.listCard,
+                    selectedList?._id === list._id && styles.listCardSelected,
                   ]}
+                  onPress={() => setSelectedList(list)}
+                  onLongPress={() => handleEditList(list)}
                 >
-                  {list.name}
-                </AppText>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+                  <AppText
+                    style={[
+                      styles.listCardText,
+                      selectedList?._id === list._id && styles.listCardTextSelected,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {list.name}
+                  </AppText>
+                  {selectedList?._id === list._id && (
+                    <View style={styles.listCardIndicator} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
         </View>
 
-        {selectedList ? (
-          <>
-            <View style={styles.listHeader}>
-              <AppText style={styles.listTitle}>{selectedList.name}</AppText>
-              <View style={styles.listHeaderActions}>
-                <TouchableOpacity
-                  style={styles.listActionButton}
-                  onPress={() => handleEditList(selectedList)}
-                >
-                  <Ionicons name="create-outline" size={20} color={colors.textSecondary} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.listActionButton}
-                  onPress={() => handleDeleteList(selectedList)}
-                >
-                  <Ionicons name="trash-outline" size={20} color={colors.danger} />
-                </TouchableOpacity>
-                <QuickAddButton onAddItems={handleQuickAdd} />
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={<RefreshControl refreshing={loading} onRefresh={loadLists} />}
+          keyboardShouldPersistTaps="handled"
+        >
+          {selectedList ? (
+            <>
+              {/* List Header */}
+              <View style={styles.listHeader}>
+                <View style={styles.listHeaderLeft}>
+                  <AppText style={styles.listTitle}>{selectedList.name}</AppText>
+                  <AppText style={styles.listSubtitle}>
+                    {filteredItems.length} {filteredItems.length === 1 ? t('shopping.item') : t('shopping.items')}
+                  </AppText>
+                </View>
+                <View style={styles.listHeaderActions}>
+                  <QuickAddButton onAddItems={handleQuickAdd} />
+                  <TouchableOpacity
+                    style={styles.listActionButton}
+                    onPress={() => handleEditList(selectedList)}
+                  >
+                    <Ionicons name="create-outline" size={22} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.listActionButton}
+                    onPress={() => handleDeleteList(selectedList)}
+                  >
+                    <Ionicons name="trash-outline" size={22} color={colors.danger} />
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
 
-            <View style={styles.section}>
-              <AppText style={styles.sectionTitle}>{t('shoppingList.toBuy')}</AppText>
-              {filteredItems.length === 0 ? (
-                <AppText style={styles.emptyText}>{t('shoppingList.noItemsToBuy')}</AppText>
+              {/* Items Section */}
+              {filteredItems.length === 0 && filteredCompletedItems.length === 0 ? (
+                <EmptyState
+                  icon="cart-outline"
+                  title={t('shoppingList.noItemsToBuy')}
+                  message={t('shopping.noItemsDescription')}
+                  actionLabel={t('shopping.addItem')}
+                  onAction={() => setShowAddItemModal(true)}
+                />
               ) : (
-                filteredItems.map((item) => (
-                  <ShoppingItemRow
-                    key={item._id}
-                    item={item}
-                    onToggle={() => handleToggleComplete(item)}
-                    onEdit={() => handleEditItem(item)}
-                    onDelete={() => handleDelete(item)}
-                  />
-                ))
-              )}
-            </View>
-
-            {filteredCompletedItems.length > 0 && (
-              <View style={styles.section}>
-                <View style={styles.completedHeaderContainer}>
-                  <TouchableOpacity
-                    onPress={() => setShowCompleted(!showCompleted)}
-                    style={styles.completedHeader}
-                  >
-                    <AppText style={styles.sectionTitle}>
-                      Completed ({filteredCompletedItems.length})
-                    </AppText>
-                    <AppText>{showCompleted ? '▼' : '▶'}</AppText>
-                  </TouchableOpacity>
-                  {showCompleted && (
-                    <TouchableOpacity
-                      style={styles.restoreAllButton}
-                      onPress={handleRestoreAll}
-                    >
-                      <Ionicons name="refresh-outline" size={16} color={colors.primary} />
-                      <AppText style={styles.restoreAllText}>Restore All</AppText>
-                    </TouchableOpacity>
-                  )}
-                </View>
-                {showCompleted &&
-                  filteredCompletedItems.map((item) => (
-                    <ShoppingItemRow
-                      key={item._id}
-                      item={item}
-                      onToggle={() => handleToggleComplete(item)}
-                      onEdit={() => handleEditItem(item)}
-                      onDelete={() => handleDelete(item)}
-                    />
-                  ))}
-              </View>
-            )}
-
-            <View style={styles.addSection}>
-              <AppText style={styles.addSectionTitle}>{t('shopping.addItem')}</AppText>
-              <TextInput
-                style={styles.input}
-                value={name}
-                onChangeText={setName}
-                placeholder={t('shopping.itemName')}
-                placeholderTextColor={colors.textSecondary}
-              />
-              <TextInput
-                style={styles.input}
-                value={quantity}
-                onChangeText={(text) => {
-                  // Only allow integers
-                  const numericValue = text.replace(/[^0-9]/g, '');
-                  setQuantity(numericValue);
-                }}
-                placeholder={`${t('shopping.quantity')} (${t('common.optional')})`}
-                placeholderTextColor={colors.textSecondary}
-                keyboardType="number-pad"
-              />
-              <View>
-                <TextInput
-                  style={styles.input}
-                  value={weight}
-                  onChangeText={(text) => {
-                    // Only allow integers
-                    const numericValue = text.replace(/[^0-9]/g, '');
-                    setWeight(numericValue);
-                  }}
-                  placeholder={`${t('shopping.unit')} (${t('common.optional')})`}
-                  placeholderTextColor={colors.textSecondary}
-                  keyboardType="number-pad"
-                />
-                <View style={styles.dropdownContainer}>
-                  <TouchableOpacity
-                    style={styles.dropdownButton}
-                    onPress={() => setShowUnitDropdown(!showUnitDropdown)}
-                  >
-                    <AppText style={[styles.dropdownButtonText, !weightUnit && styles.dropdownPlaceholder]}>
-                      {weightUnit || t('shopping.selectUnit')}
-                    </AppText>
-                    <AppText style={styles.dropdownArrow}>{showUnitDropdown ? '▲' : '▼'}</AppText>
-                  </TouchableOpacity>
-                  {showUnitDropdown && (
-                    <View style={styles.dropdownMenu}>
-                      <ScrollView style={styles.dropdownScrollView}>
-                        {weightUnits.map((unit) => (
-                          <TouchableOpacity
-                            key={unit}
-                            style={[
-                              styles.dropdownItem,
-                              weightUnit === unit && styles.dropdownItemSelected,
-                            ]}
-                            onPress={() => {
-                              setWeightUnit(unit);
-                              setShowUnitDropdown(false);
-                            }}
-                          >
-                            <AppText
-                              style={[
-                                styles.dropdownItemText,
-                                weightUnit === unit && styles.dropdownItemTextSelected,
-                              ]}
-                            >
-                              {unit}
-                            </AppText>
-                          </TouchableOpacity>
+                <>
+                  {filteredItems.length > 0 && (
+                    <View style={styles.section}>
+                      <AppText style={styles.sectionTitle}>{t('shoppingList.toBuy')}</AppText>
+                      <View style={styles.itemsContainer}>
+                        {filteredItems.map((item) => (
+                          <ShoppingItemRow
+                            key={item._id}
+                            item={item}
+                            onToggle={() => handleToggleComplete(item)}
+                            onEdit={() => handleEditItem(item)}
+                            onDelete={() => handleDelete(item)}
+                          />
                         ))}
-                        <TouchableOpacity
-                          style={styles.dropdownItem}
-                          onPress={() => {
-                            setWeightUnit('');
-                            setShowUnitDropdown(false);
-                          }}
-                        >
-                          <AppText style={styles.dropdownItemText}>{t('expenses.none')}</AppText>
-                        </TouchableOpacity>
-                      </ScrollView>
+                      </View>
                     </View>
                   )}
-                </View>
-              </View>
-              <View style={styles.toggleRow}>
-                <AppText style={styles.toggleLabel}>{t('shopping.shared')}</AppText>
-                <TouchableOpacity
-                  style={[styles.toggle, isShared && styles.toggleActive]}
-                  onPress={() => {
-                    setIsShared(true);
-                    setOwnerId('');
-                  }}
-                >
-                  <AppText style={isShared ? styles.toggleTextActive : styles.toggleText}>
-                    {t('common.yes')}
-                  </AppText>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.toggle, !isShared && styles.toggleActive]}
-                  onPress={() => setIsShared(false)}
-                >
-                  <AppText style={!isShared ? styles.toggleTextActive : styles.toggleText}>
-                    {t('common.no')}
-                  </AppText>
-                </TouchableOpacity>
-              </View>
-              {!isShared && (
-                <View style={styles.ownerSelect}>
-                  <AppText style={styles.ownerLabel}>{t('shopping.assignedTo')}</AppText>
-                  {selectedHousehold.members.map((member) => (
-                    <TouchableOpacity
-                      key={member._id}
-                      style={[
-                        styles.ownerOption,
-                        ownerId === member._id && styles.ownerOptionSelected,
-                      ]}
-                      onPress={() => setOwnerId(member._id)}
-                    >
-                      <AppText style={styles.ownerOptionText}>{member.name}</AppText>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
-              <PrimaryButton title={addingItem ? t('common.loading') : t('shopping.addItem')} onPress={handleAddItem} disabled={addingItem} />
-            </View>
-          </>
-        ) : (
-          <View style={styles.emptyContainer}>
-            <AppText style={styles.emptyText}>{t('shopping.noItemsDescription')}</AppText>
-          </View>
-        )}
-      </ScrollView>
 
-      {/* Create/Edit List Modal */}
-      <Modal
-        visible={showListModal}
-        animationType="slide"
-        transparent
-        onRequestClose={() => {
-          setShowListModal(false);
-          setEditingList(null);
-          setNewListName('');
-        }}
-      >
-        <KeyboardAvoidingView
-          style={styles.modalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-        >
-          <View style={styles.modalContent}>
-            <AppText style={styles.modalTitle}>
-              {editingList ? t('common.edit') : t('common.create')}
-            </AppText>
-            <TextInput
-              style={styles.input}
-              value={newListName}
-              onChangeText={setNewListName}
-              placeholder={t('shopping.title')}
-              placeholderTextColor={colors.textSecondary}
-              autoFocus
+                  {filteredCompletedItems.length > 0 && (
+                    <View style={styles.section}>
+                      <TouchableOpacity
+                        style={styles.completedHeader}
+                        onPress={() => setShowCompleted(!showCompleted)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={styles.completedHeaderLeft}>
+                          <Ionicons 
+                            name={showCompleted ? 'chevron-down' : 'chevron-forward'} 
+                            size={20} 
+                            color={colors.textSecondary} 
+                          />
+                          <AppText style={styles.sectionTitle}>
+                            {t('shopping.completedItems')} ({filteredCompletedItems.length})
+                          </AppText>
+                        </View>
+                        {showCompleted && (
+                          <TouchableOpacity
+                            style={styles.restoreAllButton}
+                            onPress={handleRestoreAll}
+                          >
+                            <Ionicons name="refresh-outline" size={16} color={colors.primary} />
+                            <AppText style={styles.restoreAllText}>{t('shopping.restoreAll')}</AppText>
+                          </TouchableOpacity>
+                        )}
+                      </TouchableOpacity>
+                      {showCompleted && (
+                        <View style={styles.itemsContainer}>
+                          {filteredCompletedItems.map((item) => (
+                            <ShoppingItemRow
+                              key={item._id}
+                              item={item}
+                              onToggle={() => handleToggleComplete(item)}
+                              onEdit={() => handleEditItem(item)}
+                              onDelete={() => handleDelete(item)}
+                            />
+                          ))}
+                        </View>
+                      )}
+                    </View>
+                  )}
+                </>
+              )}
+            </>
+          ) : (
+            <EmptyState
+              icon="list-outline"
+              title={t('shopping.noShoppingLists')}
+              message={t('shopping.noItemsDescription')}
+              actionLabel={t('shopping.createList')}
+              onAction={() => {
+                setEditingList(null);
+                setNewListName('');
+                setShowListModal(true);
+              }}
             />
-            <View style={styles.modalActions}>
-              <PrimaryButton
-                title={t('common.cancel')}
-                onPress={() => {
-                  setShowListModal(false);
-                  setEditingList(null);
-                  setNewListName('');
-                }}
-              />
-              <View style={styles.spacer} />
-              <PrimaryButton
-                title={editingList ? t('common.update') : t('common.create')}
-                onPress={editingList ? handleUpdateList : handleCreateList}
-              />
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+          )}
+        </ScrollView>
 
-      {/* Edit Item Modal */}
-      <Modal
-        visible={editingItem !== null}
-        animationType="slide"
-        transparent
-        onRequestClose={() => {
-          setEditingItem(null);
-          setEditItemName('');
-          setEditItemQuantity('');
-          setEditItemWeight('');
-          setEditItemWeightUnit('');
-          setEditItemIsShared(true);
-          setEditItemOwnerId('');
-        }}
-      >
-        <KeyboardAvoidingView
-          style={styles.modalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-        >
-          <ScrollView 
-            contentContainerStyle={styles.modalScrollContent}
-            style={styles.modalScrollView}
-            keyboardShouldPersistTaps="handled"
+        {/* Floating Action Button */}
+        {selectedList && (
+          <TouchableOpacity
+            style={styles.fab}
+            onPress={() => setShowAddItemModal(true)}
+            activeOpacity={0.8}
           >
-            <View style={styles.modalContent}>
-              <AppText style={styles.modalTitle}>{t('shopping.editItem')}</AppText>
-              <TextInput
-                style={styles.input}
-                value={editItemName}
-                onChangeText={setEditItemName}
-                placeholder={t('shopping.itemName')}
-                placeholderTextColor={colors.textSecondary}
-                autoFocus
-              />
-              <TextInput
-                style={styles.input}
-                value={editItemQuantity}
-                onChangeText={(text) => {
-                  // Only allow integers
-                  const numericValue = text.replace(/[^0-9]/g, '');
-                  setEditItemQuantity(numericValue);
-                }}
-                placeholder={`${t('shopping.quantity')} (${t('common.optional')})`}
-                placeholderTextColor={colors.textSecondary}
-                keyboardType="number-pad"
-              />
-              <View>
-                <TextInput
-                  style={styles.input}
-                  value={editItemWeight}
-                  onChangeText={(text) => {
-                    // Only allow integers
-                    const numericValue = text.replace(/[^0-9]/g, '');
-                    setEditItemWeight(numericValue);
-                  }}
-                  placeholder={`${t('shopping.unit')} (${t('common.optional')})`}
-                  placeholderTextColor={colors.textSecondary}
-                  keyboardType="number-pad"
-                />
-                <View style={styles.dropdownContainer}>
+            <Ionicons name="add" size={28} color={colors.surface} />
+          </TouchableOpacity>
+        )}
+
+        {/* Create/Edit List Modal */}
+        <Modal
+          visible={showListModal}
+          animationType="slide"
+          transparent
+          onRequestClose={() => {
+            setShowListModal(false);
+            setEditingList(null);
+            setNewListName('');
+          }}
+        >
+          <KeyboardAvoidingView
+            style={styles.modalOverlay}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+          >
+            <TouchableOpacity
+              style={styles.modalBackdrop}
+              activeOpacity={1}
+              onPress={() => {
+                setShowListModal(false);
+                setEditingList(null);
+                setNewListName('');
+              }}
+            >
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <AppText style={styles.modalTitle}>
+                    {editingList ? t('shopping.editList') : t('shopping.createList')}
+                  </AppText>
                   <TouchableOpacity
-                    style={styles.dropdownButton}
-                    onPress={() => setShowEditUnitDropdown(!showEditUnitDropdown)}
+                    style={styles.modalCloseButton}
+                    onPress={() => {
+                      setShowListModal(false);
+                      setEditingList(null);
+                      setNewListName('');
+                    }}
                   >
-                    <AppText style={[styles.dropdownButtonText, !editItemWeightUnit && styles.dropdownPlaceholder]}>
-                      {editItemWeightUnit || t('shopping.selectUnit')}
-                    </AppText>
-                    <AppText style={styles.dropdownArrow}>{showEditUnitDropdown ? '▲' : '▼'}</AppText>
+                    <Ionicons name="close" size={24} color={colors.textSecondary} />
                   </TouchableOpacity>
-                  {showEditUnitDropdown && (
-                    <View style={styles.dropdownMenu}>
-                      <ScrollView style={styles.dropdownScrollView}>
-                        {weightUnits.map((unit) => (
-                          <TouchableOpacity
-                            key={unit}
-                            style={[
-                              styles.dropdownItem,
-                              editItemWeightUnit === unit && styles.dropdownItemSelected,
-                            ]}
-                            onPress={() => {
-                              setEditItemWeightUnit(unit);
-                              setShowEditUnitDropdown(false);
-                            }}
-                          >
-                            <AppText
-                              style={[
-                                styles.dropdownItemText,
-                                editItemWeightUnit === unit && styles.dropdownItemTextSelected,
-                              ]}
-                            >
-                              {unit}
-                            </AppText>
-                          </TouchableOpacity>
-                        ))}
-                        <TouchableOpacity
-                          style={styles.dropdownItem}
-                          onPress={() => {
-                            setEditItemWeightUnit('');
-                            setShowEditUnitDropdown(false);
+                </View>
+                <View style={styles.modalBody}>
+                  <FormTextInput
+                    value={newListName}
+                    onChangeText={setNewListName}
+                    placeholder={t('shopping.listName')}
+                    autoFocus
+                  />
+                </View>
+                <View style={styles.modalFooter}>
+                  <View style={styles.modalActions}>
+                    <View style={styles.modalActionButton}>
+                      <PrimaryButton
+                        title={t('common.cancel')}
+                        onPress={() => {
+                          setShowListModal(false);
+                          setEditingList(null);
+                          setNewListName('');
+                        }}
+                        variant="outline"
+                      />
+                    </View>
+                    <View style={styles.modalActionButton}>
+                      <PrimaryButton
+                        title={editingList ? t('common.update') : t('common.create')}
+                        onPress={editingList ? handleUpdateList : handleCreateList}
+                      />
+                    </View>
+                  </View>
+                </View>
+              </View>
+            </TouchableOpacity>
+          </KeyboardAvoidingView>
+        </Modal>
+
+        {/* Add Item Modal */}
+        <Modal
+          visible={showAddItemModal}
+          animationType="slide"
+          transparent
+          onRequestClose={() => {
+            setShowAddItemModal(false);
+            resetAddItemForm();
+          }}
+        >
+          <KeyboardAvoidingView
+            style={styles.modalOverlay}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+          >
+            <TouchableOpacity
+              style={styles.modalBackdrop}
+              activeOpacity={1}
+              onPress={() => {
+                setShowAddItemModal(false);
+                resetAddItemForm();
+              }}
+            >
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <AppText style={styles.modalTitle}>{t('shopping.addItem')}</AppText>
+                  <TouchableOpacity
+                    style={styles.modalCloseButton}
+                    onPress={() => {
+                      setShowAddItemModal(false);
+                      resetAddItemForm();
+                    }}
+                  >
+                    <Ionicons name="close" size={24} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                </View>
+                
+                <ScrollView 
+                  contentContainerStyle={styles.modalScrollContent}
+                  style={styles.modalScrollView}
+                  keyboardShouldPersistTaps="handled"
+                  showsVerticalScrollIndicator={false}
+                >
+                  <FormTextInput
+                    value={name}
+                    onChangeText={setName}
+                    placeholder={t('shopping.itemNamePlaceholder')}
+                    autoFocus
+                  />
+                  
+                  <View style={styles.rowInputs}>
+                    <View style={styles.rowInputHalf}>
+                      <FormTextInput
+                        value={quantity}
+                        onChangeText={(text) => {
+                          const numericValue = text.replace(/[^0-9]/g, '');
+                          setQuantity(numericValue);
+                        }}
+                        placeholder={t('shopping.quantityOptional')}
+                        keyboardType="number-pad"
+                      />
+                    </View>
+                    <View style={styles.rowInputHalf}>
+                      <View>
+                        <FormTextInput
+                          value={weight}
+                          onChangeText={(text) => {
+                            const numericValue = text.replace(/[^0-9]/g, '');
+                            setWeight(numericValue);
                           }}
+                          placeholder={t('shopping.weightOptional')}
+                          keyboardType="number-pad"
+                        />
+                        <View style={styles.dropdownContainer}>
+                          <TouchableOpacity
+                            style={styles.dropdownButton}
+                            onPress={() => setShowUnitDropdown(!showUnitDropdown)}
+                          >
+                            <AppText style={[styles.dropdownButtonText, !weightUnit && styles.dropdownPlaceholder]}>
+                              {weightUnit || t('shopping.selectUnit')}
+                            </AppText>
+                            <Ionicons 
+                              name={showUnitDropdown ? 'chevron-up' : 'chevron-down'} 
+                              size={20} 
+                              color={colors.textSecondary} 
+                            />
+                          </TouchableOpacity>
+                          {showUnitDropdown && (
+                            <View style={styles.dropdownMenu}>
+                              <ScrollView style={styles.dropdownScrollView} nestedScrollEnabled>
+                                {weightUnits.map((unit) => (
+                                  <TouchableOpacity
+                                    key={unit}
+                                    style={[
+                                      styles.dropdownItem,
+                                      weightUnit === unit && styles.dropdownItemSelected,
+                                    ]}
+                                    onPress={() => {
+                                      setWeightUnit(unit);
+                                      setShowUnitDropdown(false);
+                                    }}
+                                  >
+                                    <AppText
+                                      style={[
+                                        styles.dropdownItemText,
+                                        weightUnit === unit && styles.dropdownItemTextSelected,
+                                      ]}
+                                    >
+                                      {unit}
+                                    </AppText>
+                                  </TouchableOpacity>
+                                ))}
+                                <TouchableOpacity
+                                  style={styles.dropdownItem}
+                                  onPress={() => {
+                                    setWeightUnit('');
+                                    setShowUnitDropdown(false);
+                                  }}
+                                >
+                                  <AppText style={styles.dropdownItemText}>{t('common.none')}</AppText>
+                                </TouchableOpacity>
+                              </ScrollView>
+                            </View>
+                          )}
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+
+                  <View style={styles.toggleSection}>
+                    <AppText style={styles.toggleLabel}>{t('shopping.shared')}</AppText>
+                    <View style={styles.toggleGroup}>
+                      <TouchableOpacity
+                        style={[styles.toggle, isShared && styles.toggleActive]}
+                        onPress={() => {
+                          setIsShared(true);
+                          setOwnerId('');
+                        }}
+                      >
+                        <AppText style={isShared ? styles.toggleTextActive : styles.toggleText}>
+                          {t('common.yes')}
+                        </AppText>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.toggle, !isShared && styles.toggleActive]}
+                        onPress={() => setIsShared(false)}
+                      >
+                        <AppText style={!isShared ? styles.toggleTextActive : styles.toggleText}>
+                          {t('common.no')}
+                        </AppText>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {!isShared && (
+                    <View style={styles.ownerSelect}>
+                      <AppText style={styles.ownerLabel}>{t('shopping.assignedTo')}</AppText>
+                      {selectedHousehold.members.map((member) => (
+                        <TouchableOpacity
+                          key={member._id}
+                          style={[
+                            styles.ownerOption,
+                            ownerId === member._id && styles.ownerOptionSelected,
+                          ]}
+                          onPress={() => setOwnerId(member._id)}
                         >
-                          <AppText style={styles.dropdownItemText}>{t('expenses.none')}</AppText>
+                          <AppText style={[
+                            styles.ownerOptionText,
+                            ownerId === member._id && styles.ownerOptionTextSelected,
+                          ]}>
+                            {member.name}
+                          </AppText>
                         </TouchableOpacity>
-                      </ScrollView>
+                      ))}
                     </View>
                   )}
+                </ScrollView>
+
+                <View style={styles.modalFooter}>
+                  <View style={styles.modalActions}>
+                    <View style={styles.modalActionButton}>
+                      <PrimaryButton
+                        title={t('common.cancel')}
+                        onPress={() => {
+                          setShowAddItemModal(false);
+                          resetAddItemForm();
+                        }}
+                        variant="outline"
+                      />
+                    </View>
+                    <View style={styles.modalActionButton}>
+                      <PrimaryButton
+                        title={addingItem ? t('common.loading') : t('shopping.addItem')}
+                        onPress={handleAddItem}
+                        disabled={addingItem || !name.trim()}
+                      />
+                    </View>
+                  </View>
                 </View>
               </View>
-              <View style={styles.toggleRow}>
-                <AppText style={styles.toggleLabel}>{t('shopping.shared')}</AppText>
-                <TouchableOpacity
-                  style={[styles.toggle, editItemIsShared && styles.toggleActive]}
-                  onPress={() => {
-                    setEditItemIsShared(true);
-                    setEditItemOwnerId('');
-                  }}
-                >
-                  <AppText style={editItemIsShared ? styles.toggleTextActive : styles.toggleText}>
-                    {t('common.yes')}
-                  </AppText>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.toggle, !editItemIsShared && styles.toggleActive]}
-                  onPress={() => setEditItemIsShared(false)}
-                >
-                  <AppText style={!editItemIsShared ? styles.toggleTextActive : styles.toggleText}>
-                    {t('common.no')}
-                  </AppText>
-                </TouchableOpacity>
-              </View>
-              {!editItemIsShared && selectedHousehold && (
-                <View style={styles.ownerSelect}>
-                  <AppText style={styles.ownerLabel}>{t('shopping.assignedTo')}</AppText>
-                  {selectedHousehold.members.map((member) => (
-                    <TouchableOpacity
-                      key={member._id}
-                      style={[
-                        styles.ownerOption,
-                        editItemOwnerId === member._id && styles.ownerOptionSelected,
-                      ]}
-                      onPress={() => setEditItemOwnerId(member._id)}
-                    >
-                      <AppText style={styles.ownerOptionText}>{member.name}</AppText>
-                    </TouchableOpacity>
-                  ))}
+            </TouchableOpacity>
+          </KeyboardAvoidingView>
+        </Modal>
+
+        {/* Edit Item Modal */}
+        <Modal
+          visible={editingItem !== null}
+          animationType="slide"
+          transparent
+          onRequestClose={() => {
+            setEditingItem(null);
+            setEditItemName('');
+            setEditItemQuantity('');
+            setEditItemWeight('');
+            setEditItemWeightUnit('');
+            setEditItemIsShared(true);
+            setEditItemOwnerId('');
+          }}
+        >
+          <KeyboardAvoidingView
+            style={styles.modalOverlay}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+          >
+            <TouchableOpacity
+              style={styles.modalBackdrop}
+              activeOpacity={1}
+              onPress={() => {
+                setEditingItem(null);
+                setEditItemName('');
+                setEditItemQuantity('');
+                setEditItemWeight('');
+                setEditItemWeightUnit('');
+                setEditItemIsShared(true);
+                setEditItemOwnerId('');
+              }}
+            >
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <AppText style={styles.modalTitle}>{t('shopping.editItem')}</AppText>
+                  <TouchableOpacity
+                    style={styles.modalCloseButton}
+                    onPress={() => {
+                      setEditingItem(null);
+                      setEditItemName('');
+                      setEditItemQuantity('');
+                      setEditItemWeight('');
+                      setEditItemWeightUnit('');
+                      setEditItemIsShared(true);
+                      setEditItemOwnerId('');
+                    }}
+                  >
+                    <Ionicons name="close" size={24} color={colors.textSecondary} />
+                  </TouchableOpacity>
                 </View>
-              )}
-              <View style={styles.modalActions}>
-                <PrimaryButton
-                  title={t('common.cancel')}
-                  onPress={() => {
-                    setEditingItem(null);
-                    setEditItemName('');
-                    setEditItemQuantity('');
-                    setEditItemWeight('');
-                    setEditItemWeightUnit('');
-                    setEditItemIsShared(true);
-                    setEditItemOwnerId('');
-                  }}
-                />
-                <View style={styles.spacer} />
-                <PrimaryButton title={t('common.update')} onPress={handleUpdateItem} />
+                
+                <ScrollView 
+                  contentContainerStyle={styles.modalScrollContent}
+                  style={styles.modalScrollView}
+                  keyboardShouldPersistTaps="handled"
+                  showsVerticalScrollIndicator={false}
+                >
+                  <FormTextInput
+                    value={editItemName}
+                    onChangeText={setEditItemName}
+                    placeholder={t('shopping.itemNamePlaceholder')}
+                    autoFocus
+                  />
+                  
+                  <View style={styles.rowInputs}>
+                    <View style={styles.rowInputHalf}>
+                      <FormTextInput
+                        value={editItemQuantity}
+                        onChangeText={(text) => {
+                          const numericValue = text.replace(/[^0-9]/g, '');
+                          setEditItemQuantity(numericValue);
+                        }}
+                        placeholder={t('shopping.quantityOptional')}
+                        keyboardType="number-pad"
+                      />
+                    </View>
+                    <View style={styles.rowInputHalf}>
+                      <View>
+                        <FormTextInput
+                          value={editItemWeight}
+                          onChangeText={(text) => {
+                            const numericValue = text.replace(/[^0-9]/g, '');
+                            setEditItemWeight(numericValue);
+                          }}
+                          placeholder={t('shopping.weightOptional')}
+                          keyboardType="number-pad"
+                        />
+                        <View style={styles.dropdownContainer}>
+                          <TouchableOpacity
+                            style={styles.dropdownButton}
+                            onPress={() => setShowEditUnitDropdown(!showEditUnitDropdown)}
+                          >
+                            <AppText style={[styles.dropdownButtonText, !editItemWeightUnit && styles.dropdownPlaceholder]}>
+                              {editItemWeightUnit || t('shopping.selectUnit')}
+                            </AppText>
+                            <Ionicons 
+                              name={showEditUnitDropdown ? 'chevron-up' : 'chevron-down'} 
+                              size={20} 
+                              color={colors.textSecondary} 
+                            />
+                          </TouchableOpacity>
+                          {showEditUnitDropdown && (
+                            <View style={styles.dropdownMenu}>
+                              <ScrollView style={styles.dropdownScrollView} nestedScrollEnabled>
+                                {weightUnits.map((unit) => (
+                                  <TouchableOpacity
+                                    key={unit}
+                                    style={[
+                                      styles.dropdownItem,
+                                      editItemWeightUnit === unit && styles.dropdownItemSelected,
+                                    ]}
+                                    onPress={() => {
+                                      setEditItemWeightUnit(unit);
+                                      setShowEditUnitDropdown(false);
+                                    }}
+                                  >
+                                    <AppText
+                                      style={[
+                                        styles.dropdownItemText,
+                                        editItemWeightUnit === unit && styles.dropdownItemTextSelected,
+                                      ]}
+                                    >
+                                      {unit}
+                                    </AppText>
+                                  </TouchableOpacity>
+                                ))}
+                                <TouchableOpacity
+                                  style={styles.dropdownItem}
+                                  onPress={() => {
+                                    setEditItemWeightUnit('');
+                                    setShowEditUnitDropdown(false);
+                                  }}
+                                >
+                                  <AppText style={styles.dropdownItemText}>{t('common.none')}</AppText>
+                                </TouchableOpacity>
+                              </ScrollView>
+                            </View>
+                          )}
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+
+                  <View style={styles.toggleSection}>
+                    <AppText style={styles.toggleLabel}>{t('shopping.shared')}</AppText>
+                    <View style={styles.toggleGroup}>
+                      <TouchableOpacity
+                        style={[styles.toggle, editItemIsShared && styles.toggleActive]}
+                        onPress={() => {
+                          setEditItemIsShared(true);
+                          setEditItemOwnerId('');
+                        }}
+                      >
+                        <AppText style={editItemIsShared ? styles.toggleTextActive : styles.toggleText}>
+                          {t('common.yes')}
+                        </AppText>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.toggle, !editItemIsShared && styles.toggleActive]}
+                        onPress={() => setEditItemIsShared(false)}
+                      >
+                        <AppText style={!editItemIsShared ? styles.toggleTextActive : styles.toggleText}>
+                          {t('common.no')}
+                        </AppText>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {!editItemIsShared && selectedHousehold && (
+                    <View style={styles.ownerSelect}>
+                      <AppText style={styles.ownerLabel}>{t('shopping.assignedTo')}</AppText>
+                      {selectedHousehold.members.map((member) => (
+                        <TouchableOpacity
+                          key={member._id}
+                          style={[
+                            styles.ownerOption,
+                            editItemOwnerId === member._id && styles.ownerOptionSelected,
+                          ]}
+                          onPress={() => setEditItemOwnerId(member._id)}
+                        >
+                          <AppText style={[
+                            styles.ownerOptionText,
+                            editItemOwnerId === member._id && styles.ownerOptionTextSelected,
+                          ]}>
+                            {member.name}
+                          </AppText>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                </ScrollView>
+
+                <View style={styles.modalFooter}>
+                  <View style={styles.modalActions}>
+                    <View style={styles.modalActionButton}>
+                      <PrimaryButton
+                        title={t('common.cancel')}
+                        onPress={() => {
+                          setEditingItem(null);
+                          setEditItemName('');
+                          setEditItemQuantity('');
+                          setEditItemWeight('');
+                          setEditItemWeightUnit('');
+                          setEditItemIsShared(true);
+                          setEditItemOwnerId('');
+                        }}
+                        variant="outline"
+                      />
+                    </View>
+                    <View style={styles.modalActionButton}>
+                      <PrimaryButton 
+                        title={t('common.update')} 
+                        onPress={handleUpdateItem}
+                        disabled={!editItemName.trim()}
+                      />
+                    </View>
+                  </View>
+                </View>
               </View>
-            </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </Modal>
+            </TouchableOpacity>
+          </KeyboardAvoidingView>
+        </Modal>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -961,51 +1210,74 @@ const createStyles = (colors: any) => StyleSheet.create({
   keyboardAvoid: {
     flex: 1,
   },
-  scrollView: {
-    flex: 1,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 32,
-  },
-  topHeader: {
+  header: {
     backgroundColor: colors.background,
+    paddingBottom: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
   },
-  topHeaderActions: {
+  headerActions: {
     paddingHorizontal: spacing.md,
-    paddingBottom: spacing.md,
-  },
-  searchWrap: {
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.md,
+    paddingTop: spacing.sm,
   },
   listSection: {
     paddingVertical: spacing.md,
     backgroundColor: colors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
   },
-  listScroll: {
+  listSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  listSectionTitle: {
+    fontSize: fontSizes.lg,
+    fontWeight: fontWeights.bold,
+    color: colors.text,
+  },
+  createListButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.md,
+    backgroundColor: colors.primaryUltraSoft,
+  },
+  createListButtonText: {
+    fontSize: fontSizes.sm,
+    fontWeight: fontWeights.semibold,
+    color: colors.primary,
+  },
+  listScrollContent: {
+    paddingHorizontal: spacing.md,
+    paddingRight: spacing.lg,
   },
   listCard: {
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: radii.md,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: radii.lg,
     backgroundColor: colors.surface,
-    marginRight: spacing.md,
-    borderWidth: 1,
+    marginRight: spacing.sm,
+    borderWidth: 2,
     borderColor: colors.borderLight,
     alignItems: 'center',
     justifyContent: 'center',
     minWidth: 100,
+    maxWidth: 180,
+    position: 'relative',
+    ...(shadows.xs as object),
   },
   listCardSelected: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
+    ...(shadows.sm as object),
   },
   listCardText: {
-    fontSize: fontSizes.md,
+    fontSize: fontSizes.sm,
     fontWeight: fontWeights.medium,
     color: colors.text,
   },
@@ -1013,95 +1285,201 @@ const createStyles = (colors: any) => StyleSheet.create({
     color: colors.surface,
     fontWeight: fontWeights.semibold,
   },
+  listCardIndicator: {
+    position: 'absolute',
+    bottom: -1,
+    left: '50%',
+    marginLeft: -4,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+  },
+  addListCard: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: radii.lg,
+    backgroundColor: colors.surface,
+    borderWidth: 2,
+    borderColor: colors.borderLight,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 100,
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
+  addListCardText: {
+    fontSize: fontSizes.sm,
+    fontWeight: fontWeights.medium,
+    color: colors.primary,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: TAB_BAR_HEIGHT + 100,
+  },
   listHeader: {
     paddingHorizontal: spacing.md,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.sm,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.md,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    backgroundColor: colors.background,
+  },
+  listHeaderLeft: {
+    flex: 1,
+    marginRight: spacing.md,
   },
   listTitle: {
-    fontSize: fontSizes.xl,
+    fontSize: fontSizes.xxl,
     fontWeight: fontWeights.extrabold,
     color: colors.text,
-    flex: 1,
+    marginBottom: spacing.xs,
+  },
+  listSubtitle: {
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
+    fontWeight: fontWeights.medium,
   },
   listHeaderActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
   listActionButton: {
     padding: spacing.xs,
+    borderRadius: radii.md,
+    backgroundColor: colors.surface,
   },
   section: {
     paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
+    paddingTop: spacing.lg,
     paddingBottom: spacing.xs,
   },
   sectionTitle: {
-    fontSize: fontSizes.xl,
-    fontWeight: fontWeights.semibold,
+    fontSize: fontSizes.lg,
+    fontWeight: fontWeights.bold,
     marginBottom: spacing.md,
     color: colors.text,
   },
-  completedHeaderContainer: {
-    marginBottom: spacing.md,
+  itemsContainer: {
+    gap: spacing.sm,
   },
   completedHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.xs,
+    marginBottom: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  completedHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    flex: 1,
   },
   restoreAllButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    alignSelf: 'flex-end',
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.sm,
-    borderRadius: radii.sm,
+    borderRadius: radii.md,
     backgroundColor: colors.primaryUltraSoft,
   },
   restoreAllText: {
     fontSize: fontSizes.sm,
     color: colors.primary,
-    fontWeight: fontWeights.medium,
+    fontWeight: fontWeights.semibold,
   },
-  emptyText: {
-    fontSize: fontSizes.md,
-    color: colors.muted,
-    textAlign: 'center',
-    padding: spacing.xxl,
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  addSection: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.lg,
+  fab: {
+    position: 'absolute',
+    bottom: TAB_BAR_HEIGHT + spacing.md,
+    right: spacing.md,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...(shadows.lg as object),
+    elevation: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
     backgroundColor: colors.surface,
-    marginTop: spacing.md,
+    borderTopLeftRadius: radii.xl,
+    borderTopRightRadius: radii.xl,
+    maxHeight: '90%',
     borderTopWidth: 1,
     borderTopColor: colors.border,
+    flex: 1,
   },
-  addSectionTitle: {
-    fontSize: fontSizes.lg,
-    fontWeight: fontWeights.semibold,
-    marginBottom: spacing.md,
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  modalCloseButton: {
+    padding: spacing.xs,
+  },
+  modalTitle: {
+    fontSize: fontSizes.xl,
+    fontWeight: fontWeights.bold,
+    marginBottom: spacing.lg,
     color: colors.text,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    padding: spacing.md,
-    fontSize: fontSizes.md,
+  modalScrollView: {
+    flex: 1,
+  },
+  modalScrollContent: {
+    padding: spacing.xl,
+    paddingBottom: spacing.md,
+  },
+  modalBody: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.md,
+  },
+  modalFooter: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xl,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
     backgroundColor: colors.surface,
+  },
+  rowInputs: {
+    flexDirection: 'row',
+    gap: spacing.md,
     marginBottom: spacing.md,
-    color: colors.text,
+  },
+  rowInputHalf: {
+    flex: 1,
   },
   dropdownContainer: {
-    marginBottom: spacing.md,
+    marginTop: spacing.sm,
     position: 'relative',
     zIndex: 1,
   },
@@ -1114,16 +1492,13 @@ const createStyles = (colors: any) => StyleSheet.create({
     borderRadius: radii.lg,
     padding: spacing.md,
     backgroundColor: colors.surface,
+    minHeight: 52,
   },
   dropdownButtonText: {
     fontSize: fontSizes.md,
     color: colors.text,
   },
   dropdownPlaceholder: {
-    color: colors.muted,
-  },
-  dropdownArrow: {
-    fontSize: 12,
     color: colors.textSecondary,
   },
   dropdownMenu: {
@@ -1136,11 +1511,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 5,
+    ...(shadows.md as object),
     maxHeight: 200,
     zIndex: 1000,
   },
@@ -1150,7 +1521,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   dropdownItem: {
     padding: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.borderLight,
   },
   dropdownItemSelected: {
     backgroundColor: colors.primarySoft,
@@ -1163,24 +1534,28 @@ const createStyles = (colors: any) => StyleSheet.create({
     color: colors.primaryDark,
     fontWeight: fontWeights.semibold,
   },
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  toggleSection: {
     marginBottom: spacing.md,
-    gap: 12,
   },
   toggleLabel: {
     fontSize: fontSizes.md,
     fontWeight: fontWeights.semibold,
     color: colors.text,
+    marginBottom: spacing.sm,
+  },
+  toggleGroup: {
+    flexDirection: 'row',
+    gap: spacing.sm,
   },
   toggle: {
-    paddingHorizontal: spacing.lg,
+    flex: 1,
     paddingVertical: spacing.sm,
-    borderRadius: radii.pill,
+    borderRadius: radii.lg,
     borderWidth: 2,
-    borderColor: colors.textSecondary,
-    backgroundColor: 'transparent',
+    borderColor: colors.border,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   toggleActive: {
     backgroundColor: colors.primary,
@@ -1197,27 +1572,21 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontSize: fontSizes.md,
   },
   ownerSelect: {
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   ownerLabel: {
     fontSize: fontSizes.md,
-    fontWeight: fontWeights.bold,
+    fontWeight: fontWeights.semibold,
     marginBottom: spacing.sm,
     color: colors.text,
-  },
-  label: {
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.semibold,
-    marginBottom: spacing.xs,
-    color: colors.textSecondary,
   },
   ownerOption: {
     padding: spacing.md,
     borderWidth: 2,
-    borderColor: colors.textSecondary,
+    borderColor: colors.border,
     borderRadius: radii.lg,
     marginBottom: spacing.xs,
-    backgroundColor: 'transparent',
+    backgroundColor: colors.background,
   },
   ownerOptionSelected: {
     backgroundColor: colors.primaryUltraSoft,
@@ -1228,39 +1597,17 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontWeight: fontWeights.medium,
     color: colors.text,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
-    padding: spacing.xl,
-    width: '90%',
-    maxWidth: 400,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  modalScrollView: {
-    width: '100%',
-  },
-  modalScrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalTitle: {
-    fontSize: fontSizes.xl,
-    fontWeight: fontWeights.extrabold,
-    marginBottom: spacing.md,
-    color: colors.text,
+  ownerOptionTextSelected: {
+    color: colors.primaryDark,
+    fontWeight: fontWeights.semibold,
   },
   modalActions: {
+    marginTop: spacing.lg,
     flexDirection: 'row',
-    marginTop: spacing.md,
+    gap: spacing.sm,
+  },
+  modalActionButton: {
+    flex: 1,
   },
   spacer: {
     width: spacing.sm,

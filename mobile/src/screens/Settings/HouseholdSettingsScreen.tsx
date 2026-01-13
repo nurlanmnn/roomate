@@ -110,7 +110,7 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
       }
     }
 
-    Alert.alert('Leave Household', message, [
+    Alert.alert(t('householdSettingsScreen.leaveHousehold'), message, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Leave',
@@ -124,7 +124,7 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
               routes: [{ name: 'HouseholdSelect' }],
             });
           } catch (error: any) {
-            Alert.alert('Error', error.response?.data?.error || 'Failed to leave household');
+            Alert.alert(t('common.error'), error.response?.data?.error || t('householdSettingsScreen.failedToLeave'));
           }
         },
       },
@@ -150,9 +150,9 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
                 index: 0,
                 routes: [{ name: 'HouseholdSelect' }],
               });
-              Alert.alert('Deleted', 'Household has been deleted successfully');
+              Alert.alert(t('common.deleted'), t('householdSettingsScreen.deleted'));
             } catch (error: any) {
-              Alert.alert('Error', error.response?.data?.error || 'Failed to delete household');
+              Alert.alert(t('common.error'), error.response?.data?.error || t('householdSettingsScreen.failedToDelete'));
             }
           },
         },
@@ -181,7 +181,7 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
                 navigation.reset({ index: 0, routes: [{ name: 'HouseholdSelect' }] });
               }
             } catch (error: any) {
-              Alert.alert('Error', error.response?.data?.error || 'Failed to remove member');
+              Alert.alert(t('common.error'), error.response?.data?.error || t('householdSettingsScreen.failedToRemoveMember'));
             } finally {
               setRemovingMemberId(null);
             }

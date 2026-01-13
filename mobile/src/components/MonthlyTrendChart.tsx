@@ -375,7 +375,7 @@ const MonthlyTrendChartComponent = ({ monthlyTrend }: MonthlyTrendChartProps) =>
       {/* SubheaderRow: Range label + Summary */}
       <View style={styles.subheaderRow}>
         <AppText style={styles.rangeLabelText}>
-          {selectedRange === 1 ? t('monthlyTrend.lastMonth') : t('monthlyTrend.lastNMonths').replace('{{count}}', String(selectedRange))}
+          {selectedRange === 1 ? t('monthlyTrend.lastMonth') : t('monthlyTrend.lastNMonths', { count: selectedRange })}
         </AppText>
         {summaryData.total > 0 && (
           <AppText style={styles.summaryText}>
