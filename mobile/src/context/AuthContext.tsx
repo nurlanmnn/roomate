@@ -31,8 +31,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // Register push token after auth check succeeds
         registerPushTokenWithBackend().catch(console.error);
       }
-    } catch (error) {
-      console.error('Auth check failed:', error);
+    } catch (error: any) {
+      // Only log unexpected errors, not 401s (which are normal when token is invalid/expired)
+      if (error?.response?.status !== 401) {
+        console.error('Auth check failed:', error);
+      }
       await SecureStore.deleteItemAsync('auth_token');
     } finally {
       setIsLoading(false);

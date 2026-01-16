@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView, TextInput, TouchableOpacity, RefreshControl, Alert, Modal, KeyboardAvoidingView, Platform } from 'react-native';
 import { AppText } from '../../components/AppText';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -23,7 +23,8 @@ export const ShoppingListScreen: React.FC = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
   const colors = useThemeColors();
-  const styles = React.useMemo(() => createStyles(colors), [colors]);
+  const insets = useSafeAreaInsets();
+  const styles = React.useMemo(() => createStyles(colors, insets.bottom), [colors, insets.bottom]);
   const [lists, setLists] = useState<ShoppingList[]>([]);
   const [selectedList, setSelectedList] = useState<ShoppingList | null>(null);
   const [items, setItems] = useState<ShoppingItem[]>([]);
@@ -1202,7 +1203,7 @@ export const ShoppingListScreen: React.FC = () => {
   );
 };
 
-const createStyles = (colors: any) => StyleSheet.create({
+const createStyles = (colors: any, bottomInset: number) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -1318,7 +1319,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: TAB_BAR_HEIGHT + 100,
+    paddingBottom: TAB_BAR_HEIGHT + bottomInset + 100, // Extra padding for FAB (56px) + spacing
   },
   listHeader: {
     paddingHorizontal: spacing.md,
@@ -1402,7 +1403,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   fab: {
     position: 'absolute',
-    bottom: TAB_BAR_HEIGHT + spacing.md,
+    bottom: TAB_BAR_HEIGHT + bottomInset + spacing.md,
     right: spacing.md,
     width: 56,
     height: 56,
@@ -1412,6 +1413,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     justifyContent: 'center',
     ...(shadows.lg as object),
     elevation: 8,
+    zIndex: 1000,
   },
   modalOverlay: {
     flex: 1,

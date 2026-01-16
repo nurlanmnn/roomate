@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { i18n, initializeLanguage, setLanguage, storeLanguage, LANGUAGES, LanguageCode } from '../locales';
+import { i18n, initializeLanguage, setLanguage, storeLanguage, LANGUAGES } from '../locales';
+import type { LanguageCode } from '../locales';
 
 interface LanguageContextType {
   language: LanguageCode;
@@ -66,4 +67,5 @@ export const useLanguage = (): LanguageContextType => {
 };
 
 // Re-export for convenience
-export { LANGUAGES, type LanguageCode };
+export { LANGUAGES };
+export type { LanguageCode };

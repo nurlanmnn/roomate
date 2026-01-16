@@ -8,7 +8,8 @@ import { Avatar } from '../../components/ui/Avatar';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
 import { useAuth } from '../../context/AuthContext';
 import { useHousehold } from '../../context/HouseholdContext';
-import { useLanguage, LANGUAGES, LanguageCode } from '../../context/LanguageContext';
+import { useLanguage, LANGUAGES } from '../../context/LanguageContext';
+import type { LanguageCode } from '../../context/LanguageContext';
 import { fontSizes, fontWeights, radii, shadows, spacing, useTheme, useThemeColors, TAB_BAR_HEIGHT } from '../../theme';
 
 type SettingsScreenProps = {
