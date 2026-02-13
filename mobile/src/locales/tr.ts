@@ -521,6 +521,7 @@ export default {
   // Categories
   categories: {
     food: 'Yemek ve Restoran',
+    fooddining: 'Yemek ve Restoran',
     foodgroceries: 'Yiyecek ve Market',
     groceries: 'Market',
     utilities: 'Faturalar',

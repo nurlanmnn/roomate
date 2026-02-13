@@ -508,6 +508,7 @@ export default {
   // Categories
   categories: {
     food: 'Essen und Restaurants',
+    fooddining: 'Essen und Restaurants',
     foodgroceries: 'Lebensmittel & Einkäufe',
     groceries: 'Lebensmittel',
     utilities: 'Nebenkosten',

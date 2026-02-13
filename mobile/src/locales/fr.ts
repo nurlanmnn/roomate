@@ -508,6 +508,7 @@ export default {
   // Categories
   categories: {
     food: 'Nourriture et Restaurants',
+    fooddining: 'Nourriture et Restaurants',
     foodgroceries: 'Nourriture et Courses',
     groceries: 'Épicerie',
     utilities: 'Services',

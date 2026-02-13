@@ -524,6 +524,7 @@ export default {
   // Categories
   categories: {
     food: 'Food & Dining',
+    fooddining: 'Food & Dining',
     foodgroceries: 'Food & Groceries',
     groceries: 'Groceries',
     utilities: 'Utilities',
