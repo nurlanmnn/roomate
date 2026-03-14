@@ -96,6 +96,11 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         <Ionicons name={icon} size={48} color={colors.textTertiary} />
         <AppText style={styles.minimalTitle}>{title}</AppText>
         <AppText style={styles.minimalMessage}>{message}</AppText>
+        {actionLabel && onAction && (
+          <View style={styles.actionContainer}>
+            <PrimaryButton title={actionLabel} onPress={onAction} />
+          </View>
+        )}
       </View>
     );
   }

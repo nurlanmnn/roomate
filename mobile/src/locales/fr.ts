@@ -136,11 +136,12 @@ export default {
     quickTip: 'Conseil Rapide',
     tipReview: 'Examinez vos dépenses par catégorie pour identifier les domaines où vous pouvez économiser.',
     tipStart: 'Commencez à suivre vos dépenses pour obtenir des informations personnalisées et mieux gérer votre budget.',
-    getStarted: 'Commencez en ajoutant votre première dépense, en créant une liste de courses ou en définissant un objectif.',
+    getStarted: 'Commencez en ajoutant votre première dépense, en créant une liste de courses ou en ajoutant un événement au calendrier.',
     inviteRoommates: 'Invitez vos colocataires avec le code :',
     pleaseSelectHousehold: 'Veuillez sélectionner un foyer',
     moreThanLastMonth: 'de plus que le mois dernier',
     lessThanLastMonth: 'de moins que le mois dernier',
+    couldNotConnect: 'Connexion impossible. Tire vers le bas pour réessayer.',
   },
 
   // Expenses
@@ -290,7 +291,32 @@ export default {
     listView: 'Liste',
     longPressToAdd: 'Appuyez longuement sur une date pour ajouter un événement',
   },
-
+  chores: {
+    title: 'Rotation des tâches',
+    choreRotation: 'Tâches ménagères',
+    thisWeek: 'Cette semaine',
+    thisWeekAssignments: 'Qui fait quoi cette semaine',
+    setUp: 'Configurer',
+    setUpDescription: 'Faites tourner cuisine, salle de bain, etc. entre colocataires',
+    manage: 'Gérer',
+    addChore: 'Ajouter une tâche',
+    editChore: 'Modifier la tâche',
+    noChores: 'Pas encore de tâches',
+    noChoresDescription: 'Ajoutez des tâches comme Cuisine ou Salle de bain et définissez l\'ordre.',
+    choreName: 'Nom de la tâche',
+    choreNamePlaceholder: 'ex. Cuisine, Salle de bain',
+    frequency: 'Fréquence',
+    weekly: 'Hebdomadaire',
+    biweekly: 'Toutes les 2 semaines',
+    rotationOrder: 'Ordre de rotation',
+    rotationOrderHint: 'La première personne fait la semaine 1, la deuxième la semaine 2, puis ça se répète.',
+    startDate: 'Date de début',
+    assignedTo: 'Assigné à %{name}',
+    noAssignee: 'Non assigné',
+    enterName: 'Veuillez entrer un nom de tâche',
+    addMembersFirst: 'Ajoutez d\'abord les membres du foyer',
+    deleteChoreConfirm: 'Supprimer « %{name} » ?',
+  },
   // Events (for CreateEventScreen)
   events: {
     addEvent: 'Ajouter un Événement',
@@ -327,6 +353,7 @@ export default {
   // Shopping
   shopping: {
     title: 'Liste de Courses',
+    yourLists: 'Vos listes',
     addItem: 'Ajouter un Article',
     editItem: 'Modifier l\'Article',
     editList: 'Modifier la Liste',

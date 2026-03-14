@@ -10,6 +10,7 @@ import settlementRoutes from './routes/settlements';
 import shoppingRoutes from './routes/shopping';
 import goalRoutes from './routes/goals';
 import eventRoutes from './routes/events';
+import choreRoutes from './routes/chores';
 import { schedulerService } from './services/schedulerService';
 
 const app = express();
@@ -33,6 +34,7 @@ app.use('/settlements', settlementRoutes);
 app.use('/shopping', shoppingRoutes);
 app.use('/goals', goalRoutes);
 app.use('/events', eventRoutes);
+app.use('/chores', choreRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

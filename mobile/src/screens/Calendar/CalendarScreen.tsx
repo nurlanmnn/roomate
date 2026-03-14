@@ -6,6 +6,7 @@ import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { eventsApi, Event } from '../../api/eventsApi';
+import { choresApi, ChoreRotation } from '../../api/choresApi';
 import { EventCard } from '../../components/EventCard';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
@@ -14,7 +15,7 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { formatDate } from '../../utils/dateHelpers';
 import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows, TAB_BAR_HEIGHT } from '../../theme';
 import { Ionicons } from '@expo/vector-icons';
-import { format, isSameDay, parseISO } from 'date-fns';
+import { format, isSameDay, parseISO, startOfWeek } from 'date-fns';
 
 type ViewMode = 'upcoming' | 'past' | 'all';
 
@@ -25,6 +26,7 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [events, setEvents] = useState<Event[]>([]);
+  const [chores, setChores] = useState<ChoreRotation[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('upcoming');
@@ -48,8 +50,14 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     if (!selectedHousehold) return;
     setLoading(true);
     try {
-      const data = await eventsApi.getEvents(selectedHousehold._id);
-      setEvents(data);
+      const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+      const weekKey = format(weekStart, 'yyyy-MM-dd');
+      const [eventsData, choresData] = await Promise.all([
+        eventsApi.getEvents(selectedHousehold._id),
+        choresApi.getChores(selectedHousehold._id, weekKey).catch(() => []),
+      ]);
+      setEvents(eventsData);
+      setChores(choresData);
     } catch (error: any) {
       console.error('Failed to load events:', error);
       if (error?.response?.status === 403) {
@@ -162,6 +170,47 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
           eventDates={eventDates}
           onAddEvent={handleAddEventOnDate}
         />
+
+        {/* Chore rotation — this week or set up */}
+        <View style={styles.choreSection}>
+          <View style={styles.choreCard}>
+            <View style={styles.choreSectionHeader}>
+              <View style={styles.choreTitleRow}>
+                <View style={styles.choreIconWrap}>
+                  <Ionicons name="repeat-outline" size={20} color={colors.primary} />
+                </View>
+                <View style={styles.choreTitleBlock}>
+                  <Text style={styles.choreSectionTitle}>{t('chores.choreRotation')}</Text>
+                  <Text style={styles.choreSectionDescription}>
+                    {chores.length > 0 ? t('chores.thisWeekAssignments') : t('chores.setUpDescription')}
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                onPress={() => navigation.getParent()?.navigate('ChoreRotation')}
+                style={styles.choreActionButton}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.choreActionLabel}>
+                  {chores.length > 0 ? t('chores.manage') : t('chores.setUp')}
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
+            {chores.length > 0 && (
+              <View style={styles.choreChips}>
+                {chores.slice(0, 5).map((chore) => (
+                  <View key={chore._id} style={styles.choreChip}>
+                    <Ionicons name="sparkles-outline" size={14} color={colors.primary} />
+                    <Text style={styles.choreChipText} numberOfLines={1}>
+                      {chore.name}: {chore.currentAssignee?.name ?? '—'}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        </View>
 
         {/* Selected date events */}
         {selectedDateEvents.length > 0 && (
@@ -359,6 +408,108 @@ const createStyles = (colors: any) =>
       fontSize: fontSizes.sm,
       color: colors.primary,
       fontWeight: fontWeights.semibold,
+    },
+    choreSection: {
+      paddingHorizontal: spacing.xl,
+      paddingTop: spacing.lg,
+      paddingBottom: spacing.md,
+    },
+    choreCard: {
+      backgroundColor: colors.surface,
+      borderRadius: radii.lg,
+      padding: spacing.lg,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      ...(shadows.sm as object),
+    },
+    choreSectionHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: spacing.md,
+    },
+    choreTitleRow: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: spacing.sm,
+      minWidth: 0,
+    },
+    choreIconWrap: {
+      width: 40,
+      height: 40,
+      borderRadius: radii.md,
+      backgroundColor: colors.primaryUltraSoft,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    choreTitleBlock: {
+      flex: 1,
+      minWidth: 0,
+    },
+    choreSectionTitle: {
+      fontSize: fontSizes.lg,
+      fontWeight: fontWeights.bold,
+      color: colors.text,
+      marginBottom: spacing.xxs,
+    },
+    choreSectionDescription: {
+      fontSize: fontSizes.sm,
+      color: colors.textSecondary,
+      lineHeight: 20,
+    },
+    choreActionButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xxs,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+      backgroundColor: colors.primaryUltraSoft,
+      borderRadius: radii.full,
+      marginLeft: spacing.sm,
+    },
+    choreActionLabel: {
+      fontSize: fontSizes.sm,
+      color: colors.primary,
+      fontWeight: fontWeights.semibold,
+    },
+    sectionDescription: {
+      fontSize: fontSizes.sm,
+      color: colors.textSecondary,
+      marginTop: spacing.xxs,
+    },
+    manageChoresButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xxs,
+    },
+    seeAllText: {
+      fontSize: fontSizes.sm,
+      color: colors.primary,
+      fontWeight: fontWeights.semibold,
+    },
+    choreChips: {
+      marginTop: spacing.md,
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.sm,
+    },
+    choreChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.sm,
+      backgroundColor: colors.surface,
+      borderRadius: radii.full,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      maxWidth: '100%',
+    },
+    choreChipText: {
+      fontSize: fontSizes.sm,
+      color: colors.text,
+      flex: 1,
     },
     allEventsSection: {
       paddingHorizontal: spacing.md,

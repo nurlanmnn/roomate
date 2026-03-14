@@ -136,11 +136,12 @@ export default {
     quickTip: 'Consejo Rápido',
     tipReview: 'Revisa tus gastos por categoría para identificar áreas donde puedes ahorrar.',
     tipStart: 'Comienza a rastrear gastos para obtener información personalizada y gestionar mejor tu presupuesto.',
-    getStarted: 'Comienza añadiendo tu primer gasto, creando una lista de compras o estableciendo una meta.',
+    getStarted: 'Comienza añadiendo tu primer gasto, creando una lista de compras o añadiendo un evento al calendario.',
     inviteRoommates: 'Invita a tus compañeros usando el código:',
     pleaseSelectHousehold: 'Por favor selecciona un hogar',
     moreThanLastMonth: 'más que el mes pasado',
     lessThanLastMonth: 'menos que el mes pasado',
+    couldNotConnect: 'No se pudo conectar. Desliza hacia abajo para reintentar.',
   },
 
   // Expenses
@@ -290,7 +291,32 @@ export default {
     listView: 'Lista',
     longPressToAdd: 'Mantén presionada una fecha para añadir evento',
   },
-
+  chores: {
+    title: 'Rotación de tareas',
+    choreRotation: 'Tareas del hogar',
+    thisWeek: 'Esta semana',
+    thisWeekAssignments: 'Quién limpia esta semana',
+    setUp: 'Configurar',
+    setUpDescription: 'Rota cocina, baño, etc. entre compañeros',
+    manage: 'Gestionar',
+    addChore: 'Añadir tarea',
+    editChore: 'Editar tarea',
+    noChores: 'Sin tareas aún',
+    noChoresDescription: 'Añade tareas como Cocina o Baño y asigna el orden de rotación.',
+    choreName: 'Nombre',
+    choreNamePlaceholder: 'ej. Cocina, Baño',
+    frequency: 'Frecuencia',
+    weekly: 'Semanal',
+    biweekly: 'Cada 2 semanas',
+    rotationOrder: 'Orden de rotación',
+    rotationOrderHint: 'La primera persona hace la semana 1, la segunda la semana 2, y se repite.',
+    startDate: 'Fecha de inicio',
+    assignedTo: 'Asignado a %{name}',
+    noAssignee: 'Sin asignar',
+    enterName: 'Introduce el nombre de la tarea',
+    addMembersFirst: 'Añade primero a los compañeros',
+    deleteChoreConfirm: '¿Eliminar "%{name}"?',
+  },
   // Events (for CreateEventScreen)
   events: {
     addEvent: 'Añadir Evento',
@@ -327,6 +353,7 @@ export default {
   // Shopping
   shopping: {
     title: 'Lista de Compras',
+    yourLists: 'Tus listas',
     addItem: 'Añadir Artículo',
     editItem: 'Editar Artículo',
     editList: 'Editar Lista',

@@ -9,11 +9,9 @@ import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { eventsApi, Event } from '../../api/eventsApi';
 import { expensesApi, PairwiseBalance, Expense } from '../../api/expensesApi';
-import { goalsApi, Goal } from '../../api/goalsApi';
 import { shoppingApi, ShoppingItem } from '../../api/shoppingApi';
 import { EventCard } from '../../components/EventCard';
 import { BalanceSummary } from '../../components/BalanceSummary';
-import { GoalCard } from '../../components/GoalCard';
 import { StatsCard } from '../../components/StatsCard';
 import { QuickActionButton } from '../../components/QuickActionButton';
 import { SpendingChart } from '../../components/SpendingChart';
@@ -32,13 +30,13 @@ export const HomeScreen: React.FC = () => {
   const { t } = useLanguage();
   const [events, setEvents] = useState<Event[]>([]);
   const [balances, setBalances] = useState<PairwiseBalance[]>([]);
-  const [goals, setGoals] = useState<Goal[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [shoppingItems, setShoppingItems] = useState<ShoppingItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [insights, setInsights] = useState<any>(null);
   const [spendingRange, setSpendingRange] = useState<'week' | 'month' | 'year' | 'all'>('month');
+  const [loadError, setLoadError] = useState(false);
 
   const styles = React.useMemo(() => StyleSheet.create({
     container: {
@@ -284,6 +282,21 @@ export const HomeScreen: React.FC = () => {
       color: colors.textSecondary,
       lineHeight: lineHeights.sm,
     },
+    errorBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      paddingHorizontal: spacing.xl,
+      paddingVertical: spacing.md,
+      marginHorizontal: spacing.xl,
+      marginTop: spacing.md,
+      borderRadius: radii.md,
+    },
+    errorBannerText: {
+      fontSize: fontSizes.sm,
+      fontWeight: fontWeights.medium,
+      flex: 1,
+    },
   }), [colors]);
 
   useEffect(() => {
@@ -305,6 +318,7 @@ export const HomeScreen: React.FC = () => {
     if (!selectedHousehold) return;
 
     setLoading(true);
+    setLoadError(false);
     try {
       // Get all shopping lists first
       const shoppingLists = await shoppingApi.getShoppingLists(selectedHousehold._id);
@@ -316,10 +330,9 @@ export const HomeScreen: React.FC = () => {
       const shoppingItemsArrays = await Promise.all(shoppingItemsPromises);
       const allShoppingItems = shoppingItemsArrays.flat();
 
-      const [eventsData, balancesData, goalsData, expensesData, insightsData] = await Promise.all([
+      const [eventsData, balancesData, expensesData, insightsData] = await Promise.all([
         eventsApi.getEvents(selectedHousehold._id),
         expensesApi.getBalances(selectedHousehold._id),
-        goalsApi.getGoals(selectedHousehold._id),
         expensesApi.getExpenses(selectedHousehold._id),
         expensesApi.getInsights(selectedHousehold._id).catch(() => null),
       ]);
@@ -330,22 +343,19 @@ export const HomeScreen: React.FC = () => {
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
         .slice(0, 5);
 
-      // Get active goals (non-done, sorted by upvotes)
-      const activeGoals = goalsData
-        .filter(g => g.status !== 'done')
-        .sort((a, b) => b.upvotes.length - a.upvotes.length)
-        .slice(0, 3);
-
       setEvents(upcomingEvents);
       setBalances(balancesData);
-      setGoals(activeGoals);
       setExpenses(expensesData);
       setShoppingItems(allShoppingItems);
       setInsights(insightsData);
     } catch (error: any) {
       console.error('Failed to load home data:', error);
+      const isNetworkError =
+        error?.code === 'ERR_NETWORK' ||
+        error?.message === 'Network Error' ||
+        !error?.response;
+      if (isNetworkError) setLoadError(true);
       // If we get a 403, the user is no longer a member of this household
-      // Clear the selection and they'll be redirected to household select
       if (error?.response?.status === 403) {
         setSelectedHousehold(null);
       }
@@ -404,7 +414,7 @@ export const HomeScreen: React.FC = () => {
   };
 
   const stats = calculateStats();
-  const hasData = expenses.length > 0 || events.length > 0 || goals.length > 0 || shoppingItems.length > 0;
+  const hasData = expenses.length > 0 || events.length > 0 || shoppingItems.length > 0;
 
   const spendingRangeStart = React.useMemo(() => {
     const now = new Date();
@@ -493,6 +503,14 @@ export const HomeScreen: React.FC = () => {
         contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT + spacing.xl }}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={loadData} />}
       >
+      {loadError && (
+        <View style={[styles.errorBanner, { backgroundColor: colors.errorSoft ?? colors.primaryUltraSoft }]}>
+          <Ionicons name="cloud-offline-outline" size={20} color={colors.error ?? colors.textSecondary} />
+          <AppText style={[styles.errorBannerText, { color: colors.error ?? colors.textSecondary }]}>
+            {t('home.couldNotConnect')}
+          </AppText>
+        </View>
+      )}
       <View style={styles.header}>
         <AppText style={styles.title}>{selectedHousehold.name}</AppText>
         {selectedHousehold.address && (
@@ -576,11 +594,6 @@ export const HomeScreen: React.FC = () => {
               />
             </View>
             <View style={styles.quickActionsRow}>
-              <QuickActionButton
-                icon={<Ionicons name="flag-outline" size={24} color={colors.primary} />}
-                label={t('home.newGoal')}
-                onPress={() => navigation.navigate('Goals')}
-              />
               <QuickActionButton
                 icon={<Ionicons name="calendar-outline" size={24} color={colors.primary} />}
                 label={t('home.addEvent')}
@@ -706,38 +719,6 @@ export const HomeScreen: React.FC = () => {
           </View>
           {events.slice(0, 3).map((event) => (
             <EventCard key={event._id} event={event} />
-          ))}
-        </View>
-      )}
-
-      {/* Active Goals */}
-      {goals.length > 0 && (
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionTitleContainer}>
-              <AppText style={styles.sectionTitle}>{t('home.activeGoals')}</AppText>
-              <AppText style={styles.sectionDescription}>
-                {t('home.activeGoalsDescription')}
-              </AppText>
-            </View>
-            <TouchableOpacity onPress={() => navigation.navigate('Goals')}>
-              <AppText style={styles.seeAllText}>{t('common.seeAll')}</AppText>
-            </TouchableOpacity>
-          </View>
-          {goals.map((goal) => (
-            <GoalCard
-              key={goal._id}
-              goal={goal}
-              onUpvote={async () => {
-                try {
-                  await goalsApi.upvoteGoal(goal._id);
-                  loadData();
-                } catch (error) {
-                  console.error('Failed to upvote:', error);
-                }
-              }}
-              currentUserId={user?._id || ''}
-            />
           ))}
         </View>
       )}

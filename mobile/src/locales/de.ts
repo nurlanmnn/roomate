@@ -136,11 +136,12 @@ export default {
     quickTip: 'Schneller Tipp',
     tipReview: 'Überprüfen Sie Ihre Ausgaben nach Kategorie, um Sparmöglichkeiten zu finden.',
     tipStart: 'Beginnen Sie mit der Ausgabenverfolgung für personalisierte Einblicke und besseres Budgetmanagement.',
-    getStarted: 'Starten Sie, indem Sie Ihre erste Ausgabe hinzufügen, eine Einkaufsliste erstellen oder ein Ziel setzen.',
+    getStarted: 'Starten Sie, indem Sie Ihre erste Ausgabe hinzufügen, eine Einkaufsliste erstellen oder einen Kalendertermin hinzufügen.',
     inviteRoommates: 'Laden Sie Ihre Mitbewohner mit dem Code ein:',
     pleaseSelectHousehold: 'Bitte wählen Sie einen Haushalt',
     moreThanLastMonth: 'mehr als letzten Monat',
     lessThanLastMonth: 'weniger als letzten Monat',
+    couldNotConnect: 'Verbindung fehlgeschlagen. Zum Aktualisieren nach unten ziehen.',
   },
 
   // Expenses
@@ -290,7 +291,32 @@ export default {
     listView: 'Liste',
     longPressToAdd: 'Lange drücken, um Ereignis hinzuzufügen',
   },
-
+  chores: {
+    title: 'Haushaltsaufgaben-Rotation',
+    choreRotation: 'Haushaltsaufgaben',
+    thisWeek: 'Diese Woche',
+    thisWeekAssignments: 'Wer diese Woche putzt',
+    setUp: 'Einrichten',
+    setUpDescription: 'Küche, Bad usw. unter Mitbewohnern rotieren',
+    manage: 'Verwalten',
+    addChore: 'Aufgabe hinzufügen',
+    editChore: 'Aufgabe bearbeiten',
+    noChores: 'Noch keine Aufgaben',
+    noChoresDescription: 'Füge Aufgaben wie Küche oder Bad hinzu und lege die Reihenfolge fest.',
+    choreName: 'Aufgabe',
+    choreNamePlaceholder: 'z.B. Küche, Bad',
+    frequency: 'Häufigkeit',
+    weekly: 'Wöchentlich',
+    biweekly: 'Alle 2 Wochen',
+    rotationOrder: 'Reihenfolge',
+    rotationOrderHint: 'Erste Person Woche 1, zweite Woche 2, dann wiederholt es sich.',
+    startDate: 'Startdatum',
+    assignedTo: 'Zugewiesen an %{name}',
+    noAssignee: 'Nicht zugewiesen',
+    enterName: 'Bitte Namen der Aufgabe eingeben',
+    addMembersFirst: 'Zuerst Mitbewohner hinzufügen',
+    deleteChoreConfirm: '"%{name}" löschen?',
+  },
   // Events (for CreateEventScreen)
   events: {
     addEvent: 'Ereignis Hinzufügen',
@@ -327,6 +353,7 @@ export default {
   // Shopping
   shopping: {
     title: 'Einkaufsliste',
+    yourLists: 'Deine Listen',
     addItem: 'Artikel Hinzufügen',
     editItem: 'Artikel Bearbeiten',
     editList: 'Liste Bearbeiten',

@@ -1,12 +1,41 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import * as SecureStore from 'expo-secure-store';
+import Constants from 'expo-constants';
+import { NativeModules } from 'react-native';
 
-// For development: Use your Mac's local IP address when testing on physical devices
-// Find your IP with: ifconfig | grep "inet " | grep -v 127.0.0.1
-// Or check System Preferences > Network
-const API_BASE_URL = __DEV__ 
-  ? 'http://192.168.1.187:3000' // Replace with your Mac's local IP address
-  : 'https://your-production-api.com'; // Change this in production
+const getDevServerHost = (): string | null => {
+  const hostUri =
+    Constants.expoConfig?.hostUri ||
+    // Older manifest format (Expo Go)
+    (Constants as unknown as { manifest?: { debuggerHost?: string } }).manifest?.debuggerHost ||
+    // Newer manifest format (EAS updates)
+    (Constants as unknown as { manifest2?: { extra?: { expoClient?: { hostUri?: string } } } }).manifest2?.extra?.expoClient?.hostUri;
+
+  if (!hostUri) return null;
+  // hostUri looks like "192.168.0.14:8081" or "exp://192.168.0.14:8081"
+  const cleaned = hostUri.replace(/^.*:\/\//, '');
+  return cleaned.split(':')[0] || null;
+};
+
+const getScriptUrlHost = (): string | null => {
+  const scriptURL = (NativeModules as { SourceCode?: { scriptURL?: string } }).SourceCode?.scriptURL;
+  if (!scriptURL) return null;
+  // scriptURL looks like "http://192.168.0.14:8081/index.bundle?..."
+  try {
+    return new URL(scriptURL).hostname || null;
+  } catch {
+    const match = scriptURL.match(/https?:\/\/([^:/]+)/);
+    return match?.[1] || null;
+  }
+};
+
+const getApiBaseUrl = (): string => {
+  if (!__DEV__) return 'https://your-production-api.com';
+  const host = getScriptUrlHost() || getDevServerHost() || 'localhost';
+  return `http://${host}:3000`;
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 class ApiClient {
   private client: AxiosInstance;

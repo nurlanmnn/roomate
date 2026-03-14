@@ -149,11 +149,12 @@ export default {
     quickTip: 'Hızlı İpucu',
     tipReview: 'Tasarruf edebileceğiniz alanları belirlemek için kategoriye göre harcamalarınızı inceleyin.',
     tipStart: 'Kişiselleştirilmiş bilgiler almak ve ev bütçenizi daha iyi yönetmek için harcamaları takip etmeye başlayın.',
-    getStarted: 'İlk harcamanızı ekleyerek, alışveriş listesi oluşturarak veya hedef belirleyerek başlayın.',
+    getStarted: 'İlk harcamanızı ekleyerek, alışveriş listesi oluşturarak veya takvime etkinlik ekleyerek başlayın.',
     inviteRoommates: 'Ev arkadaşlarınızı bu kodla davet edin:',
     pleaseSelectHousehold: 'Lütfen bir ev seçin',
     moreThanLastMonth: 'geçen aydan fazla',
     lessThanLastMonth: 'geçen aydan az',
+    couldNotConnect: 'Bağlantı kurulamadı. Yenilemek için aşağı çekin.',
   },
 
   // Expenses
@@ -303,7 +304,32 @@ export default {
     listView: 'Liste',
     longPressToAdd: 'Etkinlik eklemek için tarihe basılı tutun',
   },
-
+  chores: {
+    title: 'Görev rotasyonu',
+    choreRotation: 'Ev işleri',
+    thisWeek: 'Bu hafta',
+    thisWeekAssignments: 'Bu hafta kim ne yapıyor',
+    setUp: 'Kur',
+    setUpDescription: 'Mutfak, banyo vb. oda arkadaşları arasında dönüşümlü',
+    manage: 'Yönet',
+    addChore: 'Görev ekle',
+    editChore: 'Görevi düzenle',
+    noChores: 'Henüz görev yok',
+    noChoresDescription: 'Mutfak veya Banyo gibi görevler ekleyin ve sırayı belirleyin.',
+    choreName: 'Görev adı',
+    choreNamePlaceholder: 'örn. Mutfak, Banyo',
+    frequency: 'Sıklık',
+    weekly: 'Haftalık',
+    biweekly: '2 haftada bir',
+    rotationOrder: 'Dönüş sırası',
+    rotationOrderHint: 'İlk kişi 1. hafta, ikinci 2. hafta yapar, sonra tekrarlanır.',
+    startDate: 'Başlangıç tarihi',
+    assignedTo: '%{name} atandı',
+    noAssignee: 'Atanmadı',
+    enterName: 'Lütfen görev adı girin',
+    addMembersFirst: 'Önce ev arkadaşlarını ekleyin',
+    deleteChoreConfirm: '"%{name}" silinsin mi?',
+  },
   // Events (for CreateEventScreen)
   events: {
     addEvent: 'Etkinlik Ekle',
@@ -340,6 +366,7 @@ export default {
   // Shopping
   shopping: {
     title: 'Alışveriş Listesi',
+    yourLists: 'Listeleriniz',
     addItem: 'Ürün Ekle',
     editItem: 'Ürün Düzenle',
     editList: 'Listeyi Düzenle',

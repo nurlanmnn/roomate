@@ -149,11 +149,12 @@ export default {
     quickTip: 'Quick Tip',
     tipReview: 'Review your spending by category to identify areas where you can save money.',
     tipStart: 'Start tracking expenses to get personalized insights and better manage your household budget.',
-    getStarted: 'Get started by adding your first expense, creating a shopping list, or setting up a goal.',
+    getStarted: 'Get started by adding your first expense, creating a shopping list, or adding a calendar event.',
     inviteRoommates: 'Invite your roommates using the code:',
     pleaseSelectHousehold: 'Please select a household',
     moreThanLastMonth: 'more than last month',
     lessThanLastMonth: 'less than last month',
+    couldNotConnect: "Couldn't connect. Pull down to retry.",
   },
 
   // Expenses
@@ -307,6 +308,34 @@ export default {
     longPressToAdd: 'Long press on a date to add event',
   },
 
+  // Chore rotation
+  chores: {
+    title: 'Chore rotation',
+    choreRotation: 'Chore rotation',
+    thisWeek: 'This week',
+    thisWeekAssignments: 'Who cleans what this week',
+    setUp: 'Set up',
+    setUpDescription: 'Rotate kitchen, bathroom & more between roommates',
+    manage: 'Manage',
+    addChore: 'Add chore',
+    editChore: 'Edit chore',
+    noChores: 'No chores yet',
+    noChoresDescription: 'Add chores like Kitchen or Bathroom and assign a rotation order.',
+    choreName: 'Chore name',
+    choreNamePlaceholder: 'e.g. Kitchen, Bathroom',
+    frequency: 'Frequency',
+    weekly: 'Weekly',
+    biweekly: 'Every 2 weeks',
+    rotationOrder: 'Rotation order',
+    rotationOrderHint: 'First person does week 1, second does week 2, then it repeats.',
+    startDate: 'Rotation start date',
+    assignedTo: 'Assigned to %{name}',
+    noAssignee: 'Not assigned',
+    enterName: 'Please enter a chore name',
+    addMembersFirst: 'Add household members first',
+    deleteChoreConfirm: 'Delete "%{name}"?',
+  },
+
   // Events (for CreateEventScreen)
   events: {
     addEvent: 'Add Event',
@@ -343,10 +372,11 @@ export default {
   // Shopping
   shopping: {
     title: 'Shopping List',
+    yourLists: 'Your lists',
     addItem: 'Add Item',
     editItem: 'Edit Item',
     editList: 'Edit List',
-    createList: 'Create New List',
+    createList: 'New list',
     listName: 'List name',
     noItems: 'No items in the list',
     noItemsDescription: 'Add items to your shopping list',

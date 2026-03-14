@@ -2,12 +2,13 @@ import React, { useEffect } from 'react';
 import { NavigationContainer, useNavigation } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BlurView } from 'expo-blur';
 import { useAuth } from '../context/AuthContext';
 import { useHousehold } from '../context/HouseholdContext';
 import { useLanguage } from '../context/LanguageContext';
-import { spacing, useThemeColors } from '../theme';
+import { spacing, useThemeColors, useTheme } from '../theme';
 import { Ionicons } from '@expo/vector-icons';
 import { fontSizes, fontWeights, radii } from '../theme';
 
@@ -29,8 +30,8 @@ import { SettlementHistoryScreen } from '../screens/Expenses/SettlementHistorySc
 import { ShoppingListScreen } from '../screens/Shopping/ShoppingListScreen';
 import { CalendarScreen } from '../screens/Calendar/CalendarScreen';
 import { CreateEventScreen } from '../screens/Calendar/CreateEventScreen';
-import { GoalsScreen } from '../screens/Goals/GoalsScreen';
-import { CreateGoalScreen } from '../screens/Goals/CreateGoalScreen';
+import { ChoreRotationScreen } from '../screens/Calendar/ChoreRotationScreen';
+import { CreateChoreScreen } from '../screens/Calendar/CreateChoreScreen';
 import { SettingsScreen } from '../screens/Settings/SettingsScreen';
 import { AccountSettingsScreen } from '../screens/Settings/AccountSettingsScreen';
 import { HouseholdSettingsScreen } from '../screens/Settings/HouseholdSettingsScreen';
@@ -50,56 +51,79 @@ const AuthNavigator = () => {
   );
 };
 
-const withAlpha = (hexColor: string, alpha: number) => {
-  // expects #RRGGBB; falls back to original if format unexpected
-  if (!hexColor || hexColor[0] !== '#' || (hexColor.length !== 7 && hexColor.length !== 9)) {
-    return hexColor;
-  }
-  const clean = hexColor.slice(1, 7);
-  const a = Math.round(Math.min(Math.max(alpha, 0), 1) * 255)
-    .toString(16)
-    .padStart(2, '0');
-  return `#${clean}${a}`;
-};
+// Frosted glass active tab accent (blue glow like reference)
+const TAB_BAR_ACTIVE_COLOR = '#3478F6';
 
 const MainTabs = () => {
   const colors = useThemeColors();
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
   const horizontal = spacing.md;
   const bottomInset = Math.max(insets.bottom, spacing.sm);
+  const isDark = theme === 'dark';
+
+  const TabBarBackground = () => (
+    <View style={[StyleSheet.absoluteFill, { borderRadius: 24, overflow: 'hidden' }]}>
+      <BlurView
+        intensity={isDark ? 5 : 10}
+        tint={isDark ? 'dark' : 'light'}
+        style={StyleSheet.absoluteFill}
+      />
+      <View
+        style={[
+          StyleSheet.absoluteFill,
+          {
+            borderRadius: 24,
+            backgroundColor: isDark ? 'rgba(40,40,40,0.65)' : 'rgba(255,255,255,0.7)',
+          },
+        ]}
+      />
+    </View>
+  );
+
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.text,
-        tabBarInactiveTintColor: colors.textTertiary,
-        tabBarStyle: { 
+        tabBarActiveTintColor: TAB_BAR_ACTIVE_COLOR,
+        tabBarInactiveTintColor: isDark ? 'rgba(255,255,255,0.75)' : colors.textTertiary,
+        tabBarStyle: {
           position: 'absolute',
           left: horizontal,
           right: horizontal,
           bottom: bottomInset,
           borderRadius: 24,
-          backgroundColor: withAlpha(colors.surface, 0.84),
-          paddingTop: 8,
-          paddingBottom: Math.max(8, bottomInset / 2),
-          paddingHorizontal: 6,
-          height: 76,
+          backgroundColor: 'transparent',
+          paddingTop: 10,
+          paddingBottom: Math.max(10, bottomInset / 2),
+          paddingHorizontal: 8,
+          height: 72,
           borderTopWidth: 0,
-          elevation: 14,
-          shadowColor: colors.shadow,
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.18,
-          shadowRadius: 12,
+          elevation: 0,
+          overflow: 'hidden',
+          ...Platform.select({
+            ios: {
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.12,
+              shadowRadius: 16,
+            },
+            android: {
+              elevation: 8,
+            },
+          }),
         },
+        tabBarBackground: TabBarBackground,
         tabBarLabelStyle: {
-          fontSize: 10,
+          fontSize: 11,
           fontWeight: '500',
           marginTop: 4,
         },
         tabBarItemStyle: {
-          paddingVertical: 2,
+          paddingVertical: 4,
         },
+        tabBarShowLabel: true,
       }}
     >
       <Tab.Screen
@@ -135,14 +159,6 @@ const MainTabs = () => {
         }}
       />
       <Tab.Screen
-        name="Goals"
-        component={GoalsScreen}
-        options={{
-          tabBarLabel: t('tabs.goals'),
-          tabBarIcon: ({ color, focused }) => <TabIcon name="target" color={color} focused={focused} />,
-        }}
-      />
-      <Tab.Screen
         name="Settings"
         component={SettingsScreen}
         options={{
@@ -154,50 +170,56 @@ const MainTabs = () => {
   );
 };
 
-// Telegram-style tab icon colors
-const TAB_COLORS: Record<string, string> = {
-  home: '#3478F6',      // Blue
-  dollar: '#34C759',    // Green
-  cart: '#FF9500',      // Orange
-  calendar: '#AF52DE',  // Purple
-  target: '#FF3B30',    // Red
-  settings: '#8E8E93',  // Gray
+// Icon set: outline when inactive, filled when active (frosted glass style)
+const TAB_ICONS: Record<string, { outline: React.ComponentProps<typeof Ionicons>['name']; filled: React.ComponentProps<typeof Ionicons>['name'] }> = {
+  home: { outline: 'home-outline', filled: 'home' },
+  dollar: { outline: 'cash-outline', filled: 'cash' },
+  cart: { outline: 'cart-outline', filled: 'cart' },
+  calendar: { outline: 'calendar-outline', filled: 'calendar' },
+  settings: { outline: 'settings-outline', filled: 'settings' },
 };
 
 const TabIcon: React.FC<{ name: string; color: string; focused: boolean }> = ({ name, color, focused }) => {
-  const colors = useThemeColors();
-  const icons: Record<string, { outline: React.ComponentProps<typeof Ionicons>['name']; filled: React.ComponentProps<typeof Ionicons>['name'] }> = {
-    home: { outline: 'home-outline', filled: 'home' },
-    dollar: { outline: 'cash-outline', filled: 'cash' },
-    cart: { outline: 'cart-outline', filled: 'cart' },
-    calendar: { outline: 'calendar-outline', filled: 'calendar' },
-    target: { outline: 'flag-outline', filled: 'flag' },
-    settings: { outline: 'settings-outline', filled: 'settings' },
-  };
-  const iconSet = icons[name] || { outline: 'ellipse-outline', filled: 'ellipse' };
-  const bgColor = TAB_COLORS[name] || colors.textTertiary;
-  
-  return (
-    <View style={[
-      tabIconStyles.container,
-      { backgroundColor: focused ? bgColor : `${bgColor}20` }
-    ]}>
-      <Ionicons 
-        name={focused ? iconSet.filled : iconSet.outline} 
-        size={18} 
-        color={focused ? '#FFFFFF' : bgColor} 
-      />
-    </View>
+  const iconSet = TAB_ICONS[name] || { outline: 'ellipse-outline', filled: 'ellipse' };
+  const icon = (
+    <Ionicons
+      name={focused ? iconSet.filled : iconSet.outline}
+      size={24}
+      color={color}
+    />
   );
+
+  // Active tab: wrap in a view with soft blue glow
+  if (focused) {
+    return (
+      <View style={tabIconStyles.glowWrap}>
+        {icon}
+      </View>
+    );
+  }
+
+  return <View style={tabIconStyles.iconWrap}>{icon}</View>;
 };
 
 const tabIconStyles = StyleSheet.create({
-  container: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+  iconWrap: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  glowWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: TAB_BAR_ACTIVE_COLOR,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.5,
+        shadowRadius: 10,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
 });
 
@@ -327,11 +349,10 @@ const MainNavigator = () => {
         }}
       />
       <MainStack.Screen
-        name="CreateGoal"
-        component={CreateGoalScreen}
+        name="ChoreRotation"
+        component={ChoreRotationScreen}
         options={{
-          title: t('goals.addGoal'),
-          presentation: 'modal',
+          title: t('chores.title'),
           headerStyle: {
             backgroundColor: colors.background,
           },
@@ -342,6 +363,23 @@ const MainNavigator = () => {
           },
           headerTintColor: colors.text,
         }}
+      />
+      <MainStack.Screen
+        name="CreateChore"
+        component={CreateChoreScreen}
+        options={({ route }) => ({
+          title: route.params?.editingChore ? t('chores.editChore') : t('chores.addChore'),
+          presentation: 'modal',
+          headerStyle: {
+            backgroundColor: colors.background,
+          },
+          headerTitleStyle: {
+            fontWeight: fontWeights.extrabold,
+            fontSize: fontSizes.lg,
+            color: colors.text,
+          },
+          headerTintColor: colors.text,
+        })}
       />
       <MainStack.Screen
         name="AccountSettings"
