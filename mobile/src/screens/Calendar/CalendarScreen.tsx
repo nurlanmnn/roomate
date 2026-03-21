@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -30,6 +30,7 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   const [loading, setLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('upcoming');
+  const scrollRef = useRef<ScrollView>(null);
 
   const isCreator = (event: Event) => event.createdBy?._id === user?._id;
 
@@ -46,6 +47,12 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     }, [selectedHousehold])
   );
 
+  useFocusEffect(
+    React.useCallback(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+    }, [])
+  );
+
   const loadEvents = async () => {
     if (!selectedHousehold) return;
     setLoading(true);
@@ -59,7 +66,7 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
       setEvents(eventsData);
       setChores(choresData);
     } catch (error: any) {
-      console.error('Failed to load events:', error);
+      if (__DEV__) console.error('Failed to load events:', error);
       if (error?.response?.status === 403) {
         setSelectedHousehold(null);
       }
@@ -141,6 +148,7 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
+        ref={scrollRef}
         style={styles.scrollView}
         contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT + spacing.xl }}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={loadEvents} />}

@@ -14,7 +14,7 @@ import { choresApi, ChoreRotation, ChoreFrequency } from '../../api/choresApi';
 import { HouseholdMember } from '../../api/householdsApi';
 import { FormTextInput } from '../../components/FormTextInput';
 import { PrimaryButton } from '../../components/PrimaryButton';
-import { useThemeColors, fontSizes, fontWeights, spacing, radii } from '../../theme';
+import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows } from '../../theme';
 import { Ionicons } from '@expo/vector-icons';
 import { startOfWeek, format } from 'date-fns';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -166,7 +166,7 @@ export const CreateChoreScreen: React.FC<{ navigation: any; route: any }> = ({ n
 
         <View style={styles.field}>
           <Text style={styles.label}>{t('chores.startDate')}</Text>
-          <TouchableOpacity style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
+          <TouchableOpacity style={styles.dateButton} onPress={() => setShowDatePicker((prev) => !prev)}>
             <Ionicons name="calendar-outline" size={20} color={colors.primary} />
             <Text style={styles.dateButtonText}>{format(startDate, 'EEEE, MMM d, yyyy')}</Text>
           </TouchableOpacity>
@@ -180,6 +180,17 @@ export const CreateChoreScreen: React.FC<{ navigation: any; route: any }> = ({ n
                 if (date) setStartDate(date);
               }}
             />
+          )}
+          {Platform.OS === 'ios' && showDatePicker && (
+            <View style={styles.datePickerActions}>
+              <TouchableOpacity
+                style={styles.datePickerButton}
+                onPress={() => setShowDatePicker(false)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.datePickerButtonText}>{t('common.done')}</Text>
+              </TouchableOpacity>
+            </View>
           )}
         </View>
 
@@ -281,13 +292,37 @@ const createStyles = (colors: any) =>
       paddingVertical: spacing.md,
       paddingHorizontal: spacing.md,
       backgroundColor: colors.surface,
-      borderRadius: radii.md,
+      borderRadius: radii.lg,
       borderWidth: 1,
-      borderColor: colors.borderLight,
+      borderColor: colors.border,
+      ...(shadows.sm as object),
     },
     dateButtonText: {
       fontSize: fontSizes.md,
       color: colors.text,
+    },
+    datePickerActions: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      marginTop: spacing.md,
+      paddingTop: spacing.md,
+      borderTopWidth: 1,
+      borderTopColor: colors.borderLight,
+    },
+    datePickerButton: {
+      backgroundColor: colors.primary,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.xl,
+      borderRadius: radii.md,
+      minWidth: 80,
+      alignItems: 'center',
+      ...(shadows.xs as object),
+    },
+    datePickerButtonText: {
+      color: colors.surface,
+      fontSize: fontSizes.md,
+      fontWeight: fontWeights.semibold,
+      letterSpacing: 0.2,
     },
     mutedText: {
       fontSize: fontSizes.sm,

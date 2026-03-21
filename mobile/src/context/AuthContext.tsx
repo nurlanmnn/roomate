@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { User, authApi } from '../api/authApi';
 import * as SecureStore from 'expo-secure-store';
 import { registerPushTokenWithBackend, removePushTokenFromBackend, addNotificationListeners } from '../utils/notifications';
+import { logger } from '../utils/logger';
 
 interface AuthContextType {
   user: User | null;
@@ -29,12 +30,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const currentUser = await authApi.getMe();
         setUser(currentUser);
         // Register push token after auth check succeeds
-        registerPushTokenWithBackend().catch(console.error);
+        registerPushTokenWithBackend().catch((e) => logger.error('Push token registration', e));
       }
-    } catch (error: any) {
-      // Only log unexpected errors, not 401s (which are normal when token is invalid/expired)
-      if (error?.response?.status !== 401) {
-        console.error('Auth check failed:', error);
+    } catch (error: unknown) {
+      if ((error as { response?: { status?: number } })?.response?.status !== 401) {
+        logger.error('Auth check failed', error);
       }
       await SecureStore.deleteItemAsync('auth_token');
     } finally {
@@ -45,18 +45,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Set up notification listeners
   useEffect(() => {
     const cleanup = addNotificationListeners(
-      (notification) => {
-        // Handle received notification (app is in foreground)
-        console.log('Notification received in foreground:', notification.request.content.title);
-      },
+      (_notification) => {},
       (response) => {
-        // Handle notification tap (navigate to relevant screen)
-        const data = response.notification.request.content.data;
-        console.log('User tapped notification with data:', data);
+        const _data = response.notification.request.content.data;
         // Navigation can be handled here based on notification type
       }
     );
-
     return cleanup;
   }, []);
 
@@ -64,7 +58,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const response = await authApi.login({ email, password });
     setUser(response.user);
     // Register push token after login
-    registerPushTokenWithBackend().catch(console.error);
+    registerPushTokenWithBackend().catch((e) => logger.error('Push token registration', e));
   };
 
   const signup = async (name: string, email: string, password: string) => {
@@ -74,7 +68,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = async () => {
     // Remove push token before logout
-    await removePushTokenFromBackend().catch(console.error);
+    await removePushTokenFromBackend().catch((e) => logger.error('Remove push token', e));
     await authApi.logout();
     setUser(null);
   };
@@ -84,7 +78,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const currentUser = await authApi.getMe();
       setUser(currentUser);
     } catch (error) {
-      console.error('Failed to refresh user:', error);
+      logger.error('Failed to refresh user', error);
     }
   };
 

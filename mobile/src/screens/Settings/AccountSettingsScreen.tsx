@@ -106,7 +106,7 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
       // Return as data URL
       return `data:${mimeType};base64,${base64}`;
     } catch (error) {
-      console.error('Error converting image:', error);
+      if (__DEV__) console.error('Error converting image:', error);
       throw new Error('Failed to convert image to base64');
     }
   };
@@ -152,7 +152,7 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
         }
       }
     } catch (error) {
-      console.error('Error picking image:', error);
+      if (__DEV__) console.error('Error picking image:', error);
       Alert.alert(t('common.error'), t('accountSettingsScreen.failedToPickImage'));
     }
   };

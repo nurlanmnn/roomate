@@ -135,12 +135,12 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
     if (!selectedHousehold) return;
 
     Alert.alert(
-      'Delete Household',
-      `Are you sure you want to delete "${selectedHousehold.name}"? This action cannot be undone and all data (expenses, shopping lists, events, etc.) will be permanently deleted.`,
+      t('householdSettingsScreen.deleteHousehold'),
+      t('householdSettingsScreen.deleteConfirm'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -163,12 +163,12 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
   const handleRemoveMember = (memberId: string, memberName: string) => {
     if (!selectedHousehold) return;
     Alert.alert(
-      'Remove member',
-      `Remove ${memberName} from this household?`,
+      t('householdSettingsScreen.removeMember'),
+      t('householdSettingsScreen.removeConfirm'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Remove',
+          text: t('householdSettingsScreen.removeMember'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -195,7 +195,7 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.emptyContainer}>
-          <AppText style={styles.emptyText}>Please select a household</AppText>
+          <AppText style={styles.emptyText}>{t('home.pleaseSelectHousehold')}</AppText>
         </View>
       </SafeAreaView>
     );

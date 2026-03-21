@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert, Modal, KeyboardAvoidingView, Platform } from 'react-native';
 import { AppText } from '../../components/AppText';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,7 +15,9 @@ import { ActiveListCard } from '../../components/Shopping/ActiveListCard';
 import { SectionHeader } from '../../components/Shopping/SectionHeader';
 import { AddListSheet } from '../../components/Shopping/AddListSheet';
 import { AddItemSheet } from '../../components/Shopping/AddItemSheet';
+import { UnitPickerModal } from '../../components/Shopping/UnitPickerModal';
 import { ShoppingFAB } from '../../components/Shopping/ShoppingFAB';
+import { useFocusEffect } from '@react-navigation/native';
 import { useThemeColors, fontSizes, fontWeights, radii, spacing, TAB_BAR_HEIGHT, shadows } from '../../theme';
 import { Ionicons } from '@expo/vector-icons';
 import { FormTextInput } from '../../components/FormTextInput';
@@ -52,10 +54,20 @@ export const ShoppingListScreen: React.FC = () => {
   const [editItemWeightUnit, setEditItemWeightUnit] = useState<WeightUnit | ''>('');
   const [editItemIsShared, setEditItemIsShared] = useState(true);
   const [editItemOwnerId, setEditItemOwnerId] = useState('');
-  const [showUnitDropdown, setShowUnitDropdown] = useState(false);
-  const [showEditUnitDropdown, setShowEditUnitDropdown] = useState(false);
+  const [showEditUnitPicker, setShowEditUnitPicker] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [addingItem, setAddingItem] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+    }, [])
+  );
+
+  useEffect(() => {
+    setShowEditUnitPicker(false);
+  }, [editingItem]);
 
   useEffect(() => {
     if (selectedHousehold) {
@@ -85,7 +97,7 @@ export const ShoppingListScreen: React.FC = () => {
         setSelectedList(allLists[0]);
       }
     } catch (error: any) {
-      console.error('Failed to load shopping lists:', error);
+      if (__DEV__) console.error('Failed to load shopping lists:', error);
       if (error?.response?.status === 403) {
         setSelectedHousehold(null);
       }
@@ -106,7 +118,7 @@ export const ShoppingListScreen: React.FC = () => {
       setItems(activeItems);
       setCompletedItems(completed);
     } catch (error) {
-      console.error('Failed to load shopping items:', error);
+      if (__DEV__) console.error('Failed to load shopping items:', error);
     } finally {
       setLoading(false);
     }
@@ -207,7 +219,7 @@ export const ShoppingListScreen: React.FC = () => {
     setEditItemQuantity('');
     setEditItemWeight('');
     setEditItemWeightUnit('');
-    setShowEditUnitDropdown(false);
+    setShowEditUnitPicker(false);
     setEditItemIsShared(true);
     setEditItemOwnerId('');
 
@@ -249,7 +261,7 @@ export const ShoppingListScreen: React.FC = () => {
             }
             await loadLists();
           } catch (error) {
-            console.error('Failed to delete list:', error);
+            if (__DEV__) console.error('Failed to delete list:', error);
             Alert.alert(t('common.error'), t('shoppingList.failedToDeleteList'));
           }
         },
@@ -286,7 +298,6 @@ export const ShoppingListScreen: React.FC = () => {
       setQuantity('');
       setWeight('');
       setWeightUnit('');
-      setShowUnitDropdown(false);
       setIsShared(true);
       setOwnerId('');
       setShowAddItemModal(false);
@@ -318,7 +329,7 @@ export const ShoppingListScreen: React.FC = () => {
         loadItems();
         return;
       }
-      console.error('Failed to update item:', error);
+      if (__DEV__) console.error('Failed to update item:', error);
       // Revert optimistic update on other errors
       loadItems();
     }
@@ -353,12 +364,12 @@ export const ShoppingListScreen: React.FC = () => {
               );
               
               if (realFailures.length > 0) {
-                console.error('Some items failed to restore:', realFailures);
+                if (__DEV__) console.error('Some items failed to restore:', realFailures);
               }
               
               loadItems();
             } catch (error) {
-              console.error('Failed to restore items:', error);
+              if (__DEV__) console.error('Failed to restore items:', error);
               loadItems(); // Still refresh to show current state
             } finally {
               setLoading(false);
@@ -389,7 +400,7 @@ export const ShoppingListScreen: React.FC = () => {
               loadItems();
               return;
             }
-            console.error('Failed to delete item:', error);
+            if (__DEV__) console.error('Failed to delete item:', error);
             Alert.alert(t('common.error'), t('shoppingList.failedToDeleteItem'));
             loadItems();
           }
@@ -403,7 +414,6 @@ export const ShoppingListScreen: React.FC = () => {
     setQuantity('');
     setWeight('');
     setWeightUnit('');
-    setShowUnitDropdown(false);
     setIsShared(true);
     setOwnerId('');
   };
@@ -463,6 +473,7 @@ export const ShoppingListScreen: React.FC = () => {
         />
 
         <ScrollView
+          ref={scrollRef}
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           refreshControl={<RefreshControl refreshing={loading} onRefresh={loadLists} />}
@@ -610,6 +621,7 @@ export const ShoppingListScreen: React.FC = () => {
           quantityPlaceholder={t('shopping.quantityOptional')}
           weightPlaceholder={t('shopping.weightOptional')}
           unitPlaceholder={t('shopping.selectUnit')}
+          noneUnitLabel={t('common.none')}
           sharedLabel={t('shopping.shared')}
           personalLabel={t('shopping.personal')}
           assignedToLabel={t('shopping.assignedTo')}
@@ -720,54 +732,14 @@ export const ShoppingListScreen: React.FC = () => {
                         <View style={styles.dropdownContainer}>
                           <TouchableOpacity
                             style={styles.dropdownButton}
-                            onPress={() => setShowEditUnitDropdown(!showEditUnitDropdown)}
+                            onPress={() => setShowEditUnitPicker(true)}
+                            activeOpacity={0.7}
                           >
                             <AppText style={[styles.dropdownButtonText, !editItemWeightUnit && styles.dropdownPlaceholder]}>
                               {editItemWeightUnit || t('shopping.selectUnit')}
                             </AppText>
-                            <Ionicons 
-                              name={showEditUnitDropdown ? 'chevron-up' : 'chevron-down'} 
-                              size={20} 
-                              color={colors.textSecondary} 
-                            />
+                            <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
                           </TouchableOpacity>
-                          {showEditUnitDropdown && (
-                            <View style={styles.dropdownMenu}>
-                              <ScrollView style={styles.dropdownScrollView} nestedScrollEnabled>
-                                {weightUnits.map((unit) => (
-                                  <TouchableOpacity
-                                    key={unit}
-                                    style={[
-                                      styles.dropdownItem,
-                                      editItemWeightUnit === unit && styles.dropdownItemSelected,
-                                    ]}
-                                    onPress={() => {
-                                      setEditItemWeightUnit(unit);
-                                      setShowEditUnitDropdown(false);
-                                    }}
-                                  >
-                                    <AppText
-                                      style={[
-                                        styles.dropdownItemText,
-                                        editItemWeightUnit === unit && styles.dropdownItemTextSelected,
-                                      ]}
-                                    >
-                                      {unit}
-                                    </AppText>
-                                  </TouchableOpacity>
-                                ))}
-                                <TouchableOpacity
-                                  style={styles.dropdownItem}
-                                  onPress={() => {
-                                    setEditItemWeightUnit('');
-                                    setShowEditUnitDropdown(false);
-                                  }}
-                                >
-                                  <AppText style={styles.dropdownItemText}>{t('common.none')}</AppText>
-                                </TouchableOpacity>
-                              </ScrollView>
-                            </View>
-                          )}
                         </View>
                       </View>
                     </View>
@@ -851,6 +823,16 @@ export const ShoppingListScreen: React.FC = () => {
               </View>
             </TouchableOpacity>
           </KeyboardAvoidingView>
+          <UnitPickerModal
+            visible={showEditUnitPicker}
+            onClose={() => setShowEditUnitPicker(false)}
+            selectedValue={editItemWeightUnit}
+            onSelect={(v) => setEditItemWeightUnit((v as WeightUnit | '') || '')}
+            units={weightUnits}
+            title={t('shopping.selectUnit')}
+            noneLabel={t('common.none')}
+            cancelLabel={t('common.cancel')}
+          />
         </Modal>
       </KeyboardAvoidingView>
     </SafeAreaView>

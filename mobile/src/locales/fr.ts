@@ -34,6 +34,7 @@ export default {
     to: 'à',
     continue: 'Continuer',
     optional: 'Facultatif',
+    none: 'Aucun',
   },
 
   // Navigation & Tabs
@@ -464,6 +465,7 @@ export default {
   // Household Selection
   household: {
     selectHousehold: 'Sélectionner un Foyer',
+    selectSubtitle: 'Choisissez le foyer que vous souhaitez gérer',
     createHousehold: 'Créer un Foyer',
     joinHousehold: 'Rejoindre un Foyer',
     enterCode: 'Entrez le code d\'invitation',
@@ -471,8 +473,12 @@ export default {
     householdLocation: 'Localisation (optionnel)',
     yourHouseholds: 'Vos Foyers',
     noHouseholds: 'Aucun foyer encore',
+    noHouseholdsDescription: 'Vous ne faites partie d\'aucun foyer pour le moment.',
     createOrJoin: 'Créez un nouveau foyer ou rejoignez-en un existant',
+    createOrJoinSection: 'Créer ou Rejoindre un Foyer',
     joinWithCode: 'Rejoindre avec un Code',
+    memberCountOne: '1 membre',
+    memberCount: '%{count} membres',
     creating: 'Création...',
     joining: 'Rejoindre...',
     invalidCode: 'Code d\'invitation invalide',

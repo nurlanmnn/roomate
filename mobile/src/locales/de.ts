@@ -34,6 +34,7 @@ export default {
     to: 'an',
     continue: 'Fortfahren',
     optional: 'Optional',
+    none: 'Keine',
   },
 
   // Navigation & Tabs
@@ -464,6 +465,7 @@ export default {
   // Household Selection
   household: {
     selectHousehold: 'Haushalt Auswählen',
+    selectSubtitle: 'Wählen Sie den Haushalt, den Sie verwalten möchten',
     createHousehold: 'Haushalt Erstellen',
     joinHousehold: 'Haushalt Beitreten',
     enterCode: 'Einladungscode eingeben',
@@ -471,8 +473,12 @@ export default {
     householdLocation: 'Standort (optional)',
     yourHouseholds: 'Ihre Haushalte',
     noHouseholds: 'Noch keine Haushalte',
+    noHouseholdsDescription: 'Sie sind noch in keinem Haushalt.',
     createOrJoin: 'Erstellen Sie einen neuen Haushalt oder treten Sie einem bestehenden bei',
+    createOrJoinSection: 'Haushalt Erstellen oder Beitreten',
     joinWithCode: 'Mit Code Beitreten',
+    memberCountOne: '1 Mitglied',
+    memberCount: '%{count} Mitglieder',
     creating: 'Erstellen...',
     joining: 'Beitreten...',
     invalidCode: 'Ungültiger Einladungscode',

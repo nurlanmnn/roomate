@@ -34,6 +34,7 @@ export default {
     to: 'a',
     continue: 'Continuar',
     optional: 'Opcional',
+    none: 'Ninguno',
   },
 
   // Navigation & Tabs
@@ -464,6 +465,7 @@ export default {
   // Household Selection
   household: {
     selectHousehold: 'Seleccionar Hogar',
+    selectSubtitle: 'Elige el hogar que quieres gestionar',
     createHousehold: 'Crear Hogar',
     joinHousehold: 'Unirse a Hogar',
     enterCode: 'Ingresa código de invitación',
@@ -471,8 +473,12 @@ export default {
     householdLocation: 'Ubicación (opcional)',
     yourHouseholds: 'Tus Hogares',
     noHouseholds: 'Sin hogares aún',
+    noHouseholdsDescription: 'Aún no formas parte de ningún hogar.',
     createOrJoin: 'Crea un nuevo hogar o únete a uno existente',
+    createOrJoinSection: 'Crear o Unirse a un Hogar',
     joinWithCode: 'Unirse con Código',
+    memberCountOne: '1 miembro',
+    memberCount: '%{count} miembros',
     creating: 'Creando...',
     joining: 'Uniéndose...',
     invalidCode: 'Código de invitación inválido',

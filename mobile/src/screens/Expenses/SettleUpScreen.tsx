@@ -390,7 +390,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
       setBalances(balancesData);
       setSettlements(settlementsData || []);
     } catch (error) {
-      console.error('Failed to load balances:', error);
+      if (__DEV__) console.error('Failed to load balances:', error);
     } finally {
       setLoading(false);
     }
@@ -446,7 +446,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         }
       }
     } catch (error) {
-      console.error('Error picking image:', error);
+      if (__DEV__) console.error('Error picking image:', error);
       Alert.alert(t('common.error'), t('alerts.somethingWentWrong'));
     }
   };

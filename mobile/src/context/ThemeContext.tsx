@@ -25,7 +25,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           setThemeState(savedTheme);
         }
       } catch (error) {
-        console.error('Failed to load theme preference:', error);
+        if (__DEV__) console.error('Failed to load theme preference:', error);
       }
     };
     loadTheme();
@@ -36,7 +36,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       await SecureStore.setItemAsync(THEME_STORAGE_KEY, nextTheme);
       setThemeState(nextTheme);
     } catch (error) {
-      console.error('Failed to save theme preference:', error);
+      if (__DEV__) console.error('Failed to save theme preference:', error);
     }
   };
 

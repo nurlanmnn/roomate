@@ -30,6 +30,8 @@ interface SpendingChartProps {
   };
   selectedRange?: 'week' | 'month' | 'year' | 'all';
   onChangeRange?: (range: 'week' | 'month' | 'year' | 'all') => void;
+  /** When true, prediction block is not rendered (e.g. when parent shows it via InsightCard) */
+  hidePrediction?: boolean;
 }
 
 // Modern, softer color palette for categories
@@ -55,6 +57,7 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
   predictions,
   selectedRange = 'month',
   onChangeRange,
+  hidePrediction = false,
 }) => {
   const colors = useThemeColors();
   const { t } = useLanguage();
@@ -311,7 +314,7 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
       )}
 
       {/* Predictions */}
-      {predictions && (
+      {predictions && !hidePrediction && (
         <View style={styles.predictionContainer}>
           <AppText style={styles.predictionTitle}>{t('spendingChart.nextMonthPrediction')}</AppText>
           <AppText style={styles.predictionAmount}>{formatCurrency(predictions.nextMonth)}</AppText>

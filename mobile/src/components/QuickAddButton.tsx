@@ -215,7 +215,7 @@ export const QuickAddButton: React.FC<QuickAddButtonProps> = ({ onAddItems }) =>
       setTextInput('');
       setShowTextModal(false);
     } catch (error) {
-      console.error('Failed to process input', error);
+      if (__DEV__) console.error('Failed to process input', error);
       Alert.alert('Error', 'Failed to process your input');
     }
   };

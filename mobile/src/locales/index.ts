@@ -53,7 +53,7 @@ export const storeLanguage = async (languageCode: LanguageCode): Promise<void> =
   try {
     await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, languageCode);
   } catch (error) {
-    console.error('Error storing language preference:', error);
+    if (__DEV__) console.error('Error storing language preference:', error);
   }
 };
 

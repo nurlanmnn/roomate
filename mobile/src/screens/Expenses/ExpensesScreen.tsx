@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHousehold } from '../../context/HouseholdContext';
@@ -12,6 +12,7 @@ import { ScreenHeader } from '../../components/ui/ScreenHeader';
 import { ExpenseFilters, ExpenseFilters as ExpenseFiltersType, SortOption, GroupByOption } from '../../components/ExpenseFilters';
 import { EXPENSE_CATEGORIES, getCategoryById, getCategoryByName } from '../../constants/expenseCategories';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows, TAB_BAR_HEIGHT } from '../../theme';
 import { LoadingSkeleton, SkeletonCard } from '../../components/LoadingSkeleton';
 import { AppText } from '../../components/AppText';
@@ -106,6 +107,13 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     sortBy: 'newest',
     groupBy: 'none',
   });
+  const scrollRef = useRef<ScrollView>(null);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+    }, [])
+  );
 
   useEffect(() => {
     if (selectedHousehold) {
@@ -125,7 +133,7 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
       setExpenses(expensesData);
       setBalances(balancesData);
     } catch (error: any) {
-      console.error('Failed to load expenses:', error);
+      if (__DEV__) console.error('Failed to load expenses:', error);
       if (error?.response?.status === 403) {
         setSelectedHousehold(null);
       }
@@ -301,6 +309,7 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
+        ref={scrollRef}
         style={styles.scrollView}
         contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT + spacing.xl }}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={loadData} />}

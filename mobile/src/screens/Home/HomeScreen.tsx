@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Alert } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { AppText } from '../../components/AppText';
@@ -12,11 +12,14 @@ import { expensesApi, PairwiseBalance, Expense } from '../../api/expensesApi';
 import { shoppingApi, ShoppingItem } from '../../api/shoppingApi';
 import { EventCard } from '../../components/EventCard';
 import { BalanceSummary } from '../../components/BalanceSummary';
-import { StatsCard } from '../../components/StatsCard';
 import { QuickActionButton } from '../../components/QuickActionButton';
 import { SpendingChart } from '../../components/SpendingChart';
-import { formatDate } from '../../utils/dateHelpers';
-import { formatCompactCurrency, formatCurrency } from '../../utils/formatCurrency';
+import { DashboardHero } from '../../components/Home/DashboardHero';
+import { SectionBlock } from '../../components/ui/SectionBlock';
+import { SummaryStatCard } from '../../components/Home/SummaryStatCard';
+import { InsightCard } from '../../components/Home/InsightCard';
+import { SmartTipCard } from '../../components/Home/SmartTipCard';
+import { formatCurrency, formatCompactCurrency } from '../../utils/formatCurrency';
 import { useThemeColors, fontSizes, fontWeights, spacing, lineHeights, radii, shadows, TAB_BAR_HEIGHT } from '../../theme';
 import { scale } from '../../utils/scaling';
 import { Ionicons } from '@expo/vector-icons';
@@ -37,6 +40,13 @@ export const HomeScreen: React.FC = () => {
   const [insights, setInsights] = useState<any>(null);
   const [spendingRange, setSpendingRange] = useState<'week' | 'month' | 'year' | 'all'>('month');
   const [loadError, setLoadError] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+    }, [])
+  );
 
   const styles = React.useMemo(() => StyleSheet.create({
     container: {
@@ -45,6 +55,10 @@ export const HomeScreen: React.FC = () => {
     },
     scrollView: {
       flex: 1,
+    },
+    scrollContent: {
+      paddingTop: spacing.lg,
+      paddingBottom: TAB_BAR_HEIGHT + spacing.xl,
     },
     emptyContainer: {
       flex: 1,
@@ -57,76 +71,30 @@ export const HomeScreen: React.FC = () => {
       color: colors.muted,
     },
     skeletonStatCard: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.sm,
-      padding: spacing.md,
+      flex: 1,
+      padding: spacing.lg,
       backgroundColor: colors.surface,
-      borderRadius: radii.md,
+      borderRadius: radii.lg,
       borderWidth: 1,
       borderColor: colors.borderLight,
     },
     skeletonStatContent: {
       flex: 1,
     },
-    header: {
-      paddingHorizontal: spacing.xl,
-      paddingTop: spacing.lg,
-      paddingBottom: spacing.xl,
-      backgroundColor: colors.background,
-    },
-    title: {
-      fontSize: fontSizes.xxxl,
-      fontWeight: fontWeights.extrabold,
-      color: colors.text,
-      marginBottom: spacing.xs,
-      lineHeight: lineHeights.xxxl,
-      letterSpacing: -0.5,
-    },
-    address: {
-      fontSize: fontSizes.sm,
-      color: colors.textSecondary,
-      lineHeight: lineHeights.sm,
-    },
-    statsContainer: {
-      flexDirection: 'row',
-      paddingHorizontal: spacing.xl,
-      paddingTop: spacing.lg,
-      paddingBottom: spacing.md,
-      gap: spacing.sm,
-    },
-    section: {
-      paddingHorizontal: spacing.xl,
-      paddingTop: spacing.xl,
-      paddingBottom: spacing.md,
-    },
-    sectionHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'flex-start',
+    skeletonHero: {
+      marginHorizontal: spacing.xl,
       marginBottom: spacing.lg,
+      padding: spacing.xl,
+      backgroundColor: colors.surface,
+      borderRadius: radii.lg,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
     },
-    sectionTitleContainer: {
-      flex: 1,
-      flexShrink: 1,
-      paddingRight: spacing.md,
-    },
-    sectionTitle: {
-      fontSize: fontSizes.xl,
-      fontWeight: fontWeights.bold,
-      color: colors.text,
-      letterSpacing: -0.3,
-      marginBottom: spacing.xs,
-    },
-    sectionDescription: {
-      fontSize: fontSizes.sm,
-      color: colors.textSecondary,
-      lineHeight: lineHeights.sm,
-    },
-    seeAllText: {
-      fontSize: fontSizes.sm,
-      color: colors.primary,
-      fontWeight: fontWeights.semibold,
+    statsRow: {
+      flexDirection: 'row',
+      paddingHorizontal: spacing.xl,
+      marginBottom: spacing.xl,
+      gap: spacing.sm,
     },
     emptyStateContainer: {
       paddingHorizontal: spacing.xl,
@@ -257,30 +225,12 @@ export const HomeScreen: React.FC = () => {
       fontSize: fontSizes.sm,
       fontWeight: fontWeights.medium,
     },
-    tipCard: {
-      flexDirection: 'row',
-      backgroundColor: colors.accentUltraSoft,
-      borderRadius: radii.lg,
-      padding: spacing.lg,
-      borderWidth: 1,
-      borderColor: colors.accentSoft,
-      gap: spacing.md,
-      ...(shadows.xs as object),
+    insightRow: {
+      marginTop: spacing.lg,
     },
-    tipContent: {
-      flex: 1,
-      flexShrink: 1,
-    },
-    tipTitle: {
-      fontSize: fontSizes.md,
-      fontWeight: fontWeights.semibold,
-      color: colors.text,
-      marginBottom: spacing.xs,
-    },
-    tipText: {
-      fontSize: fontSizes.sm,
-      color: colors.textSecondary,
-      lineHeight: lineHeights.sm,
+    tipSection: {
+      paddingHorizontal: spacing.xl,
+      marginBottom: spacing.xxl,
     },
     errorBanner: {
       flexDirection: 'row',
@@ -349,7 +299,7 @@ export const HomeScreen: React.FC = () => {
       setShoppingItems(allShoppingItems);
       setInsights(insightsData);
     } catch (error: any) {
-      console.error('Failed to load home data:', error);
+      if (__DEV__) console.error('Failed to load home data:', error);
       const isNetworkError =
         error?.code === 'ERR_NETWORK' ||
         error?.message === 'Network Error' ||
@@ -465,27 +415,25 @@ export const HomeScreen: React.FC = () => {
     );
   }
 
-  // Show loading skeleton on initial load
   if (initialLoading) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <ScrollView style={styles.scrollView}>
-          <View style={styles.header}>
-            <LoadingSkeleton width={200} height={28} style={{ marginBottom: spacing.xs }} />
-            <LoadingSkeleton width={150} height={16} />
+          <View style={styles.skeletonHero}>
+            <LoadingSkeleton width={220} height={28} style={{ marginBottom: spacing.xs }} />
+            <LoadingSkeleton width={120} height={14} />
+            <LoadingSkeleton width={100} height={20} style={{ marginTop: spacing.md }} />
           </View>
-          <View style={styles.statsContainer}>
-            {[1, 2, 3, 4].map((i) => (
+          <View style={styles.statsRow}>
+            {[1, 2, 3].map((i) => (
               <View key={i} style={styles.skeletonStatCard}>
-                <LoadingSkeleton width={40} height={40} borderRadius={20} />
-                <View style={styles.skeletonStatContent}>
-                  <LoadingSkeleton width={80} height={14} style={{ marginBottom: spacing.xs }} />
-                  <LoadingSkeleton width={60} height={18} />
-                </View>
+                <LoadingSkeleton width={44} height={44} borderRadius={radii.md} />
+                <LoadingSkeleton width={60} height={18} style={{ marginTop: spacing.sm }} />
+                <LoadingSkeleton width={50} height={12} style={{ marginTop: spacing.xs }} />
               </View>
             ))}
           </View>
-          <View style={styles.section}>
+          <View style={{ paddingHorizontal: spacing.xl, marginTop: spacing.xl }}>
             <LoadingSkeleton width={150} height={20} style={{ marginBottom: spacing.md }} />
             {[1, 2, 3].map((i) => (
               <SkeletonCard key={i} lines={2} showAvatar={true} />
@@ -499,49 +447,47 @@ export const HomeScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
+        ref={scrollRef}
         style={styles.scrollView}
-        contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT + spacing.xl }}
+        contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={loadData} />}
       >
       {loadError && (
-        <View style={[styles.errorBanner, { backgroundColor: colors.errorSoft ?? colors.primaryUltraSoft }]}>
-          <Ionicons name="cloud-offline-outline" size={20} color={colors.error ?? colors.textSecondary} />
-          <AppText style={[styles.errorBannerText, { color: colors.error ?? colors.textSecondary }]}>
+        <View style={[styles.errorBanner, { backgroundColor: colors.dangerSoft }]}>
+          <Ionicons name="cloud-offline-outline" size={20} color={colors.danger} />
+          <AppText style={[styles.errorBannerText, { color: colors.danger }]}>
             {t('home.couldNotConnect')}
           </AppText>
         </View>
       )}
-      <View style={styles.header}>
-        <AppText style={styles.title}>{selectedHousehold.name}</AppText>
-        {selectedHousehold.address && (
-          <AppText style={styles.address}>{selectedHousehold.address}</AppText>
-        )}
-      </View>
 
-      {/* Quick Stats Cards */}
+      <DashboardHero
+        householdName={selectedHousehold.name}
+        address={selectedHousehold.address}
+        metricLabel={hasData ? t('home.thisMonth') : undefined}
+        metricValue={hasData ? formatCompactCurrency(stats.monthlyExpenses) : undefined}
+      />
+
       {hasData && (
-        <View style={styles.statsContainer}>
-          <StatsCard
-            icon={<Ionicons name="cash-outline" size={24} color={colors.primary} />}
+        <View style={styles.statsRow}>
+          <SummaryStatCard
+            icon={<Ionicons name="cash-outline" size={22} color={colors.primary} />}
             label={t('home.thisMonth')}
             value={formatCompactCurrency(stats.monthlyExpenses)}
-            iconColor={colors.primary}
             iconBgColor={colors.primaryUltraSoft}
             onPress={() => navigation.navigate('Expenses')}
           />
-          <StatsCard
-            icon={<Ionicons name="cart-outline" size={24} color={colors.accent} />}
+          <SummaryStatCard
+            icon={<Ionicons name="cart-outline" size={22} color={colors.accent} />}
             label={t('tabs.shopping')}
             value={stats.pendingShopping}
-            iconColor={colors.accent}
             iconBgColor={colors.accentUltraSoft}
             onPress={() => navigation.navigate('Shopping')}
           />
-          <StatsCard
-            icon={<Ionicons name="calendar-outline" size={24} color={colors.teal} />}
+          <SummaryStatCard
+            icon={<Ionicons name="calendar-outline" size={22} color={colors.teal} />}
             label={t('home.events')}
             value={stats.upcomingEventsCount}
-            iconColor={colors.teal}
             iconBgColor={colors.tealUltraSoft}
             onPress={() => navigation.navigate('Calendar')}
           />
@@ -603,140 +549,93 @@ export const HomeScreen: React.FC = () => {
           </View>
         </View>
       )}
-      {/* Balance Summary */}
       {user && balances.length > 0 && (
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionTitleContainer}>
-              <AppText style={styles.sectionTitle}>{t('home.balanceSummary')}</AppText>
-              <AppText style={styles.sectionDescription}>
-                {t('home.balanceDescription')}
-              </AppText>
-            </View>
-          </View>
-          <TouchableOpacity
-            activeOpacity={0.9}
-            onPress={() => navigation.getParent()?.navigate('SettleUp')}
-          >
+        <SectionBlock
+          title={t('home.balanceSummary')}
+          description={t('home.balanceDescription')}
+          actionLabel={t('common.seeAll')}
+          onAction={() => navigation.getParent()?.navigate('SettleUp')}
+        >
+          <TouchableOpacity activeOpacity={0.9} onPress={() => navigation.getParent()?.navigate('SettleUp')}>
             <BalanceSummary
               balances={balances}
               currentUserId={user._id}
               getUserName={getUserName}
               getUserAvatar={getUserAvatar}
+              hideTitle
             />
           </TouchableOpacity>
-        </View>
+        </SectionBlock>
       )}
 
-      {/* Spending Insights & Charts */}
-      {(spendingByCategory.length > 0 || (insights && insights.byCategory.length > 0)) && (
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionTitleContainer}>
-              <AppText style={styles.sectionTitle}>{t('home.spendingInsights')}</AppText>
-              <AppText style={styles.sectionDescription}>
-                {t('home.spendingDescription')}
-              </AppText>
-            </View>
-          </View>
+      {(spendingByCategory.length > 0 || (insights && insights.byCategory?.length > 0)) && (
+        <SectionBlock
+          title={t('home.spendingInsights')}
+          description={t('home.spendingDescription')}
+        >
           <SpendingChart
             byCategory={spendingByCategory.length > 0 ? spendingByCategory : insights.byCategory}
             monthlyTrend={insights?.monthlyTrend || []}
             predictions={insights?.predictions}
             selectedRange={spendingRange}
             onChangeRange={setSpendingRange}
+            hidePrediction
           />
-          {/* Spending Summary Card */}
-          {insights.monthlyTrend && insights.monthlyTrend.length > 1 && (
-            <View style={styles.summaryCard}>
-              <View style={styles.summaryRow}>
-                <View style={styles.summaryItem}>
-                  <Ionicons name="trending-up-outline" size={20} color={colors.primary} />
-                  <View style={styles.summaryTextContainer}>
-                    <AppText style={styles.summaryLabel}>{t('home.thisMonth')}</AppText>
-                    <AppText style={styles.summaryValue}>
-                      {formatCurrency(stats.monthlyExpenses)}
-                    </AppText>
-                  </View>
-                </View>
-                {insights.monthlyTrend.length >= 2 && (
-                  <View style={styles.summaryItem}>
-                    <Ionicons name="calendar-outline" size={20} color={colors.textSecondary} />
-                    <View style={styles.summaryTextContainer}>
-                      <AppText style={styles.summaryLabel}>{t('home.lastMonth')}</AppText>
-                      <AppText style={styles.summaryValue}>
-                        {formatCurrency(insights.monthlyTrend[insights.monthlyTrend.length - 2]?.amount || 0)}
-                      </AppText>
-                    </View>
-                  </View>
-                )}
+          {insights?.monthlyTrend && insights.monthlyTrend.length >= 2 && (() => {
+            const thisMonth = stats.monthlyExpenses;
+            const lastMonth = insights.monthlyTrend[insights.monthlyTrend.length - 2]?.amount || 0;
+            const difference = thisMonth - lastMonth;
+            const percentChange = lastMonth > 0 ? ((difference / lastMonth) * 100).toFixed(1) : '0';
+            const isIncrease = difference > 0;
+            const trendText = lastMonth > 0
+              ? `${isIncrease ? '+' : ''}${formatCurrency(Math.abs(difference))} (${isIncrease ? '+' : ''}${percentChange}%) ${isIncrease ? t('home.moreThanLastMonth') : t('home.lessThanLastMonth')}`
+              : t('home.thisMonth');
+            return (
+              <View style={styles.insightRow}>
+                <InsightCard
+                  title={t('home.thisMonth')}
+                  value={formatCurrency(thisMonth)}
+                  trend={lastMonth > 0 ? { direction: isIncrease ? 'increasing' : 'decreasing', text: trendText } : undefined}
+                  variant="primary"
+                />
               </View>
-              {insights.monthlyTrend.length >= 2 && (() => {
-                const thisMonth = stats.monthlyExpenses;
-                const lastMonth = insights.monthlyTrend[insights.monthlyTrend.length - 2]?.amount || 0;
-                const difference = thisMonth - lastMonth;
-                const percentChange = lastMonth > 0 ? ((difference / lastMonth) * 100).toFixed(1) : 0;
-                const isIncrease = difference > 0;
-                
-                if (lastMonth > 0) {
-                  return (
-                    <View style={styles.trendIndicator}>
-                      <Ionicons 
-                        name={isIncrease ? "arrow-up" : "arrow-down"} 
-                        size={16} 
-                        color={isIncrease ? colors.danger : colors.success} 
-                      />
-                      <AppText style={[
-                        styles.trendText,
-                        { color: isIncrease ? colors.danger : colors.success }
-                      ]}>
-                        {isIncrease ? '+' : ''}{formatCurrency(Math.abs(difference))} ({isIncrease ? '+' : ''}{percentChange}%) 
-                        {isIncrease ? t('home.moreThanLastMonth') : t('home.lessThanLastMonth')}
-                      </AppText>
-                    </View>
-                  );
-                }
-                return null;
-              })()}
+            );
+          })()}
+          {insights?.predictions && (
+            <View style={styles.insightRow}>
+              <InsightCard
+                title={t('spendingChart.nextMonthPrediction')}
+                value={formatCurrency(insights.predictions.nextMonth)}
+                trend={{
+                  direction: insights.predictions.trend,
+                  text: insights.predictions.trend === 'increasing' ? t('spendingChart.increasing') : insights.predictions.trend === 'decreasing' ? t('spendingChart.decreasing') : t('spendingChart.stable'),
+                }}
+                variant="teal"
+              />
             </View>
           )}
-        </View>
+        </SectionBlock>
       )}
 
-      {/* Upcoming Events */}
       {events.length > 0 && (
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionTitleContainer}>
-              <AppText style={styles.sectionTitle}>{t('home.upcomingEvents')}</AppText>
-              <AppText style={styles.sectionDescription}>
-                {t('home.upcomingEventsDescription')}
-              </AppText>
-            </View>
-            <TouchableOpacity onPress={() => navigation.navigate('Calendar')}>
-              <AppText style={styles.seeAllText}>{t('common.seeAll')}</AppText>
-            </TouchableOpacity>
-          </View>
+        <SectionBlock
+          title={t('home.upcomingEvents')}
+          description={t('home.upcomingEventsDescription')}
+          actionLabel={t('common.seeAll')}
+          onAction={() => navigation.navigate('Calendar')}
+        >
           {events.slice(0, 3).map((event) => (
             <EventCard key={event._id} event={event} />
           ))}
-        </View>
+        </SectionBlock>
       )}
 
-      {/* Quick Tip Card */}
       {hasData && (
-        <View style={styles.section}>
-          <View style={styles.tipCard}>
-            <Ionicons name="bulb-outline" size={24} color={colors.accent} />
-            <View style={styles.tipContent}>
-              <AppText style={styles.tipTitle}>{t('home.quickTip')}</AppText>
-              <AppText style={styles.tipText}>
-                {stats.monthlyExpenses > 0 
-                  ? t('home.tipReview')
-                  : t('home.tipStart')}
-              </AppText>
-            </View>
-          </View>
+        <View style={styles.tipSection}>
+          <SmartTipCard
+            title={t('home.quickTip')}
+            message={stats.monthlyExpenses > 0 ? t('home.tipReview') : t('home.tipStart')}
+          />
         </View>
       )}
     </ScrollView>

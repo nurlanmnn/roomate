@@ -505,7 +505,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
       const data = await expenseTemplatesApi.getTemplates(selectedHousehold._id);
       setTemplates(data);
     } catch (error) {
-      console.error('Failed to load templates:', error);
+      if (__DEV__) console.error('Failed to load templates:', error);
     } finally {
       setLoadingTemplates(false);
     }

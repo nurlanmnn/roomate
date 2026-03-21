@@ -15,6 +15,7 @@ import { PrimaryButton } from '../PrimaryButton';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors, fontSizes, fontWeights, spacing, radii } from '../../theme';
 import { HouseholdMember } from '../../api/householdsApi';
+import { UnitPickerModal } from './UnitPickerModal';
 
 interface AddItemSheetProps {
   visible: boolean;
@@ -37,6 +38,10 @@ interface AddItemSheetProps {
   quantityPlaceholder: string;
   weightPlaceholder: string;
   unitPlaceholder: string;
+  /** Modal title for unit list (defaults to unitPlaceholder) */
+  unitPickerTitle?: string;
+  /** Label for “clear unit” row (e.g. localized “None”) */
+  noneUnitLabel?: string;
   sharedLabel: string;
   personalLabel: string;
   assignedToLabel: string;
@@ -72,6 +77,8 @@ export const AddItemSheet: React.FC<AddItemSheetProps> = (props) => {
     quantityPlaceholder,
     weightPlaceholder,
     unitPlaceholder,
+    unitPickerTitle,
+    noneUnitLabel,
     sharedLabel,
     personalLabel,
     assignedToLabel,
@@ -87,7 +94,11 @@ export const AddItemSheet: React.FC<AddItemSheetProps> = (props) => {
 
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
-  const [showUnitPicker, setShowUnitPicker] = React.useState(false);
+  const [unitModalVisible, setUnitModalVisible] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!visible) setUnitModalVisible(false);
+  }, [visible]);
 
   const styles = React.useMemo(() => StyleSheet.create({
     overlay: {
@@ -204,21 +215,19 @@ export const AddItemSheet: React.FC<AddItemSheetProps> = (props) => {
       color: colors.primary,
       fontWeight: fontWeights.semibold,
     },
-    unitPicker: {
+    unitRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
       marginTop: spacing.sm,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
       borderRadius: radii.md,
       backgroundColor: colors.background,
       borderWidth: 1,
       borderColor: colors.borderLight,
-      maxHeight: 200,
     },
-    unitOption: {
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.md,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.borderLight,
-    },
-    unitOptionText: {
+    unitRowText: {
       fontSize: fontSizes.md,
       color: colors.text,
     },
@@ -277,38 +286,15 @@ export const AddItemSheet: React.FC<AddItemSheetProps> = (props) => {
                         keyboardType="number-pad"
                       />
                       <TouchableOpacity
-                        style={[styles.ownerChip, { marginTop: spacing.sm }]}
-                        onPress={() => setShowUnitPicker(!showUnitPicker)}
+                        style={styles.unitRow}
+                        onPress={() => setUnitModalVisible(true)}
+                        activeOpacity={0.7}
                       >
-                        <AppText style={[styles.ownerChipText, !weightUnit && { color: colors.textTertiary }]}>
+                        <AppText style={[styles.unitRowText, !weightUnit && { color: colors.textTertiary }]}>
                           {weightUnit || unitPlaceholder}
                         </AppText>
+                        <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
                       </TouchableOpacity>
-                      {showUnitPicker && (
-                        <View style={styles.unitPicker}>
-                          {weightUnits.map((u) => (
-                            <TouchableOpacity
-                              key={u}
-                              style={styles.unitOption}
-                              onPress={() => {
-                                onWeightUnitChange(u);
-                                setShowUnitPicker(false);
-                              }}
-                            >
-                              <AppText style={styles.unitOptionText}>{u}</AppText>
-                            </TouchableOpacity>
-                          ))}
-                          <TouchableOpacity
-                            style={styles.unitOption}
-                            onPress={() => {
-                              onWeightUnitChange('');
-                              setShowUnitPicker(false);
-                            }}
-                          >
-                            <AppText style={[styles.unitOptionText, { color: colors.textTertiary }]}>—</AppText>
-                          </TouchableOpacity>
-                        </View>
-                      )}
                     </View>
                   </View>
                   <View style={{ marginTop: spacing.lg }}>
@@ -367,6 +353,16 @@ export const AddItemSheet: React.FC<AddItemSheetProps> = (props) => {
           </TouchableOpacity>
         </TouchableOpacity>
       </KeyboardAvoidingView>
+      <UnitPickerModal
+        visible={unitModalVisible}
+        onClose={() => setUnitModalVisible(false)}
+        selectedValue={weightUnit}
+        onSelect={onWeightUnitChange}
+        units={weightUnits}
+        title={unitPickerTitle ?? unitPlaceholder}
+        noneLabel={noneUnitLabel ?? '—'}
+        cancelLabel={cancelLabel}
+      />
     </Modal>
   );
 };

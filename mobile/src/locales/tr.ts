@@ -34,6 +34,7 @@ export default {
     to: 'kime',
     continue: 'Devam Et',
     optional: 'İsteğe Bağlı',
+    none: 'Yok',
   },
 
   // Navigation & Tabs
@@ -477,6 +478,7 @@ export default {
   // Household Selection
   household: {
     selectHousehold: 'Ev Seç',
+    selectSubtitle: 'Yönetmek istediğiniz evi seçin',
     createHousehold: 'Ev Oluştur',
     joinHousehold: 'Eve Katıl',
     enterCode: 'Davet kodunu girin',
@@ -484,8 +486,12 @@ export default {
     householdLocation: 'Konum (isteğe bağlı)',
     yourHouseholds: 'Evleriniz',
     noHouseholds: 'Henüz ev yok',
+    noHouseholdsDescription: 'Henüz hiçbir evin üyesi değilsiniz.',
     createOrJoin: 'Yeni ev oluşturun veya mevcut birine katılın',
+    createOrJoinSection: 'Ev Oluştur veya Katıl',
     joinWithCode: 'Kodla Katıl',
+    memberCountOne: '1 üye',
+    memberCount: '%{count} üye',
     creating: 'Oluşturuluyor...',
     joining: 'Katılınıyor...',
     invalidCode: 'Geçersiz davet kodu',

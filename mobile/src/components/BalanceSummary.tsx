@@ -13,6 +13,8 @@ interface BalanceSummaryProps {
   currentUserId: string;
   getUserName: (userId: string) => string;
   getUserAvatar?: (userId: string) => string | undefined;
+  /** When true, hide the card title (e.g. when used inside SectionBlock) */
+  hideTitle?: boolean;
 }
 
 export const BalanceSummary: React.FC<BalanceSummaryProps> = ({
@@ -20,31 +22,62 @@ export const BalanceSummary: React.FC<BalanceSummaryProps> = ({
   currentUserId,
   getUserName,
   getUserAvatar,
+  hideTitle = false,
 }) => {
   const colors = useThemeColors();
   const { t } = useLanguage();
   const userBalances = balances.filter(b => b.fromUserId === currentUserId || b.toUserId === currentUserId);
 
+  const totalOwedToYou = userBalances
+    .filter(b => b.toUserId === currentUserId)
+    .reduce((sum, b) => sum + b.amount, 0);
+  const totalYouOwe = userBalances
+    .filter(b => b.fromUserId === currentUserId)
+    .reduce((sum, b) => sum + b.amount, 0);
+
   const styles = React.useMemo(() => StyleSheet.create({
     container: {
       backgroundColor: colors.surface,
-      padding: spacing.xl,
+      padding: spacing.lg,
       borderRadius: radii.lg,
-      marginBottom: spacing.lg,
       borderWidth: 1,
       borderColor: colors.borderLight,
       ...(shadows.sm as object),
     },
     title: {
       fontSize: fontSizes.lg,
-      fontWeight: fontWeights.extrabold,
+      fontWeight: fontWeights.bold,
       color: colors.text,
       marginBottom: spacing.md,
     },
-    balanceRow: {
-      paddingVertical: spacing.md,
+    summaryRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: spacing.md,
+      paddingBottom: spacing.md,
       borderBottomWidth: 1,
       borderBottomColor: colors.borderLight,
+    },
+    summaryItem: {
+      alignItems: 'center',
+    },
+    summaryLabel: {
+      fontSize: fontSizes.xs,
+      color: colors.textSecondary,
+      marginBottom: 2,
+    },
+    summaryValue: {
+      fontSize: fontSizes.md,
+      fontWeight: fontWeights.bold,
+      fontVariant: ['tabular-nums'],
+    },
+    balanceRow: {
+      paddingVertical: spacing.sm,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.borderLight,
+    },
+    balanceRowLast: {
+      borderBottomWidth: 0,
     },
     balanceContent: {
       flexDirection: 'row',
@@ -94,7 +127,23 @@ export const BalanceSummary: React.FC<BalanceSummaryProps> = ({
 
   return (
     <View style={styles.container}>
-      <AppText style={styles.title}>{t('home.balanceSummary')}</AppText>
+      {!hideTitle && <AppText style={styles.title}>{t('home.balanceSummary')}</AppText>}
+      {(totalOwedToYou > 0 || totalYouOwe > 0) && (
+        <View style={styles.summaryRow}>
+          {totalOwedToYou > 0 && (
+            <View style={styles.summaryItem}>
+              <AppText style={styles.summaryLabel}>{t('home.youAreOwed')}</AppText>
+              <AppText style={[styles.summaryValue, { color: colors.success }]}>{formatCurrency(totalOwedToYou)}</AppText>
+            </View>
+          )}
+          {totalYouOwe > 0 && (
+            <View style={styles.summaryItem}>
+              <AppText style={styles.summaryLabel}>{t('home.youOwe')}</AppText>
+              <AppText style={[styles.summaryValue, { color: colors.danger }]}>{formatCurrency(totalYouOwe)}</AppText>
+            </View>
+          )}
+        </View>
+      )}
       {userBalances.map((balance, index) => {
         const isOwed = balance.toUserId === currentUserId;
         const otherUserId = isOwed ? balance.fromUserId : balance.toUserId;
@@ -103,7 +152,7 @@ export const BalanceSummary: React.FC<BalanceSummaryProps> = ({
         const otherUserAvatar = getUserAvatar?.(otherUserId);
         
         return (
-          <View key={index} style={styles.balanceRow}>
+          <View key={index} style={[styles.balanceRow, index === userBalances.length - 1 && styles.balanceRowLast]}>
             <View style={styles.balanceContent}>
               <Avatar name={otherUserName} uri={otherUserAvatar} size={32} />
               <View style={styles.balanceTextContainer}>

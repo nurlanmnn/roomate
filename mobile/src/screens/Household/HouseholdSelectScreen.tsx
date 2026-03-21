@@ -1,5 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, KeyboardAvoidingView, Platform } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { householdsApi, Household } from '../../api/householdsApi';
@@ -7,8 +17,8 @@ import { useHousehold } from '../../context/HouseholdContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { FormTextInput } from '../../components/FormTextInput';
-import { EmptyState } from '../../components/ui/EmptyState';
-import { useThemeColors, spacing } from '../../theme';
+import { HouseholdCard } from '../../components/Household/HouseholdCard';
+import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows } from '../../theme';
 import { AppText } from '../../components/AppText';
 
 export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
@@ -32,8 +42,9 @@ export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigatio
     try {
       const data = await householdsApi.getHouseholds();
       setHouseholds(data);
-    } catch (error: any) {
-      Alert.alert(t('common.error'), error.response?.data?.error || t('alerts.somethingWentWrong'));
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { error?: string } } };
+      Alert.alert(t('common.error'), err.response?.data?.error || t('alerts.somethingWentWrong'));
     } finally {
       setLoading(false);
     }
@@ -54,11 +65,14 @@ export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigatio
       setCreateModalVisible(false);
       setHouseholdName('');
       setHouseholdAddress('');
-      Alert.alert(t('common.success'), `${t('household.householdCreated')}! ${t('householdSettingsScreen.inviteCode')}: ${household.joinCode}`, [
-        { text: t('common.ok'), onPress: () => handleSelectHousehold(household) },
-      ]);
-    } catch (error: any) {
-      Alert.alert(t('common.error'), error.response?.data?.error || t('alerts.somethingWentWrong'));
+      Alert.alert(
+        t('common.success'),
+        `${t('household.householdCreated')}! ${t('householdSettingsScreen.inviteCode')}: ${household.joinCode}`,
+        [{ text: t('common.ok'), onPress: () => handleSelectHousehold(household) }]
+      );
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { error?: string } } };
+      Alert.alert(t('common.error'), err.response?.data?.error || t('alerts.somethingWentWrong'));
     }
   };
 
@@ -69,76 +83,89 @@ export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigatio
     }
 
     try {
-      const household = await householdsApi.joinHousehold({ joinCode: joinCode.toUpperCase() });
+      const household = await householdsApi.joinHousehold({ joinCode: joinCode.trim().toUpperCase() });
       setHouseholds([...households, household]);
       setJoinModalVisible(false);
       setJoinCode('');
       handleSelectHousehold(household);
-    } catch (error: any) {
-      Alert.alert(t('common.error'), error.response?.data?.error || t('household.invalidCode'));
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { error?: string } } };
+      Alert.alert(t('common.error'), err.response?.data?.error || t('household.invalidCode'));
     }
   };
 
   const handleSelectHousehold = (household: Household) => {
     setSelectedHousehold(household);
-    // Navigate to Main tabs after selecting household
     navigation.replace('Main');
   };
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <ScrollView style={styles.scrollView}>
-      <View style={styles.header}>
-        <AppText style={styles.title}>{t('household.selectHousehold')}</AppText>
-        <TouchableOpacity
-          style={styles.settingsButton}
-          onPress={() => navigation.navigate('Settings', { fromHouseholdSelect: true })}
-        >
-          <Ionicons name="settings-outline" size={24} color={colors.text} />
-        </TouchableOpacity>
-      </View>
-
-      {households.length > 0 ? (
-        <View style={styles.section}>
-          <AppText style={styles.sectionTitle}>{t('household.yourHouseholds')}</AppText>
-          {households.map((household) => (
-            <TouchableOpacity
-              key={household._id}
-              style={styles.householdCard}
-              onPress={() => handleSelectHousehold(household)}
-            >
-              <AppText style={styles.householdName}>{household.name}</AppText>
-              {household.address && (
-                <AppText style={styles.householdAddress}>{household.address}</AppText>
-              )}
-              <AppText style={styles.joinCode}>{t('householdSettingsScreen.inviteCode')}: {household.joinCode}</AppText>
-            </TouchableOpacity>
-          ))}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerTextBlock}>
+            <AppText style={styles.title}>{t('household.selectHousehold')}</AppText>
+            <AppText style={styles.subtitle}>{t('household.selectSubtitle')}</AppText>
+          </View>
+          <TouchableOpacity
+            style={styles.settingsButton}
+            onPress={() => navigation.navigate('Settings', { fromHouseholdSelect: true })}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="settings-outline" size={24} color={colors.textSecondary} />
+          </TouchableOpacity>
         </View>
-      ) : !loading ? (
-        <View style={styles.emptyStateContainer}>
-          <EmptyState
-            icon="home-outline"
-            title={t('household.noHouseholds')}
-            message={t('household.createOrJoin')}
-            variant="minimal"
+
+        {/* Household list */}
+        {households.length > 0 ? (
+          <View style={styles.section}>
+            <AppText style={styles.sectionTitle}>{t('household.yourHouseholds')}</AppText>
+            {households.map((household) => (
+              <HouseholdCard
+                key={household._id}
+                household={household}
+                onPress={() => handleSelectHousehold(household)}
+                copiedMessage={t('common.copied')}
+                memberCountOne={t('household.memberCountOne')}
+                memberCount={({ count }) => t('household.memberCount', { count })}
+              />
+            ))}
+          </View>
+        ) : loading ? (
+          <View style={styles.loadingBlock}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        ) : (
+          <View style={styles.emptyBlock}>
+            <View style={styles.emptyIconWrap}>
+              <Ionicons name="home-outline" size={48} color={colors.primary} />
+            </View>
+            <AppText style={styles.emptyTitle}>{t('household.noHouseholds')}</AppText>
+            <AppText style={styles.emptyMessage}>{t('household.noHouseholdsDescription')}</AppText>
+          </View>
+        )}
+
+        {/* Actions section */}
+        <View style={styles.actionsSection}>
+          <AppText style={styles.actionsSectionTitle}>{t('household.createOrJoinSection')}</AppText>
+          <PrimaryButton
+            title={t('household.createHousehold')}
+            onPress={() => setCreateModalVisible(true)}
+            style={styles.primaryAction}
+          />
+          <PrimaryButton
+            title={t('household.joinWithCode')}
+            onPress={() => setJoinModalVisible(true)}
+            variant="outline"
+            style={styles.secondaryAction}
           />
         </View>
-      ) : null}
-
-      <View style={styles.actions}>
-        <PrimaryButton
-          title={t('household.createHousehold')}
-          onPress={() => setCreateModalVisible(true)}
-          style={styles.actionButton}
-        />
-        <PrimaryButton
-          title={t('household.joinWithCode')}
-          onPress={() => setJoinModalVisible(true)}
-          variant="secondary"
-          style={styles.actionButton}
-        />
-      </View>
+      </ScrollView>
 
       {/* Create Modal */}
       <Modal
@@ -147,41 +174,56 @@ export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigatio
         transparent
         onRequestClose={() => setCreateModalVisible(false)}
       >
-        <KeyboardAvoidingView
+        <TouchableOpacity
           style={styles.modalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+          activeOpacity={1}
+          onPress={() => setCreateModalVisible(false)}
         >
-          <View style={styles.modalContent}>
-            <AppText style={styles.modalTitle}>{t('household.createHousehold')}</AppText>
-            <FormTextInput
-              label={t('householdSettingsScreen.householdName')}
-              value={householdName}
-              onChangeText={setHouseholdName}
-              placeholder="e.g., Alafaya Commons 203"
-            />
-            <FormTextInput
-              label={t('household.householdLocation')}
-              value={householdAddress}
-              onChangeText={setHouseholdAddress}
-              placeholder="Orlando, FL"
-            />
-            <View style={styles.modalActions}>
-              <PrimaryButton
-                title={t('common.cancel')}
-                onPress={() => setCreateModalVisible(false)}
-                variant="secondary"
-                style={styles.modalButton}
-              />
-              <View style={styles.buttonSpacer} />
-              <PrimaryButton
-                title={t('common.create')}
-                onPress={handleCreateHousehold}
-                style={styles.modalButton}
-              />
-            </View>
-          </View>
-        </KeyboardAvoidingView>
+          <KeyboardAvoidingView
+            style={styles.modalKeyboard}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+          >
+            <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <AppText style={styles.modalTitle}>{t('household.createHousehold')}</AppText>
+                  <TouchableOpacity
+                    style={styles.modalClose}
+                    onPress={() => setCreateModalVisible(false)}
+                  >
+                    <Ionicons name="close" size={22} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                </View>
+                <FormTextInput
+                  label={t('householdSettingsScreen.householdName')}
+                  value={householdName}
+                  onChangeText={setHouseholdName}
+                  placeholder="e.g., Alafaya Commons 203"
+                />
+                <FormTextInput
+                  label={t('household.householdLocation')}
+                  value={householdAddress}
+                  onChangeText={setHouseholdAddress}
+                  placeholder="Orlando, FL"
+                />
+                <View style={styles.modalActions}>
+                  <PrimaryButton
+                    title={t('common.cancel')}
+                    onPress={() => setCreateModalVisible(false)}
+                    variant="outline"
+                    style={styles.modalButton}
+                  />
+                  <PrimaryButton
+                    title={t('common.create')}
+                    onPress={handleCreateHousehold}
+                    style={styles.modalButton}
+                  />
+                </View>
+              </View>
+            </TouchableOpacity>
+          </KeyboardAvoidingView>
+        </TouchableOpacity>
       </Modal>
 
       {/* Join Modal */}
@@ -191,142 +233,208 @@ export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigatio
         transparent
         onRequestClose={() => setJoinModalVisible(false)}
       >
-        <KeyboardAvoidingView
+        <TouchableOpacity
           style={styles.modalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+          activeOpacity={1}
+          onPress={() => setJoinModalVisible(false)}
         >
-          <View style={styles.modalContent}>
-            <AppText style={styles.modalTitle}>{t('household.joinHousehold')}</AppText>
-            <FormTextInput
-              label={t('householdSettingsScreen.inviteCode')}
-              value={joinCode}
-              onChangeText={setJoinCode}
-              placeholder={t('household.enterCode')}
-            />
-            <View style={styles.modalActions}>
-              <PrimaryButton
-                title={t('common.cancel')}
-                onPress={() => setJoinModalVisible(false)}
-                variant="secondary"
-                style={styles.modalButton}
-              />
-              <View style={styles.buttonSpacer} />
-              <PrimaryButton
-                title={t('household.joinHousehold')}
-                onPress={handleJoinHousehold}
-                style={styles.modalButton}
-              />
-            </View>
-          </View>
-        </KeyboardAvoidingView>
+          <KeyboardAvoidingView
+            style={styles.modalKeyboard}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+          >
+            <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <AppText style={styles.modalTitle}>{t('household.joinHousehold')}</AppText>
+                  <TouchableOpacity
+                    style={styles.modalClose}
+                    onPress={() => setJoinModalVisible(false)}
+                  >
+                    <Ionicons name="close" size={22} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                </View>
+                <FormTextInput
+                  label={t('householdSettingsScreen.inviteCode')}
+                  value={joinCode}
+                  onChangeText={(v) => setJoinCode(v.toUpperCase())}
+                  placeholder={t('household.enterCode')}
+                  autoCapitalize="characters"
+                />
+                <View style={styles.modalActions}>
+                  <PrimaryButton
+                    title={t('common.cancel')}
+                    onPress={() => setJoinModalVisible(false)}
+                    variant="outline"
+                    style={styles.modalButton}
+                  />
+                  <PrimaryButton
+                    title={t('household.joinHousehold')}
+                    onPress={handleJoinHousehold}
+                    style={styles.modalButton}
+                  />
+                </View>
+              </View>
+            </TouchableOpacity>
+          </KeyboardAvoidingView>
+        </TouchableOpacity>
       </Modal>
-    </ScrollView>
     </SafeAreaView>
   );
 };
 
-const createStyles = (colors: any) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  header: {
-    padding: 24,
-    paddingTop: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: colors.text,
-    flex: 1,
-  },
-  settingsButton: {
-    padding: 8,
-    marginLeft: spacing.md,
-  },
-  section: {
-    padding: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 16,
-    color: colors.text,
-  },
-  householdCard: {
-    backgroundColor: colors.surface,
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 12,
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-  },
-  householdName: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 4,
-    color: colors.text,
-  },
-  householdAddress: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginBottom: 4,
-  },
-  joinCode: {
-    fontSize: 12,
-    color: colors.textTertiary,
-  },
-  actions: {
-    padding: spacing.xl,
-    gap: spacing.md,
-  },
-  actionButton: {
-    marginBottom: spacing.md,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: colors.surface,
-    borderRadius: 16,
-    padding: spacing.xl,
-    width: '90%',
-    maxWidth: 400,
-  },
-  modalTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: spacing.xl,
-    color: colors.text,
-  },
-  modalActions: {
-    flexDirection: 'row',
-    marginTop: spacing.lg,
-  },
-  modalButton: {
-    flex: 1,
-  },
-  buttonSpacer: {
-    width: spacing.md,
-  },
-  emptyStateContainer: {
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.xxl,
-  },
-});
-
+const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingBottom: spacing.xxl,
+    },
+    header: {
+      paddingHorizontal: spacing.xl,
+      paddingTop: spacing.lg,
+      paddingBottom: spacing.md,
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+    },
+    headerTextBlock: {
+      flex: 1,
+      minWidth: 0,
+    },
+    title: {
+      fontSize: fontSizes.xxl,
+      fontWeight: fontWeights.extrabold,
+      color: colors.text,
+      letterSpacing: -0.5,
+      marginBottom: spacing.xs,
+    },
+    subtitle: {
+      fontSize: fontSizes.sm,
+      color: colors.textSecondary,
+      lineHeight: 20,
+    },
+    settingsButton: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: colors.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      ...(shadows.xs as object),
+    },
+    section: {
+      paddingHorizontal: spacing.xl,
+      marginBottom: spacing.xxl,
+    },
+    sectionTitle: {
+      fontSize: fontSizes.xs,
+      fontWeight: fontWeights.semibold,
+      color: colors.textTertiary,
+      letterSpacing: 0.5,
+      textTransform: 'uppercase',
+      marginBottom: spacing.md,
+    },
+    loadingBlock: {
+      paddingVertical: spacing.xxxl,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    emptyBlock: {
+      alignItems: 'center',
+      paddingVertical: spacing.xxxl,
+      paddingHorizontal: spacing.xl,
+      marginBottom: spacing.lg,
+    },
+    emptyIconWrap: {
+      width: 88,
+      height: 88,
+      borderRadius: 44,
+      backgroundColor: colors.primaryUltraSoft,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: spacing.lg,
+    },
+    emptyTitle: {
+      fontSize: fontSizes.xl,
+      fontWeight: fontWeights.bold,
+      color: colors.text,
+      marginBottom: spacing.xs,
+      textAlign: 'center',
+    },
+    emptyMessage: {
+      fontSize: fontSizes.md,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      lineHeight: 22,
+    },
+    actionsSection: {
+      paddingHorizontal: spacing.xl,
+      paddingTop: spacing.lg,
+      borderTopWidth: 1,
+      borderTopColor: colors.borderLight,
+    },
+    actionsSectionTitle: {
+      fontSize: fontSizes.lg,
+      fontWeight: fontWeights.bold,
+      color: colors.text,
+      marginBottom: spacing.md,
+    },
+    primaryAction: {
+      marginBottom: spacing.sm,
+    },
+    secondaryAction: {},
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.4)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: spacing.lg,
+    },
+    modalKeyboard: {
+      width: '100%',
+      maxWidth: 400,
+    },
+    modalContent: {
+      backgroundColor: colors.surface,
+      borderRadius: radii.lg,
+      padding: spacing.xl,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      ...(shadows.lg as object),
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: spacing.xl,
+    },
+    modalTitle: {
+      fontSize: fontSizes.xl,
+      fontWeight: fontWeights.bold,
+      color: colors.text,
+    },
+    modalClose: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.background,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    modalActions: {
+      flexDirection: 'row',
+      marginTop: spacing.lg,
+      gap: spacing.md,
+    },
+    modalButton: {
+      flex: 1,
+    },
+  });

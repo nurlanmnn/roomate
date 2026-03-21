@@ -191,23 +191,9 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = ({ navigat
     setLoading(true);
     try {
       const data = await settlementsApi.getSettlements(selectedHousehold._id);
-      // Log count only, not full data (proofImageUrl contains large base64 strings)
-      console.log(`Loaded ${data?.length || 0} settlements`);
-      if (data && data.length > 0) {
-        // Log first settlement structure for debugging (without proofImageUrl)
-        const first = data[0];
-        console.log('First settlement structure:', {
-          _id: first._id,
-          fromUserId: first.fromUserId,
-          toUserId: first.toUserId,
-          fromUserIdType: typeof first.fromUserId,
-          toUserIdType: typeof first.toUserId,
-          amount: first.amount,
-        });
-      }
       setSettlements(data || []);
     } catch (error) {
-      console.error('Failed to load settlements:', error);
+      if (__DEV__) console.error('Failed to load settlements', error);
       setSettlements([]);
     } finally {
       setLoading(false);

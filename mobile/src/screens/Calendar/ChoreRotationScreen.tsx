@@ -39,7 +39,7 @@ export const ChoreRotationScreen: React.FC<{ navigation: any }> = ({ navigation 
       const data = await choresApi.getChores(selectedHousehold._id, weekKey);
       setChores(data);
     } catch (error: any) {
-      console.error('Failed to load chores:', error);
+      if (__DEV__) console.error('Failed to load chores:', error);
       if (error?.response?.status === 403) {
         // handled by guard
       }

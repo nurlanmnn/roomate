@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Alert, Modal, ScrollView, StyleSheet, Switch, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,6 +10,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useLanguage, LANGUAGES } from '../../context/LanguageContext';
 import type { LanguageCode } from '../../context/LanguageContext';
+import { useFocusEffect } from '@react-navigation/native';
 import { fontSizes, fontWeights, radii, shadows, spacing, useTheme, useThemeColors, TAB_BAR_HEIGHT } from '../../theme';
 
 type SettingsScreenProps = {
@@ -183,6 +184,13 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, rout
   const styles = React.useMemo(() => createStyles(colors), [colors]);
   
   const [showLanguageModal, setShowLanguageModal] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+    }, [])
+  );
 
   // If Settings was opened from HouseholdSelect (not inside a household), hide household-only rows
   const fromHouseholdSelect = route?.params?.fromHouseholdSelect || false;
@@ -210,7 +218,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, rout
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+      <ScrollView ref={scrollRef} style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <ScreenHeader title={t('settings.title')} />
 
         <View style={styles.profileCard}>
