@@ -1,493 +1,592 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View, TouchableOpacity, Image, Keyboard } from 'react-native';
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  View,
+  TouchableOpacity,
+  Image,
+  Keyboard,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
+import { Ionicons } from '@expo/vector-icons';
 import { FormTextInput } from '../../components/FormTextInput';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { AppText } from '../../components/AppText';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { authApi } from '../../api/authApi';
 import { Avatar } from '../../components/ui/Avatar';
+import { SettingsSection } from '../../components/Settings/SettingsSection';
+import { SettingsGroupCard } from '../../components/Settings/SettingsGroupCard';
+import { DangerZoneCard } from '../../components/Settings/DangerZoneCard';
+import { DeleteAccountModal } from '../../components/Settings/DeleteAccountModal';
 import { useThemeColors, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function mapEmailChangeApiError(err: unknown, t: (key: string) => string): string {
+  const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+  if (!msg) return t('alerts.somethingWentWrong');
+  switch (msg) {
+    case 'An account with this email already exists':
+      return t('accountSettingsScreen.emailAlreadyInUse');
+    case 'This is already your email address':
+      return t('accountSettingsScreen.emailSameAsCurrent');
+    case 'Invalid OTP':
+      return t('accountSettingsScreen.otpInvalid');
+    case 'OTP has expired':
+      return t('accountSettingsScreen.otpExpired');
+    case 'Failed to send verification email':
+      return t('accountSettingsScreen.failedToSendVerificationCode');
+    default:
+      return msg;
+  }
+}
 
 export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { user, refreshUser, logout } = useAuth();
   const { t } = useLanguage();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
+
   const [name, setName] = useState(user?.name || '');
-  const [savingName, setSavingName] = useState(false);
+  const [email, setEmail] = useState(user?.email || '');
   const [avatarUri, setAvatarUri] = useState<string | null>(user?.avatarUrl || null);
-  const [savingAvatar, setSavingAvatar] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+
+  const [emailCode, setEmailCode] = useState('');
+  const [codeSentTo, setCodeSentTo] = useState<string | null>(null);
+  const [sendingEmailCode, setSendingEmailCode] = useState(false);
+  const [confirmingEmail, setConfirmingEmail] = useState(false);
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
 
-  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [keyboardVisible, setKeyboardVisible] = useState(false);
-  
-  const scrollViewRef = useRef<ScrollView>(null);
-  const inputPositions = useRef<Record<string, number>>({});
+
+  const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
-    const showSubscription = Keyboard.addListener('keyboardDidShow', () => {
-      setKeyboardVisible(true);
-    });
-    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
-      setKeyboardVisible(false);
-    });
-
-    return () => {
-      showSubscription.remove();
-      hideSubscription.remove();
-    };
-  }, []);
-
-  const handleInputLayout = (inputName: string, y: number) => {
-    inputPositions.current[inputName] = y;
-  };
-
-  const scrollToInput = (inputName: string) => {
-    const y = inputPositions.current[inputName];
-    if (y !== undefined && scrollViewRef.current) {
-      // Scroll so the input is roughly in the upper third of the screen
-      scrollViewRef.current.scrollTo({ y: Math.max(0, y - 150), animated: true });
+    if (user) {
+      setName(user.name);
+      setEmail(user.email);
+      setAvatarUri(user.avatarUrl || null);
     }
-  };
+  }, [user?._id, user?.name, user?.email, user?.avatarUrl]);
 
-  const canSaveName = useMemo(() => {
-    const trimmed = name.trim();
-    return !!user && trimmed.length > 0 && trimmed !== user.name;
-  }, [name, user]);
+  const emailChanged = useMemo(() => {
+    if (!user) return false;
+    return email.trim().toLowerCase() !== user.email.toLowerCase();
+  }, [email, user]);
 
-  const canSaveAvatar = useMemo(() => {
-    return !!user && !!avatarUri && avatarUri !== (user.avatarUrl || '');
-  }, [avatarUri, user]);
-
-  const canChangePassword = useMemo(() => {
-    return currentPassword.length > 0 && newPassword.length >= 8;
-  }, [currentPassword, newPassword]);
-
-  const handleSaveName = async () => {
-    if (!canSaveName) return;
-    try {
-      setSavingName(true);
-      await authApi.updateProfile({ name: name.trim() });
-      await refreshUser();
-      Alert.alert(t('common.success'), t('accountSettingsScreen.profileUpdated'));
-      navigation.goBack();
-    } catch (error: any) {
-      Alert.alert(t('common.error'), error.response?.data?.error || t('alerts.somethingWentWrong'));
-    } finally {
-      setSavingName(false);
+  useEffect(() => {
+    const normalized = email.trim().toLowerCase();
+    if (codeSentTo && normalized !== codeSentTo) {
+      setCodeSentTo(null);
+      setEmailCode('');
     }
-  };
+  }, [email, codeSentTo]);
+
+  const emailLooksValid = useMemo(() => {
+    const e = email.trim();
+    if (!e) return false;
+    return EMAIL_RE.test(e);
+  }, [email]);
+
+  const profileDirty = useMemo(() => {
+    if (!user) return false;
+    const nameChanged = name.trim() !== user.name;
+    const avatarChanged = !!avatarUri && avatarUri !== (user.avatarUrl || '');
+    return (nameChanged || avatarChanged) && name.trim().length > 0;
+  }, [name, avatarUri, user]);
+
+  const canSaveProfile = profileDirty && !savingProfile;
+
+  const normalizedNewEmail = useMemo(() => email.trim().toLowerCase(), [email]);
+  const codePendingForThisEmail = !!codeSentTo && codeSentTo === normalizedNewEmail;
+  const canSendEmailCode = emailChanged && emailLooksValid && !sendingEmailCode;
+  const canConfirmEmail =
+    codePendingForThisEmail && emailCode.replace(/\D/g, '').length === 6 && !confirmingEmail;
+
+  const passwordValid = useMemo(() => {
+    if (currentPassword.length === 0) return false;
+    if (newPassword.length < 8) return false;
+    if (newPassword !== confirmPassword) return false;
+    return true;
+  }, [currentPassword, newPassword, confirmPassword]);
 
   const convertImageToBase64 = async (uri: string): Promise<string> => {
-    try {
-      // Use expo-file-system to read the file as base64
-      const base64 = await FileSystem.readAsStringAsync(uri, {
-        encoding: 'base64' as any,
-      });
-      
-      // Determine the MIME type from the file extension or use a default
-      let mimeType = 'image/jpeg';
-      if (uri.toLowerCase().endsWith('.png')) {
-        mimeType = 'image/png';
-      } else if (uri.toLowerCase().endsWith('.gif')) {
-        mimeType = 'image/gif';
-      } else if (uri.toLowerCase().endsWith('.webp')) {
-        mimeType = 'image/webp';
-      }
-      
-      // Return as data URL
-      return `data:${mimeType};base64,${base64}`;
-    } catch (error) {
-      if (__DEV__) console.error('Error converting image:', error);
-      throw new Error('Failed to convert image to base64');
-    }
+    const base64 = await FileSystem.readAsStringAsync(uri, {
+      encoding: 'base64' as any,
+    });
+    let mimeType = 'image/jpeg';
+    if (uri.toLowerCase().endsWith('.png')) mimeType = 'image/png';
+    else if (uri.toLowerCase().endsWith('.gif')) mimeType = 'image/gif';
+    else if (uri.toLowerCase().endsWith('.webp')) mimeType = 'image/webp';
+    return `data:${mimeType};base64,${base64}`;
   };
 
   const handlePickImage = async () => {
     try {
-      // Request permissions
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert(t('accountSettingsScreen.permissionNeeded'), t('accountSettingsScreen.grantPhotoPermission'));
         return;
       }
 
-      // Launch image picker with base64 option
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: 'images',
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
-        base64: true, // Get base64 directly from ImagePicker to avoid deprecated FileSystem API
+        base64: true,
       });
 
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
-        // Use base64 from ImagePicker if available
         if (asset.base64) {
-          // Determine MIME type from URI
           let mimeType = 'image/jpeg';
           const uriLower = asset.uri.toLowerCase();
-          if (uriLower.includes('.png')) {
-            mimeType = 'image/png';
-          } else if (uriLower.includes('.gif')) {
-            mimeType = 'image/gif';
-          } else if (uriLower.includes('.webp')) {
-            mimeType = 'image/webp';
-          }
-          const base64DataUrl = `data:${mimeType};base64,${asset.base64}`;
-          setAvatarUri(base64DataUrl);
+          if (uriLower.includes('.png')) mimeType = 'image/png';
+          else if (uriLower.includes('.gif')) mimeType = 'image/gif';
+          else if (uriLower.includes('.webp')) mimeType = 'image/webp';
+          setAvatarUri(`data:${mimeType};base64,${asset.base64}`);
         } else {
-          // Fallback to file system conversion (using legacy API)
           const base64DataUrl = await convertImageToBase64(asset.uri);
           setAvatarUri(base64DataUrl);
         }
       }
-    } catch (error) {
-      if (__DEV__) console.error('Error picking image:', error);
+    } catch {
       Alert.alert(t('common.error'), t('accountSettingsScreen.failedToPickImage'));
     }
   };
 
-  const handleSaveAvatar = async () => {
-    if (!canSaveAvatar || !avatarUri) return;
+  const handleSaveProfile = async () => {
+    if (!user || !canSaveProfile) return;
+    if (!name.trim()) {
+      Alert.alert(t('common.error'), t('accountSettingsScreen.name'));
+      return;
+    }
+
     try {
-      setSavingAvatar(true);
-      await authApi.updateProfile({ avatarUrl: avatarUri });
+      setSavingProfile(true);
+      const payload: { name?: string; avatarUrl?: string } = {};
+      if (name.trim() !== user.name) payload.name = name.trim();
+      if (avatarUri && avatarUri !== (user.avatarUrl || '')) payload.avatarUrl = avatarUri;
+
+      const updated = await authApi.updateProfile(payload);
       await refreshUser();
-      Alert.alert(t('common.saved'), t('accountSettingsScreen.photoSaved'));
-    } catch (error: any) {
-      Alert.alert(t('common.error'), error.response?.data?.error || t('accountSettingsScreen.failedToUpdatePhoto'));
+      setAvatarUri(updated.avatarUrl || null);
+      setEmail(updated.email);
+      setName(updated.name);
+
+      Alert.alert(t('common.success'), t('accountSettingsScreen.profileUpdated'));
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { error?: string } } };
+      Alert.alert(t('common.error'), err.response?.data?.error || t('alerts.somethingWentWrong'));
     } finally {
-      setSavingAvatar(false);
+      setSavingProfile(false);
     }
   };
 
-  const handleChangePassword = async () => {
-    if (!canChangePassword) {
-      Alert.alert(t('common.error'), t('accountSettingsScreen.passwordMinLength'));
+  const handleRequestEmailCode = async () => {
+    if (!user || !emailChanged || !emailLooksValid) return;
+    try {
+      setSendingEmailCode(true);
+      await authApi.requestEmailChange(normalizedNewEmail);
+      setCodeSentTo(normalizedNewEmail);
+      setEmailCode('');
+    } catch (error: unknown) {
+      Alert.alert(t('common.error'), mapEmailChangeApiError(error, t));
+    } finally {
+      setSendingEmailCode(false);
+    }
+  };
+
+  const handleConfirmEmailChange = async () => {
+    if (!user || !codePendingForThisEmail) return;
+    const otp = emailCode.replace(/\D/g, '').slice(0, 6);
+    if (otp.length !== 6) return;
+    try {
+      setConfirmingEmail(true);
+      const updated = await authApi.confirmEmailChange(normalizedNewEmail, otp);
+      await refreshUser();
+      setEmail(updated.email);
+      setName(updated.name);
+      setAvatarUri(updated.avatarUrl || null);
+      setCodeSentTo(null);
+      setEmailCode('');
+      Alert.alert(t('common.success'), t('accountSettingsScreen.emailChangedSuccess'));
+    } catch (error: unknown) {
+      Alert.alert(t('common.error'), mapEmailChangeApiError(error, t));
+    } finally {
+      setConfirmingEmail(false);
+    }
+  };
+
+  const handleUpdatePassword = async () => {
+    if (!passwordValid) {
+      if (newPassword !== confirmPassword) {
+        Alert.alert(t('common.error'), t('accountSettingsScreen.passwordsMismatch'));
+      } else {
+        Alert.alert(t('common.error'), t('accountSettingsScreen.passwordMinLength'));
+      }
       return;
     }
 
-    Alert.alert(
-      'Change Password',
-      'Are you sure you want to change your password?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Change',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setChangingPassword(true);
-              await authApi.changePassword({ currentPassword, newPassword });
-              setCurrentPassword('');
-              setNewPassword('');
-              Alert.alert(t('common.success'), t('accountSettingsScreen.passwordChanged'));
-            } catch (error: any) {
-              Alert.alert(t('common.error'), error.response?.data?.error || t('accountSettingsScreen.failedToChangePassword'));
-            } finally {
-              setChangingPassword(false);
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const handleDeleteAccount = async () => {
-    if (!deletePassword) {
-      Alert.alert(t('common.error'), t('accountSettingsScreen.enterPassword'));
-      return;
+    try {
+      setChangingPassword(true);
+      await authApi.changePassword({ currentPassword, newPassword });
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      Keyboard.dismiss();
+      Alert.alert(t('common.success'), t('accountSettingsScreen.passwordChanged'));
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { error?: string } } };
+      Alert.alert(t('common.error'), err.response?.data?.error || t('accountSettingsScreen.failedToChangePassword'));
+    } finally {
+      setChangingPassword(false);
     }
-
-    Alert.alert(
-      'Delete Account',
-      'This will permanently delete your account. This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setDeleting(true);
-              await authApi.deleteAccount({ password: deletePassword });
-              await logout();
-            } catch (error: any) {
-              Alert.alert(t('common.error'), error.response?.data?.error || t('accountSettingsScreen.failedToDeleteAccount'));
-            } finally {
-              setDeleting(false);
-            }
-          },
-        },
-      ]
-    );
   };
+
+  const handleDeleteAccount = async (password: string) => {
+    try {
+      setDeleting(true);
+      await authApi.deleteAccount({ password });
+      setDeleteModalVisible(false);
+      await logout();
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { error?: string } } };
+      Alert.alert(t('common.error'), err.response?.data?.error || t('accountSettingsScreen.failedToDeleteAccount'));
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const displayAvatar = avatarUri;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       <KeyboardAvoidingView
-        style={styles.keyboardAvoid}
+        style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
       >
-        <ScrollView 
-          ref={scrollViewRef}
-          contentContainerStyle={styles.content} 
+        <ScrollView
+          ref={scrollRef}
+          contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <TouchableOpacity activeOpacity={1} onPress={Keyboard.dismiss}>
-            <Text style={styles.title}>{t('accountSettingsScreen.title')}</Text>
-          </TouchableOpacity>
+          <View style={styles.topPad} />
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('accountSettingsScreen.profileSection')}</Text>
-            <View style={styles.avatarRow}>
-              <TouchableOpacity onPress={handlePickImage} activeOpacity={0.7}>
-                <View style={styles.avatarContainer}>
-                  {avatarUri ? (
-                    <Image source={{ uri: avatarUri }} style={styles.avatarPreview} />
-                  ) : (
-                    <Avatar name={user?.name} uri={user?.avatarUrl} size={72} />
-                  )}
-                  <View style={styles.avatarOverlay}>
-                    <Text style={styles.avatarOverlayText}>📷</Text>
+          <SettingsSection title={t('accountSettingsScreen.profileSection')}>
+            <AppText style={styles.sectionHint}>{t('accountSettingsScreen.profileHint')}</AppText>
+            <SettingsGroupCard>
+              <View style={styles.avatarBlock}>
+                <TouchableOpacity onPress={handlePickImage} activeOpacity={0.85} style={styles.avatarTouch}>
+                  <View style={styles.avatarWrap}>
+                    {displayAvatar && displayAvatar.startsWith('data:') ? (
+                      <Image source={{ uri: displayAvatar }} style={styles.avatarImg} />
+                    ) : (
+                      <Avatar name={name || user?.name} uri={displayAvatar || undefined} size={88} />
+                    )}
+                    <View style={styles.avatarFab}>
+                      <Ionicons name="camera" size={18} color="#fff" />
+                    </View>
                   </View>
+                </TouchableOpacity>
+                <View style={styles.avatarLabels}>
+                  <AppText style={styles.inlineName} numberOfLines={1}>
+                    {name || user?.name || '—'}
+                  </AppText>
+                  <AppText style={styles.inlineEmail} numberOfLines={1}>
+                    {email || user?.email || ''}
+                  </AppText>
                 </View>
-              </TouchableOpacity>
-              <View style={styles.avatarInfo}>
-                <Text style={styles.avatarName}>{user?.name}</Text>
-                <Text style={styles.avatarEmail}>{user?.email}</Text>
               </View>
-            </View>
-            <Text style={styles.helperText}>
-              {t('accountSettingsScreen.changeAvatar')}
-            </Text>
-            {avatarUri && avatarUri !== user?.avatarUrl && (
-              <PrimaryButton
-                title={t('common.save')}
-                onPress={handleSaveAvatar}
-                disabled={!canSaveAvatar}
-                loading={savingAvatar}
-                variant="secondary"
-              />
-            )}
-            {(!avatarUri || avatarUri === user?.avatarUrl) && (
-              <PrimaryButton
-                title={t('accountSettingsScreen.changeAvatar')}
-                onPress={handlePickImage}
-                variant="secondary"
-              />
-            )}
-            <View style={styles.spacer} />
-            <View onLayout={(e) => handleInputLayout('name', e.nativeEvent.layout.y)}>
-              <FormTextInput
-                label={t('accountSettingsScreen.name')}
-                value={name}
-                onChangeText={setName}
-                placeholder={t('accountSettingsScreen.name')}
-                autoCapitalize="words"
-                onFocus={() => scrollToInput('name')}
-              />
-            </View>
-            <PrimaryButton title={t('common.save')} onPress={handleSaveName} disabled={!canSaveName} loading={savingName} />
-          </View>
 
-          <View 
-            style={styles.section}
-            onLayout={(e) => {
-              // Store base Y of the password section
-              const baseY = e.nativeEvent.layout.y;
-              handleInputLayout('currentPassword', baseY + 60);
-              handleInputLayout('newPassword', baseY + 140);
-            }}
-          >
-            <Text style={styles.sectionTitle}>{t('accountSettingsScreen.changePassword')}</Text>
-            <FormTextInput
-              label={t('accountSettingsScreen.currentPassword')}
-              value={currentPassword}
-              onChangeText={setCurrentPassword}
-              placeholder={t('accountSettingsScreen.currentPassword')}
-              secureTextEntry
-              onFocus={() => scrollToInput('currentPassword')}
-            />
-            <FormTextInput
-              label={t('accountSettingsScreen.newPassword')}
-              value={newPassword}
-              onChangeText={setNewPassword}
-              placeholder={t('accountSettingsScreen.newPassword')}
-              secureTextEntry
-              onFocus={() => scrollToInput('newPassword')}
-            />
+              <View style={styles.fieldDivider} />
+
+              <View style={styles.paddedFields}>
+                <FormTextInput
+                  label={t('accountSettingsScreen.name')}
+                  value={name}
+                  onChangeText={setName}
+                  placeholder={t('accountSettingsScreen.name')}
+                  autoCapitalize="words"
+                />
+                <FormTextInput
+                  label={t('accountSettingsScreen.email')}
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder={t('accountSettingsScreen.email')}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+                {email.trim().length > 0 && !emailLooksValid ? (
+                  <AppText style={styles.fieldError}>{t('accountSettingsScreen.invalidEmail')}</AppText>
+                ) : null}
+
+                {emailChanged && emailLooksValid ? (
+                  <View style={styles.emailChangeBlock}>
+                    <AppText style={styles.emailChangeHint}>{t('accountSettingsScreen.emailChangeHint')}</AppText>
+                    {!codePendingForThisEmail ? (
+                      <PrimaryButton
+                        title={t('accountSettingsScreen.sendVerificationCode')}
+                        onPress={handleRequestEmailCode}
+                        disabled={!canSendEmailCode}
+                        loading={sendingEmailCode}
+                        variant="secondary"
+                        style={styles.emailCodeButton}
+                      />
+                    ) : (
+                      <>
+                        <AppText style={styles.codeSentHint}>{t('accountSettingsScreen.codeSentCheckInbox')}</AppText>
+                        <FormTextInput
+                          label={t('accountSettingsScreen.verificationCode')}
+                          value={emailCode}
+                          onChangeText={(text) => setEmailCode(text.replace(/\D/g, '').slice(0, 6))}
+                          keyboardType="number-pad"
+                          autoCapitalize="none"
+                        />
+                        <PrimaryButton
+                          title={t('accountSettingsScreen.confirmNewEmail')}
+                          onPress={handleConfirmEmailChange}
+                          disabled={!canConfirmEmail}
+                          loading={confirmingEmail}
+                          style={styles.emailCodeButton}
+                        />
+                        <TouchableOpacity
+                          onPress={handleRequestEmailCode}
+                          disabled={sendingEmailCode}
+                          activeOpacity={0.7}
+                          style={styles.resendWrap}
+                        >
+                          <AppText style={styles.resendLink}>{t('accountSettingsScreen.resendVerificationCode')}</AppText>
+                        </TouchableOpacity>
+                      </>
+                    )}
+                  </View>
+                ) : null}
+              </View>
+            </SettingsGroupCard>
             <PrimaryButton
-              title={t('accountSettingsScreen.changePassword')}
-              onPress={handleChangePassword}
-              disabled={!canChangePassword}
-              loading={changingPassword}
+              title={t('accountSettingsScreen.saveChanges')}
+              onPress={handleSaveProfile}
+              disabled={!canSaveProfile}
+              loading={savingProfile}
+              style={styles.sectionButton}
             />
-          </View>
+          </SettingsSection>
 
-          <View 
-            style={[styles.section, styles.dangerSection]}
-            onLayout={(e) => handleInputLayout('deletePassword', e.nativeEvent.layout.y + 80)}
-          >
-            <Text style={[styles.sectionTitle, styles.dangerTitle]}>{t('accountSettingsScreen.dangerZone')}</Text>
-            <Text style={styles.dangerText}>
-              {t('accountSettingsScreen.deleteAccountConfirm')}
-            </Text>
-            <FormTextInput
-              label={t('auth.password')}
-              value={deletePassword}
-              onChangeText={setDeletePassword}
-              placeholder={t('auth.password')}
-              secureTextEntry
-              onFocus={() => scrollToInput('deletePassword')}
+          <SettingsSection title={t('accountSettingsScreen.securitySection')}>
+            <AppText style={styles.sectionHint}>{t('accountSettingsScreen.securityHint')}</AppText>
+            <SettingsGroupCard>
+              <View style={styles.paddedFields}>
+                <FormTextInput
+                  label={t('accountSettingsScreen.currentPassword')}
+                  value={currentPassword}
+                  onChangeText={setCurrentPassword}
+                  secureTextEntry
+                  autoCapitalize="none"
+                />
+                <FormTextInput
+                  label={t('accountSettingsScreen.newPassword')}
+                  value={newPassword}
+                  onChangeText={setNewPassword}
+                  secureTextEntry
+                  autoCapitalize="none"
+                />
+                <FormTextInput
+                  label={t('accountSettingsScreen.confirmPassword')}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry
+                  autoCapitalize="none"
+                />
+                {newPassword.length > 0 && newPassword !== confirmPassword ? (
+                  <AppText style={styles.fieldError}>{t('accountSettingsScreen.passwordsMismatch')}</AppText>
+                ) : null}
+              </View>
+            </SettingsGroupCard>
+            <PrimaryButton
+              title={t('accountSettingsScreen.updatePassword')}
+              onPress={handleUpdatePassword}
+              disabled={!passwordValid}
+              loading={changingPassword}
+              variant="secondary"
+              style={styles.sectionButton}
             />
-            <PrimaryButton title={t('accountSettingsScreen.deleteAccount')} onPress={handleDeleteAccount} loading={deleting} variant="danger" />
-          </View>
-          {/* Extra space at bottom for keyboard */}
-          <View style={styles.keyboardSpacer} />
+          </SettingsSection>
+
+          <SettingsSection title={t('accountSettingsScreen.dangerZone')}>
+            <DangerZoneCard description={t('accountSettingsScreen.deleteAccountHint')}>
+              <TouchableOpacity
+                style={styles.deleteTextButton}
+                onPress={() => setDeleteModalVisible(true)}
+                activeOpacity={0.75}
+              >
+                <AppText style={styles.deleteTextButtonLabel}>{t('accountSettingsScreen.deleteAccount')}</AppText>
+              </TouchableOpacity>
+            </DangerZoneCard>
+          </SettingsSection>
+
+          <View style={styles.bottomSpacer} />
         </ScrollView>
-        {keyboardVisible && (
-          <TouchableOpacity 
-            style={styles.doneButton} 
-            onPress={Keyboard.dismiss}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.doneButtonText}>{t('common.done')}</Text>
-          </TouchableOpacity>
-        )}
       </KeyboardAvoidingView>
+
+      <DeleteAccountModal
+        visible={deleteModalVisible}
+        onClose={() => !deleting && setDeleteModalVisible(false)}
+        onConfirm={handleDeleteAccount}
+        loading={deleting}
+        title={t('accountSettingsScreen.deleteModalTitle')}
+        body={t('accountSettingsScreen.deleteModalBody')}
+        passwordLabel={t('accountSettingsScreen.enterPassword')}
+        typePhraseLabel={t('accountSettingsScreen.typeDelete')}
+        typePhraseHint={t('accountSettingsScreen.typeDeleteHint')}
+        cancelLabel={t('common.cancel')}
+        confirmLabel={t('accountSettingsScreen.deleteAccount')}
+      />
     </SafeAreaView>
   );
 };
 
-const createStyles = (colors: any) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  keyboardAvoid: {
-    flex: 1,
-  },
-  content: {
-    padding: spacing.md,
-    flexGrow: 1,
-  },
-  keyboardSpacer: {
-    height: 200,
-  },
-  doneButton: {
-    position: 'absolute',
-    right: spacing.md,
-    bottom: Platform.OS === 'ios' ? 8 : spacing.sm,
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-    borderRadius: radii.full,
-    ...(shadows.lg as object),
-    zIndex: 100,
-  },
-  doneButtonText: {
-    color: '#FFFFFF',
-    fontSize: fontSizes.md,
-    fontWeight: fontWeights.bold,
-  },
-  title: {
-    fontSize: fontSizes.xxl,
-    fontWeight: fontWeights.extrabold,
-    color: colors.text,
-    marginBottom: spacing.md,
-  },
-  section: {
-    backgroundColor: colors.surface,
-    padding: spacing.lg,
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: spacing.md,
-    ...(shadows.sm as object),
-  },
-  sectionTitle: {
-    fontSize: fontSizes.md,
-    fontWeight: fontWeights.extrabold,
-    color: colors.text,
-    marginBottom: spacing.md,
-  },
-  dangerSection: {
-    borderColor: '#ffdddd',
-  },
-  dangerTitle: {
-    color: '#b00020',
-  },
-  dangerText: {
-    color: colors.textSecondary,
-    marginBottom: spacing.md,
-    lineHeight: 18,
-  },
-  avatarRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    marginBottom: spacing.md,
-  },
-  avatarInfo: {
-    flex: 1,
-  },
-  avatarName: {
-    fontSize: fontSizes.xl,
-    fontWeight: fontWeights.extrabold,
-    color: colors.text,
-  },
-  avatarEmail: {
-    marginTop: spacing.xxs,
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
-  },
-  avatarContainer: {
-    position: 'relative',
-  },
-  avatarPreview: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-  },
-  avatarOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.primary,
-    borderWidth: 2,
-    borderColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarOverlayText: {
-    fontSize: 14,
-  },
-  helperText: {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
-    marginBottom: spacing.sm,
-    textAlign: 'center',
-  },
-  spacer: {
-    height: spacing.md,
-  },
-});
-
-
+const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    flex: { flex: 1 },
+    scrollContent: {
+      paddingBottom: spacing.xxl,
+    },
+    topPad: {
+      height: spacing.sm,
+    },
+    sectionHint: {
+      fontSize: fontSizes.sm,
+      color: colors.textSecondary,
+      lineHeight: 20,
+      marginBottom: spacing.sm,
+      paddingHorizontal: 2,
+    },
+    avatarBlock: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: spacing.lg,
+      gap: spacing.lg,
+    },
+    avatarTouch: {},
+    avatarWrap: {
+      position: 'relative',
+    },
+    avatarImg: {
+      width: 88,
+      height: 88,
+      borderRadius: 44,
+    },
+    avatarFab: {
+      position: 'absolute',
+      right: -2,
+      bottom: -2,
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: colors.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 3,
+      borderColor: colors.surface,
+      ...(shadows.sm as object),
+    },
+    avatarLabels: {
+      flex: 1,
+      minWidth: 0,
+    },
+    inlineName: {
+      fontSize: fontSizes.lg,
+      fontWeight: fontWeights.bold,
+      color: colors.text,
+    },
+    inlineEmail: {
+      fontSize: fontSizes.sm,
+      color: colors.textSecondary,
+      marginTop: 4,
+    },
+    fieldDivider: {
+      height: StyleSheet.hairlineWidth,
+      backgroundColor: colors.borderLight,
+    },
+    paddedFields: {
+      padding: spacing.md,
+      paddingTop: spacing.lg,
+    },
+    fieldError: {
+      fontSize: fontSizes.xs,
+      color: colors.danger,
+      marginTop: -spacing.sm,
+      marginBottom: spacing.sm,
+    },
+    emailChangeBlock: {
+      marginTop: spacing.md,
+      paddingTop: spacing.md,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.borderLight,
+    },
+    emailChangeHint: {
+      fontSize: fontSizes.sm,
+      color: colors.textSecondary,
+      lineHeight: 20,
+      marginBottom: spacing.md,
+    },
+    codeSentHint: {
+      fontSize: fontSizes.sm,
+      color: colors.textSecondary,
+      marginBottom: spacing.sm,
+    },
+    emailCodeButton: {
+      marginTop: spacing.sm,
+    },
+    resendWrap: {
+      alignSelf: 'flex-start',
+      marginTop: spacing.md,
+      paddingVertical: spacing.xs,
+    },
+    resendLink: {
+      fontSize: fontSizes.sm,
+      fontWeight: fontWeights.semibold,
+      color: colors.primary,
+    },
+    sectionButton: {
+      marginTop: spacing.md,
+    },
+    deleteTextButton: {
+      alignSelf: 'flex-start',
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+      borderRadius: radii.md,
+      borderWidth: 1,
+      borderColor: colors.danger,
+      backgroundColor: colors.surface,
+    },
+    deleteTextButtonLabel: {
+      fontSize: fontSizes.md,
+      fontWeight: fontWeights.semibold,
+      color: colors.danger,
+    },
+    bottomSpacer: {
+      height: spacing.xl,
+    },
+  });

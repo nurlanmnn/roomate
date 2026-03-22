@@ -49,6 +49,9 @@ export default {
   // Settings
   settings: {
     title: 'Einstellungen',
+    sectionAccountHousehold: 'Konto & Haushalt',
+    sectionPreferences: 'Präferenzen',
+    tapToEditProfile: 'Tippen zum Bearbeiten',
     accountSettings: 'Kontoeinstellungen',
     accountDescription: 'Profil, Passwort und Konto verwalten',
     householdSettings: 'Haushaltseinstellungen',
@@ -84,6 +87,18 @@ export default {
     passwordUpdated: 'Passwort erfolgreich aktualisiert',
     profileUpdated: 'Profil erfolgreich aktualisiert',
     enterPassword: 'Geben Sie Ihr Passwort zur Bestätigung ein',
+    emailChangeHint: 'Wir senden einen 6-stelligen Code an die neue Adresse. Geben Sie ihn hier ein.',
+    sendVerificationCode: 'Bestätigungscode senden',
+    verificationCode: 'Bestätigungscode',
+    confirmNewEmail: 'Neue E-Mail bestätigen',
+    resendVerificationCode: 'Code erneut senden',
+    emailAlreadyInUse: 'Ein Konto mit dieser E-Mail existiert bereits',
+    emailSameAsCurrent: 'Das ist bereits Ihre E-Mail-Adresse',
+    codeSentCheckInbox: 'Geben Sie den Code ein, den wir an Ihre neue E-Mail gesendet haben.',
+    emailChangedSuccess: 'Ihre E-Mail wurde aktualisiert.',
+    otpInvalid: 'Ungültiger Code. Bitte erneut versuchen.',
+    otpExpired: 'Dieser Code ist abgelaufen. Fordern Sie einen neuen an.',
+    failedToSendVerificationCode: 'Bestätigungs-E-Mail konnte nicht gesendet werden. Später erneut versuchen.',
   },
 
   // Household Settings
@@ -103,9 +118,12 @@ export default {
     removeMember: 'Mitglied Entfernen',
     leaveConfirm: 'Sind Sie sicher, dass Sie diesen Haushalt verlassen möchten?',
     deleteConfirm: 'Sind Sie sicher, dass Sie diesen Haushalt löschen möchten? Alle Daten gehen verloren.',
-    removeConfirm: 'Sind Sie sicher, dass Sie dieses Mitglied entfernen möchten?',
+    removeConfirm: '%{name} aus diesem Haushalt entfernen?',
+    ownerOnlyEdit: 'Nur der Haushaltsinhaber kann Name und Standort bearbeiten.',
     ownershipTransfer: 'Die Eigentümerschaft wird auf das nächste Mitglied übertragen.',
     codeCopied: 'Einladungscode in Zwischenablage kopiert',
+    failedToRegenerate: 'Neuer Code konnte nicht erzeugt werden',
+    shareMessage: 'Tritt unserem Haushalt bei! Code: %{code}',
   },
 
   // Home Screen
@@ -139,6 +157,20 @@ export default {
     tipStart: 'Beginnen Sie mit der Ausgabenverfolgung für personalisierte Einblicke und besseres Budgetmanagement.',
     getStarted: 'Starten Sie, indem Sie Ihre erste Ausgabe hinzufügen, eine Einkaufsliste erstellen oder einen Kalendertermin hinzufügen.',
     inviteRoommates: 'Laden Sie Ihre Mitbewohner mit dem Code ein:',
+    setupHeroTagline: 'Richten wir euren Haushalt ein 👇',
+    setupInviteTitle: 'Mitbewohner einladen',
+    setupInviteDescription: 'Teilt diesen Code, damit andere beitreten können.',
+    setupCopyCode: 'Kopieren',
+    setupShareInvite: 'Teilen',
+    setupStepsHeading: 'Euer Setup',
+    setupProgress: '%{done} von %{total} Schritten',
+    setupStep1Title: 'Mitbewohner einladen',
+    setupStep1Subtitle: 'Code teilen, damit andere beitreten',
+    setupStep2Title: 'Erste Ausgabe erfassen',
+    setupStep2Subtitle: 'Gemeinsame Kosten an einem Ort',
+    setupStep3Title: 'Einkaufsliste anlegen',
+    setupStep3Subtitle: 'Artikel hinzufügen, die alle sehen',
+    primaryFirstExpense: 'Erste Ausgabe hinzufügen',
     pleaseSelectHousehold: 'Bitte wählen Sie einen Haushalt',
     moreThanLastMonth: 'mehr als letzten Monat',
     lessThanLastMonth: 'weniger als letzten Monat',
@@ -227,6 +259,11 @@ export default {
     selectPerson: 'Person Auswählen',
     participant: 'Teilnehmer',
     participantPlural: 'Teilnehmer',
+    sectionExpenseDetails: 'Ausgabendetails',
+    sectionTemplates: 'Vorlagen',
+    sectionPaidBy: 'Bezahlt von',
+    sectionDateAndCategory: 'Datum & Kategorie',
+    sectionSplitPreview: 'Aufteilungsvorschau',
   },
 
   // Settle Up
@@ -263,6 +300,10 @@ export default {
     partialDebtForgiven: 'Teilschulden vom Gläubiger erlassen',
     debtForgivenNote: 'Schulden vom Gläubiger erlassen',
     moneyOwedToYou: 'Geld, das Ihnen Geschuldet Wird',
+    sectionQuickLinks: 'Aktionen',
+    sectionYouOwe: 'Sie schulden',
+    nothingToPayNow: 'Derzeit nichts zu zahlen.',
+    sectionReceipts: 'Erhaltene Zahlungen',
   },
 
   // Calendar
@@ -291,6 +332,10 @@ export default {
     monthView: 'Monat',
     listView: 'Liste',
     longPressToAdd: 'Lange drücken, um Ereignis hinzuzufügen',
+    sectionShow: 'Anzeigen',
+    sectionCalendar: 'Kalender',
+    sectionSelectedDay: 'Ausgewählter Tag',
+    past: 'Vergangen',
   },
   chores: {
     title: 'Haushaltsaufgaben-Rotation',
@@ -354,6 +399,8 @@ export default {
   // Shopping
   shopping: {
     title: 'Einkaufsliste',
+    sectionSearch: 'Suche',
+    sectionCurrentList: 'Aktuelle Liste',
     yourLists: 'Deine Listen',
     addItem: 'Artikel Hinzufügen',
     editItem: 'Artikel Bearbeiten',
@@ -613,6 +660,9 @@ export default {
   // Settlement History
   settlementHistory: {
     title: 'Abrechnungsverlauf',
+    sectionHousehold: 'Haushalt',
+    sectionPeriod: 'Zeitraum',
+    sectionList: 'Abrechnungen',
     noSettlements: 'Noch keine Abrechnungen',
     noSettlementsDescription: 'Wenn Sie Zahlungen im Abrechnungsbildschirm als bezahlt markieren, erscheinen sie hier mit allen Details.',
     noSettlementsInPeriod: 'Keine Abrechnungen in diesem Zeitraum',

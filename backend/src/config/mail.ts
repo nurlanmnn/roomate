@@ -77,3 +77,28 @@ export const sendVerificationEmail = async (
   });
 };
 
+export const sendEmailChangeVerificationEmail = async (
+  email: string,
+  name: string,
+  otp: string
+): Promise<void> => {
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2>Confirm your new email, ${name}</h2>
+      <p>You requested to change your Roomate account email to this address. Use the code below to confirm:</p>
+      <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
+        <h1 style="font-size: 36px; letter-spacing: 8px; color: #4CAF50; margin: 0;">${otp}</h1>
+      </div>
+      <p>Enter this code in the app to verify your new email address.</p>
+      <p style="color: #999; font-size: 12px;">This code will expire in 10 minutes.</p>
+      <p>If you did not request this change, you can ignore this email.</p>
+    </div>
+  `;
+
+  await sendEmail({
+    to: email,
+    subject: 'Confirm your new email - Roomate',
+    html,
+  });
+};
+

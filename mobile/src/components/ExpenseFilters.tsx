@@ -29,12 +29,15 @@ interface ExpenseFiltersProps {
   filters: ExpenseFilters;
   onFiltersChange: (filters: ExpenseFilters) => void;
   memberNames: { id: string; name: string }[];
+  /** Lighter bar when nested inside a group card */
+  embedded?: boolean;
 }
 
 export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
   filters,
   onFiltersChange,
   memberNames,
+  embedded = false,
 }) => {
   const colors = useThemeColors();
   const { theme } = useTheme();
@@ -56,6 +59,12 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
       backgroundColor: colors.surface,
       borderBottomWidth: 1,
       borderBottomColor: colors.borderLight,
+    },
+    filterBarEmbedded: {
+      backgroundColor: colors.background,
+      borderBottomWidth: 0,
+      borderRadius: radii.md,
+      marginBottom: spacing.sm,
     },
     filterButton: {
       flexDirection: 'row',
@@ -270,7 +279,7 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
 
   return (
     <>
-      <View style={styles.filterBar}>
+      <View style={[styles.filterBar, embedded && styles.filterBarEmbedded]}>
         <TouchableOpacity
           style={[styles.filterButton, hasActiveFilters && styles.filterButtonActive]}
           onPress={() => setShowFilters(true)}
@@ -566,20 +575,22 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
                 <View style={styles.filterSection}>
                   <AppText style={styles.filterLabel}>{t('expenses.amountRange')}</AppText>
                   <View style={styles.amountRow}>
-                    <FormTextInput
-                      value={filters.amountMin || ''}
-                      onChangeText={(text) => updateFilter('amountMin', text)}
-                      placeholder={t('expenses.min')}
-                      keyboardType="numeric"
-                      style={styles.amountInput}
-                    />
-                    <FormTextInput
-                      value={filters.amountMax || ''}
-                      onChangeText={(text) => updateFilter('amountMax', text)}
-                      placeholder={t('expenses.max')}
-                      keyboardType="numeric"
-                      style={styles.amountInput}
-                    />
+                    <View style={styles.amountInput}>
+                      <FormTextInput
+                        value={filters.amountMin || ''}
+                        onChangeText={(text) => updateFilter('amountMin', text)}
+                        placeholder={t('expenses.min')}
+                        keyboardType="numeric"
+                      />
+                    </View>
+                    <View style={styles.amountInput}>
+                      <FormTextInput
+                        value={filters.amountMax || ''}
+                        onChangeText={(text) => updateFilter('amountMax', text)}
+                        placeholder={t('expenses.max')}
+                        keyboardType="numeric"
+                      />
+                    </View>
                   </View>
                 </View>
 
@@ -625,7 +636,7 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
         <DateTimePicker
           value={filters.dateFrom || new Date()}
           mode="date"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          display="default"
           themeVariant={theme}
           onChange={(event, date) => {
             setShowDateFromPicker(false);
@@ -637,7 +648,7 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
         <DateTimePicker
           value={filters.dateTo || new Date()}
           mode="date"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          display="default"
           themeVariant={theme}
           onChange={(event, date) => {
             setShowDateToPicker(false);

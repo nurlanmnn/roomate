@@ -12,6 +12,8 @@ interface ListTabsProps {
   onLongPressList: (list: ShoppingList) => void;
   onAddList: () => void;
   newListLabel: string;
+  /** Inside SettingsGroupCard — tighter padding, no outer strip background. */
+  embedded?: boolean;
 }
 
 export const ListTabs: React.FC<ListTabsProps> = ({
@@ -21,13 +23,14 @@ export const ListTabs: React.FC<ListTabsProps> = ({
   onLongPressList,
   onAddList,
   newListLabel,
+  embedded = false,
 }) => {
   const colors = useThemeColors();
   const styles = React.useMemo(() => StyleSheet.create({
     container: {
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.xl,
-      backgroundColor: colors.background,
+      paddingVertical: embedded ? spacing.xs : spacing.sm,
+      paddingHorizontal: embedded ? spacing.sm : spacing.xl,
+      backgroundColor: embedded ? 'transparent' : colors.background,
     },
     scroll: {
       flexGrow: 0,
@@ -80,7 +83,7 @@ export const ListTabs: React.FC<ListTabsProps> = ({
       fontWeight: fontWeights.semibold,
       color: colors.primary,
     },
-  }), [colors]);
+  }), [colors, embedded]);
 
   return (
     <View style={styles.container}>

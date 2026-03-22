@@ -1,5 +1,5 @@
 import React from 'react';
-import { TextInput, StyleSheet, Text, View, Platform } from 'react-native';
+import { TextInput, StyleSheet, Text, View, Platform, ViewStyle } from 'react-native';
 import { AppText } from './AppText';
 import { useThemeColors, fontSizes, fontWeights, radii, spacing } from '../theme';
 
@@ -17,6 +17,8 @@ interface FormTextInputProps {
   helperText?: string;
   onFocus?: () => void;
   onBlur?: () => void;
+  /** Merged with the outer container (e.g. marginBottom: 0 for last field in a group). */
+  containerStyle?: ViewStyle;
 }
 
 export const FormTextInput: React.FC<FormTextInputProps> = ({
@@ -33,6 +35,7 @@ export const FormTextInput: React.FC<FormTextInputProps> = ({
   helperText,
   onFocus,
   onBlur,
+  containerStyle,
 }) => {
   const colors = useThemeColors();
   const styles = React.useMemo(() => StyleSheet.create({
@@ -76,7 +79,7 @@ export const FormTextInput: React.FC<FormTextInputProps> = ({
   }), [colors]);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, containerStyle]}>
       {label && <AppText style={styles.label}>{label}</AppText>}
       <TextInput
         style={[

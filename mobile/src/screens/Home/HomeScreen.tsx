@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Alert } from 'react-native';
-import * as Clipboard from 'expo-clipboard';
+import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Alert, Share } from 'react-native';
 import { AppText } from '../../components/AppText';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -12,16 +11,17 @@ import { expensesApi, PairwiseBalance, Expense } from '../../api/expensesApi';
 import { shoppingApi, ShoppingItem } from '../../api/shoppingApi';
 import { EventCard } from '../../components/EventCard';
 import { BalanceSummary } from '../../components/BalanceSummary';
-import { QuickActionButton } from '../../components/QuickActionButton';
+import { PrimaryButton } from '../../components/PrimaryButton';
 import { SpendingChart } from '../../components/SpendingChart';
 import { DashboardHero } from '../../components/Home/DashboardHero';
+import { HomeInviteCard } from '../../components/Home/HomeInviteCard';
+import { HomeSetupStep } from '../../components/Home/HomeSetupStep';
 import { SectionBlock } from '../../components/ui/SectionBlock';
 import { SummaryStatCard } from '../../components/Home/SummaryStatCard';
 import { InsightCard } from '../../components/Home/InsightCard';
 import { SmartTipCard } from '../../components/Home/SmartTipCard';
 import { formatCurrency, formatCompactCurrency } from '../../utils/formatCurrency';
-import { useThemeColors, fontSizes, fontWeights, spacing, lineHeights, radii, shadows, TAB_BAR_HEIGHT } from '../../theme';
-import { scale } from '../../utils/scaling';
+import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows, TAB_BAR_HEIGHT } from '../../theme';
 import { Ionicons } from '@expo/vector-icons';
 import { LoadingSkeleton, SkeletonCard } from '../../components/LoadingSkeleton';
 
@@ -98,86 +98,53 @@ export const HomeScreen: React.FC = () => {
     },
     emptyStateContainer: {
       paddingHorizontal: spacing.xl,
-      paddingTop: spacing.lg,
+      paddingTop: spacing.sm,
     },
-    welcomeSection: {
-      padding: spacing.xxl,
+    setupStepsCard: {
       backgroundColor: colors.surface,
       borderRadius: radii.lg,
       borderWidth: 1,
       borderColor: colors.borderLight,
-      alignItems: 'center',
-      marginBottom: spacing.xl,
+      paddingHorizontal: spacing.xs,
+      paddingBottom: spacing.sm,
+      marginBottom: spacing.lg,
       ...(shadows.sm as object),
     },
-    welcomeIconContainer: {
-      width: scale(80),
-      height: scale(80),
-      borderRadius: scale(40),
-      backgroundColor: colors.primaryUltraSoft,
+    setupStepsHeader: {
+      flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: spacing.sm,
+      paddingTop: spacing.md,
+      paddingBottom: spacing.xs,
+      gap: spacing.sm,
+    },
+    setupStepsTitle: {
+      fontSize: fontSizes.lg,
+      fontWeight: fontWeights.bold,
+      color: colors.text,
+      flex: 1,
+    },
+    setupProgressBadge: {
+      fontSize: fontSizes.xs,
+      fontWeight: fontWeights.semibold,
+      color: colors.primary,
+      backgroundColor: colors.primaryUltraSoft,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xxs,
+      borderRadius: radii.sm,
+      overflow: 'hidden',
+    },
+    primaryCta: {
+      marginBottom: spacing.md,
+    },
+    secondaryRow: {
+      flexDirection: 'row',
+      gap: spacing.sm,
       marginBottom: spacing.lg,
     },
-    welcomeTitle: {
-      fontSize: fontSizes.xxl,
-      fontWeight: fontWeights.extrabold,
-      color: colors.text,
-      marginBottom: spacing.md,
-      textAlign: 'center',
-      lineHeight: lineHeights.xxl,
-    },
-    welcomeText: {
-      fontSize: fontSizes.md,
-      color: colors.textSecondary,
-      textAlign: 'center',
-      lineHeight: lineHeights.md,
-      paddingHorizontal: spacing.md,
-      marginBottom: spacing.md,
-    },
-    inviteMessageContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: colors.primaryUltraSoft,
-      paddingHorizontal: spacing.md,
-      paddingVertical: spacing.sm,
-      borderRadius: radii.md,
-      marginTop: spacing.md,
-      gap: spacing.xs,
-      flexWrap: 'wrap',
-    },
-    inviteMessage: {
-      fontSize: fontSizes.sm,
-      color: colors.textSecondary,
-      textAlign: 'center',
-    },
-    joinCodeContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: colors.surface,
-      paddingHorizontal: spacing.sm,
-      paddingVertical: spacing.xs,
-      borderRadius: radii.sm,
-      borderWidth: 1,
-      borderColor: colors.primary,
-      gap: spacing.xs,
-    },
-    joinCode: {
-      fontSize: fontSizes.sm,
-      fontWeight: fontWeights.bold,
-      color: colors.primary,
-      letterSpacing: 1,
-    },
-    copyIcon: {
-      marginLeft: spacing.xxs,
-    },
-    quickActionsContainer: {
-      gap: spacing.md,
-    },
-    quickActionsRow: {
-      flexDirection: 'row',
-      gap: spacing.md,
+    secondaryBtn: {
+      flex: 1,
     },
     summaryCard: {
       backgroundColor: colors.surface,
@@ -299,16 +266,23 @@ export const HomeScreen: React.FC = () => {
       setShoppingItems(allShoppingItems);
       setInsights(insightsData);
     } catch (error: any) {
-      if (__DEV__) console.error('Failed to load home data:', error);
+      const status = error?.response?.status;
+      // 403 = not a member of this household (removed, or stale selection). Cleared below — not a crash.
+      if (status === 403) {
+        if (__DEV__) {
+          console.warn(
+            '[Home] 403: no access to this household — clearing selection (rejoin or pick another).'
+          );
+        }
+        setSelectedHousehold(null);
+      } else {
+        if (__DEV__) console.error('Failed to load home data:', error);
+      }
       const isNetworkError =
         error?.code === 'ERR_NETWORK' ||
         error?.message === 'Network Error' ||
         !error?.response;
       if (isNetworkError) setLoadError(true);
-      // If we get a 403, the user is no longer a member of this household
-      if (error?.response?.status === 403) {
-        setSelectedHousehold(null);
-      }
     } finally {
       setLoading(false);
       setInitialLoading(false);
@@ -365,6 +339,28 @@ export const HomeScreen: React.FC = () => {
 
   const stats = calculateStats();
   const hasData = expenses.length > 0 || events.length > 0 || shoppingItems.length > 0;
+
+  const setupInviteDone = (selectedHousehold?.members?.length ?? 0) > 1;
+  const setupExpenseDone = expenses.length > 0;
+  const setupShoppingDone = shoppingItems.length > 0;
+  const setupDoneCount = [setupInviteDone, setupExpenseDone, setupShoppingDone].filter(Boolean).length;
+
+  const handleShareInvite = async () => {
+    if (!selectedHousehold?.joinCode) {
+      navigation.getParent()?.navigate('HouseholdSettings');
+      return;
+    }
+    try {
+      await Share.share({
+        message: String(
+          t('householdSettingsScreen.shareMessage', { code: selectedHousehold.joinCode })
+        ),
+        title: selectedHousehold.name,
+      });
+    } catch {
+      /* dismissed */
+    }
+  };
 
   const spendingRangeStart = React.useMemo(() => {
     const now = new Date();
@@ -466,6 +462,7 @@ export const HomeScreen: React.FC = () => {
         address={selectedHousehold.address}
         metricLabel={hasData ? t('home.thisMonth') : undefined}
         metricValue={hasData ? formatCompactCurrency(stats.monthlyExpenses) : undefined}
+        tagline={!hasData ? t('home.setupHeroTagline') : undefined}
       />
 
       {hasData && (
@@ -494,58 +491,62 @@ export const HomeScreen: React.FC = () => {
         </View>
       )}
 
-      {/* Welcome Message & Quick Actions for New Users */}
+      {/* Guided household setup when there is no activity yet */}
       {!hasData && (
         <View style={styles.emptyStateContainer}>
-          <View style={styles.welcomeSection}>
-            <View style={styles.welcomeIconContainer}>
-              <Ionicons name="home-outline" size={48} color={colors.primary} />
+          {selectedHousehold.joinCode ? (
+            <HomeInviteCard joinCode={selectedHousehold.joinCode} householdName={selectedHousehold.name} />
+          ) : null}
+
+          <View style={styles.setupStepsCard}>
+            <View style={styles.setupStepsHeader}>
+              <AppText style={styles.setupStepsTitle}>{t('home.setupStepsHeading')}</AppText>
+              <AppText style={styles.setupProgressBadge}>
+                {t('home.setupProgress', { done: setupDoneCount, total: 3 })}
+              </AppText>
             </View>
-            <AppText style={styles.welcomeTitle}>{t('home.welcomeTo')} {selectedHousehold.name}! 👋</AppText>
-            <AppText style={styles.welcomeText}>
-              {t('home.getStarted')}
-            </AppText>
-            {selectedHousehold.members.length === 1 && selectedHousehold.joinCode && (
-              <View style={styles.inviteMessageContainer}>
-                <Ionicons name="people-outline" size={20} color={colors.primary} />
-                <AppText style={styles.inviteMessage}>
-                  {t('home.inviteRoommates')}{' '}
-                </AppText>
-                <TouchableOpacity
-                  onPress={async () => {
-                    await Clipboard.setStringAsync(selectedHousehold.joinCode);
-                    Alert.alert(t('common.copied'), t('householdSettingsScreen.codeCopied'));
-                  }}
-                  style={styles.joinCodeContainer}
-                >
-                  <AppText style={styles.joinCode}>{selectedHousehold.joinCode}</AppText>
-                  <Ionicons name="copy-outline" size={16} color={colors.primary} style={styles.copyIcon} />
-                </TouchableOpacity>
-              </View>
-            )}
+            <HomeSetupStep
+              stepNumber={1}
+              title={t('home.setupStep1Title')}
+              subtitle={t('home.setupStep1Subtitle')}
+              completed={setupInviteDone}
+              onPress={handleShareInvite}
+            />
+            <HomeSetupStep
+              stepNumber={2}
+              title={t('home.setupStep2Title')}
+              subtitle={t('home.setupStep2Subtitle')}
+              completed={setupExpenseDone}
+              onPress={() => navigation.getParent()?.navigate('CreateExpense')}
+            />
+            <HomeSetupStep
+              stepNumber={3}
+              title={t('home.setupStep3Title')}
+              subtitle={t('home.setupStep3Subtitle')}
+              completed={setupShoppingDone}
+              onPress={() => navigation.navigate('Shopping')}
+              isLast
+            />
           </View>
-          <View style={styles.quickActionsContainer}>
-            <View style={styles.quickActionsRow}>
-              <QuickActionButton
-                icon={<Ionicons name="add-circle-outline" size={24} color={colors.primary} />}
-                label={t('home.addExpense')}
-                onPress={() => {
-                  navigation.getParent()?.navigate('CreateExpense');
-                }}
-              />
-              <QuickActionButton
-                icon={<Ionicons name="cart-outline" size={24} color={colors.primary} />}
-                label={t('home.shoppingList')}
-                onPress={() => navigation.navigate('Shopping')}
-              />
-            </View>
-            <View style={styles.quickActionsRow}>
-              <QuickActionButton
-                icon={<Ionicons name="calendar-outline" size={24} color={colors.primary} />}
-                label={t('home.addEvent')}
-                onPress={() => navigation.navigate('Calendar')}
-              />
-            </View>
+
+          <PrimaryButton
+            title={t('home.primaryFirstExpense')}
+            onPress={() => navigation.getParent()?.navigate('CreateExpense')}
+            style={styles.primaryCta}
+          />
+          <View style={styles.secondaryRow}>
+            <PrimaryButton
+              variant="outline"
+              title={t('home.shoppingList')}
+              onPress={() => navigation.navigate('Shopping')}
+              style={styles.secondaryBtn}
+            />
+            <PrimaryButton
+              variant="outline"
+              title={t('home.addEvent')}
+              onPress={() => navigation.navigate('Calendar')}
+              style={styles.secondaryBtn}
+            />
           </View>
         </View>
       )}

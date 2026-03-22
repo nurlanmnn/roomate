@@ -13,6 +13,8 @@ interface ShoppingItemRowProps {
   onDelete?: () => void;
   isFirst?: boolean;
   isLast?: boolean;
+  /** Row sits inside SettingsGroupCard (transparent row bg). */
+  inGroupCard?: boolean;
 }
 
 export const ShoppingItemRow: React.FC<ShoppingItemRowProps> = ({
@@ -22,6 +24,7 @@ export const ShoppingItemRow: React.FC<ShoppingItemRowProps> = ({
   onDelete,
   isFirst = false,
   isLast = false,
+  inGroupCard = false,
 }) => {
   const colors = useThemeColors();
   const styles = React.useMemo(() => StyleSheet.create({
@@ -31,7 +34,7 @@ export const ShoppingItemRow: React.FC<ShoppingItemRowProps> = ({
       paddingVertical: spacing.md,
       paddingHorizontal: spacing.lg,
       minHeight: 56,
-      backgroundColor: colors.surface,
+      backgroundColor: inGroupCard ? 'transparent' : colors.surface,
       borderBottomWidth: 1,
       borderBottomColor: colors.borderLight,
     },
@@ -123,7 +126,7 @@ export const ShoppingItemRow: React.FC<ShoppingItemRowProps> = ({
     actionBtn: {
       padding: spacing.xs,
     },
-  }), [colors]);
+  }), [colors, inGroupCard]);
 
   return (
     <SwipeableRow

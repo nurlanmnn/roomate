@@ -13,8 +13,8 @@ interface BalanceSummaryProps {
   currentUserId: string;
   getUserName: (userId: string) => string;
   getUserAvatar?: (userId: string) => string | undefined;
-  /** When true, hide the card title (e.g. when used inside SectionBlock) */
   hideTitle?: boolean;
+  variant?: 'card' | 'plain';
 }
 
 export const BalanceSummary: React.FC<BalanceSummaryProps> = ({
@@ -23,6 +23,7 @@ export const BalanceSummary: React.FC<BalanceSummaryProps> = ({
   getUserName,
   getUserAvatar,
   hideTitle = false,
+  variant = 'card',
 }) => {
   const colors = useThemeColors();
   const { t } = useLanguage();
@@ -43,6 +44,13 @@ export const BalanceSummary: React.FC<BalanceSummaryProps> = ({
       borderWidth: 1,
       borderColor: colors.borderLight,
       ...(shadows.sm as object),
+    },
+    containerPlain: {
+      backgroundColor: 'transparent',
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderWidth: 0,
+      borderRadius: 0,
     },
     title: {
       fontSize: fontSizes.lg,
@@ -117,16 +125,18 @@ export const BalanceSummary: React.FC<BalanceSummaryProps> = ({
     },
   }), [colors]);
 
+  const wrapStyle = variant === 'plain' ? [styles.container, styles.containerPlain] : styles.container;
+
   if (userBalances.length === 0) {
     return (
-      <View style={styles.container}>
+      <View style={wrapStyle}>
         <AppText style={styles.emptyText}>{t('home.allSettled')} 🎉</AppText>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={wrapStyle}>
       {!hideTitle && <AppText style={styles.title}>{t('home.balanceSummary')}</AppText>}
       {(totalOwedToYou > 0 || totalYouOwe > 0) && (
         <View style={styles.summaryRow}>

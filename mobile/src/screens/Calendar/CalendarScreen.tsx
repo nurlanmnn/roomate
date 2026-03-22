@@ -1,5 +1,12 @@
-import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View, RefreshControl } from 'react-native';
+import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
+import {
+  Alert,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+  RefreshControl,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useHousehold } from '../../context/HouseholdContext';
@@ -8,16 +15,20 @@ import { useLanguage } from '../../context/LanguageContext';
 import { eventsApi, Event } from '../../api/eventsApi';
 import { choresApi, ChoreRotation } from '../../api/choresApi';
 import { EventCard } from '../../components/EventCard';
-import { PrimaryButton } from '../../components/PrimaryButton';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
 import { CalendarView } from '../../components/CalendarView';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { AppText } from '../../components/AppText';
+import { SettingsSection } from '../../components/Settings/SettingsSection';
+import { SettingsGroupCard } from '../../components/Settings/SettingsGroupCard';
 import { formatDate } from '../../utils/dateHelpers';
-import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows, TAB_BAR_HEIGHT } from '../../theme';
+import { useThemeColors, fontSizes, fontWeights, spacing, radii, TAB_BAR_HEIGHT } from '../../theme';
 import { Ionicons } from '@expo/vector-icons';
 import { format, isSameDay, parseISO, startOfWeek } from 'date-fns';
 
 type ViewMode = 'upcoming' | 'past' | 'all';
+
+const VIEW_MODES: ViewMode[] = ['upcoming', 'past', 'all'];
 
 export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { selectedHousehold, setSelectedHousehold } = useHousehold();
@@ -38,9 +49,8 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     if (selectedHousehold) loadEvents();
   }, [selectedHousehold]);
 
-  // Reload events when screen comes into focus
   useFocusEffect(
-    React.useCallback(() => {
+    useCallback(() => {
       if (selectedHousehold) {
         loadEvents();
       }
@@ -48,7 +58,7 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   );
 
   useFocusEffect(
-    React.useCallback(() => {
+    useCallback(() => {
       scrollRef.current?.scrollTo({ y: 0, animated: true });
     }, [])
   );
@@ -101,31 +111,31 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     navigation.navigate('CreateEvent', { preselectedDate: date.toISOString() });
   };
 
-  // Get all event dates for calendar dots
   const eventDates = useMemo(() => events.map((e) => e.date), [events]);
 
-  // Get events for selected date
   const selectedDateEvents = useMemo(() => {
     return events.filter((e) => isSameDay(parseISO(e.date), selectedDate));
   }, [events, selectedDate]);
 
-  // Get filtered events based on view mode
   const filteredEvents = useMemo(() => {
     const now = new Date();
     now.setHours(0, 0, 0, 0);
 
     switch (viewMode) {
       case 'upcoming':
-        return events.filter((e) => new Date(e.date) >= now).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        return events
+          .filter((e) => new Date(e.date) >= now)
+          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
       case 'past':
-        return events.filter((e) => new Date(e.date) < now).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        return events
+          .filter((e) => new Date(e.date) < now)
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       case 'all':
       default:
         return events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     }
   }, [events, viewMode]);
 
-  // Group events by date
   const eventsByDate = useMemo(() => {
     const grouped: Record<string, Event[]> = {};
     filteredEvents.forEach((event) => {
@@ -135,11 +145,24 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     return grouped;
   }, [filteredEvents]);
 
+  const listSectionTitle =
+    viewMode === 'upcoming'
+      ? t('home.upcomingEvents')
+      : viewMode === 'past'
+        ? t('calendar.past')
+        : t('home.events');
+
+  const filterLabel = (mode: ViewMode) => {
+    if (mode === 'upcoming') return t('calendar.upcoming');
+    if (mode === 'past') return t('calendar.past');
+    return t('time.all');
+  };
+
   if (!selectedHousehold) {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>{t('alerts.selectHousehold')}</Text>
+          <AppText style={styles.emptyText}>{t('alerts.selectHousehold')}</AppText>
         </View>
       </SafeAreaView>
     );
@@ -150,174 +173,187 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
       <ScrollView
         ref={scrollRef}
         style={styles.scrollView}
-        contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT + spacing.xl }}
+        contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={loadEvents} />}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        {/* Header with view mode selector */}
-        <View style={styles.headerRow}>
-          <TouchableOpacity
-            style={styles.viewModeButton}
-            onPress={() => {
-              const modes: ViewMode[] = ['upcoming', 'past', 'all'];
-              const currentIndex = modes.indexOf(viewMode);
-              setViewMode(modes[(currentIndex + 1) % modes.length]);
-            }}
-          >
-            <Text style={styles.viewModeText}>
-              {viewMode === 'upcoming' ? t('calendar.upcoming') : viewMode === 'past' ? t('time.lastMonth') : t('time.all')}
-            </Text>
-            <Ionicons name="chevron-down" size={16} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.eventCount}>{filteredEvents.length}</Text>
-        </View>
-
-        {/* Calendar */}
-        <CalendarView
-          selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
-          eventDates={eventDates}
-          onAddEvent={handleAddEventOnDate}
+        <ScreenHeader
+          title={t('calendar.title')}
+          subtitle={selectedHousehold.name}
+          rightText={t('calendar.addEvent')}
+          onRightPress={() => navigation.navigate('CreateEvent')}
         />
 
-        {/* Chore rotation — this week or set up */}
-        <View style={styles.choreSection}>
-          <View style={styles.choreCard}>
-            <View style={styles.choreSectionHeader}>
-              <View style={styles.choreTitleRow}>
-                <View style={styles.choreIconWrap}>
-                  <Ionicons name="repeat-outline" size={20} color={colors.primary} />
-                </View>
-                <View style={styles.choreTitleBlock}>
-                  <Text style={styles.choreSectionTitle}>{t('chores.choreRotation')}</Text>
-                  <Text style={styles.choreSectionDescription}>
-                    {chores.length > 0 ? t('chores.thisWeekAssignments') : t('chores.setUpDescription')}
-                  </Text>
-                </View>
-              </View>
-              <TouchableOpacity
-                onPress={() => navigation.getParent()?.navigate('ChoreRotation')}
-                style={styles.choreActionButton}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.choreActionLabel}>
-                  {chores.length > 0 ? t('chores.manage') : t('chores.setUp')}
-                </Text>
-                <Ionicons name="chevron-forward" size={16} color={colors.primary} />
-              </TouchableOpacity>
-            </View>
-            {chores.length > 0 && (
-              <View style={styles.choreChips}>
-                {chores.slice(0, 5).map((chore) => (
-                  <View key={chore._id} style={styles.choreChip}>
-                    <Ionicons name="sparkles-outline" size={14} color={colors.primary} />
-                    <Text style={styles.choreChipText} numberOfLines={1}>
-                      {chore.name}: {chore.currentAssignee?.name ?? '—'}
-                    </Text>
-                  </View>
+        <SettingsSection title={t('calendar.sectionShow')}>
+          <SettingsGroupCard>
+            <View style={styles.filterBlock}>
+              <View style={styles.filterRow}>
+                {VIEW_MODES.map((mode) => (
+                  <TouchableOpacity
+                    key={mode}
+                    style={[styles.filterChip, viewMode === mode && styles.filterChipActive]}
+                    onPress={() => setViewMode(mode)}
+                    activeOpacity={0.85}
+                  >
+                    <AppText
+                      style={[styles.filterChipText, viewMode === mode && styles.filterChipTextActive]}
+                      numberOfLines={1}
+                    >
+                      {filterLabel(mode)}
+                    </AppText>
+                  </TouchableOpacity>
                 ))}
               </View>
-            )}
-          </View>
-        </View>
+              <AppText style={styles.eventCountLine}>
+                {filteredEvents.length} {t('home.events')}
+              </AppText>
+            </View>
+          </SettingsGroupCard>
+        </SettingsSection>
 
-        {/* Selected date events */}
-        {selectedDateEvents.length > 0 && (
-          <View style={styles.selectedDateSection}>
-            <View style={styles.selectedDateHeader}>
-              <Text style={styles.selectedDateTitle}>
-                {format(selectedDate, 'EEEE, MMM d')}
-              </Text>
+        <SettingsSection title={t('calendar.sectionCalendar')}>
+          <SettingsGroupCard>
+            <CalendarView
+              embedded
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+              eventDates={eventDates}
+              onAddEvent={handleAddEventOnDate}
+            />
+            <View style={styles.calendarHint}>
+              <Ionicons name="information-circle-outline" size={16} color={colors.textTertiary} />
+              <AppText style={styles.calendarHintText}>{t('calendar.longPressToAdd')}</AppText>
+            </View>
+          </SettingsGroupCard>
+        </SettingsSection>
+
+        <SettingsSection title={t('chores.choreRotation')}>
+          <SettingsGroupCard>
+            <View style={styles.choreInner}>
+              <View style={styles.choreSectionHeader}>
+                <View style={styles.choreTitleRow}>
+                  <View style={styles.choreIconWrap}>
+                    <Ionicons name="repeat-outline" size={20} color={colors.primary} />
+                  </View>
+                  <View style={styles.choreTitleBlock}>
+                    <AppText style={styles.choreSectionDescription}>
+                      {chores.length > 0 ? t('chores.thisWeekAssignments') : t('chores.setUpDescription')}
+                    </AppText>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  onPress={() => navigation.getParent()?.navigate('ChoreRotation')}
+                  style={styles.choreActionButton}
+                  activeOpacity={0.8}
+                >
+                  <AppText style={styles.choreActionLabel}>
+                    {chores.length > 0 ? t('chores.manage') : t('chores.setUp')}
+                  </AppText>
+                  <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+                </TouchableOpacity>
+              </View>
+              {chores.length > 0 ? (
+                <View style={styles.choreChips}>
+                  {chores.slice(0, 5).map((chore) => (
+                    <View key={chore._id} style={styles.choreChip}>
+                      <Ionicons name="sparkles-outline" size={14} color={colors.primary} />
+                      <AppText style={styles.choreChipText} numberOfLines={1}>
+                        {chore.name}: {chore.currentAssignee?.name ?? '—'}
+                      </AppText>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+            </View>
+          </SettingsGroupCard>
+        </SettingsSection>
+
+        <SettingsSection title={t('calendar.sectionSelectedDay')}>
+          <SettingsGroupCard>
+            <View style={styles.selectedDayHeader}>
+              <AppText style={styles.selectedDateTitle}>{format(selectedDate, 'EEEE, MMM d')}</AppText>
               <TouchableOpacity
                 style={styles.addOnDateButton}
                 onPress={() => handleAddEventOnDate(selectedDate)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Ionicons name="add-circle" size={24} color={colors.primary} />
+                <Ionicons name="add-circle" size={28} color={colors.primary} />
               </TouchableOpacity>
             </View>
-            {selectedDateEvents.map((event) => (
-              <View key={event._id} style={styles.eventWrapper}>
-                <EventCard event={event} />
-                {isCreator(event) && (
-                  <View style={styles.eventActions}>
-                    <TouchableOpacity style={styles.actionButton} onPress={() => handleEditEvent(event)}>
-                      <Ionicons name="pencil-outline" size={16} color={colors.primary} />
-                      <Text style={styles.editText}>{t('common.edit')}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.actionButton} onPress={() => handleDeleteEvent(event)}>
-                      <Ionicons name="trash-outline" size={16} color={colors.danger} />
-                      <Text style={styles.deleteText}>{t('common.delete')}</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
+
+            {selectedDateEvents.length > 0 ? (
+              selectedDateEvents.map((event) => (
+                <View key={event._id} style={styles.eventBlock}>
+                  <EventCard event={event} />
+                  {isCreator(event) ? (
+                    <View style={styles.eventActions}>
+                      <TouchableOpacity style={styles.actionButton} onPress={() => handleEditEvent(event)}>
+                        <Ionicons name="pencil-outline" size={16} color={colors.primary} />
+                        <AppText style={styles.editText}>{t('common.edit')}</AppText>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.actionButton} onPress={() => handleDeleteEvent(event)}>
+                        <Ionicons name="trash-outline" size={16} color={colors.danger} />
+                        <AppText style={styles.deleteText}>{t('common.delete')}</AppText>
+                      </TouchableOpacity>
+                    </View>
+                  ) : null}
+                </View>
+              ))
+            ) : (
+              <View style={styles.emptyDayInner}>
+                <Ionicons name="calendar-outline" size={36} color={colors.textTertiary} />
+                <AppText style={styles.emptyDateText}>{t('calendar.noEvents')}</AppText>
+                <TouchableOpacity
+                  style={styles.addEventHintButton}
+                  onPress={() => handleAddEventOnDate(selectedDate)}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
+                  <AppText style={styles.addEventHintText}>{t('calendar.addEvent')}</AppText>
+                </TouchableOpacity>
               </View>
-            ))}
-          </View>
-        )}
+            )}
+          </SettingsGroupCard>
+        </SettingsSection>
 
-        {/* Quick add event hint */}
-        {selectedDateEvents.length === 0 && (
-          <View style={styles.emptyDateHint}>
-            <Ionicons name="calendar-outline" size={32} color={colors.textTertiary} />
-            <Text style={styles.emptyDateTitle}>
-              {format(selectedDate, 'EEEE, MMM d')}
-            </Text>
-            <Text style={styles.emptyDateText}>
-              {t('calendar.noEvents')}
-            </Text>
-            <TouchableOpacity
-              style={styles.addEventHintButton}
-              onPress={() => handleAddEventOnDate(selectedDate)}
-            >
-              <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
-              <Text style={styles.addEventHintText}>{t('calendar.addEvent')}</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* All events list */}
-        <View style={styles.allEventsSection}>
-          <View style={styles.allEventsHeader}>
-            <Text style={styles.sectionTitle}>
-              {viewMode === 'upcoming' ? t('home.upcomingEvents') : viewMode === 'past' ? t('time.lastMonth') : t('home.events')}
-            </Text>
-            <PrimaryButton
-              title={`+ ${t('calendar.addEvent')}`}
-              onPress={() => navigation.navigate('CreateEvent')}
-            />
-          </View>
-
-          {Object.keys(eventsByDate).length === 0 ? (
-            <EmptyState
-              icon="calendar-outline"
-              title={t('calendar.noEvents')}
-              message={t('calendar.longPressToAdd')}
-              variant="minimal"
-            />
-          ) : (
-            Object.entries(eventsByDate).map(([dateKey, dateEvents]) => (
-              <View key={dateKey} style={styles.dateSection}>
-                <Text style={styles.dateHeader}>{dateKey}</Text>
-                {dateEvents.map((event) => (
-                  <View key={event._id} style={styles.eventWrapper}>
-                    <EventCard event={event} />
-                    {isCreator(event) && (
-                      <View style={styles.eventActions}>
-                        <TouchableOpacity style={styles.actionButton} onPress={() => handleEditEvent(event)}>
-                          <Ionicons name="pencil-outline" size={16} color={colors.primary} />
-                          <Text style={styles.editText}>{t('common.edit')}</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.actionButton} onPress={() => handleDeleteEvent(event)}>
-                          <Ionicons name="trash-outline" size={16} color={colors.danger} />
-                          <Text style={styles.deleteText}>{t('common.delete')}</Text>
-                        </TouchableOpacity>
-                      </View>
-                    )}
-                  </View>
-                ))}
+        <SettingsSection title={listSectionTitle}>
+          <SettingsGroupCard>
+            {Object.keys(eventsByDate).length === 0 ? (
+              <View style={styles.emptyListPad}>
+                <EmptyState
+                  icon="calendar-outline"
+                  title={t('calendar.noEvents')}
+                  message={t('calendar.longPressToAdd')}
+                  variant="minimal"
+                />
               </View>
-            ))
-          )}
-        </View>
+            ) : (
+              Object.entries(eventsByDate).map(([dateKey, dateEvents]) => (
+                <View key={dateKey} style={styles.dateSection}>
+                  <AppText style={styles.dateHeader}>{dateKey}</AppText>
+                  {dateEvents.map((event) => (
+                    <View key={event._id} style={styles.eventBlock}>
+                      <EventCard event={event} />
+                      {isCreator(event) ? (
+                        <View style={styles.eventActions}>
+                          <TouchableOpacity style={styles.actionButton} onPress={() => handleEditEvent(event)}>
+                            <Ionicons name="pencil-outline" size={16} color={colors.primary} />
+                            <AppText style={styles.editText}>{t('common.edit')}</AppText>
+                          </TouchableOpacity>
+                          <TouchableOpacity style={styles.actionButton} onPress={() => handleDeleteEvent(event)}>
+                            <Ionicons name="trash-outline" size={16} color={colors.danger} />
+                            <AppText style={styles.deleteText}>{t('common.delete')}</AppText>
+                          </TouchableOpacity>
+                        </View>
+                      ) : null}
+                    </View>
+                  ))}
+                </View>
+              ))
+            )}
+          </SettingsGroupCard>
+        </SettingsSection>
       </ScrollView>
     </SafeAreaView>
   );
@@ -332,27 +368,8 @@ const createStyles = (colors: any) =>
     scrollView: {
       flex: 1,
     },
-    headerRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingHorizontal: spacing.xl,
-      paddingVertical: spacing.lg,
-    },
-    viewModeButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.xs,
-    },
-    viewModeText: {
-      fontSize: fontSizes.xxl,
-      fontWeight: fontWeights.extrabold,
-      color: colors.text,
-    },
-    eventCount: {
-      fontSize: fontSizes.md,
-      color: colors.textSecondary,
-      fontWeight: fontWeights.medium,
+    scrollContent: {
+      paddingBottom: TAB_BAR_HEIGHT + spacing.xl,
     },
     emptyContainer: {
       padding: spacing.xxl,
@@ -361,74 +378,62 @@ const createStyles = (colors: any) =>
     emptyText: {
       fontSize: fontSizes.md,
       color: colors.muted,
+      textAlign: 'center',
     },
-    selectedDateSection: {
-      paddingHorizontal: spacing.md,
-      paddingTop: spacing.sm,
+    filterBlock: {
+      padding: spacing.md,
+      gap: spacing.sm,
     },
-    selectedDateHeader: {
+    filterRow: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: spacing.md,
-    },
-    selectedDateTitle: {
-      fontSize: fontSizes.lg,
-      fontWeight: fontWeights.bold,
-      color: colors.text,
-    },
-    addOnDateButton: {
-      padding: spacing.xs,
-    },
-    emptyDateHint: {
-      alignItems: 'center',
-      paddingVertical: spacing.xl,
-      paddingHorizontal: spacing.md,
-      marginHorizontal: spacing.md,
-      backgroundColor: colors.surface,
-      borderRadius: radii.lg,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      ...(shadows.xs as object),
-    },
-    emptyDateTitle: {
-      fontSize: fontSizes.md,
-      fontWeight: fontWeights.semibold,
-      color: colors.text,
-      marginTop: spacing.sm,
-    },
-    emptyDateText: {
-      fontSize: fontSizes.sm,
-      color: colors.textSecondary,
-      marginTop: spacing.xxs,
-    },
-    addEventHintButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.xs,
-      marginTop: spacing.md,
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.md,
-      backgroundColor: colors.primaryUltraSoft,
+      padding: spacing.xxs,
+      gap: spacing.xxs,
+      backgroundColor: colors.background,
       borderRadius: radii.md,
     },
-    addEventHintText: {
-      fontSize: fontSizes.sm,
-      color: colors.primary,
+    filterChip: {
+      flex: 1,
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.sm,
+      borderRadius: radii.sm,
+      alignItems: 'center',
+      justifyContent: 'center',
+      minWidth: 0,
+    },
+    filterChipActive: {
+      backgroundColor: colors.primary,
+    },
+    filterChipText: {
+      fontSize: fontSizes.xs,
+      fontWeight: fontWeights.medium,
+      color: colors.textSecondary,
+    },
+    filterChipTextActive: {
+      color: colors.surface,
       fontWeight: fontWeights.semibold,
     },
-    choreSection: {
-      paddingHorizontal: spacing.xl,
-      paddingTop: spacing.lg,
-      paddingBottom: spacing.md,
+    eventCountLine: {
+      fontSize: fontSizes.sm,
+      color: colors.textSecondary,
+      fontWeight: fontWeights.medium,
+      textAlign: 'center',
     },
-    choreCard: {
-      backgroundColor: colors.surface,
-      borderRadius: radii.lg,
-      padding: spacing.lg,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      ...(shadows.sm as object),
+    calendarHint: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: spacing.sm,
+      paddingHorizontal: spacing.md,
+      paddingBottom: spacing.md,
+      paddingTop: 0,
+    },
+    calendarHintText: {
+      flex: 1,
+      fontSize: fontSizes.xs,
+      color: colors.textTertiary,
+      lineHeight: 18,
+    },
+    choreInner: {
+      padding: spacing.md,
     },
     choreSectionHeader: {
       flexDirection: 'row',
@@ -455,12 +460,6 @@ const createStyles = (colors: any) =>
       flex: 1,
       minWidth: 0,
     },
-    choreSectionTitle: {
-      fontSize: fontSizes.lg,
-      fontWeight: fontWeights.bold,
-      color: colors.text,
-      marginBottom: spacing.xxs,
-    },
     choreSectionDescription: {
       fontSize: fontSizes.sm,
       color: colors.textSecondary,
@@ -473,25 +472,10 @@ const createStyles = (colors: any) =>
       paddingVertical: spacing.sm,
       paddingHorizontal: spacing.md,
       backgroundColor: colors.primaryUltraSoft,
-      borderRadius: radii.full,
+      borderRadius: radii.pill,
       marginLeft: spacing.sm,
     },
     choreActionLabel: {
-      fontSize: fontSizes.sm,
-      color: colors.primary,
-      fontWeight: fontWeights.semibold,
-    },
-    sectionDescription: {
-      fontSize: fontSizes.sm,
-      color: colors.textSecondary,
-      marginTop: spacing.xxs,
-    },
-    manageChoresButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.xxs,
-    },
-    seeAllText: {
       fontSize: fontSizes.sm,
       color: colors.primary,
       fontWeight: fontWeights.semibold,
@@ -508,8 +492,8 @@ const createStyles = (colors: any) =>
       gap: spacing.xs,
       paddingVertical: spacing.xs,
       paddingHorizontal: spacing.sm,
-      backgroundColor: colors.surface,
-      borderRadius: radii.full,
+      backgroundColor: colors.background,
+      borderRadius: radii.pill,
       borderWidth: 1,
       borderColor: colors.borderLight,
       maxWidth: '100%',
@@ -519,39 +503,61 @@ const createStyles = (colors: any) =>
       color: colors.text,
       flex: 1,
     },
-    allEventsSection: {
-      paddingHorizontal: spacing.md,
-      paddingTop: spacing.xl,
-      paddingBottom: spacing.xxl,
-    },
-    allEventsHeader: {
+    selectedDayHeader: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: spacing.md,
+      paddingHorizontal: spacing.md,
+      paddingTop: spacing.md,
+      paddingBottom: spacing.sm,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.borderLight,
     },
-    sectionTitle: {
-      fontSize: fontSizes.lg,
+    selectedDateTitle: {
+      fontSize: fontSizes.md,
       fontWeight: fontWeights.bold,
       color: colors.text,
+      flex: 1,
     },
-    dateSection: {
-      marginBottom: spacing.md,
+    addOnDateButton: {
+      padding: spacing.xs,
     },
-    dateHeader: {
-      fontSize: fontSizes.md,
-      fontWeight: fontWeights.semibold,
-      marginBottom: spacing.sm,
+    emptyDayInner: {
+      alignItems: 'center',
+      paddingVertical: spacing.xl,
+      paddingHorizontal: spacing.md,
+    },
+    emptyDateText: {
+      fontSize: fontSizes.sm,
       color: colors.textSecondary,
+      marginTop: spacing.sm,
+      textAlign: 'center',
     },
-    eventWrapper: {
+    addEventHintButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      marginTop: spacing.md,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+      backgroundColor: colors.primaryUltraSoft,
+      borderRadius: radii.lg,
+    },
+    addEventHintText: {
+      fontSize: fontSizes.sm,
+      color: colors.primary,
+      fontWeight: fontWeights.semibold,
+    },
+    eventBlock: {
       marginBottom: spacing.sm,
+      paddingHorizontal: spacing.sm,
     },
     eventActions: {
       flexDirection: 'row',
       justifyContent: 'flex-end',
       gap: spacing.md,
       marginTop: spacing.xs,
+      paddingHorizontal: spacing.xs,
     },
     actionButton: {
       flexDirection: 'row',
@@ -562,9 +568,28 @@ const createStyles = (colors: any) =>
     editText: {
       color: colors.primary,
       fontSize: fontSizes.sm,
+      fontWeight: fontWeights.medium,
     },
     deleteText: {
       color: colors.danger,
       fontSize: fontSizes.sm,
+      fontWeight: fontWeights.medium,
+    },
+    emptyListPad: {
+      paddingHorizontal: spacing.sm,
+      paddingBottom: spacing.md,
+      paddingTop: spacing.xs,
+    },
+    dateSection: {
+      marginBottom: spacing.md,
+    },
+    dateHeader: {
+      fontSize: fontSizes.sm,
+      fontWeight: fontWeights.semibold,
+      marginBottom: spacing.sm,
+      marginTop: spacing.xs,
+      color: colors.textSecondary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.4,
     },
   });

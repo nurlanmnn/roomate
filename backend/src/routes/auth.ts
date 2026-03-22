@@ -6,7 +6,7 @@ import { User } from '../models/User';
 import { EmailVerificationToken } from '../models/EmailVerificationToken';
 import { Household } from '../models/Household';
 import { authMiddleware, JWTPayload } from '../middleware/auth';
-import { sendVerificationEmail } from '../config/mail';
+import { sendVerificationEmail, sendEmailChangeVerificationEmail } from '../config/mail';
 import { config } from '../config/env';
 import mongoose from 'mongoose';
 
@@ -35,6 +35,15 @@ const verifyOtpSchema = z.object({
 const updateProfileSchema = z.object({
   name: z.string().min(1).max(80).optional(),
   avatarUrl: z.string().max(1000000).optional(), // Accept data URLs (base64 images can be large)
+});
+
+const requestEmailChangeSchema = z.object({
+  newEmail: z.string().email().transform((e) => e.trim().toLowerCase()),
+});
+
+const confirmEmailChangeSchema = z.object({
+  newEmail: z.string().email().transform((e) => e.trim().toLowerCase()),
+  otp: z.string().length(6),
 });
 
 const changePasswordSchema = z.object({
@@ -202,6 +211,131 @@ router.patch('/me', authMiddleware, async (req: Request, res: Response) => {
   }
 });
 
+// POST /auth/request-email-change (send OTP to new address; must confirm with /confirm-email-change)
+router.post('/request-email-change', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { newEmail } = requestEmailChangeSchema.parse(req.body);
+    const userIdObj = new mongoose.Types.ObjectId(userId);
+
+    const user = await User.findById(userIdObj);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (newEmail === user.email) {
+      return res.status(400).json({ error: 'This is already your email address' });
+    }
+
+    const taken = await User.findOne({
+      email: newEmail,
+      _id: { $ne: userIdObj },
+    });
+    if (taken) {
+      return res.status(400).json({ error: 'An account with this email already exists' });
+    }
+
+    await EmailVerificationToken.deleteMany({ userId: userIdObj });
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + 10);
+
+    const verificationToken = new EmailVerificationToken({
+      userId: userIdObj,
+      otp,
+      newEmail,
+      expiresAt,
+    });
+    await verificationToken.save();
+
+    try {
+      await sendEmailChangeVerificationEmail(newEmail, user.name, otp);
+    } catch (emailError) {
+      console.error('Failed to send email change verification:', emailError);
+      await EmailVerificationToken.deleteOne({ _id: verificationToken._id });
+      return res.status(500).json({ error: 'Failed to send verification email' });
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+    }
+    console.error('Request email change error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /auth/confirm-email-change
+router.post('/confirm-email-change', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { newEmail, otp } = confirmEmailChangeSchema.parse(req.body);
+    const userIdObj = new mongoose.Types.ObjectId(userId);
+
+    const user = await User.findById(userIdObj);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (newEmail === user.email) {
+      return res.status(400).json({ error: 'This is already your email address' });
+    }
+
+    const verificationToken = await EmailVerificationToken.findOne({
+      userId: userIdObj,
+      otp,
+      newEmail,
+    });
+
+    if (!verificationToken) {
+      return res.status(400).json({ error: 'Invalid OTP' });
+    }
+
+    if (verificationToken.expiresAt < new Date()) {
+      await EmailVerificationToken.deleteOne({ _id: verificationToken._id });
+      return res.status(410).json({ error: 'OTP has expired' });
+    }
+
+    const taken = await User.findOne({
+      email: newEmail,
+      _id: { $ne: userIdObj },
+    });
+    if (taken) {
+      return res.status(400).json({ error: 'An account with this email already exists' });
+    }
+
+    user.email = newEmail;
+    user.isEmailVerified = true;
+    await user.save();
+
+    await EmailVerificationToken.deleteOne({ _id: verificationToken._id });
+
+    res.json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      isEmailVerified: user.isEmailVerified,
+      avatarUrl: user.avatarUrl,
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+    }
+    console.error('Confirm email change error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // POST /auth/change-password
 router.post('/change-password', authMiddleware, async (req: Request, res: Response) => {
   try {
@@ -297,10 +431,11 @@ router.post('/verify-email', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Find OTP
-    const verificationToken = await EmailVerificationToken.findOne({ 
+    // Signup / resend verification tokens only (not email-change OTPs)
+    const verificationToken = await EmailVerificationToken.findOne({
       userId: user._id,
       otp,
+      newEmail: { $exists: false },
     });
     
     if (!verificationToken) {
@@ -345,8 +480,8 @@ router.post('/resend-verification', async (req: Request, res: Response) => {
       return res.json({ message: 'Email is already verified' });
     }
 
-    // Delete old OTPs
-    await EmailVerificationToken.deleteMany({ userId: user._id });
+    // Delete old signup OTPs only (keep pending email-change tokens)
+    await EmailVerificationToken.deleteMany({ userId: user._id, newEmail: { $exists: false } });
 
     // Generate new 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();

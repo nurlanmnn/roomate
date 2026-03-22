@@ -79,5 +79,11 @@ export const householdsApi = {
     const response = await apiClient.instance.delete(`/households/${id}`);
     return response.data;
   },
+
+  /** Owner only — generates a new invite code; old code stops working. */
+  regenerateInviteCode: async (householdId: string): Promise<Household> => {
+    const response = await apiClient.instance.post(`/households/${householdId}/regenerate-invite`);
+    return response.data;
+  },
 };
 

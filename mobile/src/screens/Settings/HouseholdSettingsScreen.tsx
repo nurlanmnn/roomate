@@ -1,16 +1,28 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, ActivityIndicator } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  TextInput,
+  ActivityIndicator,
+  Share,
+  Platform,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '../../components/AppText';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
-import { householdsApi, getOwnerIdString } from '../../api/householdsApi';
-import { Avatar } from '../../components/ui/Avatar';
+import { householdsApi, getOwnerIdString, HouseholdMember } from '../../api/householdsApi';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
+import { SettingsSection } from '../../components/Settings/SettingsSection';
+import { SettingsGroupCard } from '../../components/Settings/SettingsGroupCard';
+import { MemberRow } from '../../components/Settings/MemberRow';
 import * as Clipboard from 'expo-clipboard';
-import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows } from '../../theme';
 
 export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
@@ -19,12 +31,14 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
   const { t } = useLanguage();
   const colors = useThemeColors();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
+
   const [isOwner, setIsOwner] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState('');
   const [editAddress, setEditAddress] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
+  const [regenerating, setRegenerating] = useState(false);
 
   useEffect(() => {
     if (selectedHousehold && user) {
@@ -40,28 +54,14 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
     }
   }, [selectedHousehold]);
 
-  const handleStartEditing = () => {
-    if (selectedHousehold) {
-      setEditName(selectedHousehold.name);
-      setEditAddress(selectedHousehold.address || '');
-      setIsEditing(true);
-    }
-  };
-
-  const handleCancelEditing = () => {
-    setIsEditing(false);
-    if (selectedHousehold) {
-      setEditName(selectedHousehold.name);
-      setEditAddress(selectedHousehold.address || '');
-    }
-  };
+  const memberCount = selectedHousehold?.members.length ?? 0;
+  const ownerIdStr = selectedHousehold ? getOwnerIdString(selectedHousehold) : '';
 
   const handleSaveChanges = async () => {
     if (!selectedHousehold || !editName.trim()) {
       Alert.alert(t('common.error'), t('household.householdName'));
       return;
     }
-
     setIsSaving(true);
     try {
       const updated = await householdsApi.updateHousehold(selectedHousehold._id, {
@@ -70,25 +70,65 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
       });
       setSelectedHousehold(updated);
       setIsEditing(false);
-      Alert.alert(t('common.success'), t('common.success'));
-    } catch (error: any) {
-      Alert.alert(t('common.error'), error.response?.data?.error || t('alerts.somethingWentWrong'));
+      Alert.alert(t('common.success'), t('accountSettingsScreen.profileUpdated'));
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { error?: string } } };
+      Alert.alert(t('common.error'), err.response?.data?.error || t('alerts.somethingWentWrong'));
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleCopyCode = async () => {
-    if (selectedHousehold) {
-      await Clipboard.setStringAsync(selectedHousehold.joinCode);
-      Alert.alert(t('common.copied'), t('householdSettingsScreen.codeCopied'));
+    if (!selectedHousehold) return;
+    await Clipboard.setStringAsync(selectedHousehold.joinCode);
+    Alert.alert(t('common.copied'), t('householdSettingsScreen.codeCopied'));
+  };
+
+  const handleShare = async () => {
+    if (!selectedHousehold) return;
+    try {
+      await Share.share({
+        message: t('householdSettingsScreen.shareMessage', { code: selectedHousehold.joinCode }),
+        title: selectedHousehold.name,
+      });
+    } catch {
+      /* dismissed */
     }
   };
 
+  const handleRegenerate = () => {
+    if (!selectedHousehold || !isOwner) return;
+    Alert.alert(
+      t('householdSettingsScreen.regenerateConfirmTitle'),
+      t('householdSettingsScreen.regenerateConfirmBody'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('householdSettingsScreen.regenerateCode'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setRegenerating(true);
+              const updated = await householdsApi.regenerateInviteCode(selectedHousehold._id);
+              setSelectedHousehold(updated);
+            } catch (error: unknown) {
+              const err = error as { response?: { data?: { error?: string } } };
+              Alert.alert(
+                t('common.error'),
+                err.response?.data?.error || t('householdSettingsScreen.failedToRegenerate')
+              );
+            } finally {
+              setRegenerating(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleSwitchHousehold = () => {
-    // Clear selection first so the MainTabs guard can't bounce us back into tabs
     setSelectedHousehold(null);
-    // Reset stack to the household picker (more reliable than getParent().navigate)
     navigation.reset({
       index: 0,
       routes: [{ name: 'HouseholdSelect' }],
@@ -97,23 +137,20 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
 
   const handleLeaveHousehold = async () => {
     if (!selectedHousehold) return;
-
-    const memberCount = selectedHousehold.members.length;
-    let message = 'Are you sure you want to leave this household?';
-    
+    let message = t('householdSettingsScreen.leaveConfirm');
     if (isOwner) {
       if (memberCount === 1) {
-        message = 'You are the only member. Leaving will delete this household and all its data.';
+        message = t('householdSettingsScreen.leaveConfirm');
       } else {
-        const nextOwner = selectedHousehold.members.find(m => m._id !== user?._id);
-        message = `You are the owner. If you leave, ${nextOwner?.name || 'the next member'} will become the new owner.`;
+        const nextOwner = selectedHousehold.members.find((m) => m._id !== user?._id);
+        message = `${t('householdSettingsScreen.leaveOwnerHint')} ${nextOwner?.name || ''}`;
       }
     }
 
     Alert.alert(t('householdSettingsScreen.leaveHousehold'), message, [
-      { text: 'Cancel', style: 'cancel' },
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Leave',
+        text: t('householdSettingsScreen.leaveHousehold'),
         style: 'destructive',
         onPress: async () => {
           try {
@@ -123,8 +160,9 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
               index: 0,
               routes: [{ name: 'HouseholdSelect' }],
             });
-          } catch (error: any) {
-            Alert.alert(t('common.error'), error.response?.data?.error || t('householdSettingsScreen.failedToLeave'));
+          } catch (error: unknown) {
+            const err = error as { response?: { data?: { error?: string } } };
+            Alert.alert(t('common.error'), err.response?.data?.error || t('householdSettingsScreen.failedToLeave'));
           }
         },
       },
@@ -133,7 +171,6 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
 
   const handleDeleteHousehold = async () => {
     if (!selectedHousehold) return;
-
     Alert.alert(
       t('householdSettingsScreen.deleteHousehold'),
       t('householdSettingsScreen.deleteConfirm'),
@@ -151,8 +188,9 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
                 routes: [{ name: 'HouseholdSelect' }],
               });
               Alert.alert(t('common.deleted'), t('householdSettingsScreen.deleted'));
-            } catch (error: any) {
-              Alert.alert(t('common.error'), error.response?.data?.error || t('householdSettingsScreen.failedToDelete'));
+            } catch (error: unknown) {
+              const err = error as { response?: { data?: { error?: string } } };
+              Alert.alert(t('common.error'), err.response?.data?.error || t('householdSettingsScreen.failedToDelete'));
             }
           },
         },
@@ -164,7 +202,7 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
     if (!selectedHousehold) return;
     Alert.alert(
       t('householdSettingsScreen.removeMember'),
-      t('householdSettingsScreen.removeConfirm'),
+      t('householdSettingsScreen.removeConfirm', { name: memberName }),
       [
         { text: t('common.cancel'), style: 'cancel' },
         {
@@ -176,12 +214,12 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
               const updated = await householdsApi.removeMember(selectedHousehold._id, memberId);
               setSelectedHousehold(updated);
               if (user && user._id === memberId) {
-                // if somehow removing self (should be blocked on backend), reset
                 setSelectedHousehold(null);
                 navigation.reset({ index: 0, routes: [{ name: 'HouseholdSelect' }] });
               }
-            } catch (error: any) {
-              Alert.alert(t('common.error'), error.response?.data?.error || t('householdSettingsScreen.failedToRemoveMember'));
+            } catch (error: unknown) {
+              const err = error as { response?: { data?: { error?: string } } };
+              Alert.alert(t('common.error'), err.response?.data?.error || t('householdSettingsScreen.failedToRemoveMember'));
             } finally {
               setRemovingMemberId(null);
             }
@@ -189,6 +227,10 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
         },
       ]
     );
+  };
+
+  const roleForMember = (m: HouseholdMember): 'owner' | 'member' => {
+    return m._id === ownerIdStr ? 'owner' : 'member';
   };
 
   if (!selectedHousehold) {
@@ -201,365 +243,428 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
     );
   }
 
+  const householdDirty =
+    isEditing &&
+    isOwner &&
+    (editName.trim() !== selectedHousehold.name ||
+      (editAddress.trim() || '') !== (selectedHousehold.address || ''));
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <ScreenHeader title={t('householdSettingsScreen.title')} subtitle={selectedHousehold.name} />
 
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <AppText style={styles.sectionTitle}>{t('householdSettingsScreen.householdInfo')}</AppText>
-            {isOwner && !isEditing && (
-              <TouchableOpacity onPress={handleStartEditing} style={styles.editButton}>
-                <Ionicons name="pencil" size={18} color={colors.primary} />
-                <AppText style={styles.editButtonText}>{t('common.edit')}</AppText>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {isEditing ? (
-            <>
-              <View style={styles.inputGroup}>
+        <SettingsSection title={t('householdSettingsScreen.sectionHousehold')}>
+          <SettingsGroupCard>
+            {isOwner && isEditing ? (
+              <View style={styles.padded}>
                 <AppText style={styles.inputLabel}>{t('householdSettingsScreen.householdName')}</AppText>
                 <TextInput
                   style={styles.textInput}
                   value={editName}
                   onChangeText={setEditName}
                   placeholder={t('household.householdName')}
-                  placeholderTextColor={colors.textSecondary}
+                  placeholderTextColor={colors.textTertiary}
                 />
-              </View>
-              <View style={styles.inputGroup}>
-                <AppText style={styles.inputLabel}>{t('household.householdLocation')}</AppText>
+                <AppText style={[styles.inputLabel, styles.inputLabelSpaced]}>
+                  {t('householdSettingsScreen.householdLocation')}
+                </AppText>
                 <TextInput
                   style={styles.textInput}
                   value={editAddress}
                   onChangeText={setEditAddress}
-                  placeholder={t('householdSettingsScreen.householdLocation')}
-                  placeholderTextColor={colors.textSecondary}
+                  placeholder={t('household.householdLocation')}
+                  placeholderTextColor={colors.textTertiary}
                 />
-              </View>
-              <View style={styles.editActions}>
-                <TouchableOpacity
-                  style={[styles.editActionButton, styles.cancelButton]}
-                  onPress={handleCancelEditing}
-                  disabled={isSaving}
-                >
-                  <AppText style={styles.cancelButtonText}>{t('common.cancel')}</AppText>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.editActionButton, styles.saveButton, isSaving && styles.disabledButton]}
-                  onPress={handleSaveChanges}
-                  disabled={isSaving}
-                >
-                  <AppText style={styles.saveButtonText}>{isSaving ? t('common.loading') : t('common.save')}</AppText>
-                </TouchableOpacity>
-              </View>
-            </>
-          ) : (
-            <>
-              <View style={styles.infoRow}>
-                <AppText style={styles.infoLabel}>{t('householdSettingsScreen.householdName')}</AppText>
-                <AppText style={styles.infoValue}>{selectedHousehold.name}</AppText>
-              </View>
-              {selectedHousehold.address && (
-                <View style={styles.infoRow}>
-                  <AppText style={styles.infoLabel}>{t('householdSettingsScreen.householdLocation')}</AppText>
-                  <AppText style={styles.infoValue}>{selectedHousehold.address}</AppText>
-                </View>
-              )}
-            </>
-          )}
-
-          <View style={styles.infoRow}>
-            <AppText style={styles.infoLabel}>{t('householdSettingsScreen.inviteCode')}</AppText>
-            <View style={styles.joinCodeRow}>
-              <AppText style={styles.infoValue}>{selectedHousehold.joinCode}</AppText>
-              <TouchableOpacity onPress={handleCopyCode} style={styles.copyButton}>
-                <Ionicons name="copy-outline" size={18} color={colors.primary} />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View style={styles.codeActions}>
-            <PrimaryButton
-              title={t('householdSettingsScreen.copyCode')}
-              onPress={handleCopyCode}
-              variant="secondary"
-            />
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <AppText style={styles.sectionTitle}>{t('householdSettingsScreen.members')}</AppText>
-          {selectedHousehold.members.map((m) => {
-            const ownerIdStr = getOwnerIdString(selectedHousehold);
-            const isOwnerMember = m._id === ownerIdStr;
-            const canRemove = isOwner && !isOwnerMember;
-            return (
-              <View key={m._id} style={styles.memberRow}>
-                <Avatar name={m.name} uri={m.avatarUrl} size={40} />
-                <View style={styles.memberInfo}>
-                  <AppText style={styles.memberName}>{m.name}</AppText>
-                  <AppText style={styles.memberEmail}>{m.email}</AppText>
-                </View>
-                {isOwnerMember && (
-                  <View style={styles.ownerBadge}>
-                    <AppText style={styles.ownerBadgeText}>{t('householdSettingsScreen.owner')}</AppText>
-                  </View>
-                )}
-                {canRemove && (
+                <View style={styles.editRow}>
                   <TouchableOpacity
-                    style={styles.removeButton}
-                    onPress={() => handleRemoveMember(m._id, m.name)}
-                    disabled={removingMemberId === m._id}
+                    style={[styles.chipButton, styles.chipCancel]}
+                    onPress={() => {
+                      setIsEditing(false);
+                      setEditName(selectedHousehold.name);
+                      setEditAddress(selectedHousehold.address || '');
+                    }}
+                    disabled={isSaving}
                   >
-                    {removingMemberId === m._id ? (
-                      <ActivityIndicator size="small" color={colors.danger} />
+                    <AppText style={styles.chipCancelText}>{t('common.cancel')}</AppText>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.chipButton, styles.chipSave, (!householdDirty || isSaving) && styles.chipDisabled]}
+                    onPress={handleSaveChanges}
+                    disabled={!householdDirty || isSaving}
+                  >
+                    {isSaving ? (
+                      <ActivityIndicator color="#FFFFFF" />
                     ) : (
-                      <Ionicons name="person-remove-outline" size={20} color={colors.danger} />
+                      <AppText style={styles.chipSaveText}>{t('common.save')}</AppText>
                     )}
                   </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.padded}>
+                <View style={styles.displayRow}>
+                  <AppText style={styles.displayLabel}>{t('householdSettingsScreen.householdName')}</AppText>
+                  <AppText style={styles.displayValue}>{selectedHousehold.name}</AppText>
+                </View>
+                <View style={styles.displayRow}>
+                  <AppText style={styles.displayLabel}>{t('householdSettingsScreen.householdLocation')}</AppText>
+                  <AppText style={styles.displayValue}>
+                    {selectedHousehold.address || '—'}
+                  </AppText>
+                </View>
+                {isOwner ? (
+                  <TouchableOpacity style={styles.editLink} onPress={() => setIsEditing(true)} activeOpacity={0.7}>
+                    <Ionicons name="create-outline" size={18} color={colors.primary} />
+                    <AppText style={styles.editLinkText}>{t('common.edit')}</AppText>
+                  </TouchableOpacity>
+                ) : (
+                  <AppText style={styles.readOnlyNote}>{t('householdSettingsScreen.ownerOnlyEdit')}</AppText>
                 )}
               </View>
-            );
-          })}
-        </View>
+            )}
+          </SettingsGroupCard>
+        </SettingsSection>
 
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <AppText style={styles.sectionTitle}>{t('householdSettingsScreen.actions')}</AppText>
-          </View>
-          <PrimaryButton
-            title={t('household.selectHousehold')}
-            onPress={handleSwitchHousehold}
-          />
-          <View style={styles.spacer} />
-          <PrimaryButton
-            title={t('householdSettingsScreen.leaveHousehold')}
-            onPress={handleLeaveHousehold}
-            variant="danger"
-          />
-          {isOwner && (
+        <SettingsSection title={t('householdSettingsScreen.sectionInvite')}>
+          <AppText style={styles.sectionHint}>{t('householdSettingsScreen.inviteHint')}</AppText>
+          <SettingsGroupCard>
+            <View style={styles.inviteRow}>
+              <View style={styles.codeBadge}>
+                <AppText style={styles.codeBadgeText}>{selectedHousehold.joinCode}</AppText>
+              </View>
+              <TouchableOpacity onPress={handleCopyCode} style={styles.iconBtn} hitSlop={10}>
+                <Ionicons name="copy-outline" size={22} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.inviteActions}>
+              <View style={styles.inviteActionHalf}>
+                <PrimaryButton title={t('householdSettingsScreen.shareInvite')} onPress={handleShare} variant="secondary" />
+              </View>
+              <View style={styles.inviteActionHalf}>
+                <PrimaryButton title={t('householdSettingsScreen.copyCode')} onPress={handleCopyCode} variant="outline" />
+              </View>
+            </View>
+            {isOwner ? (
+              <View style={styles.regenWrap}>
+                <TouchableOpacity
+                  style={[styles.regenButton, regenerating && styles.chipDisabled]}
+                  onPress={handleRegenerate}
+                  disabled={regenerating}
+                  activeOpacity={0.7}
+                >
+                  {regenerating ? (
+                    <ActivityIndicator size="small" color={colors.danger} />
+                  ) : (
+                    <>
+                      <Ionicons name="refresh-outline" size={18} color={colors.danger} />
+                      <AppText style={styles.regenText}>{t('householdSettingsScreen.regenerateCode')}</AppText>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            ) : null}
+          </SettingsGroupCard>
+        </SettingsSection>
+
+        <SettingsSection title={t('householdSettingsScreen.sectionMembers')}>
+          <SettingsGroupCard>
+            {selectedHousehold.members.map((m, index) => {
+              const role = roleForMember(m);
+              const canRemove = isOwner && role === 'member';
+              return (
+                <MemberRow
+                  key={m._id}
+                  name={m.name}
+                  email={m.email}
+                  avatarUrl={m.avatarUrl}
+                  role={role}
+                  roleLabel={role === 'owner' ? t('householdSettingsScreen.owner') : t('householdSettingsScreen.member')}
+                  showRemove={canRemove}
+                  removing={removingMemberId === m._id}
+                  onRemove={canRemove ? () => handleRemoveMember(m._id, m.name) : undefined}
+                  isLast={index === selectedHousehold.members.length - 1}
+                />
+              );
+            })}
+          </SettingsGroupCard>
+        </SettingsSection>
+
+        <SettingsSection title={t('householdSettingsScreen.sectionActions')}>
+          <TouchableOpacity style={styles.switchRow} onPress={handleSwitchHousehold} activeOpacity={0.7}>
+            <View style={styles.switchRowLeft}>
+              <Ionicons name="swap-horizontal-outline" size={22} color={colors.textSecondary} />
+              <View style={styles.switchRowText}>
+                <AppText style={styles.switchTitle}>{t('householdSettingsScreen.switchHousehold')}</AppText>
+                <AppText style={styles.switchHint}>{t('householdSettingsScreen.switchHouseholdHint')}</AppText>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
+          </TouchableOpacity>
+
+          <View style={styles.actionSpacer} />
+
+          {!isOwner ? (
+            <TouchableOpacity style={styles.leaveOutline} onPress={handleLeaveHousehold} activeOpacity={0.8}>
+              <AppText style={styles.leaveOutlineText}>{t('householdSettingsScreen.leaveHousehold')}</AppText>
+              <AppText style={styles.leaveOutlineHint}>{t('householdSettingsScreen.leaveHouseholdHint')}</AppText>
+            </TouchableOpacity>
+          ) : (
             <>
-              <View style={styles.spacer} />
+              {memberCount > 1 ? (
+                <TouchableOpacity style={styles.leaveOutline} onPress={handleLeaveHousehold} activeOpacity={0.8}>
+                  <AppText style={styles.leaveOutlineText}>{t('householdSettingsScreen.leaveHousehold')}</AppText>
+                  <AppText style={styles.leaveOutlineHint}>{t('householdSettingsScreen.leaveOwnerHint')}</AppText>
+                </TouchableOpacity>
+              ) : null}
+              <View style={styles.actionSpacer} />
               <PrimaryButton
                 title={t('householdSettingsScreen.deleteHousehold')}
                 onPress={handleDeleteHousehold}
                 variant="danger"
               />
-              <View style={styles.ownerNoteContainer}>
-                <Ionicons name="information-circle-outline" size={20} color={colors.warning} />
-                <AppText style={styles.ownerNote}>
-                  {t('householdSettingsScreen.ownershipTransfer')}
-                </AppText>
-              </View>
+              <AppText style={styles.deleteHint}>{t('householdSettingsScreen.deleteHouseholdHint')}</AppText>
             </>
           )}
-        </View>
+        </SettingsSection>
+
+        <View style={styles.bottomPad} />
       </ScrollView>
     </SafeAreaView>
   );
 };
 
-const createStyles = (colors: any) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: spacing.xl,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.xl,
-  },
-  emptyText: {
-    fontSize: fontSizes.lg,
-    color: colors.textSecondary,
-  },
-  section: {
-    backgroundColor: colors.surface,
-    padding: spacing.lg,
-    marginHorizontal: spacing.md,
-    marginTop: spacing.md,
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    ...(shadows.sm as object),
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  sectionTitle: {
-    fontSize: fontSizes.lg,
-    fontWeight: fontWeights.bold,
-    color: colors.text,
-  },
-  editButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radii.sm,
-    backgroundColor: colors.primaryUltraSoft,
-  },
-  editButtonText: {
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.semibold,
-    color: colors.primary,
-  },
-  inputGroup: {
-    marginBottom: spacing.md,
-  },
-  inputLabel: {
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.medium,
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-  },
-  textInput: {
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    fontSize: fontSizes.md,
-    color: colors.text,
-  },
-  editActions: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  editActionButton: {
-    flex: 1,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.md,
-    alignItems: 'center',
-  },
-  cancelButton: {
-    backgroundColor: colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  cancelButtonText: {
-    fontSize: fontSizes.md,
-    fontWeight: fontWeights.semibold,
-    color: colors.textSecondary,
-  },
-  saveButton: {
-    backgroundColor: colors.primary,
-  },
-  saveButtonText: {
-    fontSize: fontSizes.md,
-    fontWeight: fontWeights.semibold,
-    color: colors.textOnPrimary,
-  },
-  disabledButton: {
-    opacity: 0.6,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-  },
-  infoLabel: {
-    fontSize: fontSizes.md,
-    color: colors.textSecondary,
-    fontWeight: fontWeights.medium,
-  },
-  infoValue: {
-    fontSize: fontSizes.md,
-    color: colors.text,
-    fontWeight: fontWeights.semibold,
-    flex: 1,
-    textAlign: 'right',
-  },
-  joinCodeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    flex: 1,
-  },
-  copyButton: {
-    padding: spacing.xs,
-  },
-  codeActions: {
-    marginTop: spacing.md,
-  },
-  spacer: {
-    height: spacing.sm,
-  },
-  membersSection: {
-    marginTop: spacing.md,
-  },
-  membersTitle: {
-    fontSize: fontSizes.md,
-    fontWeight: fontWeights.semibold,
-    color: colors.text,
-    marginBottom: spacing.sm,
-  },
-  memberRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-    gap: spacing.md,
-  },
-  memberInfo: {
-    flex: 1,
-  },
-  memberName: {
-    fontSize: fontSizes.md,
-    fontWeight: fontWeights.semibold,
-    color: colors.text,
-  },
-  memberEmail: {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
-    marginTop: spacing.xxs,
-  },
-  ownerBadge: {
-    backgroundColor: colors.primaryUltraSoft,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radii.sm,
-  },
-  ownerBadgeText: {
-    fontSize: fontSizes.xs,
-    fontWeight: fontWeights.semibold,
-    color: colors.primary,
-  },
-  ownerNoteContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginTop: spacing.md,
-    padding: spacing.md,
-    backgroundColor: colors.warningUltraSoft,
-    borderRadius: radii.md,
-    gap: spacing.sm,
-  },
-  ownerNote: {
-    flex: 1,
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
-    lineHeight: 20,
-  },
-});
-
+const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    scrollView: { flex: 1 },
+    scrollContent: {
+      paddingBottom: spacing.xxl,
+    },
+    emptyContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: spacing.xl,
+    },
+    emptyText: {
+      fontSize: fontSizes.lg,
+      color: colors.textSecondary,
+    },
+    sectionHint: {
+      fontSize: fontSizes.sm,
+      color: colors.textSecondary,
+      marginBottom: spacing.sm,
+      lineHeight: 20,
+    },
+    padded: {
+      padding: spacing.md,
+    },
+    inputLabel: {
+      fontSize: fontSizes.xs,
+      fontWeight: fontWeights.semibold,
+      color: colors.textSecondary,
+      marginBottom: spacing.xs,
+    },
+    inputLabelSpaced: {
+      marginTop: spacing.md,
+    },
+    textInput: {
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.md,
+      paddingHorizontal: spacing.md,
+      paddingVertical: Platform.OS === 'ios' ? spacing.sm : spacing.xs,
+      fontSize: fontSizes.md,
+      color: colors.text,
+    },
+    editRow: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+      marginTop: spacing.lg,
+    },
+    chipButton: {
+      flex: 1,
+      paddingVertical: spacing.md,
+      borderRadius: radii.md,
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: 48,
+    },
+    chipCancel: {
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    chipCancelText: {
+      fontSize: fontSizes.md,
+      fontWeight: fontWeights.semibold,
+      color: colors.textSecondary,
+    },
+    chipSave: {
+      backgroundColor: colors.primary,
+    },
+    chipSaveText: {
+      fontSize: fontSizes.md,
+      fontWeight: fontWeights.semibold,
+      color: '#FFFFFF',
+    },
+    chipDisabled: {
+      opacity: 0.5,
+    },
+    displayRow: {
+      paddingVertical: spacing.sm,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.borderLight,
+    },
+    displayLabel: {
+      fontSize: fontSizes.xs,
+      fontWeight: fontWeights.semibold,
+      color: colors.textTertiary,
+      marginBottom: 4,
+    },
+    displayValue: {
+      fontSize: fontSizes.md,
+      fontWeight: fontWeights.semibold,
+      color: colors.text,
+    },
+    editLink: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      marginTop: spacing.md,
+      alignSelf: 'flex-start',
+    },
+    editLinkText: {
+      fontSize: fontSizes.sm,
+      fontWeight: fontWeights.semibold,
+      color: colors.primary,
+    },
+    readOnlyNote: {
+      fontSize: fontSizes.sm,
+      color: colors.textTertiary,
+      marginTop: spacing.md,
+    },
+    inviteRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: spacing.md,
+      gap: spacing.md,
+    },
+    codeBadge: {
+      flex: 1,
+      backgroundColor: colors.background,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+      borderRadius: radii.md,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+    },
+    codeBadgeText: {
+      fontSize: fontSizes.xl,
+      fontWeight: fontWeights.bold,
+      letterSpacing: 4,
+      color: colors.text,
+      fontVariant: ['tabular-nums'],
+    },
+    iconBtn: {
+      padding: spacing.sm,
+    },
+    inviteActions: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+      paddingHorizontal: spacing.md,
+      paddingBottom: spacing.md,
+    },
+    inviteActionHalf: {
+      flex: 1,
+    },
+    regenWrap: {
+      paddingHorizontal: spacing.md,
+      paddingBottom: spacing.md,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.borderLight,
+    },
+    regenButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: spacing.sm,
+      paddingVertical: spacing.sm,
+    },
+    regenText: {
+      fontSize: fontSizes.sm,
+      fontWeight: fontWeights.semibold,
+      color: colors.danger,
+    },
+    switchRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.md,
+      backgroundColor: colors.surface,
+      borderRadius: radii.lg,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      ...(shadows.sm as object),
+    },
+    switchRowLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+      flex: 1,
+    },
+    switchRowText: {
+      flex: 1,
+    },
+    switchTitle: {
+      fontSize: fontSizes.md,
+      fontWeight: fontWeights.semibold,
+      color: colors.text,
+    },
+    switchHint: {
+      fontSize: fontSizes.sm,
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+    actionSpacer: {
+      height: spacing.md,
+    },
+    leaveOutline: {
+      padding: spacing.lg,
+      borderRadius: radii.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+    },
+    leaveOutlineText: {
+      fontSize: fontSizes.md,
+      fontWeight: fontWeights.semibold,
+      color: colors.text,
+      marginBottom: spacing.xs,
+    },
+    leaveOutlineHint: {
+      fontSize: fontSizes.sm,
+      color: colors.textSecondary,
+      lineHeight: 18,
+    },
+    deleteHint: {
+      fontSize: fontSizes.sm,
+      color: colors.textSecondary,
+      marginTop: spacing.sm,
+      lineHeight: 18,
+    },
+    bottomPad: {
+      height: spacing.xl,
+    },
+  });

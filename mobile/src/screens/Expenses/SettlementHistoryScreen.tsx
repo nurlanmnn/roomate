@@ -1,22 +1,24 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Modal, RefreshControl } from 'react-native';
+import { View, StyleSheet, ScrollView, Image, TouchableOpacity, Modal, RefreshControl } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
 import { settlementsApi, Settlement } from '../../api/settlementsApi';
-import { ScreenHeader } from '../../components/ui/ScreenHeader';
 import { Avatar } from '../../components/ui/Avatar';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { AppText } from '../../components/AppText';
+import { SettingsSection } from '../../components/Settings/SettingsSection';
+import { SettingsGroupCard } from '../../components/Settings/SettingsGroupCard';
 import { formatCurrency } from '../../utils/formatCurrency';
-import { formatDate, formatDateTime } from '../../utils/dateHelpers';
-import { useThemeColors, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
+import { formatDate } from '../../utils/dateHelpers';
+import { useThemeColors, fontSizes, fontWeights, radii, spacing } from '../../theme';
 import { Ionicons } from '@expo/vector-icons';
-import { parseISO, subMonths, subYears, startOfMonth, startOfYear } from 'date-fns';
+import { parseISO, subMonths, startOfMonth, startOfYear } from 'date-fns';
 import { useLanguage } from '../../context/LanguageContext';
 
 type DateFilter = 'all' | 'month' | '3months' | '6months' | 'year';
 
-export const SettlementHistoryScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
+export const SettlementHistoryScreen: React.FC<{ navigation: any }> = () => {
   const { selectedHousehold } = useHousehold();
   const { user } = useAuth();
   const colors = useThemeColors();
@@ -34,26 +36,15 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = ({ navigat
         },
         scrollContent: {
           flexGrow: 1,
+          paddingBottom: spacing.xxl,
         },
-        subtitleContainer: {
-          paddingHorizontal: spacing.xl,
-          paddingTop: spacing.sm,
-          paddingBottom: spacing.xs,
-        },
-        subtitle: {
-          fontSize: fontSizes.sm,
-          color: colors.textSecondary,
-          fontWeight: fontWeights.medium,
-        },
-        filterContainer: {
-          paddingHorizontal: spacing.xl,
-          paddingTop: spacing.md,
-          paddingBottom: spacing.sm,
+        householdLine: {
+          fontSize: fontSizes.md,
+          fontWeight: fontWeights.semibold,
+          color: colors.text,
         },
         filterRow: {
           flexDirection: 'row',
-          backgroundColor: colors.background,
-          borderRadius: radii.md,
           padding: spacing.xxs,
           gap: spacing.xxs,
         },
@@ -91,17 +82,8 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = ({ navigat
           textAlign: 'center',
           marginTop: spacing.xl,
         },
-        section: {
+        cardPad: {
           padding: spacing.lg,
-        },
-        settlementCard: {
-          backgroundColor: colors.surface,
-          padding: spacing.lg,
-          borderRadius: radii.lg,
-          marginBottom: spacing.md,
-          borderWidth: 1,
-          borderColor: colors.borderLight,
-          ...(shadows.sm as object),
         },
         settlementHeader: {
           flexDirection: 'row',
@@ -248,7 +230,7 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = ({ navigat
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.emptyContainer}>
-          <Text>{t('alerts.selectHousehold')}</Text>
+          <AppText>{t('alerts.selectHousehold')}</AppText>
         </View>
       </SafeAreaView>
     );
@@ -260,125 +242,150 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = ({ navigat
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={loadSettlements} />}
+        showsVerticalScrollIndicator={false}
       >
-        {/* Subtitle */}
-        <View style={styles.subtitleContainer}>
-          <Text style={styles.subtitle}>{selectedHousehold.name}</Text>
-        </View>
+        <SettingsSection title={t('settlementHistory.sectionHousehold')}>
+          <SettingsGroupCard>
+            <View style={styles.cardPad}>
+              <AppText style={styles.householdLine}>{selectedHousehold.name}</AppText>
+            </View>
+          </SettingsGroupCard>
+        </SettingsSection>
 
-        {/* Date Filter */}
-        <View style={styles.filterContainer}>
-          <View style={styles.filterRow}>
-            {(['all', 'month', '3months', '6months', 'year'] as DateFilter[]).map((filter) => (
-              <TouchableOpacity
-                key={filter}
-                style={[
-                  styles.filterButton,
-                  dateFilter === filter && styles.filterButtonActive,
-                ]}
-                onPress={() => setDateFilter(filter)}
-              >
-                <Text
+        <SettingsSection title={t('settlementHistory.sectionPeriod')}>
+          <SettingsGroupCard>
+            <View style={styles.filterRow}>
+              {(['all', 'month', '3months', '6months', 'year'] as DateFilter[]).map((filter) => (
+                <TouchableOpacity
+                  key={filter}
                   style={[
-                    styles.filterButtonText,
-                    dateFilter === filter && styles.filterButtonTextActive,
+                    styles.filterButton,
+                    dateFilter === filter && styles.filterButtonActive,
                   ]}
+                  onPress={() => setDateFilter(filter)}
+                  activeOpacity={0.85}
                 >
-                  {filter === 'all' ? t('time.all') : filter === 'month' ? '1M' : filter === '3months' ? '3M' : filter === '6months' ? '6M' : '1Y'}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
+                  <AppText
+                    style={[
+                      styles.filterButtonText,
+                      dateFilter === filter && styles.filterButtonTextActive,
+                    ]}
+                  >
+                    {filter === 'all'
+                      ? t('time.all')
+                      : filter === 'month'
+                        ? '1M'
+                        : filter === '3months'
+                          ? '3M'
+                          : filter === '6months'
+                            ? '6M'
+                            : '1Y'}
+                  </AppText>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </SettingsGroupCard>
+        </SettingsSection>
 
         {loading ? (
           <View style={styles.emptyContainer}>
-            <Text style={styles.loadingText}>{t('settlementHistory.loading')}</Text>
+            <AppText style={styles.loadingText}>{t('settlementHistory.loading')}</AppText>
           </View>
         ) : filteredSettlements.length === 0 ? (
           <View style={styles.emptyContainer}>
             <EmptyState
               icon="receipt-outline"
-              title={settlements.length === 0 ? t('settlementHistory.noSettlements') : t('settlementHistory.noSettlementsInPeriod')}
-              message={settlements.length === 0 
-                ? t('settlementHistory.noSettlementsDescription')
-                : t('settlementHistory.tryDifferentPeriod')}
+              title={
+                settlements.length === 0
+                  ? t('settlementHistory.noSettlements')
+                  : t('settlementHistory.noSettlementsInPeriod')
+              }
+              message={
+                settlements.length === 0
+                  ? t('settlementHistory.noSettlementsDescription')
+                  : t('settlementHistory.tryDifferentPeriod')
+              }
               variant="minimal"
             />
           </View>
         ) : (
-          <View style={styles.section}>
-            {filteredSettlements.map((settlement) => {
-              // Handle cases where fromUserId or toUserId might be null or not populated
-              // Backend populates them as objects, but handle both cases
-              const fromUserId = typeof settlement.fromUserId === 'object' && settlement.fromUserId !== null
-                ? settlement.fromUserId._id
-                : (settlement.fromUserId as any);
-              const toUserId = typeof settlement.toUserId === 'object' && settlement.toUserId !== null
-                ? settlement.toUserId._id
-                : (settlement.toUserId as any);
-              
-              // Handle null users (deleted users) - use fallback names
-              const fromUserName = fromUserId 
+          <SettingsSection title={t('settlementHistory.sectionList')}>
+            {filteredSettlements.map((settlement, index) => {
+              const fromUserId =
+                typeof settlement.fromUserId === 'object' && settlement.fromUserId !== null
+                  ? settlement.fromUserId._id
+                  : (settlement.fromUserId as string);
+              const toUserId =
+                typeof settlement.toUserId === 'object' && settlement.toUserId !== null
+                  ? settlement.toUserId._id
+                  : (settlement.toUserId as string);
+
+              const fromUserName = fromUserId
                 ? getUserName(fromUserId)
-                : (typeof settlement.fromUserId === 'object' && settlement.fromUserId !== null
-                    ? settlement.fromUserId.name || 'Unknown User'
-                    : 'Unknown User');
+                : typeof settlement.fromUserId === 'object' && settlement.fromUserId !== null
+                  ? settlement.fromUserId.name || 'Unknown User'
+                  : 'Unknown User';
               const toUserName = toUserId
                 ? getUserName(toUserId)
-                : (typeof settlement.toUserId === 'object' && settlement.toUserId !== null
-                    ? settlement.toUserId.name || 'Unknown User'
-                    : 'Unknown User');
-              
+                : typeof settlement.toUserId === 'object' && settlement.toUserId !== null
+                  ? settlement.toUserId.name || 'Unknown User'
+                  : 'Unknown User';
+
               const fromUserAvatar = fromUserId ? getUserAvatar(fromUserId) : undefined;
-              const toUserAvatar = toUserId ? getUserAvatar(toUserId) : undefined;
-              const isCurrentUser = user._id === fromUserId;
 
               return (
-                <View key={settlement._id} style={styles.settlementCard}>
-                  <View style={styles.settlementHeader}>
-                    <View style={styles.userInfo}>
-                      <Avatar name={fromUserName} uri={fromUserAvatar} size={32} />
-                      <Text style={styles.settlementText}>
-                        <Text style={styles.userName}>{fromUserName}</Text>
-                        {` ${t('settlementHistory.paid')} `}
-                        <Text style={styles.userName}>{toUserName}</Text>
-                      </Text>
+                <SettingsGroupCard
+                  key={settlement._id}
+                  style={{
+                    marginBottom: index < filteredSettlements.length - 1 ? spacing.md : 0,
+                  }}
+                >
+                  <View style={styles.cardPad}>
+                    <View style={styles.settlementHeader}>
+                      <View style={styles.userInfo}>
+                        <Avatar name={fromUserName} uri={fromUserAvatar} size={32} />
+                        <AppText style={styles.settlementText}>
+                          <AppText style={styles.userName}>{fromUserName}</AppText>
+                          {` ${t('settlementHistory.paid')} `}
+                          <AppText style={styles.userName}>{toUserName}</AppText>
+                        </AppText>
+                      </View>
+                      <AppText style={styles.amount}>{formatCurrency(settlement.amount)}</AppText>
                     </View>
-                    <Text style={styles.amount}>{formatCurrency(settlement.amount)}</Text>
-                  </View>
 
-                  <View style={styles.settlementDetails}>
-                    <View style={styles.detailRow}>
-                      <Ionicons name="calendar-outline" size={16} color={colors.textSecondary} />
-                      <Text style={styles.detailText}>{formatDate(settlement.date)}</Text>
+                    <View style={styles.settlementDetails}>
+                      <View style={styles.detailRow}>
+                        <Ionicons name="calendar-outline" size={16} color={colors.textSecondary} />
+                        <AppText style={styles.detailText}>{formatDate(settlement.date)}</AppText>
+                      </View>
+                      {settlement.method ? (
+                        <View style={styles.detailRow}>
+                          <Ionicons name="card-outline" size={16} color={colors.textSecondary} />
+                          <AppText style={styles.detailText}>{settlement.method}</AppText>
+                        </View>
+                      ) : null}
+                      {settlement.note ? (
+                        <View style={styles.detailRow}>
+                          <Ionicons name="document-text-outline" size={16} color={colors.textSecondary} />
+                          <AppText style={styles.detailText}>{settlement.note}</AppText>
+                        </View>
+                      ) : null}
+                      {settlement.proofImageUrl ? (
+                        <TouchableOpacity
+                          style={styles.proofButton}
+                          onPress={() => setSelectedProofImage(settlement.proofImageUrl || null)}
+                          activeOpacity={0.75}
+                        >
+                          <Ionicons name="image-outline" size={16} color={colors.primary} />
+                          <AppText style={styles.proofButtonText}>{t('settlementHistory.viewProof')}</AppText>
+                        </TouchableOpacity>
+                      ) : null}
                     </View>
-                    {settlement.method && (
-                      <View style={styles.detailRow}>
-                        <Ionicons name="card-outline" size={16} color={colors.textSecondary} />
-                        <Text style={styles.detailText}>{settlement.method}</Text>
-                      </View>
-                    )}
-                    {settlement.note && (
-                      <View style={styles.detailRow}>
-                        <Ionicons name="document-text-outline" size={16} color={colors.textSecondary} />
-                        <Text style={styles.detailText}>{settlement.note}</Text>
-                      </View>
-                    )}
-                    {settlement.proofImageUrl && (
-                      <TouchableOpacity
-                        style={styles.proofButton}
-                        onPress={() => setSelectedProofImage(settlement.proofImageUrl || null)}
-                      >
-                        <Ionicons name="image-outline" size={16} color={colors.primary} />
-                        <Text style={styles.proofButtonText}>{t('settlementHistory.viewProof')}</Text>
-                      </TouchableOpacity>
-                    )}
                   </View>
-                </View>
+                </SettingsGroupCard>
               );
             })}
-          </View>
+          </SettingsSection>
         )}
       </ScrollView>
 

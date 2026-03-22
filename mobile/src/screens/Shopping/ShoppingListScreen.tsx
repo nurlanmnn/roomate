@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert, Modal, KeyboardAvoidingView, Platform } from 'react-native';
 import { AppText } from '../../components/AppText';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,7 +9,10 @@ import { shoppingApi, ShoppingItem, ShoppingList, WeightUnit } from '../../api/s
 import { ShoppingItemRow } from '../../components/ShoppingItemRow';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { EmptyState } from '../../components/ui/EmptyState';
-import { ShoppingHeader } from '../../components/Shopping/ShoppingHeader';
+import { ScreenHeader } from '../../components/ui/ScreenHeader';
+import { SearchBar } from '../../components/ui/SearchBar';
+import { SettingsSection } from '../../components/Settings/SettingsSection';
+import { SettingsGroupCard } from '../../components/Settings/SettingsGroupCard';
 import { ListTabs } from '../../components/Shopping/ListTabs';
 import { ActiveListCard } from '../../components/Shopping/ActiveListCard';
 import { SectionHeader } from '../../components/Shopping/SectionHeader';
@@ -30,7 +33,7 @@ export const ShoppingListScreen: React.FC = () => {
   const { t } = useLanguage();
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
-  const styles = React.useMemo(() => createStyles(colors, insets.bottom), [colors, insets.bottom]);
+  const styles = useMemo(() => createStyles(colors, insets.bottom), [colors, insets.bottom]);
   const [lists, setLists] = useState<ShoppingList[]>([]);
   const [selectedList, setSelectedList] = useState<ShoppingList | null>(null);
   const [items, setItems] = useState<ShoppingItem[]>([]);
@@ -451,47 +454,63 @@ export const ShoppingListScreen: React.FC = () => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
-        <ShoppingHeader
-          title={t('shopping.title')}
-          subtitle={selectedHousehold.name}
-          searchValue={searchQuery}
-          onSearchChange={setSearchQuery}
-          searchPlaceholder={t('common.search')}
-        />
-
-        <ListTabs
-          lists={filteredLists}
-          selectedListId={selectedList?._id ?? null}
-          onSelectList={setSelectedList}
-          onLongPressList={handleEditList}
-          onAddList={() => {
-            setEditingList(null);
-            setNewListName('');
-            setShowListModal(true);
-          }}
-          newListLabel={t('shopping.createList')}
-        />
-
         <ScrollView
           ref={scrollRef}
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           refreshControl={<RefreshControl refreshing={loading} onRefresh={loadLists} />}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
+          <ScreenHeader title={t('shopping.title')} subtitle={selectedHousehold.name} />
+
+          <SettingsSection title={t('shopping.sectionSearch')}>
+            <SettingsGroupCard>
+              <View style={styles.searchPad}>
+                <SearchBar
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  placeholder={t('common.search')}
+                />
+              </View>
+            </SettingsGroupCard>
+          </SettingsSection>
+
+          <SettingsSection title={t('shopping.yourLists')}>
+            <SettingsGroupCard>
+              <ListTabs
+                embedded
+                lists={filteredLists}
+                selectedListId={selectedList?._id ?? null}
+                onSelectList={setSelectedList}
+                onLongPressList={handleEditList}
+                onAddList={() => {
+                  setEditingList(null);
+                  setNewListName('');
+                  setShowListModal(true);
+                }}
+                newListLabel={t('shopping.createList')}
+              />
+            </SettingsGroupCard>
+          </SettingsSection>
+
           {selectedList ? (
             <>
-              <ActiveListCard
-                listName={selectedList.name}
-                toBuyCount={filteredItems.length}
-                completedCount={filteredCompletedItems.length}
-                itemLabel={t('shopping.item')}
-                itemsLabel={t('shopping.items')}
-                onEdit={() => handleEditList(selectedList)}
-                onDelete={() => handleDeleteList(selectedList)}
-              />
+              <SettingsSection title={t('shopping.sectionCurrentList')}>
+                <SettingsGroupCard>
+                  <ActiveListCard
+                    embedded
+                    listName={selectedList.name}
+                    toBuyCount={filteredItems.length}
+                    completedCount={filteredCompletedItems.length}
+                    itemLabel={t('shopping.item')}
+                    itemsLabel={t('shopping.items')}
+                    onEdit={() => handleEditList(selectedList)}
+                    onDelete={() => handleDeleteList(selectedList)}
+                  />
+                </SettingsGroupCard>
+              </SettingsSection>
 
-              {/* Items Section */}
               {filteredItems.length === 0 && filteredCompletedItems.length === 0 ? (
                 <View style={styles.emptyStateWrap}>
                   <EmptyState
@@ -504,14 +523,14 @@ export const ShoppingListScreen: React.FC = () => {
                 </View>
               ) : (
                 <>
-                  {filteredItems.length > 0 && (
-                    <View style={styles.itemsSection}>
-                      <SectionHeader title={t('shoppingList.toBuy')} />
-                      <View style={styles.itemsCard}>
+                  {filteredItems.length > 0 ? (
+                    <SettingsSection title={t('shoppingList.toBuy')}>
+                      <SettingsGroupCard>
                         {filteredItems.map((item, index) => (
                           <ShoppingItemRow
                             key={item._id}
                             item={item}
+                            inGroupCard
                             onToggle={() => handleToggleComplete(item)}
                             onEdit={() => handleEditItem(item)}
                             onDelete={() => handleDelete(item)}
@@ -519,13 +538,14 @@ export const ShoppingListScreen: React.FC = () => {
                             isLast={index === filteredItems.length - 1}
                           />
                         ))}
-                      </View>
-                    </View>
-                  )}
+                      </SettingsGroupCard>
+                    </SettingsSection>
+                  ) : null}
 
-                  {filteredCompletedItems.length > 0 && (
-                    <View style={styles.itemsSection}>
+                  {filteredCompletedItems.length > 0 ? (
+                    <View style={styles.completedSection}>
                       <SectionHeader
+                        embedded
                         title={t('shopping.completedItems')}
                         count={filteredCompletedItems.length}
                         collapsed={!showCompleted}
@@ -533,12 +553,13 @@ export const ShoppingListScreen: React.FC = () => {
                         actionLabel={showCompleted ? t('shopping.restoreAll') : undefined}
                         onAction={showCompleted ? handleRestoreAll : undefined}
                       />
-                      {showCompleted && (
-                        <View style={styles.itemsCard}>
+                      {showCompleted ? (
+                        <SettingsGroupCard style={styles.completedCard}>
                           {filteredCompletedItems.map((item, index) => (
                             <ShoppingItemRow
                               key={item._id}
                               item={item}
+                              inGroupCard
                               onToggle={() => handleToggleComplete(item)}
                               onEdit={() => handleEditItem(item)}
                               onDelete={() => handleDelete(item)}
@@ -546,25 +567,27 @@ export const ShoppingListScreen: React.FC = () => {
                               isLast={index === filteredCompletedItems.length - 1}
                             />
                           ))}
-                        </View>
-                      )}
+                        </SettingsGroupCard>
+                      ) : null}
                     </View>
-                  )}
+                  ) : null}
                 </>
               )}
             </>
           ) : (
-            <EmptyState
-              icon="list-outline"
-              title={t('shopping.noShoppingLists')}
-              message={t('shopping.noItemsDescription')}
-              actionLabel={t('shopping.createList')}
-              onAction={() => {
-                setEditingList(null);
-                setNewListName('');
-                setShowListModal(true);
-              }}
-            />
+            <View style={styles.noListsWrap}>
+              <EmptyState
+                icon="list-outline"
+                title={t('shopping.noShoppingLists')}
+                message={t('shopping.noItemsDescription')}
+                actionLabel={t('shopping.createList')}
+                onAction={() => {
+                  setEditingList(null);
+                  setNewListName('');
+                  setShowListModal(true);
+                }}
+              />
+            </View>
           )}
         </ScrollView>
 
@@ -676,7 +699,7 @@ export const ShoppingListScreen: React.FC = () => {
             >
               <View style={styles.modalContent}>
                 <View style={styles.modalHeader}>
-                  <AppText style={styles.modalTitle}>{t('shopping.editItem')}</AppText>
+                  <AppText style={styles.modalHeaderTitle}>{t('shopping.editItem')}</AppText>
                   <TouchableOpacity
                     style={styles.modalCloseButton}
                     onPress={() => {
@@ -910,7 +933,7 @@ const createStyles = (colors: any, bottomInset: number) => StyleSheet.create({
   listPill: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm + 2,
-    borderRadius: radii.full,
+    borderRadius: radii.pill,
     backgroundColor: colors.background,
     borderWidth: 1,
     borderColor: colors.borderLight,
@@ -937,9 +960,22 @@ const createStyles = (colors: any, bottomInset: number) => StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.sm,
     paddingBottom: TAB_BAR_HEIGHT + bottomInset + 100,
+  },
+  searchPad: {
+    padding: spacing.md,
+  },
+  completedSection: {
+    marginTop: spacing.xl,
+    paddingHorizontal: spacing.xl,
+  },
+  completedCard: {
+    marginTop: spacing.sm,
+  },
+  noListsWrap: {
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.xl,
   },
   listCard: {
     backgroundColor: colors.surface,
@@ -992,6 +1028,7 @@ const createStyles = (colors: any, bottomInset: number) => StyleSheet.create({
   },
   emptyStateWrap: {
     marginTop: spacing.sm,
+    paddingHorizontal: spacing.xl,
   },
   itemsSection: {
     marginBottom: spacing.xl,
@@ -1072,8 +1109,8 @@ const createStyles = (colors: any, bottomInset: number) => StyleSheet.create({
   },
   modalContent: {
     backgroundColor: colors.surface,
-    borderTopLeftRadius: radii.xl,
-    borderTopRightRadius: radii.xl,
+    borderTopLeftRadius: radii.lg,
+    borderTopRightRadius: radii.lg,
     maxHeight: '90%',
     borderTopWidth: 1,
     borderTopColor: colors.border,
@@ -1092,11 +1129,11 @@ const createStyles = (colors: any, bottomInset: number) => StyleSheet.create({
   modalCloseButton: {
     padding: spacing.xs,
   },
-  modalTitle: {
-    fontSize: fontSizes.xl,
-    fontWeight: fontWeights.bold,
-    marginBottom: spacing.lg,
+  modalHeaderTitle: {
+    fontSize: fontSizes.lg,
+    fontWeight: fontWeights.extrabold,
     color: colors.text,
+    flex: 1,
   },
   modalScrollView: {
     flex: 1,

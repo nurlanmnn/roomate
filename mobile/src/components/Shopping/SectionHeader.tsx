@@ -11,6 +11,8 @@ interface SectionHeaderProps {
   onToggle?: () => void;
   actionLabel?: string;
   onAction?: () => void;
+  /** When parent already applies horizontal padding (e.g. next to SettingsSection). */
+  embedded?: boolean;
 }
 
 export const SectionHeader: React.FC<SectionHeaderProps> = ({
@@ -20,6 +22,7 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
   onToggle,
   actionLabel,
   onAction,
+  embedded = false,
 }) => {
   const colors = useThemeColors();
   const styles = React.useMemo(() => StyleSheet.create({
@@ -27,7 +30,7 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingHorizontal: spacing.xl,
+      paddingHorizontal: embedded ? 0 : spacing.xl,
       paddingVertical: spacing.sm,
       marginBottom: spacing.sm,
     },
@@ -58,7 +61,7 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
       fontWeight: fontWeights.semibold,
       color: colors.primary,
     },
-  }), [colors]);
+  }), [colors, embedded]);
 
   return (
     <View style={styles.container}>

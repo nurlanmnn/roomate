@@ -222,6 +222,53 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
   }
 });
 
+// POST /households/:id/regenerate-invite — new join code (owner only)
+router.post('/:id/regenerate-invite', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const household = await Household.findById(req.params.id);
+    if (!household) {
+      return res.status(404).json({ error: 'Household not found' });
+    }
+
+    if (household.ownerId.toString() !== userId) {
+      return res.status(403).json({ error: 'Only the owner can regenerate the invite code' });
+    }
+
+    let joinCode = generateJoinCode();
+    let attempts = 0;
+    while (
+      (await Household.findOne({
+        joinCode,
+        _id: { $ne: household._id },
+      })) &&
+      attempts < 10
+    ) {
+      joinCode = generateJoinCode();
+      attempts++;
+    }
+
+    if (attempts >= 10) {
+      return res.status(500).json({ error: 'Failed to generate unique join code' });
+    }
+
+    household.joinCode = joinCode;
+    await household.save();
+
+    await household.populate('ownerId', 'name email avatarUrl');
+    await household.populate('members', 'name email avatarUrl');
+
+    res.json(household);
+  } catch (error) {
+    console.error('Regenerate invite error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // POST /households/:id/leave
 router.post('/:id/leave', authMiddleware, async (req: Request, res: Response) => {
   try {

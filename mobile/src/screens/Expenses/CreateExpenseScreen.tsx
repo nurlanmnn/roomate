@@ -1,5 +1,17 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity, Platform, KeyboardAvoidingView, Modal, Animated, PanResponder, Dimensions } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  Alert,
+  TouchableOpacity,
+  Platform,
+  KeyboardAvoidingView,
+  Modal,
+  Animated,
+  PanResponder,
+  Dimensions,
+} from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHousehold } from '../../context/HouseholdContext';
@@ -16,8 +28,9 @@ import { CategoryPicker } from '../../components/CategoryPicker';
 import { EXPENSE_CATEGORIES, getCategoryById } from '../../constants/expenseCategories';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '../../components/AppText';
-import { useRoute } from '@react-navigation/native';
 import { useLanguage } from '../../context/LanguageContext';
+import { SettingsSection } from '../../components/Settings/SettingsSection';
+import { SettingsGroupCard } from '../../components/Settings/SettingsGroupCard';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const EDGE_SWIPE_WIDTH = 24; // iOS-like left edge swipe region
@@ -171,7 +184,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
     })
   ).current;
 
-  const styles = React.useMemo(() => StyleSheet.create({
+  const styles = useMemo(() => StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: colors.background,
@@ -187,87 +200,133 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
       justifyContent: 'center',
       alignItems: 'center',
     },
-    form: {
-      paddingHorizontal: spacing.md,
-      paddingTop: spacing.md,
+    scrollContent: {
       paddingBottom: spacing.xxl,
     },
-    field: {
-      marginBottom: spacing.md,
+    templateActionsInCard: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+      padding: spacing.md,
     },
-    label: {
+    templateButtonInCard: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: spacing.xs,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.sm,
+      backgroundColor: colors.background,
+      borderRadius: radii.md,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+    },
+    templateButtonText: {
+      fontSize: fontSizes.sm,
+      fontWeight: fontWeights.semibold,
+      color: colors.text,
+      flex: 1,
+      textAlign: 'center',
+    },
+    cardPad: {
+      padding: spacing.lg,
+    },
+    cardSectionDivider: {
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.borderLight,
+    },
+    fieldLabel: {
       fontSize: fontSizes.sm,
       fontWeight: fontWeights.semibold,
       marginBottom: spacing.xs,
       color: colors.textSecondary,
     },
-    radioOption: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.sm,
-      paddingVertical: spacing.md,
-      paddingHorizontal: spacing.md,
-      borderWidth: 2,
-      borderColor: colors.textSecondary,
-      borderRadius: radii.lg,
-      marginBottom: spacing.xs,
-      backgroundColor: colors.surface,
-    },
-    radioSelected: {
-      backgroundColor: colors.primarySoft,
-      borderColor: colors.primary,
-    },
-    radioText: {
-      fontSize: fontSizes.md,
-      fontWeight: fontWeights.medium,
-      color: colors.text,
-    },
-    radioTextSelected: {
-      color: colors.primary,
-      fontWeight: fontWeights.bold,
-    },
-    checkboxOption: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.sm,
+    dateField: {
       paddingVertical: spacing.md,
       paddingHorizontal: spacing.md,
       borderWidth: 1,
       borderColor: colors.border,
-      borderRadius: radii.lg,
-      marginBottom: spacing.xs,
+      borderRadius: radii.md,
       backgroundColor: colors.surface,
-      ...(shadows.sm as object),
     },
-    checkboxSelected: {
-      backgroundColor: colors.primarySoft,
-      borderColor: colors.primary,
-    },
-    checkboxText: {
+    dateText: {
       fontSize: fontSizes.md,
       color: colors.text,
     },
-    selectAllButton: {
-      alignSelf: 'flex-end',
-      padding: spacing.xs,
+    selectableRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.md,
+    },
+    selectableRowBorder: {
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.borderLight,
+    },
+    paidByRowSelected: {
+      backgroundColor: colors.primaryUltraSoft,
+    },
+    participantRowSelected: {
+      backgroundColor: colors.primaryUltraSoft,
+    },
+    rowName: {
+      fontSize: fontSizes.md,
+      fontWeight: fontWeights.medium,
+      color: colors.text,
+      flex: 1,
+    },
+    rowNameSelected: {
+      color: colors.primary,
+      fontWeight: fontWeights.semibold,
     },
     selectAllText: {
       color: colors.primary,
       fontWeight: fontWeights.semibold,
+      fontSize: fontSizes.sm,
     },
-    sharesPreview: {
-      backgroundColor: colors.surface,
-      padding: spacing.lg,
-      borderRadius: radii.lg,
-      marginBottom: spacing.md,
-      borderWidth: 1,
-      borderColor: colors.border,
-      ...(shadows.sm as object),
+    customSection: {
+      marginTop: spacing.xl,
+      paddingHorizontal: spacing.xl,
+    },
+    participantsHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: spacing.sm,
+    },
+    sectionUpperLabel: {
+      fontSize: fontSizes.xs,
+      fontWeight: fontWeights.semibold,
+      color: colors.textTertiary,
+      letterSpacing: 0.6,
+      textTransform: 'uppercase',
+    },
+    splitRow: {
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.md,
+    },
+    splitRowBorder: {
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.borderLight,
+    },
+    splitRowActive: {
+      backgroundColor: colors.primaryUltraSoft,
+    },
+    splitRowText: {
+      fontSize: fontSizes.md,
+      fontWeight: fontWeights.medium,
+      color: colors.text,
+      textAlign: 'center',
+    },
+    splitRowTextActive: {
+      color: colors.primary,
+      fontWeight: fontWeights.bold,
     },
     sharesTitle: {
       fontSize: fontSizes.md,
       fontWeight: fontWeights.semibold,
-      marginBottom: spacing.xs,
+      marginBottom: spacing.sm,
       color: colors.text,
     },
     shareItem: {
@@ -278,34 +337,25 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
     manualShareRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginBottom: spacing.xs,
+      marginBottom: spacing.sm,
+      gap: spacing.sm,
     },
     manualShareLabel: {
-      width: 100,
+      width: 96,
       fontSize: fontSizes.sm,
       color: colors.textSecondary,
     },
+    manualShareInputWrap: {
+      flex: 1,
+    },
     remaining: {
-      marginTop: spacing.xs,
+      marginTop: spacing.sm,
       fontSize: fontSizes.sm,
       fontWeight: fontWeights.semibold,
       color: colors.success,
     },
     remainingError: {
       color: colors.danger,
-    },
-    dateButton: {
-      paddingVertical: spacing.md,
-      paddingHorizontal: spacing.md,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: radii.lg,
-      backgroundColor: colors.surface,
-      ...(shadows.sm as object),
-    },
-    dateText: {
-      fontSize: fontSizes.md,
-      color: colors.text,
     },
     datePickerActions: {
       flexDirection: 'row',
@@ -330,31 +380,14 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
       fontWeight: fontWeights.semibold,
       letterSpacing: 0.2,
     },
-    templateActions: {
-      flexDirection: 'row',
-      gap: spacing.sm,
-      paddingHorizontal: spacing.md,
-      paddingTop: spacing.sm,
-      paddingBottom: spacing.md,
+    footerActions: {
+      paddingHorizontal: spacing.xl,
+      paddingTop: spacing.lg,
+      paddingBottom: spacing.xl,
     },
-    templateButton: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: spacing.xs,
-      paddingVertical: spacing.md,
-      paddingHorizontal: spacing.md,
-      backgroundColor: colors.surface,
-      borderRadius: radii.md,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      ...(shadows.xs as object),
-    },
-    templateButtonText: {
-      fontSize: fontSizes.sm,
-      fontWeight: fontWeights.semibold,
-      color: colors.text,
+    saveButton: {
+      borderRadius: radii.lg,
+      alignSelf: 'stretch',
     },
     modalContainer: {
       flex: 1,
@@ -456,7 +489,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
     },
     saveTemplateModalContent: {
       backgroundColor: colors.background,
-      borderRadius: radii.xl,
+      borderRadius: radii.lg,
       padding: spacing.xl,
       width: '90%',
       maxWidth: 400,
@@ -741,7 +774,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
       }
       navigation.goBack();
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to save expense');
+      Alert.alert(t('common.error'), error.response?.data?.error || t('alerts.somethingWentWrong'));
     } finally {
       setLoading(false);
     }
@@ -751,7 +784,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.emptyContainer}>
-          <Text>{t('alerts.selectHousehold')}</Text>
+          <AppText>{t('alerts.selectHousehold')}</AppText>
         </View>
       </SafeAreaView>
     );
@@ -767,191 +800,262 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
-        <ScrollView 
+        <ScrollView
           style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-      <ScreenHeader title={isEditing ? t('expenses.editExpense') : t('expenses.addExpense')} subtitle={selectedHousehold.name} />
+          <ScreenHeader
+            title={isEditing ? t('expenses.editExpense') : t('expenses.addExpense')}
+            subtitle={selectedHousehold.name}
+          />
 
-      <View style={styles.templateActions}>
-        <TouchableOpacity
-          style={styles.templateButton}
-          onPress={() => setShowTemplatesModal(true)}
-          disabled={loadingTemplates}
-        >
-          <Ionicons name="document-text-outline" size={20} color={colors.primary} />
-          <AppText style={styles.templateButtonText}>
-            {templates.length > 0 ? `${t('expenses.loadTemplate')} (${templates.length})` : t('expenses.loadTemplate')}
-          </AppText>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.templateButton}
-          onPress={() => setShowSaveTemplateModal(true)}
-        >
-          <Ionicons name="bookmark-outline" size={20} color={colors.accent} />
-          <AppText style={styles.templateButtonText}>{t('expenses.saveAsTemplate')}</AppText>
-        </TouchableOpacity>
-      </View>
+          <SettingsSection title={t('expenses.sectionTemplates')}>
+            <SettingsGroupCard>
+              <View style={styles.templateActionsInCard}>
+                <TouchableOpacity
+                  style={styles.templateButtonInCard}
+                  onPress={() => setShowTemplatesModal(true)}
+                  disabled={loadingTemplates}
+                  activeOpacity={0.75}
+                >
+                  <Ionicons name="document-text-outline" size={20} color={colors.primary} />
+                  <AppText style={styles.templateButtonText} numberOfLines={2}>
+                    {templates.length > 0
+                      ? `${t('expenses.loadTemplate')} (${templates.length})`
+                      : t('expenses.loadTemplate')}
+                  </AppText>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.templateButtonInCard}
+                  onPress={() => setShowSaveTemplateModal(true)}
+                  activeOpacity={0.75}
+                >
+                  <Ionicons name="bookmark-outline" size={20} color={colors.accent} />
+                  <AppText style={styles.templateButtonText} numberOfLines={2}>
+                    {t('expenses.saveAsTemplate')}
+                  </AppText>
+                </TouchableOpacity>
+              </View>
+            </SettingsGroupCard>
+          </SettingsSection>
 
-      <View style={styles.form}>
-        <FormTextInput
-          label={t('expenses.description')}
-          value={description}
-          onChangeText={setDescription}
-          placeholder={t('expenses.descriptionPlaceholder')}
-        />
+          <SettingsSection title={t('expenses.sectionExpenseDetails')}>
+            <SettingsGroupCard>
+              <View style={styles.cardPad}>
+                <FormTextInput
+                  label={t('expenses.description')}
+                  value={description}
+                  onChangeText={setDescription}
+                  placeholder={t('expenses.descriptionPlaceholder')}
+                  containerStyle={{ marginBottom: spacing.md }}
+                />
+                <FormTextInput
+                  label={t('expenses.totalAmount')}
+                  value={totalAmount}
+                  onChangeText={setTotalAmount}
+                  placeholder="0.00"
+                  keyboardType="numeric"
+                  containerStyle={{ marginBottom: 0 }}
+                />
+              </View>
+            </SettingsGroupCard>
+          </SettingsSection>
 
-        <FormTextInput
-          label={t('expenses.totalAmount')}
-          value={totalAmount}
-          onChangeText={setTotalAmount}
-          placeholder="0.00"
-          keyboardType="numeric"
-        />
-
-        <View style={styles.field}>
-          <Text style={styles.label}>{t('expenses.paidBy')}</Text>
-          {selectedHousehold.members.map((member) => (
-            <TouchableOpacity
-              key={member._id}
-              style={[styles.radioOption, paidBy === member._id && styles.radioSelected]}
-              onPress={() => setPaidBy(member._id)}
-            >
-              <Avatar name={member.name} uri={member.avatarUrl} size={32} />
-              <Text style={styles.radioText}>{member.name}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={styles.field}>
-          <Text style={styles.label}>{t('expenses.date')}</Text>
-          <TouchableOpacity
-            style={styles.dateButton}
-            onPress={() => setShowDatePicker((prev) => !prev)}
-          >
-            <Text style={styles.dateText}>
-              {date.toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
+          <SettingsSection title={t('expenses.sectionPaidBy')}>
+            <SettingsGroupCard>
+              {selectedHousehold.members.map((member, index) => {
+                const isLast = index === selectedHousehold.members.length - 1;
+                const selected = paidBy === member._id;
+                return (
+                  <TouchableOpacity
+                    key={member._id}
+                    style={[
+                      styles.selectableRow,
+                      !isLast && styles.selectableRowBorder,
+                      selected && styles.paidByRowSelected,
+                    ]}
+                    onPress={() => setPaidBy(member._id)}
+                    activeOpacity={0.75}
+                  >
+                    <Avatar name={member.name} uri={member.avatarUrl} size={32} />
+                    <AppText style={[styles.rowName, selected && styles.rowNameSelected]}>{member.name}</AppText>
+                  </TouchableOpacity>
+                );
               })}
-            </Text>
-          </TouchableOpacity>
-          {showDatePicker && (
-            <DateTimePicker
-              value={date}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              maximumDate={new Date()}
-              themeVariant={theme}
-              onChange={(event, selectedDate) => {
-                setShowDatePicker(Platform.OS === 'ios');
-                if (selectedDate) {
-                  setDate(selectedDate);
-                }
-              }}
-            />
-          )}
-          {Platform.OS === 'ios' && showDatePicker && (
-            <View style={styles.datePickerActions}>
-              <TouchableOpacity
-                style={styles.datePickerButton}
-                onPress={() => setShowDatePicker(false)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.datePickerButtonText}>{t('common.done')}</Text>
+            </SettingsGroupCard>
+          </SettingsSection>
+
+          <SettingsSection title={t('expenses.sectionDateAndCategory')}>
+            <SettingsGroupCard>
+              <View style={styles.cardPad}>
+                <AppText style={styles.fieldLabel}>{t('expenses.date')}</AppText>
+                <TouchableOpacity
+                  style={styles.dateField}
+                  onPress={() => setShowDatePicker((prev) => !prev)}
+                  activeOpacity={0.75}
+                >
+                  <AppText style={styles.dateText}>
+                    {date.toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                    })}
+                  </AppText>
+                </TouchableOpacity>
+                {showDatePicker ? (
+                  <DateTimePicker
+                    value={date}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    maximumDate={new Date()}
+                    themeVariant={theme}
+                    onChange={(event, selectedDate) => {
+                      setShowDatePicker(Platform.OS === 'ios');
+                      if (selectedDate) {
+                        setDate(selectedDate);
+                      }
+                    }}
+                  />
+                ) : null}
+                {Platform.OS === 'ios' && showDatePicker ? (
+                  <View style={styles.datePickerActions}>
+                    <TouchableOpacity
+                      style={styles.datePickerButton}
+                      onPress={() => setShowDatePicker(false)}
+                      activeOpacity={0.7}
+                    >
+                      <AppText style={styles.datePickerButtonText}>{t('common.done')}</AppText>
+                    </TouchableOpacity>
+                  </View>
+                ) : null}
+              </View>
+              <View style={[styles.cardPad, styles.cardSectionDivider]}>
+                <AppText style={styles.fieldLabel}>{t('expenses.categoryOptional')}</AppText>
+                <CategoryPicker
+                  selectedCategory={category}
+                  onSelectCategory={setCategory}
+                  onClear={() => setCategory('')}
+                />
+              </View>
+            </SettingsGroupCard>
+          </SettingsSection>
+
+          <View style={styles.customSection}>
+            <View style={styles.participantsHeaderRow}>
+              <AppText style={styles.sectionUpperLabel}>{t('expenses.participants')}</AppText>
+              <TouchableOpacity onPress={toggleSelectAll} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <AppText style={styles.selectAllText}>
+                  {allSelected ? t('common.deselectAll') : t('common.selectAll')}
+                </AppText>
               </TouchableOpacity>
             </View>
-          )}
-        </View>
-
-        <View style={styles.field}>
-          <Text style={styles.label}>{t('expenses.categoryOptional')}</Text>
-          <CategoryPicker
-            selectedCategory={category}
-            onSelectCategory={setCategory}
-            onClear={() => setCategory('')}
-          />
-        </View>
-
-        <View style={styles.field}>
-          <Text style={styles.label}>{t('expenses.participants')}</Text>
-          <TouchableOpacity onPress={toggleSelectAll} style={styles.selectAllButton}>
-            <Text style={styles.selectAllText}>{allSelected ? t('common.deselectAll') : t('common.selectAll')}</Text>
-          </TouchableOpacity>
-          {selectedHousehold.members.map((member) => (
-            <TouchableOpacity
-              key={member._id}
-              style={[styles.checkboxOption, selectedParticipants.includes(member._id) && styles.checkboxSelected]}
-              onPress={() => toggleParticipant(member._id)}
-            >
-              <Avatar name={member.name} uri={member.avatarUrl} size={32} />
-              <Text style={styles.checkboxText}>{member.name}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={styles.field}>
-          <Text style={styles.label}>{t('expenses.splitMethod')}</Text>
-          <TouchableOpacity
-            style={[styles.radioOption, splitMethod === 'even' && styles.radioSelected]}
-            onPress={() => setSplitMethod('even')}
-          >
-            <Text style={[styles.radioText, splitMethod === 'even' && styles.radioTextSelected]}>{t('expenses.splitEvenly')}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.radioOption, splitMethod === 'manual' && styles.radioSelected]}
-            onPress={() => setSplitMethod('manual')}
-          >
-            <Text style={[styles.radioText, splitMethod === 'manual' && styles.radioTextSelected]}>{t('expenses.splitManually')}</Text>
-          </TouchableOpacity>
-        </View>
-
-        {splitMethod === 'even' && selectedParticipants.length > 0 && totalAmount && (
-          <View style={styles.sharesPreview}>
-            <Text style={styles.sharesTitle}>{t('expenses.shares')} ({t('expenses.evenSplit')}):</Text>
-            {calculateEvenShares().map((share, index) => {
-              const member = selectedHousehold.members.find(m => m._id === share.userId);
-              return (
-                <Text key={index} style={styles.shareItem}>
-                  {member?.name}: {formatCurrency(share.amount)}
-                </Text>
-              );
-            })}
+            <SettingsGroupCard>
+              {selectedHousehold.members.map((member, index) => {
+                const isLast = index === selectedHousehold.members.length - 1;
+                const selected = selectedParticipants.includes(member._id);
+                return (
+                  <TouchableOpacity
+                    key={member._id}
+                    style={[
+                      styles.selectableRow,
+                      !isLast && styles.selectableRowBorder,
+                      selected && styles.participantRowSelected,
+                    ]}
+                    onPress={() => toggleParticipant(member._id)}
+                    activeOpacity={0.75}
+                  >
+                    <Avatar name={member.name} uri={member.avatarUrl} size={32} />
+                    <AppText style={[styles.rowName, selected && styles.rowNameSelected]}>{member.name}</AppText>
+                  </TouchableOpacity>
+                );
+              })}
+            </SettingsGroupCard>
           </View>
-        )}
 
-        {splitMethod === 'manual' && (
-          <View style={styles.field}>
-            <Text style={styles.label}>{t('expenses.manualShares')}</Text>
-            {selectedParticipants.map((userId) => {
-              const member = selectedHousehold.members.find(m => m._id === userId);
-              return (
-                <View key={userId} style={styles.manualShareRow}>
-                  <Text style={styles.manualShareLabel}>{member?.name}:</Text>
-                  <FormTextInput
-                    value={manualShares[userId] || ''}
-                    onChangeText={(text) => setManualShares({ ...manualShares, [userId]: text })}
-                    placeholder="0.00"
-                    keyboardType="numeric"
-                  />
+          <SettingsSection title={t('expenses.splitMethod')}>
+            <SettingsGroupCard>
+              <TouchableOpacity
+                style={[styles.splitRow, styles.splitRowBorder, splitMethod === 'even' && styles.splitRowActive]}
+                onPress={() => setSplitMethod('even')}
+                activeOpacity={0.75}
+              >
+                <AppText style={[styles.splitRowText, splitMethod === 'even' && styles.splitRowTextActive]}>
+                  {t('expenses.splitEvenly')}
+                </AppText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.splitRow, splitMethod === 'manual' && styles.splitRowActive]}
+                onPress={() => setSplitMethod('manual')}
+                activeOpacity={0.75}
+              >
+                <AppText style={[styles.splitRowText, splitMethod === 'manual' && styles.splitRowTextActive]}>
+                  {t('expenses.splitManually')}
+                </AppText>
+              </TouchableOpacity>
+            </SettingsGroupCard>
+          </SettingsSection>
+
+          {splitMethod === 'even' && selectedParticipants.length > 0 && totalAmount ? (
+            <SettingsSection title={t('expenses.sectionSplitPreview')}>
+              <SettingsGroupCard>
+                <View style={styles.cardPad}>
+                  <AppText style={styles.sharesTitle}>
+                    {t('expenses.shares')} ({t('expenses.evenSplit')})
+                  </AppText>
+                  {calculateEvenShares().map((share, index) => {
+                    const member = selectedHousehold.members.find((m) => m._id === share.userId);
+                    return (
+                      <AppText key={index} style={styles.shareItem}>
+                        {member?.name}: {formatCurrency(share.amount)}
+                      </AppText>
+                    );
+                  })}
                 </View>
-              );
-            })}
-            <Text style={[styles.remaining, remaining !== 0 && styles.remainingError]}>
-              {t('expenses.remainingToAssign')}: {formatCurrency(remaining)}
-            </Text>
-          </View>
-        )}
+              </SettingsGroupCard>
+            </SettingsSection>
+          ) : null}
 
-        <PrimaryButton
-          title={isEditing ? t('expenses.updateExpense') : t('expenses.saveExpense')}
-          onPress={handleSubmit}
-          loading={loading}
-          disabled={!canSubmit}
-        />
-      </View>
-    </ScrollView>
+          {splitMethod === 'manual' ? (
+            <SettingsSection title={t('expenses.manualShares')}>
+              <SettingsGroupCard>
+                <View style={styles.cardPad}>
+                  {selectedParticipants.map((userId) => {
+                    const member = selectedHousehold.members.find((m) => m._id === userId);
+                    return (
+                      <View key={userId} style={styles.manualShareRow}>
+                        <AppText style={styles.manualShareLabel}>{member?.name}</AppText>
+                        <View style={styles.manualShareInputWrap}>
+                          <FormTextInput
+                            value={manualShares[userId] || ''}
+                            onChangeText={(text) => setManualShares({ ...manualShares, [userId]: text })}
+                            placeholder="0.00"
+                            keyboardType="numeric"
+                            containerStyle={{ marginBottom: 0 }}
+                          />
+                        </View>
+                      </View>
+                    );
+                  })}
+                  <AppText style={[styles.remaining, remaining !== 0 && styles.remainingError]}>
+                    {t('expenses.remainingToAssign')}: {formatCurrency(remaining)}
+                  </AppText>
+                </View>
+              </SettingsGroupCard>
+            </SettingsSection>
+          ) : null}
+
+          <View style={styles.footerActions}>
+            <PrimaryButton
+              title={isEditing ? t('expenses.updateExpense') : t('expenses.saveExpense')}
+              onPress={handleSubmit}
+              loading={loading}
+              disabled={!canSubmit}
+              style={styles.saveButton}
+            />
+          </View>
+        </ScrollView>
     </KeyboardAvoidingView>
 
     {/* Templates Modal */}

@@ -27,6 +27,8 @@ interface CalendarViewProps {
   onSelectDate: (date: Date) => void;
   eventDates: string[]; // Array of ISO date strings that have events
   onAddEvent?: (date: Date) => void;
+  /** When true, sits inside a SettingsGroupCard (no outer margin / border / shadow). */
+  embedded?: boolean;
 }
 
 export const CalendarView: React.FC<CalendarViewProps> = ({
@@ -34,6 +36,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   onSelectDate,
   eventDates,
   onAddEvent,
+  embedded = false,
 }) => {
   const colors = useThemeColors();
   const { t } = useLanguage();
@@ -52,6 +55,18 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           borderColor: colors.borderLight,
           ...(shadows.sm as object),
         },
+        containerEmbedded: {
+          backgroundColor: 'transparent',
+          marginHorizontal: 0,
+          marginBottom: 0,
+          borderWidth: 0,
+          paddingHorizontal: spacing.sm,
+          paddingVertical: spacing.xs,
+          shadowOpacity: 0,
+          shadowRadius: 0,
+          shadowOffset: { width: 0, height: 0 },
+          elevation: 0,
+        },
         header: {
           flexDirection: 'row',
           justifyContent: 'space-between',
@@ -66,7 +81,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         },
         navButton: {
           padding: spacing.sm,
-          borderRadius: radii.full,
+          borderRadius: radii.pill,
           backgroundColor: colors.surfaceAlt,
         },
         weekDays: {
@@ -98,7 +113,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           height: DAY_SIZE - 4,
           alignItems: 'center',
           justifyContent: 'center',
-          borderRadius: radii.full,
+          borderRadius: radii.pill,
         },
         dayButtonSelected: {
           backgroundColor: colors.primary,
@@ -142,6 +157,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
       }),
     [colors]
   );
+
+  const containerStyles = [styles.container, embedded && styles.containerEmbedded];
 
   // Build event dates set for quick lookup
   const eventDatesSet = useMemo(() => {
@@ -191,7 +208,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   ];
 
   return (
-    <View style={styles.container}>
+    <View style={containerStyles}>
       {/* Header with month navigation */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.navButton} onPress={goToPrevMonth}>

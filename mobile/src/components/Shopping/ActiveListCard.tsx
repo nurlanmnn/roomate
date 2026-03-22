@@ -12,6 +12,8 @@ interface ActiveListCardProps {
   itemsLabel: string;
   onEdit: () => void;
   onDelete: () => void;
+  /** Strip outer card chrome when nested in SettingsGroupCard. */
+  embedded?: boolean;
 }
 
 export const ActiveListCard: React.FC<ActiveListCardProps> = ({
@@ -22,21 +24,32 @@ export const ActiveListCard: React.FC<ActiveListCardProps> = ({
   itemsLabel,
   onEdit,
   onDelete,
+  embedded = false,
 }) => {
   const colors = useThemeColors();
   const total = toBuyCount + completedCount;
   const progress = total > 0 ? completedCount / total : 0;
 
   const styles = React.useMemo(() => StyleSheet.create({
-    card: {
-      marginBottom: spacing.lg,
-      backgroundColor: colors.surface,
-      borderRadius: radii.lg,
-      padding: spacing.lg,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      ...(shadows.sm as object),
-    },
+    card: embedded
+      ? {
+          marginBottom: 0,
+          backgroundColor: 'transparent',
+          borderRadius: 0,
+          padding: spacing.md,
+          borderWidth: 0,
+          shadowOpacity: 0,
+          elevation: 0,
+        }
+      : {
+          marginBottom: spacing.lg,
+          backgroundColor: colors.surface,
+          borderRadius: radii.lg,
+          padding: spacing.lg,
+          borderWidth: 1,
+          borderColor: colors.borderLight,
+          ...(shadows.sm as object),
+        },
     top: {
       flexDirection: 'row',
       alignItems: 'flex-start',
@@ -90,7 +103,7 @@ export const ActiveListCard: React.FC<ActiveListCardProps> = ({
       borderRadius: 2,
       backgroundColor: colors.primary,
     },
-  }), [colors]);
+  }), [colors, embedded]);
 
   return (
     <View style={styles.card}>

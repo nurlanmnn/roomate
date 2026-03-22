@@ -1,13 +1,28 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Modal, KeyboardAvoidingView, Platform, Image, Keyboard } from 'react-native';
+import React, { useEffect, useState, useMemo } from 'react';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
+  Image,
+  Keyboard,
+  RefreshControl,
+} from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
 import { expensesApi, PairwiseBalance } from '../../api/expensesApi';
 import { settlementsApi, Settlement } from '../../api/settlementsApi';
-import { BalanceSummary } from '../../components/BalanceSummary';
 import { FormTextInput } from '../../components/FormTextInput';
+import { AppText } from '../../components/AppText';
+import { SettingsSection } from '../../components/Settings/SettingsSection';
+import { SettingsGroupCard } from '../../components/Settings/SettingsGroupCard';
+import { SettingsRow } from '../../components/Settings/SettingsRow';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { Avatar } from '../../components/ui/Avatar';
@@ -36,7 +51,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   const [note, setNote] = useState('');
   const [proofImage, setProofImage] = useState<string | null>(null);
 
-  const styles = React.useMemo(() => StyleSheet.create({
+  const styles = useMemo(() => StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: colors.background,
@@ -51,19 +66,22 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
       padding: spacing.xxl,
       alignItems: 'center',
     },
-    section: {
-      paddingHorizontal: spacing.md,
-      paddingTop: spacing.md,
-      paddingBottom: spacing.xs,
+    loadingPad: {
+      paddingHorizontal: spacing.xl,
+      paddingVertical: spacing.xxl,
+      alignItems: 'center',
     },
-    balanceCard: {
-      backgroundColor: colors.surface,
+    loadingText: {
+      fontSize: fontSizes.sm,
+      color: colors.textSecondary,
+    },
+    cardPad: {
       padding: spacing.lg,
-      borderRadius: radii.lg,
-      marginBottom: spacing.md,
-      borderWidth: 1,
-      borderColor: colors.border,
-      ...(shadows.sm as object),
+    },
+    mutedLine: {
+      fontSize: fontSizes.sm,
+      color: colors.textSecondary,
+      lineHeight: 20,
     },
     balanceHeader: {
       flexDirection: 'row',
@@ -86,16 +104,18 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
       fontWeight: fontWeights.extrabold,
     },
     actions: {
-      flexDirection: 'row',
-      gap: spacing.xs,
-      flexWrap: 'wrap',
+      flexDirection: 'column',
+      gap: spacing.sm,
+      width: '100%',
     },
     actionButton: {
-      flex: 1,
-      minWidth: 100,
-      padding: spacing.md,
-      borderRadius: radii.md,
+      width: '100%',
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.lg,
+      borderRadius: radii.lg,
       alignItems: 'center',
+      justifyContent: 'center',
+      flexDirection: 'row',
     },
     netButton: {
       backgroundColor: colors.warning,
@@ -185,7 +205,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
       top: spacing.xs,
       right: spacing.xs,
       backgroundColor: colors.surface,
-      borderRadius: radii.full,
+      borderRadius: radii.pill,
       padding: spacing.xxs,
     },
     addProofButton: {
@@ -206,43 +226,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
       fontWeight: fontWeights.medium,
     },
     scrollContent: {
-      paddingTop: spacing.md,
-      paddingBottom: spacing.xl,
-    },
-    historyButtonContainer: {
-      paddingHorizontal: spacing.lg,
-      marginBottom: spacing.md,
-    },
-    historyButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: spacing.xs,
-      padding: spacing.md,
-      backgroundColor: colors.surface,
-      borderRadius: radii.md,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-    },
-    historyButtonText: {
-      fontSize: fontSizes.sm,
-      color: colors.primary,
-      fontWeight: fontWeights.semibold,
-    },
-    sectionTitle: {
-      fontSize: fontSizes.lg,
-      fontWeight: fontWeights.bold,
-      color: colors.text,
-      marginBottom: spacing.md,
-    },
-    receivedSettlementCard: {
-      backgroundColor: colors.surface,
-      padding: spacing.md,
-      borderRadius: radii.md,
-      marginBottom: spacing.sm,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      ...(shadows.xs as object),
+      paddingBottom: spacing.xxl,
     },
     receivedSettlementHeader: {
       flexDirection: 'row',
@@ -291,37 +275,6 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     proofModalImage: {
       width: '90%',
       height: '80%',
-    },
-    owedToSection: {
-      paddingHorizontal: spacing.md,
-      paddingTop: spacing.md,
-      paddingBottom: spacing.xs,
-    },
-    owedToBalanceCard: {
-      backgroundColor: colors.surface,
-      padding: spacing.lg,
-      borderRadius: radii.lg,
-      marginBottom: spacing.md,
-      borderWidth: 1,
-      borderColor: colors.border,
-      ...(shadows.sm as object),
-    },
-    owedToAmount: {
-      fontSize: fontSizes.lg,
-      fontWeight: fontWeights.extrabold,
-      color: colors.success,
-    },
-    forgiveButton: {
-      backgroundColor: colors.danger,
-      padding: spacing.md,
-      borderRadius: radii.md,
-      alignItems: 'center',
-      marginTop: spacing.sm,
-    },
-    forgiveButtonText: {
-      color: colors.surface,
-      fontSize: fontSizes.sm,
-      fontWeight: fontWeights.semibold,
     },
     forgiveAmountOptions: {
       flexDirection: 'row',
@@ -521,7 +474,6 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
       setSettleModalVisible(false);
       setProofImage(null);
       loadBalances();
-      navigation.goBack();
     } catch (error: any) {
       Alert.alert(t('common.error'), error.response?.data?.error || t('alerts.somethingWentWrong'));
     }
@@ -531,7 +483,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.emptyContainer}>
-          <Text>{t('alerts.selectHousehold')}</Text>
+          <AppText>{t('alerts.selectHousehold')}</AppText>
         </View>
       </SafeAreaView>
     );
@@ -554,6 +506,13 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     const toUserId = typeof s.toUserId === 'object' && s.toUserId !== null ? s.toUserId._id : s.toUserId;
     return toUserId === user._id && s.proofImageUrl;
   }).slice(0, 5); // Show last 5 with receipts
+
+  const fullySettled =
+    userOwedBalances.length === 0 &&
+    userOwedToBalances.length === 0 &&
+    receivedSettlements.length === 0;
+  const showInitialLoading = loading && balances.length === 0 && settlements.length === 0;
+  const showGlobalEmpty = !loading && fullySettled;
 
   const handleForgiveDebt = (balance: PairwiseBalance) => {
     setSelectedForgiveBalance(balance);
@@ -605,146 +564,199 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
-        <ScrollView 
+        <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={loading} onRefresh={loadBalances} />}
         >
-      <View style={styles.historyButtonContainer}>
-        <TouchableOpacity
-          style={styles.historyButton}
-          onPress={() => navigation.navigate('SettlementHistory')}
-        >
-          <Ionicons name="receipt-outline" size={20} color={colors.primary} />
-          <Text style={styles.historyButtonText}>{t('expenses.viewSettlementHistory')}</Text>
-        </TouchableOpacity>
-      </View>
+          <SettingsSection title={t('settleUp.sectionQuickLinks')}>
+            <SettingsGroupCard>
+              <SettingsRow
+                icon="receipt-outline"
+                iconBackgroundColor={colors.primaryUltraSoft}
+                iconColor={colors.primary}
+                title={t('expenses.viewSettlementHistory')}
+                subtitle={t('expenses.settlementHistory')}
+                onPress={() => navigation.navigate('SettlementHistory')}
+                isLast
+              />
+            </SettingsGroupCard>
+          </SettingsSection>
 
-      {userOwedBalances.length === 0 ? (
-        <EmptyState
-          icon="checkmark-circle-outline"
-          title={`${t('home.allSettled')} 🎉`}
-          message={t('settleUp.noBalances')}
-          variant="minimal"
-        />
-      ) : (
-        <View style={styles.section}>
-          {userOwedBalances.map((balance, index) => {
-            const toUserName = getUserName(balance.toUserId);
-            const hasMutualDebt = mutualDebts.some(b => b.toUserId === balance.toUserId);
-            
-            const toUserAvatar = getUserAvatar(balance.toUserId);
-            
-            return (
-              <View key={index} style={styles.balanceCard}>
-                <View style={styles.balanceHeader}>
-                  <Avatar name={toUserName} uri={toUserAvatar} size={40} />
-                  <View style={styles.balanceTextContainer}>
-                    <Text style={styles.balanceText}>
-                      {t('home.youOwe')} <Text style={styles.userName}>{toUserName}</Text>{' '}
-                      <Text style={styles.amount}>{formatCurrency(balance.amount)}</Text>
-                    </Text>
-                  </View>
-                </View>
-                {hasMutualDebt && (
-                  <Text style={styles.mutualDebtNote}>
-                    💡 {toUserName} {t('settleUp.alsoOwesYou')}
-                  </Text>
-                )}
-                <View style={styles.actions}>
-                  {hasMutualDebt && (
-                    <TouchableOpacity
-                      style={[styles.actionButton, styles.netButton]}
-                      onPress={() => handleNetBalance(balance)}
-                    >
-                      <Text style={styles.actionButtonText}>{t('settleUp.netBalance')}</Text>
-                    </TouchableOpacity>
-                  )}
-                  <TouchableOpacity
-                    style={[styles.actionButton, styles.markButton]}
-                    onPress={() => handleMarkAsPaid(balance)}
-                  >
-                    <Text style={styles.actionButtonText}>{t('settleUp.markAsPaid')}</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            );
-          })}
-        </View>
-      )}
+          {showInitialLoading ? (
+            <View style={styles.loadingPad}>
+              <AppText style={styles.loadingText}>{t('settlementHistory.loading')}</AppText>
+            </View>
+          ) : showGlobalEmpty ? (
+            <EmptyState
+              icon="checkmark-circle-outline"
+              title={`${t('home.allSettled')} 🎉`}
+              message={t('settleUp.noBalances')}
+              variant="minimal"
+            />
+          ) : (
+            <>
+              {userOwedBalances.length > 0 ? (
+                <SettingsSection title={t('settleUp.sectionYouOwe')}>
+                  {userOwedBalances.map((balance, index) => {
+                    const toUserName = getUserName(balance.toUserId);
+                    const hasMutualDebt = mutualDebts.some(b => b.toUserId === balance.toUserId);
+                    const toUserAvatar = getUserAvatar(balance.toUserId);
+                    const rowKey = `${balance.fromUserId}-${balance.toUserId}`;
+                    return (
+                      <SettingsGroupCard
+                        key={rowKey}
+                        style={{
+                          marginBottom: index < userOwedBalances.length - 1 ? spacing.md : 0,
+                        }}
+                      >
+                        <View style={styles.cardPad}>
+                          <View style={styles.balanceHeader}>
+                            <Avatar name={toUserName} uri={toUserAvatar} size={40} />
+                            <View style={styles.balanceTextContainer}>
+                              <AppText style={styles.balanceText}>
+                                {t('home.youOwe')}{' '}
+                                <AppText style={styles.userName}>{toUserName}</AppText>{' '}
+                                <AppText style={styles.amount}>{formatCurrency(balance.amount)}</AppText>
+                              </AppText>
+                            </View>
+                          </View>
+                          {hasMutualDebt ? (
+                            <AppText style={styles.mutualDebtNote}>
+                              💡 {toUserName} {t('settleUp.alsoOwesYou')}
+                            </AppText>
+                          ) : null}
+                          <View style={styles.actions}>
+                            {hasMutualDebt ? (
+                              <TouchableOpacity
+                                style={[styles.actionButton, styles.netButton]}
+                                onPress={() => handleNetBalance(balance)}
+                                activeOpacity={0.85}
+                              >
+                                <AppText style={styles.actionButtonText}>{t('settleUp.netBalance')}</AppText>
+                              </TouchableOpacity>
+                            ) : null}
+                            <TouchableOpacity
+                              style={[styles.actionButton, styles.markButton]}
+                              onPress={() => handleMarkAsPaid(balance)}
+                              activeOpacity={0.85}
+                            >
+                              <AppText style={styles.actionButtonText}>{t('settleUp.markAsPaid')}</AppText>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      </SettingsGroupCard>
+                    );
+                  })}
+                </SettingsSection>
+              ) : (
+                <SettingsSection title={t('settleUp.sectionYouOwe')}>
+                  <SettingsGroupCard>
+                    <View style={styles.cardPad}>
+                      <AppText style={styles.mutedLine}>{t('settleUp.nothingToPayNow')}</AppText>
+                    </View>
+                  </SettingsGroupCard>
+                </SettingsSection>
+              )}
 
-      {/* Balances where user is owed money */}
-      {userOwedToBalances.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('settleUp.moneyOwedToYou')}</Text>
-          {userOwedToBalances.map((balance, index) => {
-            const fromUserName = getUserName(balance.fromUserId);
-            const fromUserAvatar = getUserAvatar(balance.fromUserId);
-            
-            return (
-              <View key={index} style={styles.balanceCard}>
-                <View style={styles.balanceHeader}>
-                  <Avatar name={fromUserName} uri={fromUserAvatar} size={40} />
-                  <View style={styles.balanceTextContainer}>
-                    <Text style={styles.balanceText}>
-                      <Text style={styles.userName}>{fromUserName}</Text> {t('settleUp.owesYou').toLowerCase()}{' '}
-                      <Text style={[styles.amount, styles.amountPositive]}>{formatCurrency(balance.amount)}</Text>
-                    </Text>
-                  </View>
-                </View>
-                <View style={styles.actions}>
-                  <TouchableOpacity
-                    style={[styles.actionButton, styles.forgiveButton]}
-                    onPress={() => handleForgiveDebt(balance)}
-                  >
-                    <Ionicons name="close-circle-outline" size={18} color={colors.surface} style={{ marginRight: spacing.xs }} />
-                    <Text style={styles.actionButtonText}>{t('settleUp.forgiveDebt')}</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            );
-          })}
-        </View>
-      )}
+              {userOwedToBalances.length > 0 ? (
+                <SettingsSection title={t('settleUp.moneyOwedToYou')}>
+                  {userOwedToBalances.map((balance, index) => {
+                    const fromUserName = getUserName(balance.fromUserId);
+                    const fromUserAvatar = getUserAvatar(balance.fromUserId);
+                    const rowKey = `${balance.fromUserId}-${balance.toUserId}`;
+                    return (
+                      <SettingsGroupCard
+                        key={rowKey}
+                        style={{
+                          marginBottom: index < userOwedToBalances.length - 1 ? spacing.md : 0,
+                        }}
+                      >
+                        <View style={styles.cardPad}>
+                          <View style={styles.balanceHeader}>
+                            <Avatar name={fromUserName} uri={fromUserAvatar} size={40} />
+                            <View style={styles.balanceTextContainer}>
+                              <AppText style={styles.balanceText}>
+                                <AppText style={styles.userName}>{fromUserName}</AppText>{' '}
+                                {t('settleUp.owesYou').toLowerCase()}{' '}
+                                <AppText style={[styles.amount, styles.amountPositive]}>
+                                  {formatCurrency(balance.amount)}
+                                </AppText>
+                              </AppText>
+                            </View>
+                          </View>
+                          <View style={styles.actions}>
+                            <TouchableOpacity
+                              style={[styles.actionButton, styles.forgiveButton]}
+                              onPress={() => handleForgiveDebt(balance)}
+                              activeOpacity={0.85}
+                            >
+                              <Ionicons
+                                name="close-circle-outline"
+                                size={18}
+                                color={colors.surface}
+                                style={{ marginRight: spacing.xs }}
+                              />
+                              <AppText style={styles.actionButtonText}>{t('settleUp.forgiveDebt')}</AppText>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      </SettingsGroupCard>
+                    );
+                  })}
+                </SettingsSection>
+              ) : null}
 
-      {/* Received Payments with Receipts */}
-      {receivedSettlements.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('settleUp.receivedSettlements')}</Text>
-          {receivedSettlements.map((settlement) => {
-            const fromUserId = typeof settlement.fromUserId === 'object' && settlement.fromUserId !== null
-              ? settlement.fromUserId._id
-              : settlement.fromUserId;
-            const fromUserName = fromUserId ? getUserName(fromUserId) : 'Unknown';
-            const fromUserAvatar = fromUserId ? getUserAvatar(fromUserId) : undefined;
-
-            return (
-              <View key={settlement._id} style={styles.receivedSettlementCard}>
-                <View style={styles.receivedSettlementHeader}>
-                  <Avatar name={fromUserName} uri={fromUserAvatar} size={32} />
-                  <View style={styles.receivedSettlementInfo}>
-                    <Text style={styles.receivedSettlementText}>
-                      <Text style={styles.userName}>{fromUserName}</Text> {t('settleUp.paidYou')} {formatCurrency(settlement.amount)}
-                    </Text>
-                    {settlement.method && (
-                      <Text style={styles.receivedSettlementMethod}>{settlement.method}</Text>
-                    )}
-                  </View>
-                </View>
-                {settlement.proofImageUrl && (
-                  <TouchableOpacity
-                    style={styles.viewReceiptButton}
-                    onPress={() => setSelectedProofImage(settlement.proofImageUrl || null)}
-                  >
-                    <Ionicons name="receipt-outline" size={18} color={colors.primary} />
-                    <Text style={styles.viewReceiptText}>{t('settleUp.viewReceipt')}</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            );
-          })}
-        </View>
-      )}
+              {receivedSettlements.length > 0 ? (
+                <SettingsSection title={t('settleUp.receivedSettlements')}>
+                  {receivedSettlements.map((settlement, index) => {
+                    const fromUserId =
+                      typeof settlement.fromUserId === 'object' && settlement.fromUserId !== null
+                        ? settlement.fromUserId._id
+                        : settlement.fromUserId;
+                    const fromUserName = fromUserId ? getUserName(fromUserId) : 'Unknown';
+                    const fromUserAvatar = fromUserId ? getUserAvatar(fromUserId) : undefined;
+                    return (
+                      <SettingsGroupCard
+                        key={settlement._id}
+                        style={{
+                          marginBottom: index < receivedSettlements.length - 1 ? spacing.md : 0,
+                        }}
+                      >
+                        <View style={styles.cardPad}>
+                          <View style={styles.receivedSettlementHeader}>
+                            <Avatar name={fromUserName} uri={fromUserAvatar} size={32} />
+                            <View style={styles.receivedSettlementInfo}>
+                              <AppText style={styles.receivedSettlementText}>
+                                <AppText style={styles.userName}>{fromUserName}</AppText>{' '}
+                                {t('settleUp.paidYou')} {formatCurrency(settlement.amount)}
+                              </AppText>
+                              {settlement.method ? (
+                                <AppText style={styles.receivedSettlementMethod}>{settlement.method}</AppText>
+                              ) : null}
+                            </View>
+                          </View>
+                          {settlement.proofImageUrl ? (
+                            <TouchableOpacity
+                              style={styles.viewReceiptButton}
+                              onPress={() => setSelectedProofImage(settlement.proofImageUrl || null)}
+                              activeOpacity={0.75}
+                            >
+                              <Ionicons name="receipt-outline" size={18} color={colors.primary} />
+                              <AppText style={styles.viewReceiptText}>{t('settleUp.viewReceipt')}</AppText>
+                            </TouchableOpacity>
+                          ) : null}
+                        </View>
+                      </SettingsGroupCard>
+                    );
+                  })}
+                </SettingsSection>
+              ) : null}
+            </>
+          )}
+        </ScrollView>
 
       {/* Settlement Modal */}
       <Modal
@@ -759,11 +771,11 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
           keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>{t('settleUp.markAsPaid')}</Text>
+            <AppText style={styles.modalTitle}>{t('settleUp.markAsPaid')}</AppText>
             {selectedBalance && (
-              <Text style={styles.modalSubtitle}>
+              <AppText style={styles.modalSubtitle}>
                 {t('settleUp.paying')} {getUserName(selectedBalance.toUserId)}
-              </Text>
+              </AppText>
             )}
             <FormTextInput
               label={t('expenses.amount')}
@@ -786,7 +798,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
               multiline
             />
             <View style={styles.proofSection}>
-              <Text style={styles.proofLabel}>{t('settleUp.proofOptional')}</Text>
+              <AppText style={styles.proofLabel}>{t('settleUp.proofOptional')}</AppText>
               {proofImage ? (
                 <View style={styles.proofImageContainer}>
                   <Image source={{ uri: proofImage }} style={styles.proofImage} />
@@ -803,7 +815,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                   onPress={handlePickProofImage}
                 >
                   <Ionicons name="camera-outline" size={24} color={colors.primary} />
-                  <Text style={styles.addProofText}>{t('settleUp.addProof')}</Text>
+                  <AppText style={styles.addProofText}>{t('settleUp.addProof')}</AppText>
                 </TouchableOpacity>
               )}
             </View>
@@ -835,11 +847,12 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
           keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>{t('settleUp.forgiveDebt')}</Text>
+            <AppText style={styles.modalTitle}>{t('settleUp.forgiveDebt')}</AppText>
             {selectedForgiveBalance && (
-              <Text style={styles.modalSubtitle}>
-                {getUserName(selectedForgiveBalance.fromUserId)} {t('settleUp.owesYou').toLowerCase()} {formatCurrency(selectedForgiveBalance.amount)}
-              </Text>
+              <AppText style={styles.modalSubtitle}>
+                {getUserName(selectedForgiveBalance.fromUserId)} {t('settleUp.owesYou').toLowerCase()}{' '}
+                {formatCurrency(selectedForgiveBalance.amount)}
+              </AppText>
             )}
             
             {/* Amount options */}
@@ -852,13 +865,13 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                   ]}
                   onPress={() => setForgiveAmount(selectedForgiveBalance.amount.toFixed(2))}
                 >
-                  <Text style={[
+                  <AppText style={[
                     styles.forgiveAmountOptionText,
                     forgiveAmount === selectedForgiveBalance.amount.toFixed(2) && styles.forgiveAmountOptionTextSelected,
-                  ]}>{t('settleUp.fullAmount')}</Text>
-                  <Text style={styles.forgiveAmountOptionValue}>
+                  ]}>{t('settleUp.fullAmount')}</AppText>
+                  <AppText style={styles.forgiveAmountOptionValue}>
                     {formatCurrency(selectedForgiveBalance.amount)}
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
                 
                 {selectedForgiveBalance.amount > 1 && (
@@ -869,13 +882,13 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                     ]}
                     onPress={() => setForgiveAmount((selectedForgiveBalance.amount / 2).toFixed(2))}
                   >
-                    <Text style={[
+                    <AppText style={[
                       styles.forgiveAmountOptionText,
                       forgiveAmount === (selectedForgiveBalance.amount / 2).toFixed(2) && styles.forgiveAmountOptionTextSelected,
-                    ]}>{t('settleUp.halfAmount')}</Text>
-                    <Text style={styles.forgiveAmountOptionValue}>
+                    ]}>{t('settleUp.halfAmount')}</AppText>
+                    <AppText style={styles.forgiveAmountOptionValue}>
                       {formatCurrency(selectedForgiveBalance.amount / 2)}
-                    </Text>
+                    </AppText>
                   </TouchableOpacity>
                 )}
               </View>
@@ -893,9 +906,9 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
             
             <View style={styles.forgiveWarning}>
               <Ionicons name="warning-outline" size={20} color={colors.warning} />
-              <Text style={styles.forgiveWarningText}>
+              <AppText style={styles.forgiveWarningText}>
                 {t('alerts.forgiveWarning')}
-              </Text>
+              </AppText>
             </View>
             
             <View style={styles.modalActions}>
@@ -933,7 +946,6 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
           )}
         </View>
       </Modal>
-    </ScrollView>
     </KeyboardAvoidingView>
     </SafeAreaView>
   );
