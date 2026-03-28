@@ -6,7 +6,7 @@ import { User } from '../models/User';
 import { EmailVerificationToken } from '../models/EmailVerificationToken';
 import { Household } from '../models/Household';
 import { authMiddleware, JWTPayload } from '../middleware/auth';
-import { sendVerificationEmail, sendEmailChangeVerificationEmail } from '../config/mail';
+import { sendVerificationEmail, sendEmailChangeVerificationEmail, sendPasswordResetEmail } from '../config/mail';
 import { config } from '../config/env';
 import mongoose from 'mongoose';
 
@@ -53,6 +53,16 @@ const changePasswordSchema = z.object({
 
 const deleteAccountSchema = z.object({
   password: z.string().min(1),
+});
+
+const forgotPasswordSchema = z.object({
+  email: z.string().email().transform((e) => e.trim().toLowerCase()),
+});
+
+const resetPasswordSchema = z.object({
+  email: z.string().email().transform((e) => e.trim().toLowerCase()),
+  otp: z.string().length(6),
+  newPassword: z.string().min(8),
 });
 
 // POST /auth/signup
@@ -436,6 +446,7 @@ router.post('/verify-email', async (req: Request, res: Response) => {
       userId: user._id,
       otp,
       newEmail: { $exists: false },
+      passwordReset: { $ne: true },
     });
     
     if (!verificationToken) {
@@ -480,8 +491,12 @@ router.post('/resend-verification', async (req: Request, res: Response) => {
       return res.json({ message: 'Email is already verified' });
     }
 
-    // Delete old signup OTPs only (keep pending email-change tokens)
-    await EmailVerificationToken.deleteMany({ userId: user._id, newEmail: { $exists: false } });
+    // Delete old signup OTPs only (keep pending email-change and password-reset tokens)
+    await EmailVerificationToken.deleteMany({
+      userId: user._id,
+      newEmail: { $exists: false },
+      passwordReset: { $ne: true },
+    });
 
     // Generate new 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -509,6 +524,92 @@ router.post('/resend-verification', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid input', details: error.errors });
     }
     console.error('Resend verification error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /auth/forgot-password
+router.post('/forgot-password', async (req: Request, res: Response) => {
+  try {
+    const { email } = forgotPasswordSchema.parse(req.body);
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.json({
+        message: 'If an account exists for this email, a reset code has been sent',
+      });
+    }
+
+    await EmailVerificationToken.deleteMany({ userId: user._id, passwordReset: true });
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + 10);
+
+    const verificationToken = new EmailVerificationToken({
+      userId: user._id,
+      otp,
+      passwordReset: true,
+      expiresAt,
+    });
+    await verificationToken.save();
+
+    try {
+      await sendPasswordResetEmail(user.email, user.name, otp);
+    } catch (emailError) {
+      console.error('Failed to send password reset email:', emailError);
+      await EmailVerificationToken.deleteOne({ _id: verificationToken._id });
+      return res.status(500).json({ error: 'Failed to send reset email' });
+    }
+
+    res.json({
+      message: 'If an account exists for this email, a reset code has been sent',
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+    }
+    console.error('Forgot password error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /auth/reset-password
+router.post('/reset-password', async (req: Request, res: Response) => {
+  try {
+    const { email, otp, newPassword } = resetPasswordSchema.parse(req.body);
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ error: 'Invalid or expired reset code' });
+    }
+
+    const verificationToken = await EmailVerificationToken.findOne({
+      userId: user._id,
+      otp,
+      passwordReset: true,
+    });
+
+    if (!verificationToken) {
+      return res.status(400).json({ error: 'Invalid or expired reset code' });
+    }
+
+    if (verificationToken.expiresAt < new Date()) {
+      await EmailVerificationToken.deleteOne({ _id: verificationToken._id });
+      return res.status(410).json({ error: 'Reset code has expired' });
+    }
+
+    user.passwordHash = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    await EmailVerificationToken.deleteOne({ _id: verificationToken._id });
+
+    res.json({ success: true });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+    }
+    console.error('Reset password error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

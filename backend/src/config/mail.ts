@@ -102,3 +102,28 @@ export const sendEmailChangeVerificationEmail = async (
   });
 };
 
+export const sendPasswordResetEmail = async (
+  email: string,
+  name: string,
+  otp: string
+): Promise<void> => {
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2>Password reset, ${name}</h2>
+      <p>You requested to reset your Roomate account password. Use the code below:</p>
+      <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
+        <h1 style="font-size: 36px; letter-spacing: 8px; color: #4CAF50; margin: 0;">${otp}</h1>
+      </div>
+      <p>Enter this code in the app to set a new password.</p>
+      <p style="color: #999; font-size: 12px;">This code will expire in 10 minutes.</p>
+      <p>If you did not request a password reset, you can ignore this email.</p>
+    </div>
+  `;
+
+  await sendEmail({
+    to: email,
+    subject: 'Reset your password - Roomate',
+    html,
+  });
+};
+

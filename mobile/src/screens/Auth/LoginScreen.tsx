@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, StyleSheet, ScrollView, Alert, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FormTextInput } from '../../components/FormTextInput';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { AppText } from '../../components/AppText';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { useThemeColors, spacing, fontSizes, fontWeights } from '../../theme';
 
 export const LoginScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const [email, setEmail] = useState('');
@@ -12,16 +14,18 @@ export const LoginScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const { t } = useLanguage();
+  const colors = useThemeColors();
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert(t('common.error'), t('alerts.somethingWentWrong'));
+    const emailTrim = email.trim();
+    if (!emailTrim || !password) {
+      Alert.alert(t('common.error'), t('alerts.fillRequiredFields'));
       return;
     }
 
     setLoading(true);
     try {
-      await login(email, password);
+      await login(emailTrim, password);
     } catch (error: any) {
       Alert.alert(t('common.error'), error.response?.data?.error || t('auth.invalidCredentials'));
     } finally {
@@ -30,53 +34,58 @@ export const LoginScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
-        <ScrollView 
-          style={styles.container} 
+        <ScrollView
+          style={styles.container}
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
         >
-      <TouchableOpacity 
-        style={styles.backButton}
-        onPress={() => navigation.navigate('Landing')}
-      >
-        <Text style={styles.backButtonText}>← {t('common.back')}</Text>
-      </TouchableOpacity>
-      
-      <Text style={styles.title}>{t('auth.welcomeBack')}</Text>
-      <Text style={styles.subtitle}>{t('auth.login')}</Text>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.navigate('Landing')} accessibilityRole="button">
+            <AppText style={[styles.backButtonText, { color: colors.primary }]}>← {t('common.back')}</AppText>
+          </TouchableOpacity>
 
-      <FormTextInput
-        label={t('auth.email')}
-        value={email}
-        onChangeText={setEmail}
-        placeholder="your@email.com"
-        keyboardType="email-address"
-      />
+          <AppText style={[styles.title, { color: colors.text }]}>{t('auth.welcomeBack')}</AppText>
+          <AppText style={[styles.subtitle, { color: colors.textSecondary }]}>{t('auth.login')}</AppText>
 
-      <FormTextInput
-        label={t('auth.password')}
-        value={password}
-        onChangeText={setPassword}
-        placeholder={t('auth.password')}
-        secureTextEntry
-      />
+          <FormTextInput
+            label={t('auth.email')}
+            value={email}
+            onChangeText={setEmail}
+            placeholder="your@email.com"
+            keyboardType="email-address"
+          />
 
-      <PrimaryButton title={t('auth.login')} onPress={handleLogin} loading={loading} />
-      
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>{t('auth.noAccount')} </Text>
-        <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
-          <Text style={styles.linkText}>{t('auth.signup')}</Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
-    </KeyboardAvoidingView>
+          <FormTextInput
+            label={t('auth.password')}
+            value={password}
+            onChangeText={setPassword}
+            placeholder={t('auth.password')}
+            secureTextEntry
+          />
+
+          <TouchableOpacity
+            style={styles.forgotRow}
+            onPress={() => navigation.navigate('ForgotPassword')}
+            accessibilityRole="button"
+          >
+            <AppText style={[styles.forgotLink, { color: colors.primary }]}>{t('auth.forgotPassword')}</AppText>
+          </TouchableOpacity>
+
+          <PrimaryButton title={t('auth.login')} onPress={handleLogin} loading={loading} />
+
+          <View style={styles.footer}>
+            <AppText style={[styles.footerText, { color: colors.textSecondary }]}>{t('auth.noAccount')} </AppText>
+            <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
+              <AppText style={[styles.linkText, { color: colors.primary }]}>{t('auth.signup')}</AppText>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -84,7 +93,6 @@ export const LoginScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   keyboardAvoid: {
     flex: 1,
@@ -93,42 +101,45 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: 24,
-    paddingTop: 20,
+    padding: spacing.xl,
+    paddingTop: spacing.lg,
   },
   backButton: {
-    marginBottom: 24,
+    marginBottom: spacing.lg,
     alignSelf: 'flex-start',
   },
   backButtonText: {
-    fontSize: 16,
-    color: '#4CAF50',
-    fontWeight: '600',
+    fontSize: fontSizes.md,
+    fontWeight: fontWeights.semibold,
   },
   title: {
-    fontSize: 32,
-    fontWeight: '700',
-    marginBottom: 8,
-    color: '#333',
+    fontSize: fontSizes.xxl,
+    fontWeight: fontWeights.bold,
+    marginBottom: spacing.xs,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 32,
+    fontSize: fontSizes.md,
+    marginBottom: spacing.xl,
+  },
+  forgotRow: {
+    alignSelf: 'flex-end',
+    marginBottom: spacing.lg,
+    marginTop: -spacing.sm,
+  },
+  forgotLink: {
+    fontSize: fontSizes.sm,
+    fontWeight: fontWeights.semibold,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 24,
+    marginTop: spacing.xl,
   },
   footerText: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: fontSizes.sm,
   },
   linkText: {
-    fontSize: 14,
-    color: '#4CAF50',
-    fontWeight: '600',
+    fontSize: fontSizes.sm,
+    fontWeight: fontWeights.semibold,
   },
 });
-

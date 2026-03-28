@@ -7,7 +7,8 @@ export { shadows } from './shadows';
 export { useTheme } from '../context/ThemeContext';
 
 // Floating tab bar height constant - used for bottom padding on main screens
-export const TAB_BAR_HEIGHT = 76;
+/** Matches floating tab bar in `MainTabBar` (pill + labels + safe inset). */
+export const TAB_BAR_HEIGHT = 88;
 
 // Export a hook to get theme-aware colors
 export const useThemeColors = () => {

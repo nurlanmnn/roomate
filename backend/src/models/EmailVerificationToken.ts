@@ -5,6 +5,8 @@ export interface IEmailVerificationToken extends Document {
   otp: string; // 6-digit OTP code
   /** When set, OTP was sent to this address for an email change (user still has old email on account). */
   newEmail?: string;
+  /** When true, OTP is for password reset (not signup or email change). */
+  passwordReset?: boolean;
   expiresAt: Date;
   createdAt: Date;
 }
@@ -25,6 +27,10 @@ const emailVerificationTokenSchema = new Schema<IEmailVerificationToken>({
     required: false,
     lowercase: true,
     trim: true,
+  },
+  passwordReset: {
+    type: Boolean,
+    required: false,
   },
   expiresAt: {
     type: Date,

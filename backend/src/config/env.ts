@@ -14,6 +14,11 @@ export const config = {
   emailFrom: process.env.EMAIL_FROM || 'noreply@roommate-app.com',
   backendPublicUrl: process.env.BACKEND_PUBLIC_URL || 'http://localhost:3000',
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:19006',
+  /** Comma-separated extra CORS origins for production (e.g. marketing site). Native apps often send no Origin. */
+  allowedOrigins: (process.env.ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean),
   geminiApiKey: process.env.GEMINI_API_KEY || '',
 };
 

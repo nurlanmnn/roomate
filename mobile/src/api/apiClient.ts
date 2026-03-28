@@ -30,9 +30,8 @@ const getScriptUrlHost = (): string | null => {
 };
 
 /**
- * Production: set EXPO_PUBLIC_API_URL in app.json extra or in EAS env.
- * Example app.json: "extra": { "apiUrl": "https://api.yourapp.com" }
- * Or use EXPO_PUBLIC_API_URL when building. Falls back to placeholder so build succeeds.
+ * Production: set via app.config.js extra.apiUrl (from EXPO_PUBLIC_API_URL at build time) or EAS env.
+ * Falls back to placeholder until you configure production URL.
  */
 const getApiBaseUrl = (): string => {
   if (!__DEV__) {

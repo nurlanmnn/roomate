@@ -38,6 +38,13 @@ A roommate coordination app to help you and your roommates manage shared living 
 - Manage multiple households
 - Member avatars and profiles
 
+## Documentation
+
+- **[TestFlight — step by step (start here)](docs/TESTFLIGHT_NEXT_STEPS.md)** — Apple IDs, EAS build, submit, install on device
+- **[iOS App Store & EAS](docs/APP_STORE_IOS.md)** — production API URL, bundle ID, builds
+- **[Deploy backend](docs/DEPLOY_BACKEND.md)** — hosting the API
+- **[Privacy policy template](docs/legal/PRIVACY_POLICY.md)** · **[Support template](docs/legal/SUPPORT.md)** — fill and host before App Store review
+
 ## Tech Stack
 
 - **Mobile**: React Native (Expo) + TypeScript

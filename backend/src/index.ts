@@ -15,13 +15,31 @@ import { schedulerService } from './services/schedulerService';
 
 const app = express();
 
-// Middleware
-app.use(cors({
-  origin: process.env.NODE_ENV !== 'production'
-    ? true // Allow all origins in development (for mobile device access)
-    : config.frontendUrl,
-  credentials: true,
-}));
+// Middleware — React Native often sends no Origin; browsers send the web app origin
+const corsOrigin = (
+  origin: string | undefined,
+  callback: (err: Error | null, allow?: boolean) => void
+) => {
+  if (process.env.NODE_ENV !== 'production') {
+    callback(null, true);
+    return;
+  }
+  if (!origin) {
+    callback(null, true);
+    return;
+  }
+  const allowed =
+    origin === config.frontendUrl ||
+    config.allowedOrigins.includes(origin);
+  callback(null, allowed);
+};
+
+app.use(
+  cors({
+    origin: corsOrigin,
+    credentials: true,
+  })
+);
 // Increase body size limit to handle base64 image data URLs (can be several MB)
 app.use(express.json({ limit: '10mb' }));
 
