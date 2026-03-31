@@ -26,7 +26,7 @@ Any Node host that supports env vars and TLS works, for example:
 
 Typical steps:
 
-1. Connect this repo (or deploy the `backend/` folder).
+1. Connect this repo (or deploy the `backend/` folder). **Monorepo:** on hosts like DigitalOcean App Platform, set **Source directory** to `backend` on the GitHub connect screen (see [`DEPLOY_DIGITALOCEAN.md`](DEPLOY_DIGITALOCEAN.md)) or detection fails.
 2. Set **Start command**: `npm start` or `node dist/index.js` if you compile TypeScript (see your `package.json`).
 3. Set **Port**: match `PORT` (often the platform sets `PORT` automatically — align `backend` to read `process.env.PORT`).
 4. Add a **custom domain** and enable HTTPS (usually automatic).
