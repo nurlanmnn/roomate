@@ -4,26 +4,35 @@ import { ExpenseTemplate } from '../models/ExpenseTemplate';
 import { Household } from '../models/Household';
 import { authMiddleware } from '../middleware/auth';
 import mongoose from 'mongoose';
+import { objectIdSchema, optionalTrimmedString, trimmedString } from '../utils/validation';
 
 const router = express.Router();
 
 const expenseTemplateShareSchema = z.object({
-  userId: z.string(),
+  userId: objectIdSchema,
   amount: z.number().min(0).optional(),
 });
 
 const createExpenseTemplateSchema = z.object({
-  householdId: z.string().optional(),
-  name: z.string().min(1),
-  description: z.string().optional(),
-  category: z.string().optional(),
+  householdId: objectIdSchema.optional(),
+  name: trimmedString(1, 120),
+  description: optionalTrimmedString(2000),
+  category: optionalTrimmedString(80),
   splitMethod: z.enum(['even', 'manual']),
-  defaultParticipants: z.array(z.string()).min(1),
+  defaultParticipants: z.array(objectIdSchema).min(1),
   defaultShares: z.array(expenseTemplateShareSchema).optional(),
 });
 
 const updateExpenseTemplateSchema = createExpenseTemplateSchema.partial().extend({
-  name: z.string().min(1).optional(),
+  name: trimmedString(1, 120).optional(),
+});
+
+const templateIdParamsSchema = z.object({
+  id: objectIdSchema,
+});
+
+const templateQuerySchema = z.object({
+  householdId: objectIdSchema.optional(),
 });
 
 // GET /expense-templates - Get all templates for user (household-specific and user-specific)
@@ -34,7 +43,7 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const householdId = req.query.householdId as string | undefined;
+    const { householdId } = templateQuerySchema.parse(req.query);
 
     // Build query: user's templates, optionally filtered by household
     const query: any = {
@@ -54,6 +63,9 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
 
     res.json(templates);
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Validation error', details: error.errors });
+    }
     console.error('Get expense templates error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -67,7 +79,8 @@ router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const template = await ExpenseTemplate.findById(req.params.id)
+    const { id } = templateIdParamsSchema.parse(req.params);
+    const template = await ExpenseTemplate.findById(id)
       .populate('defaultParticipants', 'name email avatarUrl');
 
     if (!template) {
@@ -88,6 +101,9 @@ router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
 
     res.json(template);
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Validation error', details: error.errors });
+    }
     console.error('Get expense template error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -165,7 +181,8 @@ router.patch('/:id', authMiddleware, async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const template = await ExpenseTemplate.findById(req.params.id);
+    const { id } = templateIdParamsSchema.parse(req.params);
+    const template = await ExpenseTemplate.findById(id);
     if (!template) {
       return res.status(404).json({ error: 'Template not found' });
     }
@@ -239,7 +256,8 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const template = await ExpenseTemplate.findById(req.params.id);
+    const { id } = templateIdParamsSchema.parse(req.params);
+    const template = await ExpenseTemplate.findById(id);
     if (!template) {
       return res.status(404).json({ error: 'Template not found' });
     }
@@ -252,6 +270,9 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
     await template.deleteOne();
     res.json({ message: 'Template deleted' });
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Validation error', details: error.errors });
+    }
     console.error('Delete expense template error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }

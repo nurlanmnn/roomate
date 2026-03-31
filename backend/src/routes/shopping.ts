@@ -5,17 +5,38 @@ import { ShoppingItem } from '../models/ShoppingItem';
 import { ShoppingList } from '../models/ShoppingList';
 import { Household } from '../models/Household';
 import { authMiddleware } from '../middleware/auth';
+import { booleanQuerySchema, objectIdSchema, optionalTrimmedString, trimmedString } from '../utils/validation';
 
 const router = express.Router();
 
 // ========== SCHEMAS ==========
 const createShoppingListSchema = z.object({
-  householdId: z.string(),
-  name: z.string().min(1),
+  householdId: objectIdSchema,
+  name: trimmedString(1, 120),
 });
 
 const updateShoppingListSchema = z.object({
-  name: z.string().min(1),
+  name: trimmedString(1, 120),
+});
+
+const householdParamsSchema = z.object({
+  householdId: objectIdSchema,
+});
+
+const itemIdParamsSchema = z.object({
+  id: objectIdSchema,
+});
+
+const listIdParamsSchema = z.object({
+  id: objectIdSchema,
+});
+
+const listItemsParamsSchema = z.object({
+  listId: objectIdSchema,
+});
+
+const listItemsQuerySchema = z.object({
+  completed: booleanQuerySchema.optional(),
 });
 
 // ========== SHOPPING LISTS ROUTES ==========
@@ -28,7 +49,8 @@ router.get('/lists/household/:householdId', authMiddleware, async (req: Request,
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const household = await Household.findById(req.params.householdId);
+    const { householdId } = householdParamsSchema.parse(req.params);
+    const household = await Household.findById(householdId);
     if (!household) {
       return res.status(404).json({ error: 'Household not found' });
     }
@@ -38,12 +60,15 @@ router.get('/lists/household/:householdId', authMiddleware, async (req: Request,
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    const lists = await ShoppingList.find({ householdId: req.params.householdId })
+    const lists = await ShoppingList.find({ householdId })
       .populate('createdBy', 'name email avatarUrl')
       .sort({ createdAt: -1 });
 
     res.json(lists);
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+    }
     console.error('Get shopping lists error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -101,7 +126,8 @@ router.patch('/lists/:id', authMiddleware, async (req: Request, res: Response) =
 
     const data = updateShoppingListSchema.parse(req.body);
 
-    const list = await ShoppingList.findById(req.params.id);
+    const { id } = listIdParamsSchema.parse(req.params);
+    const list = await ShoppingList.findById(id);
     if (!list) {
       return res.status(404).json({ error: 'Shopping list not found' });
     }
@@ -139,7 +165,8 @@ router.delete('/lists/:id', authMiddleware, async (req: Request, res: Response) 
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const list = await ShoppingList.findById(req.params.id);
+    const { id } = listIdParamsSchema.parse(req.params);
+    const list = await ShoppingList.findById(id);
     if (!list) {
       return res.status(404).json({ error: 'Shopping list not found' });
     }
@@ -162,6 +189,9 @@ router.delete('/lists/:id', authMiddleware, async (req: Request, res: Response) 
 
     res.json({ success: true });
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+    }
     console.error('Delete shopping list error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -170,9 +200,9 @@ router.delete('/lists/:id', authMiddleware, async (req: Request, res: Response) 
 // ========== SHOPPING ITEMS ROUTES ==========
 
 const createShoppingItemSchema = z.object({
-  householdId: z.string(),
-  listId: z.string(),
-  name: z.string().min(1),
+  householdId: objectIdSchema,
+  listId: objectIdSchema,
+  name: trimmedString(1, 120),
   quantity: z.union([
     z.number().int().positive(),
     z.string().transform((val) => {
@@ -190,7 +220,7 @@ const createShoppingItemSchema = z.object({
     }),
   ]).optional(),
   weightUnit: z.enum(['lbs', 'kg', 'g', 'oz', 'liter', 'ml', 'fl oz', 'cup', 'pint', 'quart', 'gallon']).optional(),
-  category: z.string().optional(),
+  category: optionalTrimmedString(80),
   isShared: z.boolean().default(true),
   ownerId: z
     .string()
@@ -198,11 +228,12 @@ const createShoppingItemSchema = z.object({
       const trimmed = val?.trim();
       return trimmed ? trimmed : undefined;
     })
+    .pipe(objectIdSchema.optional())
     .optional(),
 });
 
 const updateShoppingItemSchema = z.object({
-  name: z.string().min(1).optional(),
+  name: trimmedString(1, 120).optional(),
   quantity: z.union([
     z.number().int().positive(),
     z.string().transform((val) => {
@@ -233,7 +264,7 @@ const updateShoppingItemSchema = z.object({
     return val === undefined || (typeof val === 'number' && !isNaN(val) && val > 0);
   }, { message: 'Weight must be a positive number' }),
   weightUnit: z.enum(['lbs', 'kg', 'g', 'oz', 'liter', 'ml', 'fl oz', 'cup', 'pint', 'quart', 'gallon']).optional().or(z.undefined()),
-  category: z.string().optional(),
+  category: optionalTrimmedString(80),
   isShared: z.boolean().optional(),
   ownerId: z
     .string()
@@ -241,6 +272,7 @@ const updateShoppingItemSchema = z.object({
       const trimmed = val?.trim();
       return trimmed ? trimmed : undefined;
     })
+    .pipe(objectIdSchema.optional())
     .optional(),
   completed: z.boolean().optional(),
 });
@@ -253,7 +285,9 @@ router.get('/items/list/:listId', authMiddleware, async (req: Request, res: Resp
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const list = await ShoppingList.findById(req.params.listId);
+    const { listId } = listItemsParamsSchema.parse(req.params);
+    const { completed } = listItemsQuerySchema.parse(req.query);
+    const list = await ShoppingList.findById(listId);
     if (!list) {
       return res.status(404).json({ error: 'Shopping list not found' });
     }
@@ -268,11 +302,10 @@ router.get('/items/list/:listId', authMiddleware, async (req: Request, res: Resp
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    const { completed } = req.query;
-    const query: any = { listId: req.params.listId };
+    const query: any = { listId };
     
     if (completed !== undefined) {
-      query.completed = completed === 'true';
+      query.completed = completed;
     }
 
     const items = await ShoppingItem.find(query)
@@ -282,6 +315,9 @@ router.get('/items/list/:listId', authMiddleware, async (req: Request, res: Resp
 
     res.json(items);
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+    }
     console.error('Get shopping items error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -368,14 +404,6 @@ router.patch('/:id', authMiddleware, async (req: Request, res: Response) => {
     
     // Additional validation: ensure weight is never a string that looks like a unit
     if (data.weight !== undefined) {
-      if (typeof data.weight === 'string') {
-        // If weight is a string that matches weight unit values, it's invalid
-        const weightUnits = ['lbs', 'kg', 'g', 'oz', 'liter', 'ml', 'fl oz', 'cup', 'pint', 'quart', 'gallon', 'k'];
-        if (weightUnits.includes(data.weight.toLowerCase())) {
-          console.warn('Invalid weight value detected (looks like unit):', data.weight);
-          data.weight = undefined; // Clear invalid weight
-        }
-      }
       // Ensure weight is a valid number
       if (typeof data.weight !== 'number' || isNaN(data.weight) || data.weight <= 0) {
         console.warn('Invalid weight value:', data.weight);
@@ -385,7 +413,8 @@ router.patch('/:id', authMiddleware, async (req: Request, res: Response) => {
     
     console.log('Parsed and validated data:', JSON.stringify(data));
 
-    const item = await ShoppingItem.findById(req.params.id);
+    const { id } = itemIdParamsSchema.parse(req.params);
+    const item = await ShoppingItem.findById(id);
     if (!item) {
       return res.status(404).json({ error: 'Shopping item not found' });
     }
@@ -415,7 +444,7 @@ router.patch('/:id', authMiddleware, async (req: Request, res: Response) => {
       }
     }
     if (data.weightUnit !== undefined) {
-      item.weightUnit = data.weightUnit === null || data.weightUnit === '' ? undefined : data.weightUnit;
+      item.weightUnit = data.weightUnit;
     }
     if (data.category !== undefined) item.category = data.category;
     if (data.isShared !== undefined) item.isShared = data.isShared;
@@ -447,7 +476,8 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const item = await ShoppingItem.findById(req.params.id);
+    const { id } = itemIdParamsSchema.parse(req.params);
+    const item = await ShoppingItem.findById(id);
     if (!item) {
       return res.status(404).json({ error: 'Shopping item not found' });
     }
@@ -466,6 +496,9 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
 
     res.json({ success: true });
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+    }
     console.error('Delete shopping item error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }

@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import { config } from './config/env';
 import { connectDB } from './config/db';
 import authRoutes from './routes/auth';
@@ -12,8 +13,13 @@ import goalRoutes from './routes/goals';
 import eventRoutes from './routes/events';
 import choreRoutes from './routes/chores';
 import { schedulerService } from './services/schedulerService';
+import { authRateLimiter, globalApiLimiter } from './middleware/security';
 
 const app = express();
+
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
 
 // Middleware — React Native often sends no Origin; browsers send the web app origin
 const corsOrigin = (
@@ -40,11 +46,18 @@ app.use(
     credentials: true,
   })
 );
+app.use(
+  helmet({
+    crossOriginResourcePolicy: false,
+  })
+);
+app.disable('x-powered-by');
+app.use(globalApiLimiter);
 // Increase body size limit to handle base64 image data URLs (can be several MB)
 app.use(express.json({ limit: '10mb' }));
 
 // Routes
-app.use('/auth', authRoutes);
+app.use('/auth', authRateLimiter, authRoutes);
 app.use('/households', householdRoutes);
 app.use('/expenses', expenseRoutes);
 app.use('/expense-templates', expenseTemplateRoutes);

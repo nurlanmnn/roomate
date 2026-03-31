@@ -6,16 +6,26 @@ import { authMiddleware } from '../middleware/auth';
 import { notificationService } from '../services/notificationService';
 import mongoose from 'mongoose';
 import crypto from 'crypto';
+import { objectIdSchema, optionalTrimmedString, trimmedString } from '../utils/validation';
 
 const router = express.Router();
 
 const createHouseholdSchema = z.object({
-  name: z.string().min(1),
-  address: z.string().optional(),
+  name: trimmedString(1, 120),
+  address: optionalTrimmedString(200),
 });
 
 const joinHouseholdSchema = z.object({
-  joinCode: z.string().min(1),
+  joinCode: z.string().trim().regex(/^[A-Za-z0-9]{6,12}$/),
+});
+
+const householdIdParamsSchema = z.object({
+  id: objectIdSchema,
+});
+
+const householdMemberParamsSchema = z.object({
+  id: objectIdSchema,
+  memberId: objectIdSchema,
 });
 
 // Generate unique join code
@@ -147,7 +157,8 @@ router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const household = await Household.findById(req.params.id);
+    const { id } = householdIdParamsSchema.parse(req.params);
+    const household = await Household.findById(id);
     if (!household) {
       return res.status(404).json({ error: 'Household not found' });
     }
@@ -162,6 +173,9 @@ router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
 
     res.json(household);
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+    }
     console.error('Get household error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -169,8 +183,8 @@ router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
 
 // PUT /households/:id - Update household (owner only)
 const updateHouseholdSchema = z.object({
-  name: z.string().min(1).optional(),
-  address: z.string().optional(),
+  name: trimmedString(1, 120).optional(),
+  address: optionalTrimmedString(200),
 });
 
 router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
@@ -180,7 +194,8 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const household = await Household.findById(req.params.id);
+    const { id } = householdIdParamsSchema.parse(req.params);
+    const household = await Household.findById(id);
     if (!household) {
       return res.status(404).json({ error: 'Household not found' });
     }
@@ -230,7 +245,8 @@ router.post('/:id/regenerate-invite', authMiddleware, async (req: Request, res: 
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const household = await Household.findById(req.params.id);
+    const { id } = householdIdParamsSchema.parse(req.params);
+    const household = await Household.findById(id);
     if (!household) {
       return res.status(404).json({ error: 'Household not found' });
     }
@@ -264,6 +280,9 @@ router.post('/:id/regenerate-invite', authMiddleware, async (req: Request, res: 
 
     res.json(household);
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+    }
     console.error('Regenerate invite error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -277,7 +296,8 @@ router.post('/:id/leave', authMiddleware, async (req: Request, res: Response) =>
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const household = await Household.findById(req.params.id);
+    const { id } = householdIdParamsSchema.parse(req.params);
+    const household = await Household.findById(id);
     if (!household) {
       return res.status(404).json({ error: 'Household not found' });
     }
@@ -293,7 +313,7 @@ router.post('/:id/leave', authMiddleware, async (req: Request, res: Response) =>
       // Owner is leaving - transfer ownership or delete household
       if (household.members.length === 1) {
         // Owner is the only member - delete the household
-        await Household.findByIdAndDelete(req.params.id);
+        await Household.findByIdAndDelete(id);
         return res.json({ success: true, deleted: true });
       }
 
@@ -314,6 +334,9 @@ router.post('/:id/leave', authMiddleware, async (req: Request, res: Response) =>
 
     res.json({ success: true });
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+    }
     console.error('Leave household error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -327,7 +350,7 @@ router.delete('/:id/members/:memberId', authMiddleware, async (req: Request, res
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const { id, memberId } = req.params;
+    const { id, memberId } = householdMemberParamsSchema.parse(req.params);
     const household = await Household.findById(id);
     if (!household) {
       return res.status(404).json({ error: 'Household not found' });
@@ -363,6 +386,9 @@ router.delete('/:id/members/:memberId', authMiddleware, async (req: Request, res
 
     res.json(household);
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+    }
     console.error('Remove member error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -376,7 +402,8 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const household = await Household.findById(req.params.id);
+    const { id } = householdIdParamsSchema.parse(req.params);
+    const household = await Household.findById(id);
     if (!household) {
       return res.status(404).json({ error: 'Household not found' });
     }
@@ -390,7 +417,7 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
     const memberIds = household.members.map(m => m.toString());
     const householdName = household.name;
 
-    await Household.findByIdAndDelete(req.params.id);
+    await Household.findByIdAndDelete(id);
 
     // Notify members about deletion
     notificationService.notifyHouseholdDeleted(
@@ -401,6 +428,9 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
 
     res.json({ success: true });
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+    }
     console.error('Delete household error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }

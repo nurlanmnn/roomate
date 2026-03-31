@@ -6,16 +6,25 @@ import { Household } from '../models/Household';
 import { User } from '../models/User';
 import { authMiddleware } from '../middleware/auth';
 import { notificationService } from '../services/notificationService';
+import { isoDateSchema, objectIdSchema, optionalTrimmedString, trimmedString } from '../utils/validation';
 
 const router = express.Router();
 
 const createEventSchema = z.object({
-  householdId: z.string(),
-  title: z.string().min(1),
-  description: z.string().optional(),
+  householdId: objectIdSchema,
+  title: trimmedString(1, 120),
+  description: optionalTrimmedString(2000),
   type: z.enum(['bill', 'cleaning', 'social', 'meal', 'meeting', 'maintenance', 'shopping', 'trip', 'birthday', 'reminder', 'other']),
-  date: z.string().datetime().or(z.date()),
-  endDate: z.string().datetime().or(z.date()).optional(),
+  date: isoDateSchema,
+  endDate: isoDateSchema.optional(),
+});
+
+const householdParamsSchema = z.object({
+  householdId: objectIdSchema,
+});
+
+const eventIdParamsSchema = z.object({
+  id: objectIdSchema,
 });
 
 // GET /events/household/:householdId
@@ -26,7 +35,8 @@ router.get('/household/:householdId', authMiddleware, async (req: Request, res: 
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const household = await Household.findById(req.params.householdId);
+    const { householdId } = householdParamsSchema.parse(req.params);
+    const household = await Household.findById(householdId);
     if (!household) {
       return res.status(404).json({ error: 'Household not found' });
     }
@@ -37,13 +47,16 @@ router.get('/household/:householdId', authMiddleware, async (req: Request, res: 
     }
 
     const events = await Event.find({
-      householdId: req.params.householdId,
+      householdId,
     })
       .populate('createdBy', 'name email avatarUrl')
       .sort({ date: 1 });
 
     res.json(events);
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+    }
     console.error('Get events error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -115,7 +128,8 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const event = await Event.findById(req.params.id);
+    const { id } = eventIdParamsSchema.parse(req.params);
+    const event = await Event.findById(id);
     if (!event) {
       return res.status(404).json({ error: 'Event not found' });
     }
@@ -168,7 +182,8 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const event = await Event.findById(req.params.id);
+    const { id } = eventIdParamsSchema.parse(req.params);
+    const event = await Event.findById(id);
     if (!event) {
       return res.status(404).json({ error: 'Event not found' });
     }
@@ -182,6 +197,9 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
 
     res.json({ success: true });
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+    }
     console.error('Delete event error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }

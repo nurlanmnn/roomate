@@ -9,35 +9,44 @@ import { computeBalances } from '../utils/balances';
 import { calculateExpenseInsights } from '../utils/expenseInsights';
 import { notificationService } from '../services/notificationService';
 import mongoose from 'mongoose';
+import { isoDateSchema, objectIdSchema, optionalTrimmedString, trimmedString } from '../utils/validation';
 
 const router = express.Router();
 
 const expenseShareSchema = z.object({
-  userId: z.string(),
+  userId: objectIdSchema,
   amount: z.number().min(0),
 });
 
 const createExpenseSchema = z.object({
-  householdId: z.string(),
-  description: z.string().min(1),
+  householdId: objectIdSchema,
+  description: trimmedString(1, 200),
   totalAmount: z.number().min(0.01),
-  paidBy: z.string(),
-  participants: z.array(z.string()).min(1),
+  paidBy: objectIdSchema,
+  participants: z.array(objectIdSchema).min(1),
   splitMethod: z.enum(['even', 'manual']),
   shares: z.array(expenseShareSchema),
-  date: z.string().datetime().or(z.date()),
-  category: z.string().optional(),
+  date: isoDateSchema,
+  category: optionalTrimmedString(80),
 });
 
 const updateExpenseSchema = z.object({
-  description: z.string().min(1),
+  description: trimmedString(1, 200),
   totalAmount: z.number().min(0.01),
-  paidBy: z.string(),
-  participants: z.array(z.string()).min(1),
+  paidBy: objectIdSchema,
+  participants: z.array(objectIdSchema).min(1),
   splitMethod: z.enum(['even', 'manual']),
   shares: z.array(expenseShareSchema),
-  date: z.string().datetime().or(z.date()),
-  category: z.string().optional(),
+  date: isoDateSchema,
+  category: optionalTrimmedString(80),
+});
+
+const householdParamsSchema = z.object({
+  householdId: objectIdSchema,
+});
+
+const expenseIdParamsSchema = z.object({
+  id: objectIdSchema,
 });
 
 // GET /expenses/household/:householdId
@@ -48,7 +57,8 @@ router.get('/household/:householdId', authMiddleware, async (req: Request, res: 
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const household = await Household.findById(req.params.householdId);
+    const { householdId } = householdParamsSchema.parse(req.params);
+    const household = await Household.findById(householdId);
     if (!household) {
       return res.status(404).json({ error: 'Household not found' });
     }
@@ -59,7 +69,7 @@ router.get('/household/:householdId', authMiddleware, async (req: Request, res: 
     }
 
     const expenses = await Expense.find({
-      householdId: req.params.householdId,
+      householdId,
     })
       .populate('createdBy', 'name email avatarUrl')
       .populate('paidBy', 'name email avatarUrl')
@@ -68,6 +78,9 @@ router.get('/household/:householdId', authMiddleware, async (req: Request, res: 
 
     res.json(expenses);
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+    }
     console.error('Get expenses error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -81,7 +94,8 @@ router.get('/household/:householdId/balances', authMiddleware, async (req: Reque
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const household = await Household.findById(req.params.householdId);
+    const { householdId } = householdParamsSchema.parse(req.params);
+    const household = await Household.findById(householdId);
     if (!household) {
       return res.status(404).json({ error: 'Household not found' });
     }
@@ -92,10 +106,10 @@ router.get('/household/:householdId/balances', authMiddleware, async (req: Reque
     }
 
     const expenses = await Expense.find({
-      householdId: req.params.householdId,
+      householdId,
     });
     const settlements = await Settlement.find({
-      householdId: req.params.householdId,
+      householdId,
     });
 
     const balances = computeBalances(expenses, settlements);
@@ -128,6 +142,9 @@ router.get('/household/:householdId/balances', authMiddleware, async (req: Reque
 
     res.json(balancesWithSinceDate);
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+    }
     console.error('Get balances error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -241,7 +258,8 @@ router.get('/household/:householdId/insights', authMiddleware, async (req: Reque
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const household = await Household.findById(req.params.householdId);
+    const { householdId } = householdParamsSchema.parse(req.params);
+    const household = await Household.findById(householdId);
     if (!household) {
       return res.status(404).json({ error: 'Household not found' });
     }
@@ -252,13 +270,16 @@ router.get('/household/:householdId/insights', authMiddleware, async (req: Reque
     }
 
     const expenses = await Expense.find({
-      householdId: req.params.householdId,
+      householdId,
     });
 
     const insights = calculateExpenseInsights(expenses);
 
     res.json(insights);
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+    }
     console.error('Get insights error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -272,7 +293,8 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const expense = await Expense.findById(req.params.id);
+    const { id } = expenseIdParamsSchema.parse(req.params);
+    const expense = await Expense.findById(id);
     if (!expense) {
       return res.status(404).json({ error: 'Expense not found' });
     }
@@ -355,7 +377,8 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const expense = await Expense.findById(req.params.id);
+    const { id } = expenseIdParamsSchema.parse(req.params);
+    const expense = await Expense.findById(id);
     if (!expense) {
       return res.status(404).json({ error: 'Expense not found' });
     }
@@ -382,6 +405,9 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
 
     res.json({ success: true });
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+    }
     console.error('Delete expense error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }

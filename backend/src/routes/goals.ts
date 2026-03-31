@@ -6,23 +6,31 @@ import { User } from '../models/User';
 import { authMiddleware } from '../middleware/auth';
 import { notificationService } from '../services/notificationService';
 import mongoose from 'mongoose';
+import { isoDateSchema, objectIdSchema, optionalTrimmedString, trimmedString } from '../utils/validation';
 
 const router = express.Router();
 
 const createGoalSchema = z.object({
-  householdId: z.string(),
-  title: z.string().min(1),
-  description: z.string().optional(),
+  householdId: objectIdSchema,
+  title: trimmedString(1, 120),
+  description: optionalTrimmedString(2000),
   status: z.enum(['idea', 'planned', 'in_progress', 'done']).default('idea'),
-  // Mobile sends YYYY-MM-DD; also accept full ISO datetime strings.
-  targetDate: z.coerce.date().optional(),
+  targetDate: isoDateSchema.optional(),
 });
 
 const updateGoalSchema = z.object({
-  title: z.string().min(1).optional(),
-  description: z.string().optional(),
+  title: trimmedString(1, 120).optional(),
+  description: optionalTrimmedString(2000),
   status: z.enum(['idea', 'planned', 'in_progress', 'done']).optional(),
-  targetDate: z.coerce.date().optional(),
+  targetDate: isoDateSchema.optional(),
+});
+
+const householdParamsSchema = z.object({
+  householdId: objectIdSchema,
+});
+
+const goalIdParamsSchema = z.object({
+  id: objectIdSchema,
 });
 
 // GET /goals/household/:householdId
@@ -33,7 +41,8 @@ router.get('/household/:householdId', authMiddleware, async (req: Request, res: 
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const household = await Household.findById(req.params.householdId);
+    const { householdId } = householdParamsSchema.parse(req.params);
+    const household = await Household.findById(householdId);
     if (!household) {
       return res.status(404).json({ error: 'Household not found' });
     }
@@ -44,7 +53,7 @@ router.get('/household/:householdId', authMiddleware, async (req: Request, res: 
     }
 
     const goals = await Goal.find({
-      householdId: req.params.householdId,
+      householdId,
     })
       .populate('createdBy', 'name email avatarUrl')
       .populate('upvotes', 'name email avatarUrl')
@@ -52,6 +61,9 @@ router.get('/household/:householdId', authMiddleware, async (req: Request, res: 
 
     res.json(goals);
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+    }
     console.error('Get goals error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -125,7 +137,8 @@ router.patch('/:id', authMiddleware, async (req: Request, res: Response) => {
 
     const data = updateGoalSchema.parse(req.body);
 
-    const goal = await Goal.findById(req.params.id);
+    const { id } = goalIdParamsSchema.parse(req.params);
+    const goal = await Goal.findById(id);
     if (!goal) {
       return res.status(404).json({ error: 'Goal not found' });
     }
@@ -194,7 +207,8 @@ router.post('/:id/upvote', authMiddleware, async (req: Request, res: Response) =
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const goal = await Goal.findById(req.params.id);
+    const { id } = goalIdParamsSchema.parse(req.params);
+    const goal = await Goal.findById(id);
     if (!goal) {
       return res.status(404).json({ error: 'Goal not found' });
     }
@@ -226,6 +240,9 @@ router.post('/:id/upvote', authMiddleware, async (req: Request, res: Response) =
 
     res.json(goal);
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+    }
     console.error('Upvote goal error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }

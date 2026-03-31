@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
 import { config } from '../config/env';
 
 export interface JWTPayload {
@@ -21,6 +22,11 @@ export const authMiddleware = (
 
     const token = authHeader.substring(7);
     const decoded = jwt.verify(token, config.jwtSecret) as JWTPayload;
+
+    if (!decoded?.userId || !mongoose.Types.ObjectId.isValid(decoded.userId)) {
+      res.status(401).json({ error: 'Invalid or expired token' });
+      return;
+    }
     
     req.user = {
       userId: decoded.userId,

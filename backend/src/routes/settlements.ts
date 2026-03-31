@@ -6,23 +6,28 @@ import { Household } from '../models/Household';
 import { Expense } from '../models/Expense';
 import { authMiddleware } from '../middleware/auth';
 import { computeBalances } from '../utils/balances';
+import { isoDateSchema, objectIdSchema, optionalTrimmedString } from '../utils/validation';
 
 const router = express.Router();
 
 const createSettlementSchema = z.object({
-  householdId: z.string(),
-  fromUserId: z.string(),
-  toUserId: z.string(),
+  householdId: objectIdSchema,
+  fromUserId: objectIdSchema,
+  toUserId: objectIdSchema,
   amount: z.number().min(0.01),
-  method: z.string().optional(),
-  note: z.string().optional(),
-  date: z.string().datetime().or(z.date()),
-  proofImageUrl: z.string().max(1000000).optional(), // Accept data URLs (base64 images can be large)
+  method: optionalTrimmedString(120),
+  note: optionalTrimmedString(2000),
+  date: isoDateSchema,
+  proofImageUrl: z.string().trim().max(1000000).optional(), // Accept data URLs (base64 images can be large)
 });
 
 const netBalanceSchema = z.object({
-  householdId: z.string(),
-  otherUserId: z.string(),
+  householdId: objectIdSchema,
+  otherUserId: objectIdSchema,
+});
+
+const householdParamsSchema = z.object({
+  householdId: objectIdSchema,
 });
 
 // GET /settlements/household/:householdId
@@ -33,7 +38,8 @@ router.get('/household/:householdId', authMiddleware, async (req: Request, res: 
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const household = await Household.findById(req.params.householdId);
+    const { householdId } = householdParamsSchema.parse(req.params);
+    const household = await Household.findById(householdId);
     if (!household) {
       return res.status(404).json({ error: 'Household not found' });
     }
@@ -44,7 +50,7 @@ router.get('/household/:householdId', authMiddleware, async (req: Request, res: 
     }
 
     const settlements = await Settlement.find({
-      householdId: req.params.householdId,
+      householdId,
     })
       .populate('fromUserId', 'name email avatarUrl')
       .populate('toUserId', 'name email avatarUrl')
@@ -52,6 +58,9 @@ router.get('/household/:householdId', authMiddleware, async (req: Request, res: 
 
     res.json(settlements);
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+    }
     console.error('Get settlements error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }

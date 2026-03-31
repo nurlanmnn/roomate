@@ -4,22 +4,40 @@ import mongoose from 'mongoose';
 import { ChoreRotation } from '../models/ChoreRotation';
 import { Household } from '../models/Household';
 import { authMiddleware } from '../middleware/auth';
+import { isoDateSchema, objectIdSchema, trimmedString } from '../utils/validation';
 
 const router = express.Router();
 
 const createChoreSchema = z.object({
-  householdId: z.string(),
-  name: z.string().min(1).max(100),
-  rotationOrder: z.array(z.string()), // user IDs
+  householdId: objectIdSchema,
+  name: trimmedString(1, 100),
+  rotationOrder: z.array(objectIdSchema).min(1), // user IDs
   frequency: z.enum(['weekly', 'biweekly']),
-  startDate: z.string().datetime().or(z.date()),
+  startDate: isoDateSchema,
 });
 
 const updateChoreSchema = z.object({
-  name: z.string().min(1).max(100).optional(),
-  rotationOrder: z.array(z.string()).optional(),
+  name: trimmedString(1, 100).optional(),
+  rotationOrder: z.array(objectIdSchema).min(1).optional(),
   frequency: z.enum(['weekly', 'biweekly']).optional(),
-  startDate: z.string().datetime().or(z.date()).optional(),
+  startDate: isoDateSchema.optional(),
+});
+
+const householdParamsSchema = z.object({
+  householdId: objectIdSchema,
+});
+
+const choreIdParamsSchema = z.object({
+  id: objectIdSchema,
+});
+
+const choresWeekQuerySchema = z.object({
+  week: isoDateSchema.optional(),
+});
+
+const choresScheduleQuerySchema = z.object({
+  from: isoDateSchema.optional(),
+  to: isoDateSchema.optional(),
 });
 
 // Helper: get assignee index for a given date
@@ -44,7 +62,9 @@ router.get('/household/:householdId', authMiddleware, async (req: Request, res: 
     const userId = req.user?.userId;
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
-    const household = await Household.findById(req.params.householdId);
+    const { householdId } = householdParamsSchema.parse(req.params);
+    const { week } = choresWeekQuerySchema.parse(req.query);
+    const household = await Household.findById(householdId);
     if (!household) return res.status(404).json({ error: 'Household not found' });
 
     const userIdObj = new mongoose.Types.ObjectId(userId);
@@ -52,11 +72,11 @@ router.get('/household/:householdId', authMiddleware, async (req: Request, res: 
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    const chores = await ChoreRotation.find({ householdId: req.params.householdId })
+    const chores = await ChoreRotation.find({ householdId })
       .populate('rotationOrder', 'name email avatarUrl')
       .sort({ createdAt: 1 });
 
-    const refDate = req.query.week ? new Date(req.query.week as string) : new Date();
+    const refDate = week ?? new Date();
 
     const list = chores.map((chore) => {
       const rotationOrder = (chore.rotationOrder as unknown as { _id: mongoose.Types.ObjectId; name: string }[]);
@@ -85,6 +105,9 @@ router.get('/household/:householdId', authMiddleware, async (req: Request, res: 
 
     res.json(list);
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+    }
     console.error('Get chores error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -96,7 +119,9 @@ router.get('/household/:householdId/schedule', authMiddleware, async (req: Reque
     const userId = req.user?.userId;
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
-    const household = await Household.findById(req.params.householdId);
+    const { householdId } = householdParamsSchema.parse(req.params);
+    const { from, to } = choresScheduleQuerySchema.parse(req.query);
+    const household = await Household.findById(householdId);
     if (!household) return res.status(404).json({ error: 'Household not found' });
 
     const userIdObj = new mongoose.Types.ObjectId(userId);
@@ -104,13 +129,13 @@ router.get('/household/:householdId/schedule', authMiddleware, async (req: Reque
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    const from = req.query.from ? new Date(req.query.from as string) : new Date();
-    const to = req.query.to ? new Date(req.query.to as string) : new Date(from.getTime() + 28 * 24 * 60 * 60 * 1000);
-    const fromTime = from.getTime();
-    const toTime = to.getTime();
+    const fromDate = from ?? new Date();
+    const toDate = to ?? new Date(fromDate.getTime() + 28 * 24 * 60 * 60 * 1000);
+    const fromTime = fromDate.getTime();
+    const toTime = toDate.getTime();
     const msPerDay = 24 * 60 * 60 * 1000;
 
-    const chores = await ChoreRotation.find({ householdId: req.params.householdId })
+    const chores = await ChoreRotation.find({ householdId })
       .populate('rotationOrder', 'name')
       .sort({ createdAt: 1 });
 
@@ -145,6 +170,9 @@ router.get('/household/:householdId/schedule', authMiddleware, async (req: Reque
 
     res.json(assignments);
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+    }
     console.error('Get schedule error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -195,7 +223,8 @@ router.patch('/:id', authMiddleware, async (req: Request, res: Response) => {
     const userId = req.user?.userId;
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
-    const chore = await ChoreRotation.findById(req.params.id);
+    const { id } = choreIdParamsSchema.parse(req.params);
+    const chore = await ChoreRotation.findById(id);
     if (!chore) return res.status(404).json({ error: 'Chore not found' });
 
     const household = await Household.findById(chore.householdId);
@@ -234,7 +263,8 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
     const userId = req.user?.userId;
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
-    const chore = await ChoreRotation.findById(req.params.id);
+    const { id } = choreIdParamsSchema.parse(req.params);
+    const chore = await ChoreRotation.findById(id);
     if (!chore) return res.status(404).json({ error: 'Chore not found' });
 
     const household = await Household.findById(chore.householdId);
@@ -248,6 +278,9 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
     await ChoreRotation.deleteOne({ _id: chore._id });
     res.json({ success: true });
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+    }
     console.error('Delete chore error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }

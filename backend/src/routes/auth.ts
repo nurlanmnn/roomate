@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { User } from '../models/User';
@@ -9,41 +10,85 @@ import { authMiddleware, JWTPayload } from '../middleware/auth';
 import { sendVerificationEmail, sendEmailChangeVerificationEmail, sendPasswordResetEmail } from '../config/mail';
 import { config } from '../config/env';
 import mongoose from 'mongoose';
+import { emailSchema, optionalTrimmedString, otpSchema, trimmedString } from '../utils/validation';
+import { otpRateLimiter } from '../middleware/security';
 
 const router = express.Router();
+const OTP_EXPIRY_MINUTES = 10;
+const OTP_MAX_ATTEMPTS = 5;
+
+const generateOtp = (): string => Math.floor(100000 + Math.random() * 900000).toString();
+
+const hashOtp = (otp: string): string => crypto.createHash('sha256').update(otp).digest('hex');
+
+const createExpiresAt = (): Date => {
+  const expiresAt = new Date();
+  expiresAt.setMinutes(expiresAt.getMinutes() + OTP_EXPIRY_MINUTES);
+  return expiresAt;
+};
+
+const buildOtpToken = (data: {
+  userId: mongoose.Types.ObjectId;
+  otp: string;
+  newEmail?: string;
+  passwordReset?: boolean;
+}) =>
+  new EmailVerificationToken({
+    userId: data.userId,
+    otpHash: hashOtp(data.otp),
+    newEmail: data.newEmail,
+    passwordReset: data.passwordReset,
+    expiresAt: createExpiresAt(),
+    attempts: 0,
+    maxAttempts: OTP_MAX_ATTEMPTS,
+  });
+
+const matchesOtp = (token: { otpHash?: string; otp?: string }, otp: string): boolean =>
+  token.otpHash === hashOtp(otp) || token.otp === otp;
+
+const registerFailedOtpAttempt = async (token: InstanceType<typeof EmailVerificationToken>) => {
+  token.attempts += 1;
+  if (token.attempts >= token.maxAttempts) {
+    await EmailVerificationToken.deleteOne({ _id: token._id });
+    return false;
+  }
+
+  await token.save();
+  return true;
+};
 
 const signupSchema = z.object({
-  name: z.string().min(1),
-  email: z.string().email().transform((e) => e.trim().toLowerCase()),
+  name: trimmedString(1, 80),
+  email: emailSchema,
   password: z.string().min(8),
 });
 
 const loginSchema = z.object({
-  email: z.string().email().transform((e) => e.trim().toLowerCase()),
+  email: emailSchema,
   password: z.string().min(1),
 });
 
 const resendVerificationSchema = z.object({
-  email: z.string().email().transform((e) => e.trim().toLowerCase()),
+  email: emailSchema,
 });
 
 const verifyOtpSchema = z.object({
-  email: z.string().email().transform((e) => e.trim().toLowerCase()),
-  otp: z.string().length(6),
+  email: emailSchema,
+  otp: otpSchema,
 });
 
 const updateProfileSchema = z.object({
-  name: z.string().min(1).max(80).optional(),
-  avatarUrl: z.string().max(1000000).optional(), // Accept data URLs (base64 images can be large)
+  name: trimmedString(1, 80).optional(),
+  avatarUrl: z.string().trim().max(1000000).optional(), // Accept data URLs (base64 images can be large)
 });
 
 const requestEmailChangeSchema = z.object({
-  newEmail: z.string().email().transform((e) => e.trim().toLowerCase()),
+  newEmail: emailSchema,
 });
 
 const confirmEmailChangeSchema = z.object({
-  newEmail: z.string().email().transform((e) => e.trim().toLowerCase()),
-  otp: z.string().length(6),
+  newEmail: emailSchema,
+  otp: otpSchema,
 });
 
 const changePasswordSchema = z.object({
@@ -56,12 +101,12 @@ const deleteAccountSchema = z.object({
 });
 
 const forgotPasswordSchema = z.object({
-  email: z.string().email().transform((e) => e.trim().toLowerCase()),
+  email: emailSchema,
 });
 
 const resetPasswordSchema = z.object({
-  email: z.string().email().transform((e) => e.trim().toLowerCase()),
-  otp: z.string().length(6),
+  email: emailSchema,
+  otp: otpSchema,
   newPassword: z.string().min(8),
 });
 
@@ -89,14 +134,10 @@ router.post('/signup', async (req: Request, res: Response) => {
     await user.save();
 
     // Generate 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = new Date();
-    expiresAt.setMinutes(expiresAt.getMinutes() + 10); // OTP expires in 10 minutes
-
-    const verificationToken = new EmailVerificationToken({
+    const otp = generateOtp();
+    const verificationToken = buildOtpToken({
       userId: user._id,
       otp,
-      expiresAt,
     });
     await verificationToken.save();
 
@@ -251,15 +292,11 @@ router.post('/request-email-change', authMiddleware, async (req: Request, res: R
 
     await EmailVerificationToken.deleteMany({ userId: userIdObj });
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = new Date();
-    expiresAt.setMinutes(expiresAt.getMinutes() + 10);
-
-    const verificationToken = new EmailVerificationToken({
+    const otp = generateOtp();
+    const verificationToken = buildOtpToken({
       userId: userIdObj,
       otp,
       newEmail,
-      expiresAt,
     });
     await verificationToken.save();
 
@@ -303,7 +340,6 @@ router.post('/confirm-email-change', authMiddleware, async (req: Request, res: R
 
     const verificationToken = await EmailVerificationToken.findOne({
       userId: userIdObj,
-      otp,
       newEmail,
     });
 
@@ -314,6 +350,13 @@ router.post('/confirm-email-change', authMiddleware, async (req: Request, res: R
     if (verificationToken.expiresAt < new Date()) {
       await EmailVerificationToken.deleteOne({ _id: verificationToken._id });
       return res.status(410).json({ error: 'OTP has expired' });
+    }
+
+    if (!matchesOtp(verificationToken, otp)) {
+      const canRetry = await registerFailedOtpAttempt(verificationToken);
+      return res.status(400).json({
+        error: canRetry ? 'Invalid OTP' : 'Too many invalid attempts. Request a new code.',
+      });
     }
 
     const taken = await User.findOne({
@@ -431,7 +474,7 @@ router.post('/delete-account', authMiddleware, async (req: Request, res: Respons
 });
 
 // POST /auth/verify-email
-router.post('/verify-email', async (req: Request, res: Response) => {
+router.post('/verify-email', otpRateLimiter, async (req: Request, res: Response) => {
   try {
     const { email, otp } = verifyOtpSchema.parse(req.body);
     
@@ -444,7 +487,6 @@ router.post('/verify-email', async (req: Request, res: Response) => {
     // Signup / resend verification tokens only (not email-change OTPs)
     const verificationToken = await EmailVerificationToken.findOne({
       userId: user._id,
-      otp,
       newEmail: { $exists: false },
       passwordReset: { $ne: true },
     });
@@ -457,6 +499,13 @@ router.post('/verify-email', async (req: Request, res: Response) => {
     if (verificationToken.expiresAt < new Date()) {
       await EmailVerificationToken.deleteOne({ _id: verificationToken._id });
       return res.status(410).json({ error: 'OTP has expired' });
+    }
+
+    if (!matchesOtp(verificationToken, otp)) {
+      const canRetry = await registerFailedOtpAttempt(verificationToken);
+      return res.status(400).json({
+        error: canRetry ? 'Invalid OTP' : 'Too many invalid attempts. Request a new code.',
+      });
     }
 
     // Update user
@@ -477,7 +526,7 @@ router.post('/verify-email', async (req: Request, res: Response) => {
 });
 
 // POST /auth/resend-verification
-router.post('/resend-verification', async (req: Request, res: Response) => {
+router.post('/resend-verification', otpRateLimiter, async (req: Request, res: Response) => {
   try {
     const { email } = resendVerificationSchema.parse(req.body);
 
@@ -499,14 +548,10 @@ router.post('/resend-verification', async (req: Request, res: Response) => {
     });
 
     // Generate new 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = new Date();
-    expiresAt.setMinutes(expiresAt.getMinutes() + 10); // OTP expires in 10 minutes
-
-    const verificationToken = new EmailVerificationToken({
+    const otp = generateOtp();
+    const verificationToken = buildOtpToken({
       userId: user._id,
       otp,
-      expiresAt,
     });
     await verificationToken.save();
 
@@ -529,7 +574,7 @@ router.post('/resend-verification', async (req: Request, res: Response) => {
 });
 
 // POST /auth/forgot-password
-router.post('/forgot-password', async (req: Request, res: Response) => {
+router.post('/forgot-password', otpRateLimiter, async (req: Request, res: Response) => {
   try {
     const { email } = forgotPasswordSchema.parse(req.body);
 
@@ -542,15 +587,11 @@ router.post('/forgot-password', async (req: Request, res: Response) => {
 
     await EmailVerificationToken.deleteMany({ userId: user._id, passwordReset: true });
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = new Date();
-    expiresAt.setMinutes(expiresAt.getMinutes() + 10);
-
-    const verificationToken = new EmailVerificationToken({
+    const otp = generateOtp();
+    const verificationToken = buildOtpToken({
       userId: user._id,
       otp,
       passwordReset: true,
-      expiresAt,
     });
     await verificationToken.save();
 
@@ -575,7 +616,7 @@ router.post('/forgot-password', async (req: Request, res: Response) => {
 });
 
 // POST /auth/reset-password
-router.post('/reset-password', async (req: Request, res: Response) => {
+router.post('/reset-password', otpRateLimiter, async (req: Request, res: Response) => {
   try {
     const { email, otp, newPassword } = resetPasswordSchema.parse(req.body);
 
@@ -586,7 +627,6 @@ router.post('/reset-password', async (req: Request, res: Response) => {
 
     const verificationToken = await EmailVerificationToken.findOne({
       userId: user._id,
-      otp,
       passwordReset: true,
     });
 
@@ -597,6 +637,13 @@ router.post('/reset-password', async (req: Request, res: Response) => {
     if (verificationToken.expiresAt < new Date()) {
       await EmailVerificationToken.deleteOne({ _id: verificationToken._id });
       return res.status(410).json({ error: 'Reset code has expired' });
+    }
+
+    if (!matchesOtp(verificationToken, otp)) {
+      const canRetry = await registerFailedOtpAttempt(verificationToken);
+      return res.status(400).json({
+        error: canRetry ? 'Invalid or expired reset code' : 'Too many invalid attempts. Request a new reset code.',
+      });
     }
 
     user.passwordHash = await bcrypt.hash(newPassword, 10);
@@ -616,7 +663,9 @@ router.post('/reset-password', async (req: Request, res: Response) => {
 
 // POST /auth/push-token - Register push notification token
 const pushTokenSchema = z.object({
-  pushToken: z.string().min(1),
+  pushToken: optionalTrimmedString(400).refine((value) => !!value, {
+    message: 'Push token is required',
+  }),
 });
 
 router.post('/push-token', authMiddleware, async (req: Request, res: Response) => {
