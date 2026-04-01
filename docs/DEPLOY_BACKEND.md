@@ -23,7 +23,7 @@ Any Node host that supports env vars and TLS works, for example:
 - **Railway**, **Render**, **Fly.io**, **DigitalOcean App Platform**, **Heroku**, **AWS/GCP** with a reverse proxy.
 
 **DigitalOcean (step-by-step):** see [`DEPLOY_DIGITALOCEAN.md`](DEPLOY_DIGITALOCEAN.md).
-
+`
 Typical steps:
 
 1. Connect this repo (or deploy the `backend/` folder). **Monorepo:** on hosts like DigitalOcean App Platform, set **Source directory** to `backend` on the GitHub connect screen (see [`DEPLOY_DIGITALOCEAN.md`](DEPLOY_DIGITALOCEAN.md)) or detection fails.
