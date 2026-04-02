@@ -10,6 +10,8 @@
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleIconName</key>
+	<string>AppIcon</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
@@ -33,6 +35,16 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Roomate uses the camera so you can take a profile or household photo.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Roomate uses your location to set or suggest household addresses when you choose.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Roomate may save images to your library when you export or share content.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Roomate needs access to your photo library so you can choose profile or household images.</string>
+	<key>NSUserNotificationsUsageDescription</key>
+	<string>Roomate sends reminders for chores, events, and household activity.</string>
 	<key>RCTNewArchEnabled</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
