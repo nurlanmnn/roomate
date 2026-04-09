@@ -14,7 +14,7 @@ export const LandingScreen: React.FC<{ navigation: any }> = ({ navigation }) => 
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
       <View style={styles.content}>
         <Image
-          source={require('../../../assets/icon.png')}
+          source={require('../../../assets/logo-mark.png')}
           style={styles.logo}
           resizeMode="contain"
           accessibilityIgnoresInvertColors

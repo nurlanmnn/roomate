@@ -31,6 +31,7 @@ module.exports = () => {
         supportsTablet: true,
         bundleIdentifier: BUNDLE_ID,
         infoPlist: {
+          CFBundleDisplayName: 'Roomate',
           NSCameraUsageDescription:
             'Roomate uses the camera so you can take a profile or household photo.',
           NSPhotoLibraryUsageDescription:

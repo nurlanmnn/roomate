@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { AppText } from './AppText';
 import { PairwiseBalance } from '../api/expensesApi';
 import { formatCurrency } from '../utils/formatCurrency';
@@ -17,6 +17,8 @@ interface BalanceSummaryProps {
   variant?: 'card' | 'plain';
 }
 
+const BALANCE_ROWS_PAGE_SIZE = 5;
+
 export const BalanceSummary: React.FC<BalanceSummaryProps> = ({
   balances,
   currentUserId,
@@ -27,7 +29,15 @@ export const BalanceSummary: React.FC<BalanceSummaryProps> = ({
 }) => {
   const colors = useThemeColors();
   const { t } = useLanguage();
+  const [visibleRows, setVisibleRows] = useState(BALANCE_ROWS_PAGE_SIZE);
   const userBalances = balances.filter(b => b.fromUserId === currentUserId || b.toUserId === currentUserId);
+
+  useEffect(() => {
+    setVisibleRows(BALANCE_ROWS_PAGE_SIZE);
+  }, [balances, currentUserId]);
+
+  const rowsToShow = userBalances.slice(0, visibleRows);
+  const hasMoreBalanceRows = visibleRows < userBalances.length;
 
   const totalOwedToYou = userBalances
     .filter(b => b.toUserId === currentUserId)
@@ -123,6 +133,15 @@ export const BalanceSummary: React.FC<BalanceSummaryProps> = ({
       textAlign: 'center',
       padding: spacing.lg,
     },
+    loadMore: {
+      alignItems: 'center',
+      paddingTop: spacing.sm,
+    },
+    loadMoreText: {
+      fontSize: fontSizes.sm,
+      fontWeight: fontWeights.semibold,
+      color: colors.primary,
+    },
   }), [colors]);
 
   const wrapStyle = variant === 'plain' ? [styles.container, styles.containerPlain] : styles.container;
@@ -154,15 +173,16 @@ export const BalanceSummary: React.FC<BalanceSummaryProps> = ({
           )}
         </View>
       )}
-      {userBalances.map((balance, index) => {
+      {rowsToShow.map((balance, index) => {
         const isOwed = balance.toUserId === currentUserId;
         const otherUserId = isOwed ? balance.fromUserId : balance.toUserId;
         
         const otherUserName = getUserName(otherUserId);
         const otherUserAvatar = getUserAvatar?.(otherUserId);
+        const rowKey = `${balance.fromUserId}-${balance.toUserId}`;
         
         return (
-          <View key={index} style={[styles.balanceRow, index === userBalances.length - 1 && styles.balanceRowLast]}>
+          <View key={rowKey} style={[styles.balanceRow, index === rowsToShow.length - 1 && styles.balanceRowLast]}>
             <View style={styles.balanceContent}>
               <Avatar name={otherUserName} uri={otherUserAvatar} size={32} />
               <View style={styles.balanceTextContainer}>
@@ -189,6 +209,17 @@ export const BalanceSummary: React.FC<BalanceSummaryProps> = ({
           </View>
         );
       })}
+      {hasMoreBalanceRows ? (
+        <TouchableOpacity
+          style={styles.loadMore}
+          onPress={() => setVisibleRows((n) => n + BALANCE_ROWS_PAGE_SIZE)}
+          activeOpacity={0.75}
+        >
+          <AppText style={styles.loadMoreText}>
+            {t('common.loadMore')} ({rowsToShow.length}/{userBalances.length})
+          </AppText>
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
 };

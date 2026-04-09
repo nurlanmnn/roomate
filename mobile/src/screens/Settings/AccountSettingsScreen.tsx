@@ -26,6 +26,10 @@ import { SettingsGroupCard } from '../../components/Settings/SettingsGroupCard';
 import { DangerZoneCard } from '../../components/Settings/DangerZoneCard';
 import { DeleteAccountModal } from '../../components/Settings/DeleteAccountModal';
 import { useThemeColors, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
+import {
+  alertOpenSettingsForPhotoLibrary,
+  ensureMediaLibraryPermission,
+} from '../../utils/mediaLibraryPermission';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -136,9 +140,9 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
 
   const handlePickImage = async () => {
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert(t('accountSettingsScreen.permissionNeeded'), t('accountSettingsScreen.grantPhotoPermission'));
+      const allowed = await ensureMediaLibraryPermission();
+      if (!allowed) {
+        alertOpenSettingsForPhotoLibrary(t, 'accountSettingsScreen.permissionNeeded');
         return;
       }
 

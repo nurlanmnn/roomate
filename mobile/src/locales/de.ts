@@ -35,6 +35,7 @@ export default {
     continue: 'Fortfahren',
     optional: 'Optional',
     none: 'Keine',
+    loadMore: 'Mehr laden',
   },
 
   // Navigation & Tabs
@@ -259,6 +260,7 @@ export default {
     selectPerson: 'Person Auswählen',
     participant: 'Teilnehmer',
     participantPlural: 'Teilnehmer',
+    listPaginationHint: '%{loaded} von %{total} geladen',
     sectionExpenseDetails: 'Ausgabendetails',
     sectionTemplates: 'Vorlagen',
     sectionPaidBy: 'Bezahlt von',
@@ -565,6 +567,9 @@ export default {
     fillDescriptionAndParticipants: 'Bitte füllen Sie Beschreibung aus und wählen Sie Teilnehmer, bevor Sie als Vorlage speichern',
     sharesMustMatch: 'Die Beträge müssen sich zum Gesamtbetrag addieren. Verbleibend: %{amount}',
     photoPermissionNeeded: 'Wir benötigen Zugriff auf Ihre Fotos, um einen Zahlungsnachweis hinzuzufügen.',
+    openSettings: 'Einstellungen',
+    photoLibraryEnableInSettings:
+      'Der Fotozugriff ist deaktiviert. Öffnen Sie die Einstellungen, wählen Sie diese App und erlauben Sie Fotozugriff — dann erneut versuchen.',
     selectHousehold: 'Bitte wählen Sie einen Haushalt',
     netBalanceInfo: 'Sie schulden %{otherUser} %{userOwes} und %{otherUser} schuldet Ihnen %{otherOwes}.\n\nDies erstellt eine Abrechnung zur Vereinfachung des Saldos.\n\nFortfahren?',
     noMutualDebt: 'Keine gegenseitigen Schulden zum Verrechnen gefunden',

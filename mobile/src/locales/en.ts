@@ -35,6 +35,7 @@ export default {
     continue: 'Continue',
     optional: 'Optional',
     none: 'None',
+    loadMore: 'Load more',
   },
 
   // Navigation & Tabs
@@ -161,7 +162,7 @@ export default {
     failedToDelete: 'Failed to delete household',
     failedToRemoveMember: 'Failed to remove member',
     failedToRegenerate: 'Could not generate a new code',
-    shareMessage: 'Join our household on Roommate! Invite code: %{code}',
+    shareMessage: 'Join our household on Roomate! Invite code: %{code}',
   },
 
   // Home Screen
@@ -304,6 +305,7 @@ export default {
     sectionBalances: 'Balances',
     sectionActions: 'Actions',
     sectionList: 'Activity',
+    listPaginationHint: '%{loaded} of %{total} loaded',
     addExpenseSubtitle: 'Split with roommates',
     settleUpSubtitle: 'Record payments & clear debts',
     adjustFiltersHint: 'Try adjusting filters or search to see more expenses.',
@@ -617,6 +619,9 @@ export default {
     fillDescriptionAndParticipants: 'Please fill in description and select participants before saving as template',
     sharesMustMatch: 'Share amounts must add up to total. Remaining: %{amount}',
     photoPermissionNeeded: 'We need access to your photos to add proof of payment.',
+    openSettings: 'Open Settings',
+    photoLibraryEnableInSettings:
+      'Photo library access is turned off. Open Settings, choose this app, and allow Photos access — then try again.',
     selectHousehold: 'Please select a household',
     netBalanceInfo: 'You owe %{otherUser} %{userOwes} and %{otherUser} owes you %{otherOwes}.\n\nThis will create a settlement to simplify the balance. After netting, %{debtor} will owe %{amount} to %{creditor}.\n\nContinue?',
     noMutualDebt: 'No mutual debt found to net',

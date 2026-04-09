@@ -20,7 +20,7 @@ const ICON_SIZE = 24;
 /** Taller + full slot width so the lens reads larger than icon/text */
 const BUBBLE_HEIGHT = 58;
 /** 0 = bubble spans the full tab slot width */
-const BUBBLE_PAD_H = 0;
+const BUBBLE_PAD_H = -6;
 
 const TAB_ICONS: Record<
   string,
@@ -264,11 +264,11 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    bottom: 0,
+    bottom: -10,
   },
   barOuter: {
     borderRadius: 24,
-    minHeight: 88,
+    minHeight: 48,
     overflow: 'hidden',
     ...Platform.select({
       ios: {

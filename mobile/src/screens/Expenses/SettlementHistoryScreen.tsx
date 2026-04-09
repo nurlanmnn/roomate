@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, Image, TouchableOpacity, Modal, RefreshControl } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useHousehold } from '../../context/HouseholdContext';
@@ -17,6 +17,8 @@ import { parseISO, subMonths, startOfMonth, startOfYear } from 'date-fns';
 import { useLanguage } from '../../context/LanguageContext';
 
 type DateFilter = 'all' | 'month' | '3months' | '6months' | 'year';
+
+const SETTLEMENTS_PAGE_SIZE = 5;
 
 export const SettlementHistoryScreen: React.FC<{ navigation: any }> = () => {
   const { selectedHousehold } = useHousehold();
@@ -153,6 +155,16 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = () => {
           width: '90%',
           height: '80%',
         },
+        loadMoreButton: {
+          alignItems: 'center',
+          paddingVertical: spacing.md,
+          paddingHorizontal: spacing.lg,
+        },
+        loadMoreText: {
+          fontSize: fontSizes.sm,
+          fontWeight: fontWeights.semibold,
+          color: colors.primary,
+        },
       }),
     [colors]
   );
@@ -160,12 +172,17 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = () => {
   const [loading, setLoading] = useState(false);
   const [selectedProofImage, setSelectedProofImage] = useState<string | null>(null);
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
+  const [listVisibleCount, setListVisibleCount] = useState(SETTLEMENTS_PAGE_SIZE);
 
   useEffect(() => {
     if (selectedHousehold) {
       loadSettlements();
     }
   }, [selectedHousehold]);
+
+  useEffect(() => {
+    setListVisibleCount(SETTLEMENTS_PAGE_SIZE);
+  }, [settlements, dateFilter]);
 
   const loadSettlements = async () => {
     if (!selectedHousehold) return;
@@ -225,6 +242,17 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = () => {
       return settlementDate >= cutoffDate;
     });
   }, [settlements, dateFilter]);
+
+  const visibleSettlements = useMemo(
+    () => filteredSettlements.slice(0, listVisibleCount),
+    [filteredSettlements, listVisibleCount]
+  );
+
+  const hasMoreSettlements = listVisibleCount < filteredSettlements.length;
+
+  const loadMoreSettlements = useCallback(() => {
+    setListVisibleCount((c) => c + SETTLEMENTS_PAGE_SIZE);
+  }, []);
 
   if (!selectedHousehold || !user) {
     return (
@@ -310,7 +338,7 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = () => {
           </View>
         ) : (
           <SettingsSection title={t('settlementHistory.sectionList')}>
-            {filteredSettlements.map((settlement, index) => {
+            {visibleSettlements.map((settlement, index) => {
               const fromUserId =
                 typeof settlement.fromUserId === 'object' && settlement.fromUserId !== null
                   ? settlement.fromUserId._id
@@ -337,7 +365,7 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = () => {
                 <SettingsGroupCard
                   key={settlement._id}
                   style={{
-                    marginBottom: index < filteredSettlements.length - 1 ? spacing.md : 0,
+                    marginBottom: index < visibleSettlements.length - 1 ? spacing.md : 0,
                   }}
                 >
                   <View style={styles.cardPad}>
@@ -385,6 +413,17 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = () => {
                 </SettingsGroupCard>
               );
             })}
+            {hasMoreSettlements ? (
+              <TouchableOpacity
+                style={styles.loadMoreButton}
+                onPress={loadMoreSettlements}
+                activeOpacity={0.75}
+              >
+                <AppText style={styles.loadMoreText}>
+                  {t('common.loadMore')} ({visibleSettlements.length}/{filteredSettlements.length})
+                </AppText>
+              </TouchableOpacity>
+            ) : null}
           </SettingsSection>
         )}
       </ScrollView>

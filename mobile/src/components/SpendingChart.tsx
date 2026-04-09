@@ -222,9 +222,11 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
     },
   }), [colors]);
 
-  const hasData = byCategory.length > 0 && monthlyTrend.some(m => m.amount > 0);
+  const trendHasActivity =
+    monthlyTrend.length > 0 && monthlyTrend.some((m) => m.amount > 0);
+  const showCharts = trendHasActivity || byCategory.length > 0;
 
-  if (!hasData) {
+  if (!showCharts) {
     return (
       <View style={styles.emptyContainer}>
         <AppText style={styles.emptyText}>{t('spendingChart.noSpendingData')}</AppText>
@@ -234,79 +236,91 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
 
   return (
     <View style={styles.container}>
-      {/* Category Breakdown - Pie Chart */}
-      {topCategories.length > 0 && (
-        <View style={styles.chartSection}>
-          <AppText style={styles.sectionTitle}>{t('spendingChart.spendingByCategory')}</AppText>
-          <View style={styles.rangeRow}>
-            {rangeOptions.map((opt) => {
-              const active = selectedRange === opt.key;
-              return (
-                <TouchableOpacity
-                  key={opt.key}
+      <View style={styles.chartSection}>
+        <AppText style={styles.sectionTitle}>{t('spendingChart.spendingByCategory')}</AppText>
+        <View style={styles.rangeRow}>
+          {rangeOptions.map((opt) => {
+            const active = selectedRange === opt.key;
+            return (
+              <TouchableOpacity
+                key={opt.key}
+                style={[
+                  styles.rangeChip,
+                  active && styles.rangeChipActive,
+                ]}
+                onPress={() => onChangeRange?.(opt.key)}
+                activeOpacity={0.8}
+              >
+                <AppText
                   style={[
-                    styles.rangeChip,
-                    active && styles.rangeChipActive,
+                    styles.rangeChipText,
+                    active && styles.rangeChipTextActive,
                   ]}
-                  onPress={() => onChangeRange?.(opt.key)}
-                  activeOpacity={0.8}
                 >
-                  <AppText
-                    style={[
-                      styles.rangeChipText,
-                      active && styles.rangeChipTextActive,
-                    ]}
-                  >
-                    {opt.label}
-                  </AppText>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-          <View style={styles.pieChartContainer}>
-            <DonutChart
-              data={donutData}
-              size={pieSize}
-              strokeWidth={28}
-              centerContent={
-                <View style={{ alignItems: 'center' }}>
-                  <AppText style={{ fontSize: fontSizes.sm, color: colors.textSecondary }}>
-                    {t('spendingChart.total')}
-                  </AppText>
-                  <AppText
-                    style={{
-                      fontSize: fontSizes.xl,
-                      fontWeight: fontWeights.extrabold,
-                      color: colors.text,
-                    }}
-                  >
-                    {formatCurrency(topCategories.reduce((sum, c) => sum + c.amount, 0))}
-                  </AppText>
-                </View>
-              }
-            />
-          </View>
-          <View style={styles.categoryList}>
-            {topCategories.map((cat, index) => {
-              const categoryKey = `categories.${cat.category.toLowerCase().replace(/[^a-z]/g, '')}`;
-              const translatedCategory = t(categoryKey);
-              const displayName = translatedCategory !== categoryKey ? translatedCategory : (cat.category.charAt(0).toUpperCase() + cat.category.slice(1));
-              return (
-              <View key={cat.category} style={styles.categoryItem}>
-                <View style={[styles.colorDot, { backgroundColor: getCategoryColor(index) }]} />
-                <AppText style={styles.categoryName} numberOfLines={1} ellipsizeMode="tail">
-                  {displayName}
+                  {opt.label}
                 </AppText>
-                <View style={styles.categoryRight}>
-                  <AppText style={styles.categoryAmount}>{formatCompactCurrency(cat.amount)}</AppText>
-                  <AppText style={styles.categoryPercentage}>({cat.percentage.toFixed(1)}%)</AppText>
-                </View>
-              </View>
-              );
-            })}
-          </View>
+              </TouchableOpacity>
+            );
+          })}
         </View>
-      )}
+        {topCategories.length > 0 ? (
+          <>
+            <View style={styles.pieChartContainer}>
+              <DonutChart
+                data={donutData}
+                size={pieSize}
+                strokeWidth={28}
+                centerContent={
+                  <View style={{ alignItems: 'center' }}>
+                    <AppText style={{ fontSize: fontSizes.sm, color: colors.textSecondary }}>
+                      {t('spendingChart.total')}
+                    </AppText>
+                    <AppText
+                      style={{
+                        fontSize: fontSizes.xl,
+                        fontWeight: fontWeights.extrabold,
+                        color: colors.text,
+                      }}
+                    >
+                      {formatCurrency(topCategories.reduce((sum, c) => sum + c.amount, 0))}
+                    </AppText>
+                  </View>
+                }
+              />
+            </View>
+            <View style={styles.categoryList}>
+              {topCategories.map((cat, index) => {
+                const categoryKey = `categories.${cat.category.toLowerCase().replace(/[^a-z]/g, '')}`;
+                const translatedCategory = t(categoryKey);
+                const displayName = translatedCategory !== categoryKey ? translatedCategory : (cat.category.charAt(0).toUpperCase() + cat.category.slice(1));
+                return (
+                  <View key={cat.category} style={styles.categoryItem}>
+                    <View style={[styles.colorDot, { backgroundColor: getCategoryColor(index) }]} />
+                    <AppText style={styles.categoryName} numberOfLines={1} ellipsizeMode="tail">
+                      {displayName}
+                    </AppText>
+                    <View style={styles.categoryRight}>
+                      <AppText style={styles.categoryAmount}>{formatCompactCurrency(cat.amount)}</AppText>
+                      <AppText style={styles.categoryPercentage}>({cat.percentage.toFixed(1)}%)</AppText>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          </>
+        ) : (
+          <AppText
+            style={{
+              fontSize: fontSizes.sm,
+              color: colors.textSecondary,
+              textAlign: 'center',
+              paddingVertical: spacing.lg,
+            }}
+          >
+            {t('monthlyTrend.noSpendingPeriod')}
+          </AppText>
+        )}
+      </View>
 
       {/* Monthly Trend - Bar Chart */}
       {monthlyTrend.length > 0 && (

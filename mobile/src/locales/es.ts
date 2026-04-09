@@ -35,6 +35,7 @@ export default {
     continue: 'Continuar',
     optional: 'Opcional',
     none: 'Ninguno',
+    loadMore: 'Cargar más',
   },
 
   // Navigation & Tabs
@@ -259,6 +260,7 @@ export default {
     selectPerson: 'Seleccionar Persona',
     participant: 'participante',
     participantPlural: 'participantes',
+    listPaginationHint: '%{loaded} de %{total} cargados',
     sectionExpenseDetails: 'Detalles del gasto',
     sectionTemplates: 'Plantillas',
     sectionPaidBy: 'Pagado por',
@@ -565,6 +567,9 @@ export default {
     fillDescriptionAndParticipants: 'Por favor completa descripción y selecciona participantes antes de guardar como plantilla',
     sharesMustMatch: 'Las cantidades deben sumar el total. Restante: %{amount}',
     photoPermissionNeeded: 'Necesitamos acceso a tus fotos para añadir prueba de pago.',
+    openSettings: 'Abrir Ajustes',
+    photoLibraryEnableInSettings:
+      'El acceso a fotos está desactivado. Abre Ajustes, elige esta app y permite el acceso a Fotos; luego inténtalo de nuevo.',
     selectHousehold: 'Por favor selecciona un hogar',
     netBalanceInfo: 'Debes %{userOwes} a %{otherUser} y %{otherUser} te debe %{otherOwes}.\n\nEsto creará una liquidación para simplificar el balance.\n\n¿Continuar?',
     noMutualDebt: 'No se encontró deuda mutua para netear',

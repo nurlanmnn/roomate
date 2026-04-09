@@ -30,9 +30,27 @@ export interface UpdateEventData {
   endDate?: string;
 }
 
+export interface PaginatedEvents {
+  items: Event[];
+  total: number;
+}
+
 export const eventsApi = {
-  getEvents: async (householdId: string): Promise<Event[]> => {
-    const response = await apiClient.instance.get(`/events/household/${householdId}`);
+  /** Omit options for full list (e.g. calendar). Use limit + upcoming for home dashboard. */
+  getEvents: async (
+    householdId: string,
+    options?: { limit?: number; skip?: number; upcoming?: boolean }
+  ): Promise<Event[] | PaginatedEvents> => {
+    const response = await apiClient.instance.get(`/events/household/${householdId}`, {
+      params:
+        options != null
+          ? {
+              ...(options.limit != null ? { limit: options.limit } : {}),
+              ...(options.skip != null ? { skip: options.skip } : {}),
+              ...(options.upcoming === true ? { upcoming: '1' } : {}),
+            }
+          : undefined,
+    });
     return response.data;
   },
 

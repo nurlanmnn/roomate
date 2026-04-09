@@ -35,6 +35,7 @@ export default {
     continue: 'Devam Et',
     optional: 'İsteğe Bağlı',
     none: 'Yok',
+    loadMore: 'Daha fazla yükle',
   },
 
   // Navigation & Tabs
@@ -272,6 +273,7 @@ export default {
     selectPerson: 'Kişi Seç',
     participant: 'katılımcı',
     participantPlural: 'katılımcı',
+    listPaginationHint: '%{loaded} / %{total} yüklendi',
     sectionExpenseDetails: 'Gider detayları',
     sectionTemplates: 'Şablonlar',
     sectionPaidBy: 'Ödeyen',
@@ -578,6 +580,9 @@ export default {
     fillDescriptionAndParticipants: 'Şablon olarak kaydetmeden önce lütfen açıklama ve katılımcıları doldurun',
     sharesMustMatch: 'Pay tutarları toplama eşit olmalıdır. Kalan: %{amount}',
     photoPermissionNeeded: 'Ödeme kanıtı eklemek için fotoğraflarınıza erişim gerekli.',
+    openSettings: 'Ayarlara git',
+    photoLibraryEnableInSettings:
+      'Fotoğraf galerisi erişimi kapalı. Ayarlar’da bu uygulamayı açıp Fotoğraflar iznini verin, sonra tekrar deneyin.',
     selectHousehold: 'Lütfen bir ev seçin',
     netBalanceInfo: '%{otherUser} kullanıcısına %{userOwes} borcunuz var ve %{otherUser} size %{otherOwes} borçlu.\n\nBu, bakiyeyi basitleştirmek için bir hesaplaşma oluşturacak.\n\nDevam edilsin mi?',
     noMutualDebt: 'Netlenecek karşılıklı borç bulunamadı',

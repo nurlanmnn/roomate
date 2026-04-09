@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -25,11 +25,17 @@ import { SettingsGroupCard } from '../../components/Settings/SettingsGroupCard';
 import { SettingsRow } from '../../components/Settings/SettingsRow';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { formatCurrency } from '../../utils/formatCurrency';
+import {
+  alertOpenSettingsForPhotoLibrary,
+  ensureMediaLibraryPermission,
+} from '../../utils/mediaLibraryPermission';
 import { Avatar } from '../../components/ui/Avatar';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
 import { useLanguage } from '../../context/LanguageContext';
+
+const RECEIPTS_WITH_PROOF_PAGE_SIZE = 5;
 
 export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { selectedHousehold } = useHousehold();
@@ -50,6 +56,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   const [method, setMethod] = useState('');
   const [note, setNote] = useState('');
   const [proofImage, setProofImage] = useState<string | null>(null);
+  const [receiptsVisibleCount, setReceiptsVisibleCount] = useState(RECEIPTS_WITH_PROOF_PAGE_SIZE);
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -323,6 +330,16 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
       fontSize: fontSizes.sm,
       color: colors.text,
     },
+    loadMoreReceipts: {
+      alignItems: 'center',
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.lg,
+    },
+    loadMoreReceiptsText: {
+      fontSize: fontSizes.sm,
+      fontWeight: fontWeights.semibold,
+      color: colors.primary,
+    },
   }), [colors]);
 
   useEffect(() => {
@@ -375,9 +392,9 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     Keyboard.dismiss();
     
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert(t('alerts.permissionDenied'), t('alerts.photoPermissionNeeded'));
+      const allowed = await ensureMediaLibraryPermission();
+      if (!allowed) {
+        alertOpenSettingsForPhotoLibrary(t, 'alerts.permissionDenied');
         return;
       }
 
@@ -479,6 +496,32 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     }
   };
 
+  const receivedSettlementsAll = useMemo(() => {
+    if (!user) return [];
+    return settlements
+      .filter((s) => {
+        const toUserId =
+          typeof s.toUserId === 'object' && s.toUserId !== null ? s.toUserId._id : s.toUserId;
+        return toUserId === user._id && !!s.proofImageUrl;
+      })
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [settlements, user]);
+
+  useEffect(() => {
+    setReceiptsVisibleCount(RECEIPTS_WITH_PROOF_PAGE_SIZE);
+  }, [settlements]);
+
+  const receivedSettlements = useMemo(
+    () => receivedSettlementsAll.slice(0, receiptsVisibleCount),
+    [receivedSettlementsAll, receiptsVisibleCount]
+  );
+
+  const hasMoreReceipts = receiptsVisibleCount < receivedSettlementsAll.length;
+
+  const loadMoreReceipts = useCallback(() => {
+    setReceiptsVisibleCount((c) => c + RECEIPTS_WITH_PROOF_PAGE_SIZE);
+  }, []);
+
   if (!selectedHousehold || !user) {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -501,16 +544,10 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     return false;
   });
 
-  // Get settlements where user received payments (user is toUserId)
-  const receivedSettlements = settlements.filter(s => {
-    const toUserId = typeof s.toUserId === 'object' && s.toUserId !== null ? s.toUserId._id : s.toUserId;
-    return toUserId === user._id && s.proofImageUrl;
-  }).slice(0, 5); // Show last 5 with receipts
-
   const fullySettled =
     userOwedBalances.length === 0 &&
     userOwedToBalances.length === 0 &&
-    receivedSettlements.length === 0;
+    receivedSettlementsAll.length === 0;
   const showInitialLoading = loading && balances.length === 0 && settlements.length === 0;
   const showGlobalEmpty = !loading && fullySettled;
 
@@ -709,7 +746,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                 </SettingsSection>
               ) : null}
 
-              {receivedSettlements.length > 0 ? (
+              {receivedSettlementsAll.length > 0 ? (
                 <SettingsSection title={t('settleUp.receivedSettlements')}>
                   {receivedSettlements.map((settlement, index) => {
                     const fromUserId =
@@ -752,6 +789,17 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                       </SettingsGroupCard>
                     );
                   })}
+                  {hasMoreReceipts ? (
+                    <TouchableOpacity
+                      style={styles.loadMoreReceipts}
+                      onPress={loadMoreReceipts}
+                      activeOpacity={0.75}
+                    >
+                      <AppText style={styles.loadMoreReceiptsText}>
+                        {t('common.loadMore')} ({receivedSettlements.length}/{receivedSettlementsAll.length})
+                      </AppText>
+                    </TouchableOpacity>
+                  ) : null}
                 </SettingsSection>
               ) : null}
             </>

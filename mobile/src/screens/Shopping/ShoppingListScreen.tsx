@@ -1,5 +1,16 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert, Modal, KeyboardAvoidingView, Platform } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  RefreshControl,
+  Alert,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+} from 'react-native';
 import { AppText } from '../../components/AppText';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useHousehold } from '../../context/HouseholdContext';
@@ -27,6 +38,12 @@ import { FormTextInput } from '../../components/FormTextInput';
 
 const weightUnits: WeightUnit[] = ['lbs', 'kg', 'g', 'oz', 'liter', 'ml', 'fl oz', 'cup', 'pint', 'quart', 'gallon'];
 
+/** First batch size for to-buy and completed items (same as expenses-style pagination). */
+const SHOPPING_ITEMS_PAGE_SIZE = 5;
+
+const unwrapShoppingItems = (r: ShoppingItem[] | { items: ShoppingItem[]; total: number }) =>
+  Array.isArray(r) ? { items: r, total: r.length } : r;
+
 export const ShoppingListScreen: React.FC = () => {
   const { selectedHousehold, setSelectedHousehold } = useHousehold();
   const { user } = useAuth();
@@ -38,6 +55,10 @@ export const ShoppingListScreen: React.FC = () => {
   const [selectedList, setSelectedList] = useState<ShoppingList | null>(null);
   const [items, setItems] = useState<ShoppingItem[]>([]);
   const [completedItems, setCompletedItems] = useState<ShoppingItem[]>([]);
+  const [activeTotal, setActiveTotal] = useState(0);
+  const [completedTotal, setCompletedTotal] = useState(0);
+  const [loadingMoreActive, setLoadingMoreActive] = useState(false);
+  const [loadingMoreCompleted, setLoadingMoreCompleted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState('');
   const [quantity, setQuantity] = useState('');
@@ -84,6 +105,8 @@ export const ShoppingListScreen: React.FC = () => {
     } else {
       setItems([]);
       setCompletedItems([]);
+      setActiveTotal(0);
+      setCompletedTotal(0);
     }
   }, [selectedList]);
 
@@ -114,16 +137,62 @@ export const ShoppingListScreen: React.FC = () => {
 
     setLoading(true);
     try {
-      const [activeItems, completed] = await Promise.all([
-        shoppingApi.getShoppingItems(selectedList._id, false),
-        shoppingApi.getShoppingItems(selectedList._id, true),
+      const [activeRaw, completedRaw] = await Promise.all([
+        shoppingApi.getShoppingItems(selectedList._id, false, {
+          limit: SHOPPING_ITEMS_PAGE_SIZE,
+          skip: 0,
+        }),
+        shoppingApi.getShoppingItems(selectedList._id, true, {
+          limit: SHOPPING_ITEMS_PAGE_SIZE,
+          skip: 0,
+        }),
       ]);
-      setItems(activeItems);
-      setCompletedItems(completed);
+      const active = unwrapShoppingItems(activeRaw);
+      const completed = unwrapShoppingItems(completedRaw);
+      setItems(active.items);
+      setCompletedItems(completed.items);
+      setActiveTotal(active.total);
+      setCompletedTotal(completed.total);
     } catch (error) {
       if (__DEV__) console.error('Failed to load shopping items:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadMoreActive = async () => {
+    if (!selectedList || loadingMoreActive || items.length >= activeTotal) return;
+    setLoadingMoreActive(true);
+    try {
+      const raw = await shoppingApi.getShoppingItems(selectedList._id, false, {
+        limit: SHOPPING_ITEMS_PAGE_SIZE,
+        skip: items.length,
+      });
+      const { items: next, total } = unwrapShoppingItems(raw);
+      setItems((prev) => [...prev, ...next]);
+      setActiveTotal(total);
+    } catch (error) {
+      if (__DEV__) console.error('Failed to load more active items:', error);
+    } finally {
+      setLoadingMoreActive(false);
+    }
+  };
+
+  const loadMoreCompleted = async () => {
+    if (!selectedList || loadingMoreCompleted || completedItems.length >= completedTotal) return;
+    setLoadingMoreCompleted(true);
+    try {
+      const raw = await shoppingApi.getShoppingItems(selectedList._id, true, {
+        limit: SHOPPING_ITEMS_PAGE_SIZE,
+        skip: completedItems.length,
+      });
+      const { items: next, total } = unwrapShoppingItems(raw);
+      setCompletedItems((prev) => [...prev, ...next]);
+      setCompletedTotal(total);
+    } catch (error) {
+      if (__DEV__) console.error('Failed to load more completed items:', error);
+    } finally {
+      setLoadingMoreCompleted(false);
     }
   };
 
@@ -458,7 +527,16 @@ export const ShoppingListScreen: React.FC = () => {
           ref={scrollRef}
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
-          refreshControl={<RefreshControl refreshing={loading} onRefresh={loadLists} />}
+          refreshControl={
+            <RefreshControl
+              refreshing={loading}
+              onRefresh={async () => {
+                if (!selectedHousehold) return;
+                await loadLists();
+                if (selectedList) await loadItems();
+              }}
+            />
+          }
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
@@ -501,8 +579,8 @@ export const ShoppingListScreen: React.FC = () => {
                   <ActiveListCard
                     embedded
                     listName={selectedList.name}
-                    toBuyCount={filteredItems.length}
-                    completedCount={filteredCompletedItems.length}
+                    toBuyCount={q ? filteredItems.length : activeTotal}
+                    completedCount={q ? filteredCompletedItems.length : completedTotal}
                     itemLabel={t('shopping.item')}
                     itemsLabel={t('shopping.items')}
                     onEdit={() => handleEditList(selectedList)}
@@ -511,7 +589,7 @@ export const ShoppingListScreen: React.FC = () => {
                 </SettingsGroupCard>
               </SettingsSection>
 
-              {filteredItems.length === 0 && filteredCompletedItems.length === 0 ? (
+              {!loading && activeTotal === 0 && completedTotal === 0 ? (
                 <View style={styles.emptyStateWrap}>
                   <EmptyState
                     icon="cart-outline"
@@ -539,6 +617,22 @@ export const ShoppingListScreen: React.FC = () => {
                           />
                         ))}
                       </SettingsGroupCard>
+                      {!q && items.length < activeTotal ? (
+                        <TouchableOpacity
+                          style={styles.loadMoreRow}
+                          onPress={loadMoreActive}
+                          disabled={loadingMoreActive}
+                          activeOpacity={0.7}
+                        >
+                          {loadingMoreActive ? (
+                            <ActivityIndicator color={colors.primary} />
+                          ) : (
+                            <AppText style={[styles.loadMoreText, { color: colors.primary }]}>
+                              {t('common.loadMore')} ({items.length}/{activeTotal})
+                            </AppText>
+                          )}
+                        </TouchableOpacity>
+                      ) : null}
                     </SettingsSection>
                   ) : null}
 
@@ -547,27 +641,45 @@ export const ShoppingListScreen: React.FC = () => {
                       <SectionHeader
                         embedded
                         title={t('shopping.completedItems')}
-                        count={filteredCompletedItems.length}
+                        count={q ? filteredCompletedItems.length : completedTotal}
                         collapsed={!showCompleted}
                         onToggle={() => setShowCompleted(!showCompleted)}
                         actionLabel={showCompleted ? t('shopping.restoreAll') : undefined}
                         onAction={showCompleted ? handleRestoreAll : undefined}
                       />
                       {showCompleted ? (
-                        <SettingsGroupCard style={styles.completedCard}>
-                          {filteredCompletedItems.map((item, index) => (
-                            <ShoppingItemRow
-                              key={item._id}
-                              item={item}
-                              inGroupCard
-                              onToggle={() => handleToggleComplete(item)}
-                              onEdit={() => handleEditItem(item)}
-                              onDelete={() => handleDelete(item)}
-                              isFirst={index === 0}
-                              isLast={index === filteredCompletedItems.length - 1}
-                            />
-                          ))}
-                        </SettingsGroupCard>
+                        <>
+                          <SettingsGroupCard style={styles.completedCard}>
+                            {filteredCompletedItems.map((item, index) => (
+                              <ShoppingItemRow
+                                key={item._id}
+                                item={item}
+                                inGroupCard
+                                onToggle={() => handleToggleComplete(item)}
+                                onEdit={() => handleEditItem(item)}
+                                onDelete={() => handleDelete(item)}
+                                isFirst={index === 0}
+                                isLast={index === filteredCompletedItems.length - 1}
+                              />
+                            ))}
+                          </SettingsGroupCard>
+                          {!q && completedItems.length < completedTotal ? (
+                            <TouchableOpacity
+                              style={styles.loadMoreRow}
+                              onPress={loadMoreCompleted}
+                              disabled={loadingMoreCompleted}
+                              activeOpacity={0.7}
+                            >
+                              {loadingMoreCompleted ? (
+                                <ActivityIndicator color={colors.primary} />
+                              ) : (
+                                <AppText style={[styles.loadMoreText, { color: colors.primary }]}>
+                                  {t('common.loadMore')} ({completedItems.length}/{completedTotal})
+                                </AppText>
+                              )}
+                            </TouchableOpacity>
+                          ) : null}
+                        </>
                       ) : null}
                     </View>
                   ) : null}
@@ -1029,6 +1141,15 @@ const createStyles = (colors: any, bottomInset: number) => StyleSheet.create({
   emptyStateWrap: {
     marginTop: spacing.sm,
     paddingHorizontal: spacing.xl,
+  },
+  loadMoreRow: {
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    alignItems: 'center',
+  },
+  loadMoreText: {
+    fontSize: fontSizes.sm,
+    fontWeight: fontWeights.semibold,
   },
   itemsSection: {
     marginBottom: spacing.xl,

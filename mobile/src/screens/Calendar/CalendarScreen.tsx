@@ -30,6 +30,8 @@ type ViewMode = 'upcoming' | 'past' | 'all';
 
 const VIEW_MODES: ViewMode[] = ['upcoming', 'past', 'all'];
 
+const CALENDAR_LIST_PAGE_SIZE = 5;
+
 export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { selectedHousehold, setSelectedHousehold } = useHousehold();
   const { user } = useAuth();
@@ -41,21 +43,14 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   const [loading, setLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('upcoming');
+  const [calendarListVisibleCount, setCalendarListVisibleCount] = useState(CALENDAR_LIST_PAGE_SIZE);
   const scrollRef = useRef<ScrollView>(null);
 
   const isCreator = (event: Event) => event.createdBy?._id === user?._id;
 
   useEffect(() => {
-    if (selectedHousehold) loadEvents();
-  }, [selectedHousehold]);
-
-  useFocusEffect(
-    useCallback(() => {
-      if (selectedHousehold) {
-        loadEvents();
-      }
-    }, [selectedHousehold])
-  );
+    setCalendarListVisibleCount(CALENDAR_LIST_PAGE_SIZE);
+  }, [viewMode, events.length]);
 
   useFocusEffect(
     useCallback(() => {
@@ -63,16 +58,17 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     }, [])
   );
 
-  const loadEvents = async () => {
+  const loadEvents = useCallback(async () => {
     if (!selectedHousehold) return;
     setLoading(true);
     try {
       const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
       const weekKey = format(weekStart, 'yyyy-MM-dd');
-      const [eventsData, choresData] = await Promise.all([
+      const [eventsRaw, choresData] = await Promise.all([
         eventsApi.getEvents(selectedHousehold._id),
         choresApi.getChores(selectedHousehold._id, weekKey).catch(() => []),
       ]);
+      const eventsData = Array.isArray(eventsRaw) ? eventsRaw : eventsRaw.items;
       setEvents(eventsData);
       setChores(choresData);
     } catch (error: any) {
@@ -83,7 +79,11 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedHousehold, setSelectedHousehold]);
+
+  useEffect(() => {
+    if (selectedHousehold) loadEvents();
+  }, [selectedHousehold, loadEvents]);
 
   const handleEditEvent = (event: Event) => {
     navigation.navigate('CreateEvent', { editingEvent: event });
@@ -118,8 +118,8 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   }, [events, selectedDate]);
 
   const filteredEvents = useMemo(() => {
+    // Compare full date+time so today's events move to Past after they occur (not at midnight).
     const now = new Date();
-    now.setHours(0, 0, 0, 0);
 
     switch (viewMode) {
       case 'upcoming':
@@ -136,14 +136,21 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     }
   }, [events, viewMode]);
 
+  const pagedListEvents = useMemo(
+    () => filteredEvents.slice(0, calendarListVisibleCount),
+    [filteredEvents, calendarListVisibleCount]
+  );
+
   const eventsByDate = useMemo(() => {
     const grouped: Record<string, Event[]> = {};
-    filteredEvents.forEach((event) => {
+    pagedListEvents.forEach((event) => {
       const dateKey = formatDate(event.date);
       (grouped[dateKey] ||= []).push(event);
     });
     return grouped;
-  }, [filteredEvents]);
+  }, [pagedListEvents]);
+
+  const hasMoreCalendarEvents = calendarListVisibleCount < filteredEvents.length;
 
   const listSectionTitle =
     viewMode === 'upcoming'
@@ -352,6 +359,19 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                 </View>
               ))
             )}
+            {hasMoreCalendarEvents ? (
+              <TouchableOpacity
+                style={styles.calendarLoadMore}
+                onPress={() =>
+                  setCalendarListVisibleCount((n) => n + CALENDAR_LIST_PAGE_SIZE)
+                }
+                activeOpacity={0.75}
+              >
+                <AppText style={styles.calendarLoadMoreText}>
+                  {t('common.loadMore')} ({pagedListEvents.length}/{filteredEvents.length})
+                </AppText>
+              </TouchableOpacity>
+            ) : null}
           </SettingsGroupCard>
         </SettingsSection>
       </ScrollView>
@@ -582,6 +602,7 @@ const createStyles = (colors: any) =>
     },
     dateSection: {
       marginBottom: spacing.md,
+      paddingHorizontal: spacing.md,
     },
     dateHeader: {
       fontSize: fontSizes.sm,
@@ -591,5 +612,15 @@ const createStyles = (colors: any) =>
       color: colors.textSecondary,
       textTransform: 'uppercase',
       letterSpacing: 0.4,
+    },
+    calendarLoadMore: {
+      alignItems: 'center',
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.md,
+    },
+    calendarLoadMoreText: {
+      fontSize: fontSizes.sm,
+      fontWeight: fontWeights.semibold,
+      color: colors.primary,
     },
   });

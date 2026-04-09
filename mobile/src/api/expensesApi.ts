@@ -41,9 +41,48 @@ export interface PairwiseBalance {
   sinceDate?: string; // Oldest expense date that contributes to this balance
 }
 
+/** Paginated response when GET includes ?limit= */
+export interface PaginatedExpenses {
+  items: Expense[];
+  total: number;
+}
+
+export interface ExpenseInsightsPayload {
+  byCategory: Array<{ category: string; amount: number; percentage: number; count: number }>;
+  monthlyTrend: Array<{ month: string; amount: number }>;
+  predictions: { nextMonth: number; trend: 'increasing' | 'decreasing' | 'stable' };
+  totalSpent: number;
+  averageMonthly: number;
+}
+
+export interface HomeExpenseSummary {
+  expenseCount: number;
+  calendarMonthTotal: number;
+  categoryTotals: {
+    week: ExpenseInsightsPayload['byCategory'];
+    month: ExpenseInsightsPayload['byCategory'];
+    year: ExpenseInsightsPayload['byCategory'];
+    all: ExpenseInsightsPayload['byCategory'];
+  };
+  insights: ExpenseInsightsPayload;
+}
+
 export const expensesApi = {
-  getExpenses: async (householdId: string): Promise<Expense[]> => {
-    const response = await apiClient.instance.get(`/expenses/household/${householdId}`);
+  getHomeExpenseSummary: async (householdId: string): Promise<HomeExpenseSummary> => {
+    const response = await apiClient.instance.get(`/expenses/household/${householdId}/home-summary`);
+    return response.data;
+  },
+
+  getExpenses: async (
+    householdId: string,
+    pagination?: { limit: number; skip?: number }
+  ): Promise<Expense[] | PaginatedExpenses> => {
+    const response = await apiClient.instance.get(`/expenses/household/${householdId}`, {
+      params:
+        pagination != null
+          ? { limit: pagination.limit, skip: pagination.skip ?? 0 }
+          : undefined,
+    });
     return response.data;
   },
 
@@ -67,13 +106,7 @@ export const expensesApi = {
     return response.data;
   },
 
-  getInsights: async (householdId: string): Promise<{
-    byCategory: Array<{ category: string; amount: number; percentage: number; count: number }>;
-    monthlyTrend: Array<{ month: string; amount: number }>;
-    predictions: { nextMonth: number; trend: 'increasing' | 'decreasing' | 'stable' };
-    totalSpent: number;
-    averageMonthly: number;
-  }> => {
+  getInsights: async (householdId: string): Promise<ExpenseInsightsPayload> => {
     const response = await apiClient.instance.get(`/expenses/household/${householdId}/insights`);
     return response.data;
   },

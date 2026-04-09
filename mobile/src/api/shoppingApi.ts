@@ -58,7 +58,22 @@ export interface UpdateShoppingItemData {
   completed?: boolean;
 }
 
+export interface ShoppingItemStats {
+  total: number;
+  pending: number;
+}
+
+export interface PaginatedShoppingItems {
+  items: ShoppingItem[];
+  total: number;
+}
+
 export const shoppingApi = {
+  getHouseholdItemStats: async (householdId: string): Promise<ShoppingItemStats> => {
+    const response = await apiClient.instance.get(`/shopping/household/${householdId}/item-stats`);
+    return response.data;
+  },
+
   // Shopping Lists
   getShoppingLists: async (householdId: string): Promise<ShoppingList[]> => {
     const response = await apiClient.instance.get(`/shopping/lists/household/${householdId}`);
@@ -81,8 +96,17 @@ export const shoppingApi = {
   },
 
   // Shopping Items
-  getShoppingItems: async (listId: string, completed?: boolean): Promise<ShoppingItem[]> => {
-    const params = completed !== undefined ? { completed: completed.toString() } : {};
+  getShoppingItems: async (
+    listId: string,
+    completed?: boolean,
+    pagination?: { limit: number; skip?: number }
+  ): Promise<ShoppingItem[] | PaginatedShoppingItems> => {
+    const params: Record<string, string | number> = {};
+    if (completed !== undefined) params.completed = completed.toString();
+    if (pagination != null) {
+      params.limit = pagination.limit;
+      params.skip = pagination.skip ?? 0;
+    }
     const response = await apiClient.instance.get(`/shopping/items/list/${listId}`, { params });
     return response.data;
   },

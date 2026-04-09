@@ -7,8 +7,8 @@ import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { eventsApi, Event } from '../../api/eventsApi';
-import { expensesApi, PairwiseBalance, Expense } from '../../api/expensesApi';
-import { shoppingApi, ShoppingItem } from '../../api/shoppingApi';
+import { expensesApi, PairwiseBalance, HomeExpenseSummary } from '../../api/expensesApi';
+import { shoppingApi } from '../../api/shoppingApi';
 import { EventCard } from '../../components/EventCard';
 import { BalanceSummary } from '../../components/BalanceSummary';
 import { PrimaryButton } from '../../components/PrimaryButton';
@@ -33,14 +33,18 @@ export const HomeScreen: React.FC = () => {
   const { t } = useLanguage();
   const [events, setEvents] = useState<Event[]>([]);
   const [balances, setBalances] = useState<PairwiseBalance[]>([]);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [shoppingItems, setShoppingItems] = useState<ShoppingItem[]>([]);
+  const [homeSummary, setHomeSummary] = useState<HomeExpenseSummary | null>(null);
+  const [shoppingStats, setShoppingStats] = useState({ total: 0, pending: 0 });
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [insights, setInsights] = useState<any>(null);
   const [spendingRange, setSpendingRange] = useState<'week' | 'month' | 'year' | 'all'>('month');
   const [loadError, setLoadError] = useState(false);
+  const [homeEventsVisible, setHomeEventsVisible] = useState(5);
   const scrollRef = useRef<ScrollView>(null);
+  /** Only the latest home fetch may commit (avoids duplicate effects + out-of-order responses). */
+  const loadGenRef = useRef(0);
+  const prevHouseholdIdRef = useRef<string | undefined>(undefined);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -214,60 +218,73 @@ export const HomeScreen: React.FC = () => {
       fontWeight: fontWeights.medium,
       flex: 1,
     },
+    homeEventsLoadMore: {
+      alignItems: 'center',
+      paddingVertical: spacing.md,
+      marginTop: spacing.xs,
+    },
+    homeEventsLoadMoreText: {
+      fontSize: fontSizes.sm,
+      fontWeight: fontWeights.semibold,
+      color: colors.primary,
+    },
   }), [colors]);
 
+  const householdId = selectedHousehold?._id;
+
+  // Drop stale dashboard data when switching households; invalidate any in-flight fetch.
   useEffect(() => {
-    if (selectedHousehold) {
-      loadData();
+    const hid = selectedHousehold?._id;
+    if (!hid) {
+      prevHouseholdIdRef.current = undefined;
+      return;
     }
-  }, [selectedHousehold]);
+    if (prevHouseholdIdRef.current !== hid) {
+      prevHouseholdIdRef.current = hid;
+      loadGenRef.current += 1;
+      setEvents([]);
+      setBalances([]);
+      setHomeSummary(null);
+      setShoppingStats({ total: 0, pending: 0 });
+      setInsights(null);
+      setInitialLoading(true);
+    }
+  }, [selectedHousehold?._id]);
 
-  // Reload data when screen comes into focus (e.g., after creating an event)
-  useFocusEffect(
-    React.useCallback(() => {
-      if (selectedHousehold) {
-        loadData();
-      }
-    }, [selectedHousehold])
-  );
+  useEffect(() => {
+    setHomeEventsVisible(5);
+  }, [events.length]);
 
-  const loadData = async () => {
-    if (!selectedHousehold) return;
+  const loadData = React.useCallback(async () => {
+    if (!householdId) return;
 
+    const gen = ++loadGenRef.current;
     setLoading(true);
     setLoadError(false);
     try {
-      // Get all shopping lists first
-      const shoppingLists = await shoppingApi.getShoppingLists(selectedHousehold._id);
-      
-      // Get items from all lists
-      const shoppingItemsPromises = shoppingLists.map(list => 
-        shoppingApi.getShoppingItems(list._id, false)
-      );
-      const shoppingItemsArrays = await Promise.all(shoppingItemsPromises);
-      const allShoppingItems = shoppingItemsArrays.flat();
-
-      const [eventsData, balancesData, expensesData, insightsData] = await Promise.all([
-        eventsApi.getEvents(selectedHousehold._id),
-        expensesApi.getBalances(selectedHousehold._id),
-        expensesApi.getExpenses(selectedHousehold._id),
-        expensesApi.getInsights(selectedHousehold._id).catch(() => null),
+      const [homeData, balancesData, eventsRaw, shoppingStatsData] = await Promise.all([
+        expensesApi.getHomeExpenseSummary(householdId),
+        expensesApi.getBalances(householdId),
+        eventsApi.getEvents(householdId, { upcoming: true, limit: 40 }),
+        shoppingApi.getHouseholdItemStats(householdId),
       ]);
 
-      // Get upcoming events (next 5)
+      const eventsData = Array.isArray(eventsRaw) ? eventsRaw : eventsRaw.items;
+
       const upcomingEvents = eventsData
-        .filter(e => new Date(e.date) >= new Date())
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-        .slice(0, 5);
+        .filter((e) => new Date(e.date) >= new Date())
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+      if (gen !== loadGenRef.current) return;
 
       setEvents(upcomingEvents);
       setBalances(balancesData);
-      setExpenses(expensesData);
-      setShoppingItems(allShoppingItems);
-      setInsights(insightsData);
+      setHomeSummary(homeData);
+      setInsights(homeData.insights);
+      setShoppingStats(shoppingStatsData);
     } catch (error: any) {
+      if (gen !== loadGenRef.current) return;
       const status = error?.response?.status;
-      // 403 = not a member of this household (removed, or stale selection). Cleared below — not a crash.
       if (status === 403) {
         if (__DEV__) {
           console.warn(
@@ -284,10 +301,19 @@ export const HomeScreen: React.FC = () => {
         !error?.response;
       if (isNetworkError) setLoadError(true);
     } finally {
-      setLoading(false);
-      setInitialLoading(false);
+      if (gen === loadGenRef.current) {
+        setLoading(false);
+        setInitialLoading(false);
+      }
     }
-  };
+  }, [householdId, setSelectedHousehold]);
+
+  /** Load on mount and when household changes — not on every tab focus (keeps tab switches instant). Pull-to-refresh still calls loadData. */
+  useEffect(() => {
+    if (householdId) {
+      loadData();
+    }
+  }, [householdId, loadData]);
 
   const getUserName = (userId: string): string => {
     if (!selectedHousehold) return 'Unknown';
@@ -303,16 +329,9 @@ export const HomeScreen: React.FC = () => {
 
   // Calculate stats
   const calculateStats = () => {
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    
-    // Monthly expenses
-    const monthlyExpenses = expenses
-      .filter(e => new Date(e.date) >= startOfMonth)
-      .reduce((sum, e) => sum + e.totalAmount, 0);
+    const monthlyExpenses = homeSummary?.calendarMonthTotal ?? 0;
 
-    // Pending shopping items
-    const pendingShopping = shoppingItems.filter(item => !item.completed).length;
+    const pendingShopping = shoppingStats.pending;
 
     // Upcoming events count
     const upcomingEventsCount = events.length;
@@ -338,11 +357,15 @@ export const HomeScreen: React.FC = () => {
   };
 
   const stats = calculateStats();
-  const hasData = expenses.length > 0 || events.length > 0 || shoppingItems.length > 0;
+  const hasData =
+    (homeSummary?.expenseCount ?? 0) > 0 ||
+    events.length > 0 ||
+    shoppingStats.total > 0 ||
+    balances.length > 0;
 
   const setupInviteDone = (selectedHousehold?.members?.length ?? 0) > 1;
-  const setupExpenseDone = expenses.length > 0;
-  const setupShoppingDone = shoppingItems.length > 0;
+  const setupExpenseDone = (homeSummary?.expenseCount ?? 0) > 0;
+  const setupShoppingDone = shoppingStats.total > 0;
   const setupDoneCount = [setupInviteDone, setupExpenseDone, setupShoppingDone].filter(Boolean).length;
 
   const handleShareInvite = async () => {
@@ -362,44 +385,16 @@ export const HomeScreen: React.FC = () => {
     }
   };
 
-  const spendingRangeStart = React.useMemo(() => {
-    const now = new Date();
-    if (spendingRange === 'week') {
-      return new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
-    }
-    if (spendingRange === 'month') {
-      return new Date(now.getFullYear(), now.getMonth(), 1);
-    }
-    if (spendingRange === 'year') {
-      return new Date(now.getFullYear(), 0, 1);
-    }
-    return null; // all time
-  }, [spendingRange]);
-
   const spendingByCategory = React.useMemo(() => {
-    const start = spendingRangeStart;
-    const filtered = start
-      ? expenses.filter((e) => {
-          const d = new Date(e.date);
-          return d >= start;
-        })
-      : expenses;
-
-    const totals: Record<string, number> = {};
-    filtered.forEach((e) => {
-      const key = (e.category || 'Uncategorized').trim();
-      totals[key] = (totals[key] || 0) + (e.totalAmount || 0);
-    });
-    const totalAmount = Object.values(totals).reduce((sum, v) => sum + v, 0);
-    return Object.entries(totals)
-      .map(([category, amount]) => ({
-        category,
-        amount,
-        percentage: totalAmount > 0 ? (amount / totalAmount) * 100 : 0,
-        count: 0,
-      }))
-      .sort((a, b) => b.amount - a.amount);
-  }, [expenses, spendingRangeStart]);
+    if (!homeSummary) return [];
+    const map = {
+      week: homeSummary.categoryTotals.week,
+      month: homeSummary.categoryTotals.month,
+      year: homeSummary.categoryTotals.year,
+      all: homeSummary.categoryTotals.all,
+    } as const;
+    return map[spendingRange] ?? [];
+  }, [homeSummary, spendingRange]);
 
   if (!selectedHousehold) {
     return (
@@ -569,13 +564,14 @@ export const HomeScreen: React.FC = () => {
         </SectionBlock>
       )}
 
-      {(spendingByCategory.length > 0 || (insights && insights.byCategory?.length > 0)) && (
+      {((homeSummary?.expenseCount ?? 0) > 0 ||
+        Boolean(insights?.monthlyTrend?.some((m: { amount: number }) => m.amount > 0))) && (
         <SectionBlock
           title={t('home.spendingInsights')}
           description={t('home.spendingDescription')}
         >
           <SpendingChart
-            byCategory={spendingByCategory.length > 0 ? spendingByCategory : insights.byCategory}
+            byCategory={spendingByCategory}
             monthlyTrend={insights?.monthlyTrend || []}
             predictions={insights?.predictions}
             selectedRange={spendingRange}
@@ -625,9 +621,20 @@ export const HomeScreen: React.FC = () => {
           actionLabel={t('common.seeAll')}
           onAction={() => navigation.navigate('Calendar')}
         >
-          {events.slice(0, 3).map((event) => (
+          {events.slice(0, homeEventsVisible).map((event) => (
             <EventCard key={event._id} event={event} />
           ))}
+          {events.length > homeEventsVisible ? (
+            <TouchableOpacity
+              style={styles.homeEventsLoadMore}
+              onPress={() => setHomeEventsVisible((n) => n + 5)}
+              activeOpacity={0.75}
+            >
+              <AppText style={styles.homeEventsLoadMoreText}>
+                {t('common.loadMore')} ({Math.min(homeEventsVisible, events.length)}/{events.length})
+              </AppText>
+            </TouchableOpacity>
+          ) : null}
         </SectionBlock>
       )}
 

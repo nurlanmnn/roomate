@@ -1,9 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   Alert,
   KeyboardAvoidingView,
@@ -13,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { FormTextInput } from '../../components/FormTextInput';
+import { OtpSixDigits } from '../../components/auth/OtpSixDigits';
 import { authApi } from '../../api/authApi';
 import { useLanguage } from '../../context/LanguageContext';
 
@@ -24,47 +24,6 @@ export const ResetPasswordScreen: React.FC<{ navigation: any; route: any }> = ({
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
-  const [focusedIndex, setFocusedIndex] = useState<number | null>(0);
-  const inputRefs = useRef<(TextInput | null)[]>([]);
-
-  useEffect(() => {
-    inputRefs.current[0]?.focus();
-  }, []);
-
-  const handleOtpChange = (value: string, index: number) => {
-    if (value.length > 1) {
-      const pastedOtp = value.slice(0, 6).split('');
-      const next = [...otp];
-      pastedOtp.forEach((char, i) => {
-        if (index + i < 6 && /^\d$/.test(char)) {
-          next[index + i] = char;
-        }
-      });
-      setOtp(next);
-      const nextIndex = Math.min(index + pastedOtp.length, 5);
-      inputRefs.current[nextIndex]?.focus();
-      return;
-    }
-
-    if (!/^\d$/.test(value) && value !== '') {
-      return;
-    }
-
-    const next = [...otp];
-    next[index] = value;
-    setOtp(next);
-
-    if (value && index < 5) {
-      inputRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const handleKeyPress = (key: string, index: number) => {
-    if (key === 'Backspace' && !otp[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
-    }
-  };
-
   const handleReset = async () => {
     const otpString = otp.join('');
     if (otpString.length !== 6) {
@@ -89,7 +48,6 @@ export const ResetPasswordScreen: React.FC<{ navigation: any; route: any }> = ({
     } catch (error: any) {
       Alert.alert(t('common.error'), error.response?.data?.error || t('alerts.somethingWentWrong'));
       setOtp(['', '', '', '', '', '']);
-      inputRefs.current[0]?.focus();
     } finally {
       setLoading(false);
     }
@@ -101,7 +59,6 @@ export const ResetPasswordScreen: React.FC<{ navigation: any; route: any }> = ({
       await authApi.requestPasswordReset(email);
       Alert.alert(t('common.success'), t('auth.codeSent'));
       setOtp(['', '', '', '', '', '']);
-      inputRefs.current[0]?.focus();
     } catch (error: any) {
       Alert.alert(t('common.error'), error.response?.data?.error || t('alerts.somethingWentWrong'));
     } finally {
@@ -131,29 +88,7 @@ export const ResetPasswordScreen: React.FC<{ navigation: any; route: any }> = ({
             <Text style={styles.email}>{email}</Text>
           </Text>
 
-          <View style={styles.otpContainer}>
-            {otp.map((digit, index) => (
-              <TextInput
-                key={index}
-                ref={(ref) => {
-                  inputRefs.current[index] = ref;
-                }}
-                style={[
-                  styles.otpInput,
-                  focusedIndex === index && styles.otpInputFocused,
-                  digit ? styles.otpInputFilled : null,
-                ]}
-                value={digit}
-                onChangeText={(value) => handleOtpChange(value, index)}
-                onKeyPress={({ nativeEvent }) => handleKeyPress(nativeEvent.key, index)}
-                onFocus={() => setFocusedIndex(index)}
-                onBlur={() => setFocusedIndex(null)}
-                keyboardType="number-pad"
-                maxLength={1}
-                selectTextOnFocus
-              />
-            ))}
-          </View>
+          <OtpSixDigits value={otp} onChange={setOtp} />
 
           <FormTextInput
             label={t('auth.newPassword')}
@@ -228,31 +163,6 @@ const styles = StyleSheet.create({
   email: {
     fontWeight: '600',
     color: '#333',
-  },
-  otpContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-    paddingHorizontal: 8,
-  },
-  otpInput: {
-    width: 50,
-    height: 60,
-    borderWidth: 2,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    textAlign: 'center',
-    fontSize: 24,
-    fontWeight: '600',
-    backgroundColor: '#fff',
-  },
-  otpInputFocused: {
-    borderColor: '#4CAF50',
-    borderWidth: 2,
-  },
-  otpInputFilled: {
-    borderColor: '#4CAF50',
-    backgroundColor: '#f0f9f0',
   },
   resendContainer: {
     flexDirection: 'row',

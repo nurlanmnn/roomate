@@ -35,6 +35,7 @@ export default {
     continue: 'Continuer',
     optional: 'Facultatif',
     none: 'Aucun',
+    loadMore: 'Charger plus',
   },
 
   // Navigation & Tabs
@@ -259,6 +260,7 @@ export default {
     selectPerson: 'Sélectionner une Personne',
     participant: 'participant',
     participantPlural: 'participants',
+    listPaginationHint: '%{loaded} sur %{total} chargés',
     sectionExpenseDetails: 'Détails de la dépense',
     sectionTemplates: 'Modèles',
     sectionPaidBy: 'Payé par',
@@ -565,6 +567,9 @@ export default {
     fillDescriptionAndParticipants: 'Veuillez remplir la description et sélectionner les participants avant d\'enregistrer comme modèle',
     sharesMustMatch: 'Les montants doivent correspondre au total. Restant : %{amount}',
     photoPermissionNeeded: 'Nous avons besoin d\'accéder à vos photos pour ajouter une preuve de paiement.',
+    openSettings: 'Ouvrir Réglages',
+    photoLibraryEnableInSettings:
+      'L’accès aux photos est désactivé. Ouvrez Réglages, choisissez cette app et autorisez l’accès aux photos, puis réessayez.',
     selectHousehold: 'Veuillez sélectionner un foyer',
     netBalanceInfo: 'Vous devez %{userOwes} à %{otherUser} et %{otherUser} vous doit %{otherOwes}.\n\nCela créera un règlement pour simplifier le solde.\n\nContinuer ?',
     noMutualDebt: 'Aucune dette mutuelle trouvée à compenser',

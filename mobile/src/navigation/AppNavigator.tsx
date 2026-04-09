@@ -61,6 +61,7 @@ const MainTabs = () => {
       tabBar={(props) => <MainTabBar {...props} />}
       screenOptions={{
         headerShown: false,
+        lazy: true,
       }}
     >
       <Tab.Screen

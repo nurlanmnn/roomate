@@ -1,10 +1,26 @@
-import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { View, StyleSheet, ScrollView, RefreshControl, Alert } from 'react-native';
+import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
+import {
+  View,
+  StyleSheet,
+  RefreshControl,
+  Alert,
+  FlatList,
+  ActivityIndicator,
+  ListRenderItem,
+  TouchableOpacity,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { expensesApi, Expense, PairwiseBalance } from '../../api/expensesApi';
+
+/** Smaller first page = faster initial load; more “load more” as you scroll. */
+const EXPENSES_PAGE_SIZE = 5;
+
+type ExpenseListRow =
+  | { kind: 'groupHeader'; title: string }
+  | { kind: 'expense'; expense: Expense };
 import { ExpenseCard } from '../../components/ExpenseCard';
 import { BalanceSummary } from '../../components/BalanceSummary';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
@@ -96,41 +112,89 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
           paddingHorizontal: spacing.xl,
           gap: 0,
         },
+        listFooter: {
+          paddingVertical: spacing.md,
+          alignItems: 'center',
+        },
+        loadMoreButton: {
+          alignItems: 'center',
+          paddingVertical: spacing.md,
+          paddingHorizontal: spacing.xl,
+          marginBottom: spacing.sm,
+        },
+        loadMoreText: {
+          fontSize: fontSizes.sm,
+          fontWeight: fontWeights.semibold,
+          color: colors.primary,
+        },
       }),
     [colors]
   );
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [balances, setBalances] = useState<PairwiseBalance[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [filters, setFilters] = useState<ExpenseFiltersType>({
     search: '',
     sortBy: 'newest',
     groupBy: 'none',
   });
-  const scrollRef = useRef<ScrollView>(null);
+  const listRef = useRef<FlatList>(null);
+
+  /** Full list is required for search/filters/grouping/non-default sort (client-side). */
+  const needsFullExpenseList = useMemo(() => {
+    const f = filters;
+    return (
+      Boolean(f.search?.trim()) ||
+      f.dateFrom != null ||
+      f.dateTo != null ||
+      Boolean(f.category) ||
+      Boolean(f.personId) ||
+      Boolean(f.amountMin) ||
+      Boolean(f.amountMax) ||
+      f.groupBy !== 'none' ||
+      f.sortBy !== 'newest'
+    );
+  }, [filters]);
+
+  const hasMorePages = !needsFullExpenseList && expenses.length < totalCount;
 
   useFocusEffect(
     React.useCallback(() => {
-      scrollRef.current?.scrollTo({ y: 0, animated: true });
+      listRef.current?.scrollToOffset({ offset: 0, animated: true });
     }, [])
   );
 
-  useEffect(() => {
-    if (selectedHousehold) {
-      loadData();
-    }
-  }, [selectedHousehold]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!selectedHousehold) return;
 
     setLoading(true);
     try {
-      const [expensesData, balancesData] = await Promise.all([
-        expensesApi.getExpenses(selectedHousehold._id),
+      const expensesPromise = needsFullExpenseList
+        ? expensesApi.getExpenses(selectedHousehold._id)
+        : expensesApi.getExpenses(selectedHousehold._id, {
+            limit: EXPENSES_PAGE_SIZE,
+            skip: 0,
+          });
+
+      const [expensesRaw, balancesData] = await Promise.all([
+        expensesPromise,
         expensesApi.getBalances(selectedHousehold._id),
       ]);
-      setExpenses(expensesData);
+
+      let nextExpenses: Expense[];
+      let nextTotal: number;
+      if (Array.isArray(expensesRaw)) {
+        nextExpenses = expensesRaw;
+        nextTotal = expensesRaw.length;
+      } else {
+        nextExpenses = expensesRaw.items;
+        nextTotal = expensesRaw.total;
+      }
+
+      setExpenses(nextExpenses);
+      setTotalCount(nextTotal);
       setBalances(balancesData);
     } catch (error: any) {
       if (__DEV__) console.error('Failed to load expenses:', error);
@@ -140,7 +204,40 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedHousehold, needsFullExpenseList, setSelectedHousehold]);
+
+  const loadMore = useCallback(async () => {
+    if (!selectedHousehold || needsFullExpenseList || !hasMorePages || loading || loadingMore) {
+      return;
+    }
+    setLoadingMore(true);
+    try {
+      const raw = await expensesApi.getExpenses(selectedHousehold._id, {
+        limit: EXPENSES_PAGE_SIZE,
+        skip: expenses.length,
+      });
+      if (Array.isArray(raw)) return;
+      const { items, total } = raw;
+      setExpenses((prev) => [...prev, ...items]);
+      setTotalCount(total);
+    } catch (error: any) {
+      if (__DEV__) console.error('Failed to load more expenses:', error);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [
+    selectedHousehold,
+    needsFullExpenseList,
+    hasMorePages,
+    loading,
+    loadingMore,
+    expenses.length,
+  ]);
+
+  useEffect(() => {
+    if (!selectedHousehold) return;
+    loadData();
+  }, [selectedHousehold, needsFullExpenseList, loadData]);
 
   const getUserName = (userId: string): string => {
     if (!selectedHousehold) return 'Unknown';
@@ -287,6 +384,18 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     return groups;
   }, [filteredAndSortedExpenses, filters.groupBy]);
 
+  const listRows: ExpenseListRow[] = useMemo(() => {
+    if (filters.groupBy === 'none') {
+      return filteredAndSortedExpenses.map((e) => ({ kind: 'expense' as const, expense: e }));
+    }
+    const rows: ExpenseListRow[] = [];
+    Object.entries(groupedExpenses).forEach(([title, group]) => {
+      rows.push({ kind: 'groupHeader', title });
+      group.forEach((e) => rows.push({ kind: 'expense', expense: e }));
+    });
+    return rows;
+  }, [filteredAndSortedExpenses, groupedExpenses, filters.groupBy]);
+
   const memberNames = selectedHousehold?.members.map((m) => ({ id: m._id, name: m.name })) || [];
 
   const renderExpenseCard = (expense: Expense) => {
@@ -302,7 +411,6 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
 
     return (
       <ExpenseCard
-        key={expense._id}
         expense={expense}
         onDelete={handleDeleteExpense}
         onQuickSettle={handleQuickSettle}
@@ -311,6 +419,17 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         onEdit={handleEditExpense}
       />
     );
+  };
+
+  const renderItem: ListRenderItem<ExpenseListRow> = ({ item }) => {
+    if (item.kind === 'groupHeader') {
+      return (
+        <View style={{ paddingHorizontal: spacing.xl }}>
+          <AppText style={styles.groupTitle}>{item.title}</AppText>
+        </View>
+      );
+    }
+    return <View style={{ paddingHorizontal: spacing.xl }}>{renderExpenseCard(item.expense)}</View>;
   };
 
   if (!selectedHousehold) {
@@ -326,121 +445,161 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   const showCategoryHint = expenses.length > 0 && expenses.some((e) => !e.category);
   const filteredCount =
     filteredAndSortedExpenses.length !== expenses.length ? filteredAndSortedExpenses.length : null;
+  const paginationHint =
+    !needsFullExpenseList && totalCount > 0 && expenses.length < totalCount
+      ? String(t('expenses.listPaginationHint', { loaded: expenses.length, total: totalCount }))
+      : null;
 
-  return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView
-        ref={scrollRef}
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={loadData} />}
-        showsVerticalScrollIndicator={false}
-      >
-        <ScreenHeader
-          title={t('expenses.title')}
-          subtitle={selectedHousehold.name}
-          rightText={t('expenses.settleUp')}
-          onRightPress={() => navigation.navigate('SettleUp')}
-        />
+  const listHeader = (
+    <>
+      <ScreenHeader
+        title={t('expenses.title')}
+        subtitle={selectedHousehold.name}
+        rightText={t('expenses.settleUp')}
+        onRightPress={() => navigation.navigate('SettleUp')}
+      />
 
-        {user && (
-          <SettingsSection title={t('expenses.sectionBalances')}>
-            <SettingsGroupCard>
-              <BalanceSummary
-                balances={balances}
-                currentUserId={user._id}
-                getUserName={getUserName}
-                getUserAvatar={getUserAvatar}
-                hideTitle
-                variant="plain"
-              />
-            </SettingsGroupCard>
-          </SettingsSection>
-        )}
-
-        <SettingsSection title={t('expenses.sectionActions')}>
+      {user && (
+        <SettingsSection title={t('expenses.sectionBalances')}>
           <SettingsGroupCard>
-            <SettingsRow
-              icon="add-circle-outline"
-              iconBackgroundColor={colors.primaryUltraSoft}
-              iconColor={colors.primary}
-              title={t('expenses.addExpense')}
-              subtitle={t('expenses.addExpenseSubtitle')}
-              onPress={() => navigation.navigate('CreateExpense')}
-            />
-            <SettingsRow
-              icon="swap-horizontal-outline"
-              iconBackgroundColor={colors.accentUltraSoft}
-              iconColor={colors.accent}
-              title={t('expenses.settleUp')}
-              subtitle={t('expenses.settleUpSubtitle')}
-              onPress={() => navigation.navigate('SettleUp')}
-              isLast
+            <BalanceSummary
+              balances={balances}
+              currentUserId={user._id}
+              getUserName={getUserName}
+              getUserAvatar={getUserAvatar}
+              hideTitle
+              variant="plain"
             />
           </SettingsGroupCard>
         </SettingsSection>
+      )}
 
-        {showCategoryHint && (
-          <View style={{ paddingHorizontal: spacing.xl, marginTop: spacing.md }}>
-            <SettingsGroupCard>
-              <View style={styles.hintCardInner}>
-                <Ionicons name="information-circle-outline" size={22} color={colors.primary} />
-                <AppText style={styles.hintText}>{t('expenses.categoryHintBanner')}</AppText>
-              </View>
-            </SettingsGroupCard>
-          </View>
-        )}
-
-        <View style={styles.listHeaderRow}>
-          <AppText style={styles.listTitle}>{t('expenses.sectionList')}</AppText>
-          {filteredCount != null && (
-            <AppText style={styles.filteredCount}>
-              {filteredCount} / {expenses.length}
-            </AppText>
-          )}
-        </View>
-
-        <SettingsGroupCard style={{ marginHorizontal: spacing.xl, marginBottom: spacing.md }}>
-          <ExpenseFilters
-            filters={filters}
-            onFiltersChange={setFilters}
-            memberNames={memberNames}
-            embedded
+      <SettingsSection title={t('expenses.sectionActions')}>
+        <SettingsGroupCard>
+          <SettingsRow
+            icon="add-circle-outline"
+            iconBackgroundColor={colors.primaryUltraSoft}
+            iconColor={colors.primary}
+            title={t('expenses.addExpense')}
+            subtitle={t('expenses.addExpenseSubtitle')}
+            onPress={() => navigation.navigate('CreateExpense')}
+          />
+          <SettingsRow
+            icon="swap-horizontal-outline"
+            iconBackgroundColor={colors.accentUltraSoft}
+            iconColor={colors.accent}
+            title={t('expenses.settleUp')}
+            subtitle={t('expenses.settleUpSubtitle')}
+            onPress={() => navigation.navigate('SettleUp')}
+            isLast
           />
         </SettingsGroupCard>
+      </SettingsSection>
 
-        <View style={styles.expenseListPad}>
-          {loading && expenses.length === 0 ? (
-            <>
-              {[1, 2, 3].map((i) => (
-                <SkeletonCard key={i} lines={3} showAvatar={true} />
-              ))}
-            </>
-          ) : filteredAndSortedExpenses.length === 0 ? (
-            <EmptyState
-              icon="receipt-outline"
-              title={expenses.length === 0 ? t('expenses.noExpenses') : t('common.noResults')}
-              message={
-                expenses.length === 0
-                  ? t('expenses.noExpensesDescription')
-                  : t('expenses.adjustFiltersHint')
-              }
-              variant="minimal"
-              actionLabel={expenses.length === 0 ? t('expenses.addExpense') : undefined}
-              onAction={expenses.length === 0 ? () => navigation.navigate('CreateExpense') : undefined}
-            />
-          ) : filters.groupBy === 'none' ? (
-            filteredAndSortedExpenses.map((e) => renderExpenseCard(e))
-          ) : (
-            Object.entries(groupedExpenses).map(([groupKey, groupExpenses]) => (
-              <View key={groupKey} style={styles.groupSection}>
-                <AppText style={styles.groupTitle}>{groupKey}</AppText>
-                {groupExpenses.map((e) => renderExpenseCard(e))}
-              </View>
-            ))
-          )}
+      {showCategoryHint && (
+        <View style={{ paddingHorizontal: spacing.xl, marginTop: spacing.md }}>
+          <SettingsGroupCard>
+            <View style={styles.hintCardInner}>
+              <Ionicons name="information-circle-outline" size={22} color={colors.primary} />
+              <AppText style={styles.hintText}>{t('expenses.categoryHintBanner')}</AppText>
+            </View>
+          </SettingsGroupCard>
         </View>
-      </ScrollView>
+      )}
+
+      <View style={styles.listHeaderRow}>
+        <AppText style={styles.listTitle}>{t('expenses.sectionList')}</AppText>
+        {paginationHint ? (
+          <AppText style={styles.filteredCount}>{paginationHint}</AppText>
+        ) : filteredCount != null ? (
+          <AppText style={styles.filteredCount}>
+            {filteredCount} / {expenses.length}
+          </AppText>
+        ) : null}
+      </View>
+
+      <SettingsGroupCard style={{ marginHorizontal: spacing.xl, marginBottom: spacing.md }}>
+        <ExpenseFilters
+          filters={filters}
+          onFiltersChange={setFilters}
+          memberNames={memberNames}
+          embedded
+        />
+      </SettingsGroupCard>
+    </>
+  );
+
+  const listEmpty = loading && expenses.length === 0 && (
+    <View style={styles.expenseListPad}>
+      {[1, 2, 3].map((i) => (
+        <SkeletonCard key={i} lines={3} showAvatar={true} />
+      ))}
+    </View>
+  );
+
+  const listEmptyNoData =
+    !loading && filteredAndSortedExpenses.length === 0 ? (
+      <View style={{ paddingHorizontal: spacing.xl, paddingBottom: spacing.xl }}>
+        <EmptyState
+          icon="receipt-outline"
+          title={expenses.length === 0 ? t('expenses.noExpenses') : t('common.noResults')}
+          message={
+            expenses.length === 0 ? t('expenses.noExpensesDescription') : t('expenses.adjustFiltersHint')
+          }
+          variant="minimal"
+          actionLabel={expenses.length === 0 ? t('expenses.addExpense') : undefined}
+          onAction={expenses.length === 0 ? () => navigation.navigate('CreateExpense') : undefined}
+        />
+      </View>
+    ) : null;
+
+  return (
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <FlatList
+        ref={listRef}
+        data={listRows}
+        keyExtractor={(item, index) =>
+          item.kind === 'groupHeader' ? `h-${item.title}-${index}` : `e-${item.expense._id}`
+        }
+        renderItem={renderItem}
+        ListHeaderComponent={listHeader}
+        ListEmptyComponent={
+          <>
+            {listEmpty}
+            {listEmptyNoData}
+          </>
+        }
+        ListFooterComponent={
+          hasMorePages && !needsFullExpenseList ? (
+            loadingMore ? (
+              <View style={styles.listFooter}>
+                <ActivityIndicator color={colors.primary} />
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={styles.loadMoreButton}
+                onPress={loadMore}
+                activeOpacity={0.75}
+                accessibilityRole="button"
+                accessibilityLabel={t('common.loadMore')}
+              >
+                <AppText style={styles.loadMoreText}>
+                  {t('common.loadMore')} ({expenses.length}/{totalCount})
+                </AppText>
+              </TouchableOpacity>
+            )
+          ) : null
+        }
+        contentContainerStyle={styles.scrollContent}
+        style={styles.scrollView}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={loadData} />}
+        showsVerticalScrollIndicator={false}
+        removeClippedSubviews
+        initialNumToRender={10}
+        maxToRenderPerBatch={8}
+        windowSize={10}
+        keyboardShouldPersistTaps="handled"
+      />
     </SafeAreaView>
   );
 };
