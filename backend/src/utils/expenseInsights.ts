@@ -136,3 +136,67 @@ export const calculateExpenseInsights = (expenses: IExpense[]): ExpenseInsights 
   };
 };
 
+export interface AggregatedInsightsInput {
+  byCategory: CategorySpending[];
+  monthlyTrend: Array<{ month: string; amount: number }>;
+  totalSpent: number;
+}
+
+/** Same output shape as calculateExpenseInsights, for pre-aggregated dashboard data. */
+export function buildInsightsFromAggregates(input: AggregatedInsightsInput): ExpenseInsights {
+  const { byCategory, monthlyTrend, totalSpent } = input;
+
+  const monthsWithData = monthlyTrend.filter((m) => m.amount > 0).length;
+  const averageMonthly =
+    monthsWithData > 0 ? monthlyTrend.reduce((sum, m) => sum + m.amount, 0) / monthsWithData : 0;
+
+  const trendData = monthlyTrend.slice(-3).filter((m) => m.amount > 0);
+  let nextMonthPrediction = averageMonthly;
+  let trend: 'increasing' | 'decreasing' | 'stable' = 'stable';
+
+  if (trendData.length >= 2) {
+    const n = trendData.length;
+    let sumX = 0;
+    let sumY = 0;
+    let sumXY = 0;
+    let sumX2 = 0;
+
+    trendData.forEach((data, index) => {
+      const x = index + 1;
+      const y = data.amount;
+      sumX += x;
+      sumY += y;
+      sumXY += x * y;
+      sumX2 += x * x;
+    });
+
+    const denom = n * sumX2 - sumX * sumX;
+    const slope = denom !== 0 ? (n * sumXY - sumX * sumY) / denom : 0;
+    const intercept = (sumY - slope * sumX) / n;
+    nextMonthPrediction = slope * (n + 1) + intercept;
+
+    if (nextMonthPrediction < 0) {
+      nextMonthPrediction = averageMonthly;
+    }
+
+    if (slope > averageMonthly * 0.1) {
+      trend = 'increasing';
+    } else if (slope < -averageMonthly * 0.1) {
+      trend = 'decreasing';
+    } else {
+      trend = 'stable';
+    }
+  }
+
+  return {
+    byCategory,
+    monthlyTrend,
+    predictions: {
+      nextMonth: Math.round(nextMonthPrediction * 100) / 100,
+      trend,
+    },
+    totalSpent,
+    averageMonthly: Math.round(averageMonthly * 100) / 100,
+  };
+}
+

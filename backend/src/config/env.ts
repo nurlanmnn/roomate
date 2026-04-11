@@ -12,6 +12,8 @@ export const config = {
   brevoSmtpUser: process.env.BREVO_SMTP_USER || '', // typically your Brevo login email
   brevoSmtpPass: process.env.BREVO_SMTP_PASS || '', // SMTP key generated in Brevo
   emailFrom: process.env.EMAIL_FROM || 'noreply@roommate-app.com',
+  /** Optional absolute URL (https) to a logo image for HTML emails. If unset, a text wordmark is used. */
+  emailLogoUrl: (process.env.EMAIL_LOGO_URL || '').trim(),
   backendPublicUrl: process.env.BACKEND_PUBLIC_URL || 'http://localhost:3000',
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:19006',
   /** Comma-separated extra CORS origins for production (e.g. marketing site). Native apps often send no Origin. */

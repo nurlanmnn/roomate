@@ -37,6 +37,48 @@ const listItemsParamsSchema = z.object({
 
 const listItemsQuerySchema = z.object({
   completed: booleanQuerySchema.optional(),
+  limit: z.coerce.number().int().min(1).max(200).optional(),
+  skip: z.coerce.number().int().min(0).max(100000).optional(),
+});
+
+// GET /shopping/household/:householdId/item-stats — counts only (home dashboard)
+router.get('/household/:householdId/item-stats', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { householdId } = householdParamsSchema.parse(req.params);
+    const household = await Household.findById(householdId);
+    if (!household) {
+      return res.status(404).json({ error: 'Household not found' });
+    }
+
+    const userIdObjectId = new mongoose.Types.ObjectId(userId);
+    if (!household.members.some((m) => m.equals(userIdObjectId))) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const lists = await ShoppingList.find({ householdId }).select('_id').lean();
+    const ids = lists.map((l) => l._id);
+    if (ids.length === 0) {
+      return res.json({ total: 0, pending: 0 });
+    }
+
+    const [total, pending] = await Promise.all([
+      ShoppingItem.countDocuments({ listId: { $in: ids } }),
+      ShoppingItem.countDocuments({ listId: { $in: ids }, completed: false }),
+    ]);
+
+    res.json({ total, pending });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+    }
+    console.error('Get shopping item stats error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // ========== SHOPPING LISTS ROUTES ==========
@@ -286,7 +328,11 @@ router.get('/items/list/:listId', authMiddleware, async (req: Request, res: Resp
     }
 
     const { listId } = listItemsParamsSchema.parse(req.params);
-    const { completed } = listItemsQuerySchema.parse(req.query);
+    const queryParsed = listItemsQuerySchema.safeParse(req.query);
+    if (!queryParsed.success) {
+      return res.status(400).json({ error: 'Invalid query', details: queryParsed.error.flatten() });
+    }
+    const { completed, limit, skip } = queryParsed.data;
     const list = await ShoppingList.findById(listId);
     if (!list) {
       return res.status(404).json({ error: 'Shopping list not found' });
@@ -308,11 +354,24 @@ router.get('/items/list/:listId', authMiddleware, async (req: Request, res: Resp
       query.completed = completed;
     }
 
-    const items = await ShoppingItem.find(query)
+    const usePagination = limit !== undefined;
+    const baseFind = ShoppingItem.find(query)
       .populate('addedBy', 'name email avatarUrl')
       .populate('ownerId', 'name email avatarUrl')
       .sort({ createdAt: -1 });
 
+    if (usePagination) {
+      const take = limit ?? 80;
+      const offset = skip ?? 0;
+      const [items, total] = await Promise.all([
+        baseFind.clone().skip(offset).limit(take).exec(),
+        ShoppingItem.countDocuments(query),
+      ]);
+      res.json({ items, total });
+      return;
+    }
+
+    const items = await baseFind.exec();
     res.json(items);
   } catch (error) {
     if (error instanceof z.ZodError) {

@@ -27,6 +27,12 @@ const eventIdParamsSchema = z.object({
   id: objectIdSchema,
 });
 
+const eventsListQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(500).optional(),
+  skip: z.coerce.number().int().min(0).max(100000).optional(),
+  upcoming: z.enum(['0', '1', 'true', 'false']).optional(),
+});
+
 // GET /events/household/:householdId
 router.get('/household/:householdId', authMiddleware, async (req: Request, res: Response) => {
   try {
@@ -36,6 +42,11 @@ router.get('/household/:householdId', authMiddleware, async (req: Request, res: 
     }
 
     const { householdId } = householdParamsSchema.parse(req.params);
+    const query = eventsListQuerySchema.safeParse(req.query);
+    if (!query.success) {
+      return res.status(400).json({ error: 'Invalid query', details: query.error.flatten() });
+    }
+
     const household = await Household.findById(householdId);
     if (!household) {
       return res.status(404).json({ error: 'Household not found' });
@@ -46,12 +57,32 @@ router.get('/household/:householdId', authMiddleware, async (req: Request, res: 
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    const events = await Event.find({
-      householdId,
-    })
+    const { limit, skip, upcoming } = query.data;
+    const usePagination = limit !== undefined;
+    const upcomingOnly =
+      upcoming === '1' || upcoming === 'true';
+
+    const filter: Record<string, unknown> = { householdId };
+    if (upcomingOnly) {
+      filter.date = { $gte: new Date() };
+    }
+
+    const base = Event.find(filter)
       .populate('createdBy', 'name email avatarUrl')
       .sort({ date: 1 });
 
+    if (usePagination) {
+      const take = limit ?? 100;
+      const offset = skip ?? 0;
+      const [items, total] = await Promise.all([
+        base.clone().skip(offset).limit(take).exec(),
+        Event.countDocuments(filter),
+      ]);
+      res.json({ items, total });
+      return;
+    }
+
+    const events = await base.exec();
     res.json(events);
   } catch (error) {
     if (error instanceof z.ZodError) {

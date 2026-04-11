@@ -7,6 +7,7 @@ import { User } from '../models/User';
 import { authMiddleware } from '../middleware/auth';
 import { computeBalances } from '../utils/balances';
 import { calculateExpenseInsights } from '../utils/expenseInsights';
+import { computeHomeExpenseSummary } from '../utils/expenseHomeSummary';
 import { notificationService } from '../services/notificationService';
 import mongoose from 'mongoose';
 import { isoDateSchema, objectIdSchema, optionalTrimmedString, trimmedString } from '../utils/validation';
@@ -49,7 +50,13 @@ const expenseIdParamsSchema = z.object({
   id: objectIdSchema,
 });
 
+const householdExpensesQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+  skip: z.coerce.number().int().min(0).max(100000).optional(),
+});
+
 // GET /expenses/household/:householdId
+// Optional ?limit=&skip= for pagination (newest first). Omit both for full list (e.g. home aggregates).
 router.get('/household/:householdId', authMiddleware, async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userId;
@@ -68,14 +75,40 @@ router.get('/household/:householdId', authMiddleware, async (req: Request, res: 
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    const expenses = await Expense.find({
-      householdId,
-    })
+    const query = householdExpensesQuerySchema.safeParse(req.query);
+    if (!query.success) {
+      return res.status(400).json({ error: 'Invalid query', details: query.error.flatten() });
+    }
+
+    const { limit, skip } = query.data;
+    const usePagination = limit !== undefined;
+
+    const filter = { householdId };
+
+    if (usePagination) {
+      const take = limit ?? 50;
+      const offset = skip ?? 0;
+      const [items, total] = await Promise.all([
+        Expense.find(filter)
+          .populate('createdBy', 'name email avatarUrl')
+          .populate('paidBy', 'name email avatarUrl')
+          .populate('participants', 'name email avatarUrl')
+          .sort({ date: -1 })
+          .skip(offset)
+          .limit(take)
+          .exec(),
+        Expense.countDocuments(filter),
+      ]);
+      res.json({ items, total });
+      return;
+    }
+
+    const expenses = await Expense.find(filter)
       .populate('createdBy', 'name email avatarUrl')
       .populate('paidBy', 'name email avatarUrl')
       .populate('participants', 'name email avatarUrl')
-      .sort({ date: -1 });
-
+      .sort({ date: -1 })
+      .exec();
     res.json(expenses);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -246,6 +279,36 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid input', details: error.errors });
     }
     console.error('Create expense error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /expenses/household/:householdId/home-summary — aggregates only (mobile home dashboard)
+router.get('/household/:householdId/home-summary', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { householdId } = householdParamsSchema.parse(req.params);
+    const household = await Household.findById(householdId);
+    if (!household) {
+      return res.status(404).json({ error: 'Household not found' });
+    }
+
+    const userIdObjectId = new mongoose.Types.ObjectId(userId);
+    if (!household.members.some((m) => m.equals(userIdObjectId))) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const summary = await computeHomeExpenseSummary(householdId);
+    res.json(summary);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+    }
+    console.error('Get home expense summary error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

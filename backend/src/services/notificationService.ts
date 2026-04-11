@@ -405,7 +405,7 @@ class NotificationService {
   ): Promise<void> {
     await this.sendToHouseholdMembers(householdMemberIds, newMemberId, {
       type: 'member_added',
-      title: 'New Roommate',
+      title: 'New member',
       body: `${newMemberName} joined "${householdName}"`,
       data: { householdId },
     });
