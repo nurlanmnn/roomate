@@ -4,10 +4,13 @@ import { AuthProvider } from './src/context/AuthContext';
 import { HouseholdProvider } from './src/context/HouseholdContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { LanguageProvider } from './src/context/LanguageContext';
+import { NetworkProvider } from './src/context/NetworkContext';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { PerfOverlay } from './src/components/debug/PerfOverlay';
 import { perfToggleVisible } from './src/utils/perfDebug';
 import { Pressable, View } from 'react-native';
+import { OfflineBanner } from './src/components/OfflineBanner';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 const AppContent = () => {
   const { theme } = useTheme();
@@ -29,6 +32,7 @@ const AppContent = () => {
   return (
     <>
       <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
+      <OfflineBanner />
       <AppNavigator />
       {/* Hidden hotspot: tap 6x quickly to toggle perf overlay (works in TestFlight). */}
       <Pressable
@@ -54,11 +58,15 @@ export default function App() {
   return (
     <ThemeProvider>
       <LanguageProvider>
-        <AuthProvider>
-          <HouseholdProvider>
-            <AppContent />
-          </HouseholdProvider>
-        </AuthProvider>
+        <SafeAreaProvider>
+          <NetworkProvider>
+            <AuthProvider>
+              <HouseholdProvider>
+                <AppContent />
+              </HouseholdProvider>
+            </AuthProvider>
+          </NetworkProvider>
+        </SafeAreaProvider>
       </LanguageProvider>
     </ThemeProvider>
   );

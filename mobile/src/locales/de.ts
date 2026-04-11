@@ -175,7 +175,7 @@ export default {
     pleaseSelectHousehold: 'Bitte wählen Sie einen Haushalt',
     moreThanLastMonth: 'mehr als letzten Monat',
     lessThanLastMonth: 'weniger als letzten Monat',
-    couldNotConnect: 'Verbindung fehlgeschlagen. Zum Aktualisieren nach unten ziehen.',
+    couldNotConnect: 'Startseite konnte nicht geladen werden. Zum Aktualisieren nach unten ziehen.',
   },
 
   // Expenses
@@ -555,6 +555,8 @@ export default {
     leaveConfirm: 'Sind Sie sicher, dass Sie gehen möchten?',
     unsavedChanges: 'Sie haben ungespeicherte Änderungen. Sind Sie sicher, dass Sie gehen möchten?',
     networkError: 'Netzwerkfehler. Bitte versuchen Sie es erneut.',
+    offlineBannerTitle: 'Du bist offline',
+    offlineBannerBody: 'Verbinde dich mit dem Internet, um zu synchronisieren und die neuesten Updates zu laden.',
     sessionExpired: 'Sitzung abgelaufen. Bitte melden Sie sich erneut an.',
     somethingWentWrong: 'Etwas ist schief gelaufen',
     tryAgain: 'Bitte versuchen Sie es erneut',

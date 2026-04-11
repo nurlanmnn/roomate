@@ -213,7 +213,7 @@ export default {
     pleaseSelectHousehold: 'Please select a household',
     moreThanLastMonth: 'more than last month',
     lessThanLastMonth: 'less than last month',
-    couldNotConnect: "Couldn't connect. Pull down to retry.",
+    couldNotConnect: "Couldn't load your home screen. Pull down to retry.",
   },
 
   // Expenses
@@ -607,6 +607,8 @@ export default {
     leaveConfirm: 'Are you sure you want to leave?',
     unsavedChanges: 'You have unsaved changes. Are you sure you want to leave?',
     networkError: 'Network error. Please try again.',
+    offlineBannerTitle: 'You’re offline',
+    offlineBannerBody: 'Reconnect to the internet to sync and load the latest updates.',
     sessionExpired: 'Session expired. Please log in again.',
     somethingWentWrong: 'Something went wrong',
     tryAgain: 'Please try again',

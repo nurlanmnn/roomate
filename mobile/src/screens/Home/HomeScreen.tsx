@@ -40,6 +40,8 @@ export const HomeScreen: React.FC = () => {
   const [insights, setInsights] = useState<any>(null);
   const [spendingRange, setSpendingRange] = useState<'week' | 'month' | 'year' | 'all'>('month');
   const [loadError, setLoadError] = useState(false);
+  /** True only after a successful Promise.all home fetch — avoids showing "setup" when the API failed and state stayed empty. */
+  const [dashboardLoadOk, setDashboardLoadOk] = useState(false);
   const [homeEventsVisible, setHomeEventsVisible] = useState(5);
   const scrollRef = useRef<ScrollView>(null);
   /** Only the latest home fetch may commit (avoids duplicate effects + out-of-order responses). */
@@ -248,6 +250,8 @@ export const HomeScreen: React.FC = () => {
       setShoppingStats({ total: 0, pending: 0 });
       setInsights(null);
       setInitialLoading(true);
+      setDashboardLoadOk(false);
+      setLoadError(false);
     }
   }, [selectedHousehold?._id]);
 
@@ -282,8 +286,10 @@ export const HomeScreen: React.FC = () => {
       setHomeSummary(homeData);
       setInsights(homeData.insights);
       setShoppingStats(shoppingStatsData);
+      setDashboardLoadOk(true);
     } catch (error: any) {
       if (gen !== loadGenRef.current) return;
+      setDashboardLoadOk(false);
       const status = error?.response?.status;
       if (status === 403) {
         if (__DEV__) {
@@ -291,15 +297,12 @@ export const HomeScreen: React.FC = () => {
             '[Home] 403: no access to this household — clearing selection (rejoin or pick another).'
           );
         }
+        setLoadError(false);
         setSelectedHousehold(null);
       } else {
         if (__DEV__) console.error('Failed to load home data:', error);
       }
-      const isNetworkError =
-        error?.code === 'ERR_NETWORK' ||
-        error?.message === 'Network Error' ||
-        !error?.response;
-      if (isNetworkError) setLoadError(true);
+      setLoadError(true);
     } finally {
       if (gen === loadGenRef.current) {
         setLoading(false);
@@ -457,7 +460,7 @@ export const HomeScreen: React.FC = () => {
         address={selectedHousehold.address}
         metricLabel={hasData ? t('home.thisMonth') : undefined}
         metricValue={hasData ? formatCompactCurrency(stats.monthlyExpenses) : undefined}
-        tagline={!hasData ? t('home.setupHeroTagline') : undefined}
+        tagline={dashboardLoadOk && !hasData ? t('home.setupHeroTagline') : undefined}
       />
 
       {hasData && (
@@ -486,8 +489,8 @@ export const HomeScreen: React.FC = () => {
         </View>
       )}
 
-      {/* Guided household setup when there is no activity yet */}
-      {!hasData && (
+      {/* Guided setup only after we successfully loaded (empty household). Failed loads show banner + pull to refresh, not fake "new home" UI. */}
+      {dashboardLoadOk && !hasData && (
         <View style={styles.emptyStateContainer}>
           {selectedHousehold.joinCode ? (
             <HomeInviteCard joinCode={selectedHousehold.joinCode} householdName={selectedHousehold.name} />

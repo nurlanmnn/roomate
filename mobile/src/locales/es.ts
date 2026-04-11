@@ -175,7 +175,7 @@ export default {
     pleaseSelectHousehold: 'Por favor selecciona un hogar',
     moreThanLastMonth: 'más que el mes pasado',
     lessThanLastMonth: 'menos que el mes pasado',
-    couldNotConnect: 'No se pudo conectar. Desliza hacia abajo para reintentar.',
+    couldNotConnect: 'No se pudo cargar el inicio. Desliza hacia abajo para reintentar.',
   },
 
   // Expenses
@@ -555,6 +555,8 @@ export default {
     leaveConfirm: '¿Estás seguro de que quieres salir?',
     unsavedChanges: 'Tienes cambios sin guardar. ¿Estás seguro de que quieres salir?',
     networkError: 'Error de red. Por favor intenta de nuevo.',
+    offlineBannerTitle: 'Estás sin conexión',
+    offlineBannerBody: 'Conéctate a internet para sincronizar y cargar las últimas actualizaciones.',
     sessionExpired: 'Sesión expirada. Por favor inicia sesión de nuevo.',
     somethingWentWrong: 'Algo salió mal',
     tryAgain: 'Por favor intenta de nuevo',

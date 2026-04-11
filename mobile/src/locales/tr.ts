@@ -188,7 +188,7 @@ export default {
     pleaseSelectHousehold: 'Lütfen bir ev seçin',
     moreThanLastMonth: 'geçen aydan fazla',
     lessThanLastMonth: 'geçen aydan az',
-    couldNotConnect: 'Bağlantı kurulamadı. Yenilemek için aşağı çekin.',
+    couldNotConnect: 'Ana ekran yüklenemedi. Yenilemek için aşağı çekin.',
   },
 
   // Expenses
@@ -568,6 +568,8 @@ export default {
     leaveConfirm: 'Ayrılmak istediğinizden emin misiniz?',
     unsavedChanges: 'Kaydedilmemiş değişiklikleriniz var. Ayrılmak istediğinizden emin misiniz?',
     networkError: 'Ağ hatası. Lütfen tekrar deneyin.',
+    offlineBannerTitle: 'Çevrimdışısınız',
+    offlineBannerBody: 'Senkronize etmek ve en güncel verileri yüklemek için internete bağlanın.',
     sessionExpired: 'Oturum süresi doldu. Lütfen tekrar giriş yapın.',
     somethingWentWrong: 'Bir şeyler yanlış gitti',
     tryAgain: 'Lütfen tekrar deneyin',
