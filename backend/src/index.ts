@@ -1,3 +1,4 @@
+import path from 'path';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -71,6 +72,17 @@ app.use('/chores', choreRoutes);
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
+
+/** Public privacy policy (App Store Connect). Canonical: https://api.roomate.us/legal/privacy */
+app.get('/legal/privacy', (req, res) => {
+  res.type('html');
+  res.sendFile(path.join(__dirname, '..', 'public', 'legal', 'privacy.html'));
+});
+
+app.get('/privacy', (_req, res) => {
+  res.redirect(301, '/legal/privacy');
+});
+
 
 // Connect to database and start server
 const startServer = async () => {

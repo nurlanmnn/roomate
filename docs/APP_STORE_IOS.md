@@ -54,7 +54,7 @@ See [EAS Submit](https://docs.expo.dev/submit/ios/) for App Store Connect API ke
 
 ## Store listing (your help)
 
-- **Privacy Policy URL** — host the filled-in policy from [`legal/PRIVACY_POLICY.md`](legal/PRIVACY_POLICY.md).
+- **Privacy Policy URL** — `https://api.roomate.us/legal/privacy` (served by the API; source: [`backend/public/legal/privacy.html`](../backend/public/legal/privacy.html); markdown source: [`legal/PRIVACY_POLICY.md`](legal/PRIVACY_POLICY.md)).
 - **Support URL** — see [`legal/SUPPORT.md`](legal/SUPPORT.md).
 - Screenshots (required iPhone sizes; iPad if you keep tablet support).
 - App Privacy questionnaire in App Store Connect (align with the privacy policy).

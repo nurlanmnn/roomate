@@ -35,4 +35,4 @@ EOF
 )"
 
 echo ""
-echo "→ Optional: curl https://api.roomate.us/health"
+echo "→ Optional: curl https://api.roomate.us/health && curl -sI https://api.roomate.us/legal/privacy"

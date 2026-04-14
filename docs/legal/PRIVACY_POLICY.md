@@ -1,12 +1,12 @@
-# Privacy Policy (template for Roomate)
+# Privacy Policy — Roomate
 
-**Replace all bracketed placeholders before publishing.** Host this document at a public HTTPS URL and add that URL in App Store Connect.
+Canonical public URL (after deploy): **https://api.roomate.us/legal/privacy** — add this URL in App Store Connect. Source HTML: `backend/public/legal/privacy.html` (edit there or this file, then sync wording). Old `/privacy` redirects to `/legal/privacy`.
 
-_Last updated: [DATE]_
+_Last updated: April 13, 2026_
 
 ## Introduction
 
-[Your name or company] ("we", "us") operates the Roomate mobile application (the "App"). This policy describes how we collect, use, and share information when you use the App.
+Roomate ("we", "us") operates the Roomate mobile application (the "App"). This policy describes how we collect, use, and share information when you use the App.
 
 ## Information we collect
 
@@ -36,7 +36,7 @@ We may use service providers who process data on our behalf (e.g. hosting, datab
 
 ## Data retention
 
-We retain your information while your account is active and as needed to comply with legal obligations. You may request deletion of your account subject to our technical process [describe or link to account deletion in App].
+We retain your information while your account is active and as needed to comply with legal obligations. You may request deletion of your account in the App under **Settings → Account → Delete account** (you will be asked to confirm with your password). You can also email us at the address below to ask about deletion or export.
 
 ## Security
 
@@ -48,11 +48,11 @@ The App is not directed at children under 13 (or under 16 where applicable). We 
 
 ## International transfers
 
-If you use the App from outside [your country], your data may be processed in [countries where servers run — e.g. United States / EU]. We use appropriate safeguards where required.
+If you use the App from outside the country where you live, your information may be processed in the **United States** and in other countries where we or our service providers operate (including where our API, database, and email providers host data). We use appropriate safeguards where required by law.
 
 ## Your rights
 
-Depending on your region, you may have rights to access, correct, delete, or export your personal data, or to object to certain processing. Contact us at **[support email]** to exercise these rights.
+Depending on your region, you may have rights to access, correct, delete, or export your personal data, or to object to certain processing. Contact us at **support.roomateapp@gmail.com** to exercise these rights.
 
 ## Changes
 
@@ -60,6 +60,6 @@ We may update this policy. We will post the new version at this URL and update t
 
 ## Contact
 
-**[Legal entity name]**  
-Email: **[privacy contact email]**  
-Address: **[optional physical address]**
+**Roomate**  
+Email: **support.roomateapp@gmail.com**  
+For privacy-specific requests, use the same email and include "Privacy" in the subject line.
