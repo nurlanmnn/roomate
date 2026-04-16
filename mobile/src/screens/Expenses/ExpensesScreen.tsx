@@ -140,7 +140,26 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     sortBy: 'newest',
     groupBy: 'none',
   });
+  /**
+   * Client-side cap when filters/search/sort/group are active. We fetch the
+   * full list from the server so the filter searches everything, but only
+   * render this many matches at a time — tapping "Load more" reveals the next
+   * page of matches.
+   */
+  const [filteredVisibleCount, setFilteredVisibleCount] = useState(EXPENSES_PAGE_SIZE);
   const listRef = useRef<FlatList>(null);
+  /**
+   * Tracks which fetch mode the currently-loaded `expenses` represents so we
+   * can show a loading skeleton the moment the mode flips (instead of briefly
+   * filtering stale, paginated rows while the full fetch is in flight).
+   */
+  const lastLoadedModeRef = useRef<boolean | null>(null);
+  /**
+   * Request-id guard — every `loadData` call bumps this counter and only the
+   * newest response is allowed to write to state, so a slow in-flight
+   * paginated response can't overwrite a fresh full-list one.
+   */
+  const loadRequestIdRef = useRef(0);
 
   /** Full list is required for search/filters/grouping/non-default sort (client-side). */
   const needsFullExpenseList = useMemo(() => {
@@ -169,9 +188,20 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   const loadData = useCallback(async () => {
     if (!selectedHousehold) return;
 
+    const requestId = ++loadRequestIdRef.current;
+    const fetchMode = needsFullExpenseList;
+
+    // Mode flipped (paginated ↔ full) → wipe the stale slice immediately so
+    // the user sees the loading skeleton instead of a momentary "no results"
+    // flash while we refetch against the full dataset.
+    if (lastLoadedModeRef.current !== null && lastLoadedModeRef.current !== fetchMode) {
+      setExpenses([]);
+      setTotalCount(0);
+    }
+
     setLoading(true);
     try {
-      const expensesPromise = needsFullExpenseList
+      const expensesPromise = fetchMode
         ? expensesApi.getExpenses(selectedHousehold._id)
         : expensesApi.getExpenses(selectedHousehold._id, {
             limit: EXPENSES_PAGE_SIZE,
@@ -182,6 +212,9 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         expensesPromise,
         expensesApi.getBalances(selectedHousehold._id),
       ]);
+
+      // Ignore any response that's been superseded by a newer load.
+      if (requestId !== loadRequestIdRef.current) return;
 
       let nextExpenses: Expense[];
       let nextTotal: number;
@@ -196,13 +229,17 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
       setExpenses(nextExpenses);
       setTotalCount(nextTotal);
       setBalances(balancesData);
+      lastLoadedModeRef.current = fetchMode;
     } catch (error: any) {
       if (__DEV__) console.error('Failed to load expenses:', error);
+      if (requestId !== loadRequestIdRef.current) return;
       if (error?.response?.status === 403) {
         setSelectedHousehold(null);
       }
     } finally {
-      setLoading(false);
+      if (requestId === loadRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, [selectedHousehold, needsFullExpenseList, setSelectedHousehold]);
 
@@ -239,6 +276,13 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     loadData();
   }, [selectedHousehold, needsFullExpenseList, loadData]);
 
+  // Any filter / sort / group change → restart the client-side pager and scroll
+  // the list back to the top so the user sees the first page of matches.
+  useEffect(() => {
+    setFilteredVisibleCount(EXPENSES_PAGE_SIZE);
+    listRef.current?.scrollToOffset({ offset: 0, animated: false });
+  }, [filters]);
+
   const getUserName = (userId: string): string => {
     if (!selectedHousehold) return 'Unknown';
     const member = selectedHousehold.members.find((m) => m._id === userId);
@@ -250,22 +294,34 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     return selectedHousehold.members.find((m) => m._id === userId)?.avatarUrl;
   };
 
-  const handleDeleteExpense = async (expenseId: string) => {
-    try {
-      await expensesApi.deleteExpense(expenseId);
-      await loadData();
-    } catch (error: any) {
-      Alert.alert(t('common.error'), error.response?.data?.error || t('alerts.somethingWentWrong'));
-    }
-  };
+  // Stable handler references are important — they're passed into the
+  // memoized ExpenseCard; a new identity on every render would defeat the memo
+  // and re-render every row on each filter keystroke.
+  const handleDeleteExpense = useCallback(
+    async (expenseId: string) => {
+      try {
+        await expensesApi.deleteExpense(expenseId);
+        await loadData();
+      } catch (error: any) {
+        Alert.alert(
+          t('common.error'),
+          error.response?.data?.error || t('alerts.somethingWentWrong')
+        );
+      }
+    },
+    [loadData, t]
+  );
 
-  const handleEditExpense = (expense: Expense) => {
-    navigation.navigate('CreateExpense', { expense, mode: 'edit' });
-  };
+  const handleEditExpense = useCallback(
+    (expense: Expense) => {
+      navigation.navigate('CreateExpense', { expense, mode: 'edit' });
+    },
+    [navigation]
+  );
 
-  const handleQuickSettle = () => {
+  const handleQuickSettle = useCallback(() => {
     navigation.navigate('SettleUp');
-  };
+  }, [navigation]);
 
   const getExpenseCategoryId = (category?: string): string | undefined => {
     if (!category) return undefined;
@@ -350,14 +406,24 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     return filtered;
   }, [expenses, filters]);
 
+  /**
+   * When filtering/sorting/grouping is active we fetch the full list and then
+   * only render `filteredVisibleCount` matches at a time. This keeps the
+   * screen fast and matches the "5 at a time" behaviour of the default view.
+   */
+  const displayedFilteredExpenses = useMemo(() => {
+    if (!needsFullExpenseList) return filteredAndSortedExpenses;
+    return filteredAndSortedExpenses.slice(0, filteredVisibleCount);
+  }, [filteredAndSortedExpenses, needsFullExpenseList, filteredVisibleCount]);
+
   const groupedExpenses = useMemo(() => {
     if (filters.groupBy === 'none') {
-      return { All: filteredAndSortedExpenses };
+      return { All: displayedFilteredExpenses };
     }
 
     const groups: Record<string, Expense[]> = {};
 
-    filteredAndSortedExpenses.forEach((expense) => {
+    displayedFilteredExpenses.forEach((expense) => {
       let key = 'Other';
 
       if (filters.groupBy === 'date') {
@@ -382,11 +448,11 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     });
 
     return groups;
-  }, [filteredAndSortedExpenses, filters.groupBy]);
+  }, [displayedFilteredExpenses, filters.groupBy]);
 
   const listRows: ExpenseListRow[] = useMemo(() => {
     if (filters.groupBy === 'none') {
-      return filteredAndSortedExpenses.map((e) => ({ kind: 'expense' as const, expense: e }));
+      return displayedFilteredExpenses.map((e) => ({ kind: 'expense' as const, expense: e }));
     }
     const rows: ExpenseListRow[] = [];
     Object.entries(groupedExpenses).forEach(([title, group]) => {
@@ -394,43 +460,51 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
       group.forEach((e) => rows.push({ kind: 'expense', expense: e }));
     });
     return rows;
-  }, [filteredAndSortedExpenses, groupedExpenses, filters.groupBy]);
+  }, [displayedFilteredExpenses, groupedExpenses, filters.groupBy]);
 
   const memberNames = selectedHousehold?.members.map((m) => ({ id: m._id, name: m.name })) || [];
 
-  const renderExpenseCard = (expense: Expense) => {
-    const creatorId =
-      (expense as any).createdBy && typeof (expense as any).createdBy === 'object'
-        ? (expense as any).createdBy?._id
-        : (expense as any).createdBy;
-    const canEdit =
-      !!user &&
-      ((creatorId && creatorId === user._id) ||
-        (!creatorId && (expense as any).paidBy?._id === user._id));
-    const canDelete = canEdit;
+  const currentUserId = user?._id;
 
-    return (
-      <ExpenseCard
-        expense={expense}
-        onDelete={handleDeleteExpense}
-        onQuickSettle={handleQuickSettle}
-        canDelete={canDelete}
-        canEdit={canEdit}
-        onEdit={handleEditExpense}
-      />
-    );
-  };
-
-  const renderItem: ListRenderItem<ExpenseListRow> = ({ item }) => {
-    if (item.kind === 'groupHeader') {
+  const renderItem: ListRenderItem<ExpenseListRow> = useCallback(
+    ({ item }) => {
+      if (item.kind === 'groupHeader') {
+        return (
+          <View style={{ paddingHorizontal: spacing.xl }}>
+            <AppText style={styles.groupTitle}>{item.title}</AppText>
+          </View>
+        );
+      }
+      const expense = item.expense;
+      const creatorId =
+        (expense as any).createdBy && typeof (expense as any).createdBy === 'object'
+          ? (expense as any).createdBy?._id
+          : (expense as any).createdBy;
+      const canEdit =
+        !!currentUserId &&
+        ((creatorId && creatorId === currentUserId) ||
+          (!creatorId && (expense as any).paidBy?._id === currentUserId));
       return (
         <View style={{ paddingHorizontal: spacing.xl }}>
-          <AppText style={styles.groupTitle}>{item.title}</AppText>
+          <ExpenseCard
+            expense={expense}
+            onDelete={handleDeleteExpense}
+            onQuickSettle={handleQuickSettle}
+            canDelete={canEdit}
+            canEdit={canEdit}
+            onEdit={handleEditExpense}
+          />
         </View>
       );
-    }
-    return <View style={{ paddingHorizontal: spacing.xl }}>{renderExpenseCard(item.expense)}</View>;
-  };
+    },
+    [
+      currentUserId,
+      handleDeleteExpense,
+      handleQuickSettle,
+      handleEditExpense,
+      styles.groupTitle,
+    ]
+  );
 
   if (!selectedHousehold) {
     return (
@@ -443,10 +517,19 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   }
 
   const showCategoryHint = expenses.length > 0 && expenses.some((e) => !e.category);
-  const filteredCount =
-    filteredAndSortedExpenses.length !== expenses.length ? filteredAndSortedExpenses.length : null;
-  const paginationHint =
-    !needsFullExpenseList && totalCount > 0 && expenses.length < totalCount
+  const hasMoreFilteredMatches =
+    needsFullExpenseList && filteredAndSortedExpenses.length > displayedFilteredExpenses.length;
+  /**
+   * Header count — when the user isn't filtering, we show the
+   * "loaded / total" server-pagination hint; when they are filtering, we show
+   * "visible / total matches" so they can tell whether Load more will reveal
+   * additional results.
+   */
+  const paginationHint = needsFullExpenseList
+    ? filteredAndSortedExpenses.length > 0
+      ? `${displayedFilteredExpenses.length} / ${filteredAndSortedExpenses.length}`
+      : null
+    : totalCount > 0 && expenses.length < totalCount
       ? String(t('expenses.listPaginationHint', { loaded: expenses.length, total: totalCount }))
       : null;
 
@@ -511,10 +594,6 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         <AppText style={styles.listTitle}>{t('expenses.sectionList')}</AppText>
         {paginationHint ? (
           <AppText style={styles.filteredCount}>{paginationHint}</AppText>
-        ) : filteredCount != null ? (
-          <AppText style={styles.filteredCount}>
-            {filteredCount} / {expenses.length}
-          </AppText>
         ) : null}
       </View>
 
@@ -537,18 +616,19 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     </View>
   );
 
+  const hasAnyExpenses = needsFullExpenseList ? expenses.length > 0 : totalCount > 0;
   const listEmptyNoData =
     !loading && filteredAndSortedExpenses.length === 0 ? (
       <View style={{ paddingHorizontal: spacing.xl, paddingBottom: spacing.xl }}>
         <EmptyState
           icon="receipt-outline"
-          title={expenses.length === 0 ? t('expenses.noExpenses') : t('common.noResults')}
+          title={hasAnyExpenses ? t('common.noResults') : t('expenses.noExpenses')}
           message={
-            expenses.length === 0 ? t('expenses.noExpensesDescription') : t('expenses.adjustFiltersHint')
+            hasAnyExpenses ? t('expenses.adjustFiltersHint') : t('expenses.noExpensesDescription')
           }
           variant="minimal"
-          actionLabel={expenses.length === 0 ? t('expenses.addExpense') : undefined}
-          onAction={expenses.length === 0 ? () => navigation.navigate('CreateExpense') : undefined}
+          actionLabel={hasAnyExpenses ? undefined : t('expenses.addExpense')}
+          onAction={hasAnyExpenses ? undefined : () => navigation.navigate('CreateExpense')}
         />
       </View>
     ) : null;
@@ -588,6 +668,21 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                 </AppText>
               </TouchableOpacity>
             )
+          ) : hasMoreFilteredMatches ? (
+            <TouchableOpacity
+              style={styles.loadMoreButton}
+              onPress={() =>
+                setFilteredVisibleCount((c) => c + EXPENSES_PAGE_SIZE)
+              }
+              activeOpacity={0.75}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.loadMore')}
+            >
+              <AppText style={styles.loadMoreText}>
+                {t('common.loadMore')} ({displayedFilteredExpenses.length}/
+                {filteredAndSortedExpenses.length})
+              </AppText>
+            </TouchableOpacity>
           ) : null
         }
         contentContainerStyle={styles.scrollContent}

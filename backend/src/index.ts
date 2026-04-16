@@ -92,9 +92,12 @@ const startServer = async () => {
     app.listen(port, '0.0.0.0', () => {
       console.log(`Server running on port ${port}`);
       console.log(`Accessible at http://localhost:${port} or http://192.168.1.187:${port}`);
-      
-      // Start notification scheduler
-      schedulerService.start();
+
+      if (config.notificationsEnabled) {
+        schedulerService.start();
+      } else {
+        console.log('Notifications disabled (NOTIFICATIONS_ENABLED!=true); scheduler skipped.');
+      }
     });
   } catch (error) {
     console.error('Failed to start server:', error);

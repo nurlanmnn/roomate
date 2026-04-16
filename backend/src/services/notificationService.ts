@@ -1,4 +1,5 @@
 import { User } from '../models/User';
+import { config } from '../config/env';
 
 // Expo Push Notification types
 interface ExpoPushMessage {
@@ -47,6 +48,7 @@ class NotificationService {
    * Send push notification to a single user
    */
   async sendToUser(userId: string, payload: NotificationPayload): Promise<boolean> {
+    if (!config.notificationsEnabled) return false;
     try {
       const user = await User.findById(userId);
       if (!user?.pushToken) {
@@ -65,6 +67,7 @@ class NotificationService {
    * Send push notification to multiple users
    */
   async sendToUsers(userIds: string[], payload: NotificationPayload): Promise<void> {
+    if (!config.notificationsEnabled) return;
     try {
       const users = await User.find({ 
         _id: { $in: userIds },
@@ -92,6 +95,7 @@ class NotificationService {
     excludeUserId: string, 
     payload: NotificationPayload
   ): Promise<void> {
+    if (!config.notificationsEnabled) return;
     const recipientIds = memberIds
       .map(id => id.toString())
       .filter(id => id !== excludeUserId);

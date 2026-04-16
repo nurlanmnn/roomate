@@ -18,7 +18,7 @@ interface ExpenseCardProps {
   onEdit?: (expense: Expense) => void;
 }
 
-export const ExpenseCard: React.FC<ExpenseCardProps> = ({
+const ExpenseCardInner: React.FC<ExpenseCardProps> = ({
   expense,
   onDelete,
   onQuickSettle,
@@ -184,3 +184,10 @@ export const ExpenseCard: React.FC<ExpenseCardProps> = ({
     </SwipeableRow>
   );
 };
+
+/**
+ * Memoized so that re-renders of the parent `FlatList` (e.g. a filter
+ * keystroke) don't re-render every card — only the ones whose props actually
+ * change. Callbacks passed in must be stable (wrap with `useCallback`).
+ */
+export const ExpenseCard = React.memo(ExpenseCardInner);

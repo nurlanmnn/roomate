@@ -22,6 +22,12 @@ export const config = {
     .map((s) => s.trim())
     .filter(Boolean),
   geminiApiKey: process.env.GEMINI_API_KEY || '',
+  /**
+   * Feature flag — push notifications are disabled by default while the feature
+   * is still being polished. Set NOTIFICATIONS_ENABLED=true on the server to
+   * re-enable push sending and the background scheduler.
+   */
+  notificationsEnabled: (process.env.NOTIFICATIONS_ENABLED || '').toLowerCase() === 'true',
 };
 
 export const getEnv = () => config;
