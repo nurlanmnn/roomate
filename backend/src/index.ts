@@ -15,6 +15,7 @@ import eventRoutes from './routes/events';
 import choreRoutes from './routes/chores';
 import { schedulerService } from './services/schedulerService';
 import { authRateLimiter, globalApiLimiter } from './middleware/security';
+import { Household } from './models/Household';
 
 const app = express();
 
@@ -85,9 +86,30 @@ app.get('/privacy', (_req, res) => {
 
 
 // Connect to database and start server
+/**
+ * Idempotent backfill — older households predate the `currency` field, so the
+ * first boot after deploy stamps them with `USD` (our previous hard-coded
+ * default). New documents get `USD` via the schema default, so this only ever
+ * hits legacy rows once.
+ */
+const backfillHouseholdCurrency = async () => {
+  try {
+    const result = await Household.updateMany(
+      { currency: { $exists: false } },
+      { $set: { currency: 'USD' } }
+    );
+    if (result.modifiedCount > 0) {
+      console.log(`Backfilled currency on ${result.modifiedCount} household(s).`);
+    }
+  } catch (err) {
+    console.error('Household currency backfill failed:', err);
+  }
+};
+
 const startServer = async () => {
   try {
     await connectDB();
+    await backfillHouseholdCurrency();
     const port = typeof config.port === 'string' ? parseInt(config.port, 10) : config.port;
     app.listen(port, '0.0.0.0', () => {
       console.log(`Server running on port ${port}`);

@@ -21,6 +21,8 @@ import { expenseTemplatesApi, ExpenseTemplate } from '../../api/expenseTemplates
 import { FormTextInput } from '../../components/FormTextInput';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { formatCurrency } from '../../utils/formatCurrency';
+import { useHouseholdCurrency } from '../../utils/useHouseholdCurrency';
+import { getCurrencyOption } from '../../constants/currencies';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
 import { Avatar } from '../../components/ui/Avatar';
 import { useThemeColors, useTheme, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
@@ -42,6 +44,8 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
   const colors = useThemeColors();
   const { theme } = useTheme();
   const { t } = useLanguage();
+  const currency = useHouseholdCurrency();
+  const currencySymbol = getCurrencyOption(currency).symbol;
   const editingExpense: Expense | undefined = route?.params?.expense;
   const isEditing = !!editingExpense;
   const [description, setDescription] = useState('');
@@ -741,7 +745,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
 
       const remaining = getRemainingAmount();
       if (Math.abs(remaining) > 0.01) {
-        Alert.alert(t('common.error'), t('alerts.sharesMustMatch', { amount: formatCurrency(remaining) }));
+        Alert.alert(t('common.error'), t('alerts.sharesMustMatch', { amount: formatCurrency(remaining, currency) }));
         return;
       }
     }
@@ -852,7 +856,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
                   containerStyle={{ marginBottom: spacing.md }}
                 />
                 <FormTextInput
-                  label={t('expenses.totalAmount')}
+                  label={`${t('expenses.totalAmount')} (${currencySymbol})`}
                   value={totalAmount}
                   onChangeText={setTotalAmount}
                   placeholder="0.00"
@@ -1008,7 +1012,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
                     const member = selectedHousehold.members.find((m) => m._id === share.userId);
                     return (
                       <AppText key={index} style={styles.shareItem}>
-                        {member?.name}: {formatCurrency(share.amount)}
+                        {member?.name}: {formatCurrency(share.amount, currency)}
                       </AppText>
                     );
                   })}
@@ -1039,7 +1043,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
                     );
                   })}
                   <AppText style={[styles.remaining, remaining !== 0 && styles.remainingError]}>
-                    {t('expenses.remainingToAssign')}: {formatCurrency(remaining)}
+                    {t('expenses.remainingToAssign')}: {formatCurrency(remaining, currency)}
                   </AppText>
                 </View>
               </SettingsGroupCard>

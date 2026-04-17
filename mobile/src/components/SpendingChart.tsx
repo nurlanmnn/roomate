@@ -3,6 +3,7 @@ import { View, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
 import { AppText } from './AppText';
 import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows } from '../theme';
 import { formatCompactCurrency, formatCurrency } from '../utils/formatCurrency';
+import { useHouseholdCurrency } from '../utils/useHouseholdCurrency';
 import { MonthlyTrendChart } from './MonthlyTrendChart';
 import { DonutChart } from './DonutChart';
 import { useLanguage } from '../context/LanguageContext';
@@ -61,6 +62,7 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
 }) => {
   const colors = useThemeColors();
   const { t } = useLanguage();
+  const currency = useHouseholdCurrency();
   const cardInnerWidth = screenWidth - spacing.xl * 2 - spacing.md * 2 - spacing.lg * 2;
   const pieSize = Math.min(240, cardInnerWidth - spacing.lg);
   const rangeOptions: { key: 'week' | 'month' | 'year' | 'all'; label: string }[] = [
@@ -282,7 +284,7 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
                         color: colors.text,
                       }}
                     >
-                      {formatCurrency(topCategories.reduce((sum, c) => sum + c.amount, 0))}
+                      {formatCurrency(topCategories.reduce((sum, c) => sum + c.amount, 0), currency)}
                     </AppText>
                   </View>
                 }
@@ -300,7 +302,7 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
                       {displayName}
                     </AppText>
                     <View style={styles.categoryRight}>
-                      <AppText style={styles.categoryAmount}>{formatCompactCurrency(cat.amount)}</AppText>
+                      <AppText style={styles.categoryAmount}>{formatCompactCurrency(cat.amount, currency)}</AppText>
                       <AppText style={styles.categoryPercentage}>({cat.percentage.toFixed(1)}%)</AppText>
                     </View>
                   </View>
@@ -331,7 +333,7 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
       {predictions && !hidePrediction && (
         <View style={styles.predictionContainer}>
           <AppText style={styles.predictionTitle}>{t('spendingChart.nextMonthPrediction')}</AppText>
-          <AppText style={styles.predictionAmount}>{formatCurrency(predictions.nextMonth)}</AppText>
+          <AppText style={styles.predictionAmount}>{formatCurrency(predictions.nextMonth, currency)}</AppText>
           <AppText style={styles.predictionTrend}>
             {t('spendingChart.trend')}: {predictions.trend === 'increasing' ? `📈 ${t('spendingChart.increasing')}` : 
                    predictions.trend === 'decreasing' ? `📉 ${t('spendingChart.decreasing')}` : 

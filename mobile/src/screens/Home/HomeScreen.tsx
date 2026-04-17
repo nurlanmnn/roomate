@@ -21,6 +21,7 @@ import { SummaryStatCard } from '../../components/Home/SummaryStatCard';
 import { InsightCard } from '../../components/Home/InsightCard';
 import { SmartTipCard } from '../../components/Home/SmartTipCard';
 import { formatCurrency, formatCompactCurrency } from '../../utils/formatCurrency';
+import { useHouseholdCurrency } from '../../utils/useHouseholdCurrency';
 import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows, TAB_BAR_HEIGHT } from '../../theme';
 import { Ionicons } from '@expo/vector-icons';
 import { LoadingSkeleton, SkeletonCard } from '../../components/LoadingSkeleton';
@@ -31,6 +32,7 @@ export const HomeScreen: React.FC = () => {
   const { user } = useAuth();
   const colors = useThemeColors();
   const { t } = useLanguage();
+  const currency = useHouseholdCurrency();
   const [events, setEvents] = useState<Event[]>([]);
   const [balances, setBalances] = useState<PairwiseBalance[]>([]);
   const [homeSummary, setHomeSummary] = useState<HomeExpenseSummary | null>(null);
@@ -459,7 +461,7 @@ export const HomeScreen: React.FC = () => {
         householdName={selectedHousehold.name}
         address={selectedHousehold.address}
         metricLabel={hasData ? t('home.thisMonth') : undefined}
-        metricValue={hasData ? formatCompactCurrency(stats.monthlyExpenses) : undefined}
+        metricValue={hasData ? formatCompactCurrency(stats.monthlyExpenses, currency) : undefined}
         tagline={dashboardLoadOk && !hasData ? t('home.setupHeroTagline') : undefined}
       />
 
@@ -468,7 +470,7 @@ export const HomeScreen: React.FC = () => {
           <SummaryStatCard
             icon={<Ionicons name="cash-outline" size={22} color={colors.primary} />}
             label={t('home.thisMonth')}
-            value={formatCompactCurrency(stats.monthlyExpenses)}
+            value={formatCompactCurrency(stats.monthlyExpenses, currency)}
             iconBgColor={colors.primaryUltraSoft}
             onPress={() => navigation.navigate('Expenses')}
           />
@@ -588,13 +590,13 @@ export const HomeScreen: React.FC = () => {
             const percentChange = lastMonth > 0 ? ((difference / lastMonth) * 100).toFixed(1) : '0';
             const isIncrease = difference > 0;
             const trendText = lastMonth > 0
-              ? `${isIncrease ? '+' : ''}${formatCurrency(Math.abs(difference))} (${isIncrease ? '+' : ''}${percentChange}%) ${isIncrease ? t('home.moreThanLastMonth') : t('home.lessThanLastMonth')}`
+              ? `${isIncrease ? '+' : ''}${formatCurrency(Math.abs(difference), currency)} (${isIncrease ? '+' : ''}${percentChange}%) ${isIncrease ? t('home.moreThanLastMonth') : t('home.lessThanLastMonth')}`
               : t('home.thisMonth');
             return (
               <View style={styles.insightRow}>
                 <InsightCard
                   title={t('home.thisMonth')}
-                  value={formatCurrency(thisMonth)}
+                  value={formatCurrency(thisMonth, currency)}
                   trend={lastMonth > 0 ? { direction: isIncrease ? 'increasing' : 'decreasing', text: trendText } : undefined}
                   variant="primary"
                 />
@@ -605,7 +607,7 @@ export const HomeScreen: React.FC = () => {
             <View style={styles.insightRow}>
               <InsightCard
                 title={t('spendingChart.nextMonthPrediction')}
-                value={formatCurrency(insights.predictions.nextMonth)}
+                value={formatCurrency(insights.predictions.nextMonth, currency)}
                 trend={{
                   direction: insights.predictions.trend,
                   text: insights.predictions.trend === 'increasing' ? t('spendingChart.increasing') : insights.predictions.trend === 'decreasing' ? t('spendingChart.decreasing') : t('spendingChart.stable'),

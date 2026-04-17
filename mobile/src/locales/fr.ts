@@ -36,6 +36,28 @@ export default {
     optional: 'Facultatif',
     none: 'Aucun',
     loadMore: 'Charger plus',
+    saving: 'Enregistrement…',
+  },
+
+  // Devise
+  currency: {
+    label: 'Devise',
+    sectionTitle: 'Devise',
+    sectionHintEditable:
+      'Choisissez la devise utilisée par ce foyer pour les dépenses. Modifiable jusqu’à la première dépense ou régularisation.',
+    sectionHintLocked:
+      'Ce foyer a déjà de l’activité, sa devise est donc verrouillée. Pour utiliser une autre devise, créez un nouveau foyer.',
+    sectionHintMember: 'Seul le propriétaire peut changer la devise.',
+    createHint: 'Vous pourrez la changer plus tard, uniquement avant la première dépense.',
+    pickerTitle: 'Choisir une devise',
+    searchPlaceholder: 'Rechercher (ex. EUR, Euro)…',
+    lockedInlineHint: 'Verrouillée — le foyer contient déjà des dépenses ou des règlements.',
+    changeConfirmTitle: 'Changer de devise ?',
+    changeConfirmBody:
+      'Le symbole et le format passeront à %{code} sur tous les écrans de ce foyer. Vous pourrez encore changer jusqu’à la première dépense.',
+    lockedTitle: 'Devise verrouillée',
+    lockedBody:
+      'Une dépense ou un règlement vient d’être ajouté, la devise ne peut plus être modifiée. Créez un nouveau foyer pour en utiliser une autre.',
   },
 
   // Navigation & Tabs

@@ -36,6 +36,28 @@ export default {
     optional: 'Optional',
     none: 'None',
     loadMore: 'Load more',
+    saving: 'Saving…',
+  },
+
+  // Currency picker + household currency settings
+  currency: {
+    label: 'Currency',
+    sectionTitle: 'Currency',
+    sectionHintEditable:
+      "Set the currency this household uses for expenses. You can change it up until the first expense or settle-up is recorded.",
+    sectionHintLocked:
+      'This household already has activity, so its currency is locked. To use a different currency, create a new household.',
+    sectionHintMember: 'Only the household owner can change the currency.',
+    createHint: "You can change this later — but only before the first expense is added.",
+    pickerTitle: 'Select a currency',
+    searchPlaceholder: 'Search (e.g. EUR, Euro)…',
+    lockedInlineHint: 'Locked — household already has expenses or settlements.',
+    changeConfirmTitle: 'Change currency?',
+    changeConfirmBody:
+      "This will switch the symbol and formatting to %{code} for all screens in this household. You can still change it again until the first expense is added.",
+    lockedTitle: 'Currency locked',
+    lockedBody:
+      "Someone just added an expense or settlement, so the currency can no longer be changed. Create a new household to use a different currency.",
   },
 
   // Navigation & Tabs

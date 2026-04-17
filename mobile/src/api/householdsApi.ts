@@ -14,6 +14,9 @@ export interface Household {
   ownerId: string | HouseholdMember; // Can be string or populated object
   members: HouseholdMember[];
   joinCode: string;
+  /** ISO 4217 currency code (e.g. 'USD', 'EUR'). Locked once the household has
+   *  any expenses or settlements; see `currencies.ts` for the supported list. */
+  currency: string;
   createdAt: string;
 }
 
@@ -28,6 +31,7 @@ export const getOwnerIdString = (household: Household): string => {
 export interface CreateHouseholdData {
   name: string;
   address?: string;
+  currency?: string;
 }
 
 export interface JoinHouseholdData {
@@ -37,6 +41,12 @@ export interface JoinHouseholdData {
 export interface UpdateHouseholdData {
   name?: string;
   address?: string;
+  currency?: string;
+}
+
+export interface HouseholdTransactionCount {
+  expenseCount: number;
+  settlementCount: number;
 }
 
 export const householdsApi = {
@@ -83,6 +93,12 @@ export const householdsApi = {
   /** Owner only — generates a new invite code; old code stops working. */
   regenerateInviteCode: async (householdId: string): Promise<Household> => {
     const response = await apiClient.instance.post(`/households/${householdId}/regenerate-invite`);
+    return response.data;
+  },
+
+  /** Member-accessible — used by settings to decide if currency is still editable. */
+  getTransactionCount: async (householdId: string): Promise<HouseholdTransactionCount> => {
+    const response = await apiClient.instance.get(`/households/${householdId}/transaction-count`);
     return response.data;
   },
 };

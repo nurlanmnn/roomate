@@ -3,6 +3,7 @@ import { View, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { AppText } from './AppText';
 import { Expense } from '../api/expensesApi';
 import { formatCurrency } from '../utils/formatCurrency';
+import { useHouseholdCurrency } from '../utils/useHouseholdCurrency';
 import { formatDate, formatDateShort } from '../utils/dateHelpers';
 import { useThemeColors, fontSizes, fontWeights, radii, spacing, shadows } from '../theme';
 import { Avatar } from './ui/Avatar';
@@ -28,6 +29,7 @@ const ExpenseCardInner: React.FC<ExpenseCardProps> = ({
 }) => {
   const colors = useThemeColors();
   const { t } = useLanguage();
+  const currency = useHouseholdCurrency();
   const paidByName = expense.paidBy?.name || 'Unknown';
 
   const styles = React.useMemo(() => StyleSheet.create({
@@ -143,7 +145,7 @@ const ExpenseCardInner: React.FC<ExpenseCardProps> = ({
       <View style={styles.card}>
       <View style={styles.header}>
         <AppText style={styles.description} numberOfLines={2} ellipsizeMode="tail">{expense.description}</AppText>
-        <AppText style={styles.amount}>{formatCurrency(expense.totalAmount)}</AppText>
+        <AppText style={styles.amount}>{formatCurrency(expense.totalAmount, currency)}</AppText>
       </View>
       <View style={styles.metaRow}>
         <View style={styles.paidByRow}>

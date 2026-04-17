@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '../../components/AppText';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { CurrencyPicker } from '../../components/CurrencyPicker';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -39,6 +40,12 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
   const [isSaving, setIsSaving] = useState(false);
   const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
   const [regenerating, setRegenerating] = useState(false);
+  // Currency is locked as soon as this household has any expense or settlement.
+  // `null` means "still loading"; we hide the action affordance until we know.
+  const [txCount, setTxCount] = useState<{ expenseCount: number; settlementCount: number } | null>(
+    null
+  );
+  const [savingCurrency, setSavingCurrency] = useState(false);
 
   useEffect(() => {
     if (selectedHousehold && user) {
@@ -53,6 +60,73 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
       setEditAddress(selectedHousehold.address || '');
     }
   }, [selectedHousehold]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!selectedHousehold?._id) {
+      setTxCount(null);
+      return;
+    }
+    setTxCount(null);
+    householdsApi
+      .getTransactionCount(selectedHousehold._id)
+      .then((res) => {
+        if (!cancelled) setTxCount(res);
+      })
+      .catch(() => {
+        // On failure we treat the currency as locked — safer than silently
+        // relabeling data if something fishy is happening.
+        if (!cancelled) setTxCount({ expenseCount: 1, settlementCount: 0 });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedHousehold?._id]);
+
+  const currencyLocked =
+    !txCount ? true : txCount.expenseCount > 0 || txCount.settlementCount > 0;
+
+  const handleChangeCurrency = (newCode: string) => {
+    if (!selectedHousehold || !isOwner) return;
+    if (newCode === selectedHousehold.currency) return;
+    if (currencyLocked) return;
+
+    Alert.alert(
+      t('currency.changeConfirmTitle'),
+      t('currency.changeConfirmBody', { code: newCode }),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('common.confirm'),
+          onPress: async () => {
+            try {
+              setSavingCurrency(true);
+              const updated = await householdsApi.updateHousehold(selectedHousehold._id, {
+                currency: newCode,
+              });
+              setSelectedHousehold(updated);
+            } catch (error: unknown) {
+              const err = error as {
+                response?: { status?: number; data?: { error?: string; code?: string } };
+              };
+              if (err.response?.status === 409 || err.response?.data?.code === 'CURRENCY_LOCKED') {
+                // Server says it's locked now — re-fetch the count so our UI reflects reality.
+                setTxCount({ expenseCount: 1, settlementCount: 0 });
+                Alert.alert(t('currency.lockedTitle'), t('currency.lockedBody'));
+              } else {
+                Alert.alert(
+                  t('common.error'),
+                  err.response?.data?.error || t('alerts.somethingWentWrong')
+                );
+              }
+            } finally {
+              setSavingCurrency(false);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const memberCount = selectedHousehold?.members.length ?? 0;
   const ownerIdStr = selectedHousehold ? getOwnerIdString(selectedHousehold) : '';
@@ -331,6 +405,34 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
           </SettingsGroupCard>
         </SettingsSection>
 
+        <SettingsSection title={t('currency.sectionTitle')}>
+          <AppText style={styles.sectionHint}>
+            {currencyLocked
+              ? t('currency.sectionHintLocked')
+              : isOwner
+              ? t('currency.sectionHintEditable')
+              : t('currency.sectionHintMember')}
+          </AppText>
+          <SettingsGroupCard>
+            <View style={styles.padded}>
+              <CurrencyPicker
+                value={selectedHousehold.currency || 'USD'}
+                onChange={handleChangeCurrency}
+                disabled={!isOwner || currencyLocked || savingCurrency}
+                lockedHint={
+                  currencyLocked && isOwner ? t('currency.lockedInlineHint') : undefined
+                }
+              />
+              {savingCurrency ? (
+                <View style={styles.currencySaving}>
+                  <ActivityIndicator size="small" color={colors.primary} />
+                  <AppText style={styles.currencySavingText}>{t('common.saving')}</AppText>
+                </View>
+              ) : null}
+            </View>
+          </SettingsGroupCard>
+        </SettingsSection>
+
         <SettingsSection title={t('householdSettingsScreen.sectionInvite')}>
           <AppText style={styles.sectionHint}>{t('householdSettingsScreen.inviteHint')}</AppText>
           <SettingsGroupCard>
@@ -553,6 +655,16 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
       fontSize: fontSizes.sm,
       color: colors.textTertiary,
       marginTop: spacing.md,
+    },
+    currencySaving: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      marginTop: spacing.sm,
+    },
+    currencySavingText: {
+      fontSize: fontSizes.xs,
+      color: colors.textSecondary,
     },
     inviteRow: {
       flexDirection: 'row',

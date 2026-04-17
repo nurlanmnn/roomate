@@ -1,6 +1,8 @@
 import express, { Request, Response } from 'express';
 import { z } from 'zod';
-import { Household } from '../models/Household';
+import { Household, SUPPORTED_CURRENCIES } from '../models/Household';
+import { Expense } from '../models/Expense';
+import { Settlement } from '../models/Settlement';
 import { User } from '../models/User';
 import { authMiddleware } from '../middleware/auth';
 import { notificationService } from '../services/notificationService';
@@ -10,9 +12,19 @@ import { objectIdSchema, optionalTrimmedString, trimmedString } from '../utils/v
 
 const router = express.Router();
 
+const currencySchema = z
+  .string()
+  .trim()
+  .transform((val) => val.toUpperCase())
+  .refine(
+    (val) => (SUPPORTED_CURRENCIES as readonly string[]).includes(val),
+    { message: 'Unsupported currency' }
+  );
+
 const createHouseholdSchema = z.object({
   name: trimmedString(1, 120),
   address: optionalTrimmedString(200),
+  currency: currencySchema.optional(),
 });
 
 const joinHouseholdSchema = z.object({
@@ -60,7 +72,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const { name, address } = createHouseholdSchema.parse(req.body);
+    const { name, address, currency } = createHouseholdSchema.parse(req.body);
 
     // Generate unique join code
     let joinCode = generateJoinCode();
@@ -80,6 +92,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
       ownerId: userId,
       members: [userId],
       joinCode,
+      currency: currency || 'USD',
     });
     await household.save();
 
@@ -185,6 +198,7 @@ router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
 const updateHouseholdSchema = z.object({
   name: trimmedString(1, 120).optional(),
   address: optionalTrimmedString(200),
+  currency: currencySchema.optional(),
 });
 
 router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
@@ -213,6 +227,25 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
     if (updates.address !== undefined) {
       household.address = updates.address;
     }
+    if (updates.currency !== undefined && updates.currency !== household.currency) {
+      // Currency is locked once the household has any expenses or settlements —
+      // existing numeric amounts are not converted, so changing the currency
+      // would silently relabel historical data.
+      const [expenseCount, settlementCount] = await Promise.all([
+        Expense.countDocuments({ householdId: household._id }),
+        Settlement.countDocuments({ householdId: household._id }),
+      ]);
+      if (expenseCount > 0 || settlementCount > 0) {
+        return res.status(409).json({
+          error:
+            'Currency is locked once this household has expenses or settlements. To use a different currency, create a new household.',
+          code: 'CURRENCY_LOCKED',
+          expenseCount,
+          settlementCount,
+        });
+      }
+      household.currency = updates.currency as typeof household.currency;
+    }
 
     await household.save();
 
@@ -233,6 +266,40 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid input', details: error.errors });
     }
     console.error('Update household error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /households/:id/transaction-count — returns counts the mobile settings
+// screen uses to decide whether currency can still be changed.
+router.get('/:id/transaction-count', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { id } = householdIdParamsSchema.parse(req.params);
+    const household = await Household.findById(id).select('_id members');
+    if (!household) {
+      return res.status(404).json({ error: 'Household not found' });
+    }
+
+    if (!household.members.some(m => m.toString() === userId)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const [expenseCount, settlementCount] = await Promise.all([
+      Expense.countDocuments({ householdId: household._id }),
+      Settlement.countDocuments({ householdId: household._id }),
+    ]);
+
+    res.json({ expenseCount, settlementCount });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+    }
+    console.error('Transaction count error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

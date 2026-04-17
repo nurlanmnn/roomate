@@ -25,6 +25,7 @@ import { SettingsGroupCard } from '../../components/Settings/SettingsGroupCard';
 import { SettingsRow } from '../../components/Settings/SettingsRow';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { formatCurrency } from '../../utils/formatCurrency';
+import { useHouseholdCurrency } from '../../utils/useHouseholdCurrency';
 import {
   alertOpenSettingsForPhotoLibrary,
   ensureMediaLibraryPermission,
@@ -43,6 +44,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
+  const currency = useHouseholdCurrency();
   const [balances, setBalances] = useState<PairwiseBalance[]>([]);
   const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [loading, setLoading] = useState(false);
@@ -447,7 +449,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
 
     Alert.alert(
       t('settleUp.netBalance'),
-      `${t('home.youOwe')} ${otherUserName} ${formatCurrency(userOwes)} ${t('common.and')} ${otherUserName} ${t('settleUp.owesYou').toLowerCase()} ${formatCurrency(otherOwes)}.\n\n${debtor} ${t('settleUp.willOwe')} ${formatCurrency(netAmount)} ${t('common.to')} ${creditor}.\n\n${t('common.continue')}?`,
+      `${t('home.youOwe')} ${otherUserName} ${formatCurrency(userOwes, currency)} ${t('common.and')} ${otherUserName} ${t('settleUp.owesYou').toLowerCase()} ${formatCurrency(otherOwes, currency)}.\n\n${debtor} ${t('settleUp.willOwe')} ${formatCurrency(netAmount, currency)} ${t('common.to')} ${creditor}.\n\n${t('common.continue')}?`,
       [
         { text: t('common.cancel'), style: 'cancel' },
         {
@@ -582,13 +584,13 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         amount: amountToForgive,
         method: t('settleUp.forgiven'),
         note: amountToForgive < selectedForgiveBalance.amount 
-          ? `${t('settleUp.partialDebtForgiven')} (${formatCurrency(amountToForgive)} / ${formatCurrency(selectedForgiveBalance.amount)})`
+          ? `${t('settleUp.partialDebtForgiven')} (${formatCurrency(amountToForgive, currency)} / ${formatCurrency(selectedForgiveBalance.amount, currency)})`
           : t('settleUp.debtForgivenNote'),
         date: new Date().toISOString(),
       });
       setForgiveModalVisible(false);
       loadBalances();
-      Alert.alert(t('common.success'), t('alerts.debtForgiven', { amount: formatCurrency(amountToForgive), user: fromUserName }));
+      Alert.alert(t('common.success'), t('alerts.debtForgiven', { amount: formatCurrency(amountToForgive, currency), user: fromUserName }));
     } catch (error: any) {
       Alert.alert(t('common.error'), error.response?.data?.error || t('alerts.somethingWentWrong'));
     }
@@ -656,7 +658,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                               <AppText style={styles.balanceText}>
                                 {t('home.youOwe')}{' '}
                                 <AppText style={styles.userName}>{toUserName}</AppText>{' '}
-                                <AppText style={styles.amount}>{formatCurrency(balance.amount)}</AppText>
+                                <AppText style={styles.amount}>{formatCurrency(balance.amount, currency)}</AppText>
                               </AppText>
                             </View>
                           </View>
@@ -719,7 +721,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                                 <AppText style={styles.userName}>{fromUserName}</AppText>{' '}
                                 {t('settleUp.owesYou').toLowerCase()}{' '}
                                 <AppText style={[styles.amount, styles.amountPositive]}>
-                                  {formatCurrency(balance.amount)}
+                                  {formatCurrency(balance.amount, currency)}
                                 </AppText>
                               </AppText>
                             </View>
@@ -768,7 +770,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                             <View style={styles.receivedSettlementInfo}>
                               <AppText style={styles.receivedSettlementText}>
                                 <AppText style={styles.userName}>{fromUserName}</AppText>{' '}
-                                {t('settleUp.paidYou')} {formatCurrency(settlement.amount)}
+                                {t('settleUp.paidYou')} {formatCurrency(settlement.amount, currency)}
                               </AppText>
                               {settlement.method ? (
                                 <AppText style={styles.receivedSettlementMethod}>{settlement.method}</AppText>
@@ -899,7 +901,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
             {selectedForgiveBalance && (
               <AppText style={styles.modalSubtitle}>
                 {getUserName(selectedForgiveBalance.fromUserId)} {t('settleUp.owesYou').toLowerCase()}{' '}
-                {formatCurrency(selectedForgiveBalance.amount)}
+                {formatCurrency(selectedForgiveBalance.amount, currency)}
               </AppText>
             )}
             
@@ -918,7 +920,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                     forgiveAmount === selectedForgiveBalance.amount.toFixed(2) && styles.forgiveAmountOptionTextSelected,
                   ]}>{t('settleUp.fullAmount')}</AppText>
                   <AppText style={styles.forgiveAmountOptionValue}>
-                    {formatCurrency(selectedForgiveBalance.amount)}
+                    {formatCurrency(selectedForgiveBalance.amount, currency)}
                   </AppText>
                 </TouchableOpacity>
                 
@@ -935,7 +937,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                       forgiveAmount === (selectedForgiveBalance.amount / 2).toFixed(2) && styles.forgiveAmountOptionTextSelected,
                     ]}>{t('settleUp.halfAmount')}</AppText>
                     <AppText style={styles.forgiveAmountOptionValue}>
-                      {formatCurrency(selectedForgiveBalance.amount / 2)}
+                      {formatCurrency(selectedForgiveBalance.amount / 2, currency)}
                     </AppText>
                   </TouchableOpacity>
                 )}

@@ -36,6 +36,28 @@ export default {
     optional: 'Opcional',
     none: 'Ninguno',
     loadMore: 'Cargar más',
+    saving: 'Guardando…',
+  },
+
+  // Moneda
+  currency: {
+    label: 'Moneda',
+    sectionTitle: 'Moneda',
+    sectionHintEditable:
+      'Define la moneda que usa este hogar para los gastos. Puedes cambiarla hasta que se registre el primer gasto o pago.',
+    sectionHintLocked:
+      'Este hogar ya tiene actividad, por lo que su moneda está bloqueada. Para usar otra, crea un hogar nuevo.',
+    sectionHintMember: 'Solo el propietario del hogar puede cambiar la moneda.',
+    createHint: 'Puedes cambiarla más tarde, pero solo antes de añadir el primer gasto.',
+    pickerTitle: 'Selecciona una moneda',
+    searchPlaceholder: 'Buscar (p. ej., EUR, Euro)…',
+    lockedInlineHint: 'Bloqueada — el hogar ya tiene gastos o pagos.',
+    changeConfirmTitle: '¿Cambiar la moneda?',
+    changeConfirmBody:
+      'Se cambiará el símbolo y el formato a %{code} en todas las pantallas de este hogar. Podrás volver a cambiarla hasta que se añada el primer gasto.',
+    lockedTitle: 'Moneda bloqueada',
+    lockedBody:
+      'Acaba de añadirse un gasto o pago, por lo que la moneda ya no se puede cambiar. Crea un hogar nuevo para usar otra.',
   },
 
   // Navigation & Tabs

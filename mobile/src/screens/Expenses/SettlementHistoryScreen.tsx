@@ -10,6 +10,7 @@ import { AppText } from '../../components/AppText';
 import { SettingsSection } from '../../components/Settings/SettingsSection';
 import { SettingsGroupCard } from '../../components/Settings/SettingsGroupCard';
 import { formatCurrency } from '../../utils/formatCurrency';
+import { useHouseholdCurrency } from '../../utils/useHouseholdCurrency';
 import { formatDate } from '../../utils/dateHelpers';
 import { useThemeColors, fontSizes, fontWeights, radii, spacing } from '../../theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,6 +27,7 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = () => {
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
+  const currency = useHouseholdCurrency();
   const styles = useMemo(
     () =>
       StyleSheet.create({
@@ -378,7 +380,7 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = () => {
                           <AppText style={styles.userName}>{toUserName}</AppText>
                         </AppText>
                       </View>
-                      <AppText style={styles.amount}>{formatCurrency(settlement.amount)}</AppText>
+                      <AppText style={styles.amount}>{formatCurrency(settlement.amount, currency)}</AppText>
                     </View>
 
                     <View style={styles.settlementDetails}>

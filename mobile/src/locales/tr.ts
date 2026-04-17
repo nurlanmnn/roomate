@@ -36,6 +36,28 @@ export default {
     optional: 'İsteğe Bağlı',
     none: 'Yok',
     loadMore: 'Daha fazla yükle',
+    saving: 'Kaydediliyor…',
+  },
+
+  // Para birimi
+  currency: {
+    label: 'Para birimi',
+    sectionTitle: 'Para birimi',
+    sectionHintEditable:
+      "Bu evin harcamalarda kullanacağı para birimi. İlk harcama veya ödeme kaydedilene kadar değiştirebilirsin.",
+    sectionHintLocked:
+      'Bu evde zaten kayıt var, bu yüzden para birimi kilitli. Farklı bir para birimi için yeni bir ev oluştur.',
+    sectionHintMember: 'Para birimini yalnızca ev sahibi değiştirebilir.',
+    createHint: 'Daha sonra değiştirebilirsin — ama ilk harcama eklenmeden önce.',
+    pickerTitle: 'Para birimi seç',
+    searchPlaceholder: 'Ara (ör. EUR, Euro)…',
+    lockedInlineHint: 'Kilitli — evde zaten harcama veya ödeme kaydı var.',
+    changeConfirmTitle: 'Para birimi değiştirilsin mi?',
+    changeConfirmBody:
+      "Bu evdeki tüm ekranlarda sembol ve biçim %{code} olarak değişecek. İlk harcama eklenene kadar tekrar değiştirebilirsin.",
+    lockedTitle: 'Para birimi kilitli',
+    lockedBody:
+      "Biraz önce bir harcama veya ödeme eklendi, bu yüzden artık para birimi değiştirilemez. Farklı bir para birimi için yeni bir ev oluştur.",
   },
 
   // Navigation & Tabs

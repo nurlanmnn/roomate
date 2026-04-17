@@ -3,6 +3,7 @@ import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { AppText } from './AppText';
 import { PairwiseBalance } from '../api/expensesApi';
 import { formatCurrency } from '../utils/formatCurrency';
+import { useHouseholdCurrency } from '../utils/useHouseholdCurrency';
 import { formatDateShort } from '../utils/dateHelpers';
 import { useThemeColors, fontSizes, fontWeights, radii, spacing, shadows } from '../theme';
 import { Avatar } from './ui/Avatar';
@@ -29,6 +30,7 @@ export const BalanceSummary: React.FC<BalanceSummaryProps> = ({
 }) => {
   const colors = useThemeColors();
   const { t } = useLanguage();
+  const currency = useHouseholdCurrency();
   const [visibleRows, setVisibleRows] = useState(BALANCE_ROWS_PAGE_SIZE);
   const userBalances = balances.filter(b => b.fromUserId === currentUserId || b.toUserId === currentUserId);
 
@@ -162,13 +164,13 @@ export const BalanceSummary: React.FC<BalanceSummaryProps> = ({
           {totalOwedToYou > 0 && (
             <View style={styles.summaryItem}>
               <AppText style={styles.summaryLabel}>{t('home.youAreOwed')}</AppText>
-              <AppText style={[styles.summaryValue, { color: colors.success }]}>{formatCurrency(totalOwedToYou)}</AppText>
+              <AppText style={[styles.summaryValue, { color: colors.success }]}>{formatCurrency(totalOwedToYou, currency)}</AppText>
             </View>
           )}
           {totalYouOwe > 0 && (
             <View style={styles.summaryItem}>
               <AppText style={styles.summaryLabel}>{t('home.youOwe')}</AppText>
-              <AppText style={[styles.summaryValue, { color: colors.danger }]}>{formatCurrency(totalYouOwe)}</AppText>
+              <AppText style={[styles.summaryValue, { color: colors.danger }]}>{formatCurrency(totalYouOwe, currency)}</AppText>
             </View>
           )}
         </View>
@@ -190,13 +192,13 @@ export const BalanceSummary: React.FC<BalanceSummaryProps> = ({
                   <AppText style={styles.balanceText}>
                     <AppText style={styles.userName}>{otherUserName}</AppText>
                     {' '}{t('settleUp.owesYou').toLowerCase()}{' '}
-                    <AppText style={styles.amountPositive}>{formatCurrency(balance.amount)}</AppText>
+                    <AppText style={styles.amountPositive}>{formatCurrency(balance.amount, currency)}</AppText>
                   </AppText>
                 ) : (
                   <AppText style={styles.balanceText}>
                     {t('home.youOwe')} <AppText style={styles.userName}>{otherUserName}</AppText>
                     {' '}
-                    <AppText style={styles.amountNegative}>{formatCurrency(balance.amount)}</AppText>
+                    <AppText style={styles.amountNegative}>{formatCurrency(balance.amount, currency)}</AppText>
                   </AppText>
                 )}
                 {balance.sinceDate && (

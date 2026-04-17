@@ -12,12 +12,15 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as Localization from 'expo-localization';
 import { householdsApi, Household } from '../../api/householdsApi';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { FormTextInput } from '../../components/FormTextInput';
 import { HouseholdCard } from '../../components/Household/HouseholdCard';
+import { CurrencyPicker } from '../../components/CurrencyPicker';
+import { guessDefaultCurrencyFromLocale } from '../../constants/currencies';
 import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows } from '../../theme';
 import { AppText } from '../../components/AppText';
 
@@ -31,6 +34,9 @@ export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigatio
   const [joinModalVisible, setJoinModalVisible] = useState(false);
   const [householdName, setHouseholdName] = useState('');
   const [householdAddress, setHouseholdAddress] = useState('');
+  const [householdCurrency, setHouseholdCurrency] = useState<string>(() =>
+    guessDefaultCurrencyFromLocale(Localization.getLocales()[0]?.languageTag)
+  );
   const [joinCode, setJoinCode] = useState('');
   const { setSelectedHousehold } = useHousehold();
 
@@ -60,6 +66,7 @@ export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigatio
       const household = await householdsApi.createHousehold({
         name: householdName,
         address: householdAddress || undefined,
+        currency: householdCurrency,
       });
       setHouseholds([...households, household]);
       setCreateModalVisible(false);
@@ -207,6 +214,14 @@ export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigatio
                   onChangeText={setHouseholdAddress}
                   placeholder="Orlando, FL"
                 />
+                <View style={styles.currencyField}>
+                  <AppText style={styles.currencyLabel}>{t('currency.label')}</AppText>
+                  <CurrencyPicker
+                    value={householdCurrency}
+                    onChange={setHouseholdCurrency}
+                  />
+                  <AppText style={styles.currencyHint}>{t('currency.createHint')}</AppText>
+                </View>
                 <View style={styles.modalActions}>
                   <PrimaryButton
                     title={t('common.cancel')}
@@ -428,6 +443,21 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
       backgroundColor: colors.background,
       alignItems: 'center',
       justifyContent: 'center',
+    },
+    currencyField: {
+      marginTop: spacing.md,
+    },
+    currencyLabel: {
+      fontSize: fontSizes.sm,
+      fontWeight: fontWeights.semibold,
+      color: colors.textSecondary,
+      marginBottom: spacing.xs,
+    },
+    currencyHint: {
+      fontSize: fontSizes.xs,
+      color: colors.textTertiary,
+      marginTop: spacing.xs,
+      lineHeight: 16,
     },
     modalActions: {
       flexDirection: 'row',

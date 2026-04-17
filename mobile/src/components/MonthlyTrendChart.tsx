@@ -3,6 +3,7 @@ import { View, StyleSheet, TouchableOpacity, Animated, Dimensions } from 'react-
 import { AppText } from './AppText';
 import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows } from '../theme';
 import { formatCompactCurrency, formatCurrency } from '../utils/formatCurrency';
+import { useHouseholdCurrency } from '../utils/useHouseholdCurrency';
 import { useLanguage } from '../context/LanguageContext';
 
 const screenWidth = Dimensions.get('window').width;
@@ -34,6 +35,7 @@ const clamp = (value: number, min: number, max: number): number => {
 const MonthlyTrendChartComponent = ({ monthlyTrend }: MonthlyTrendChartProps) => {
   const colors = useThemeColors();
   const { t } = useLanguage();
+  const currency = useHouseholdCurrency();
   const [selectedRange, setSelectedRange] = useState<MonthRange>(6);
   const [barAnimations, setBarAnimations] = useState<Animated.Value[]>([]);
 
@@ -379,7 +381,7 @@ const MonthlyTrendChartComponent = ({ monthlyTrend }: MonthlyTrendChartProps) =>
         </AppText>
         {summaryData.total > 0 && (
           <AppText style={styles.summaryText}>
-            {t('spendingChart.total')}: {formatCompactCurrency(summaryData.total)}
+            {t('spendingChart.total')}: {formatCompactCurrency(summaryData.total, currency)}
           </AppText>
         )}
       </View>

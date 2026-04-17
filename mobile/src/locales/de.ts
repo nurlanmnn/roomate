@@ -36,6 +36,28 @@ export default {
     optional: 'Optional',
     none: 'Keine',
     loadMore: 'Mehr laden',
+    saving: 'Wird gespeichert…',
+  },
+
+  // Währung
+  currency: {
+    label: 'Währung',
+    sectionTitle: 'Währung',
+    sectionHintEditable:
+      'Wähle die Währung, die dieser Haushalt für Ausgaben nutzt. Änderbar bis zur ersten Ausgabe oder Ausgleichszahlung.',
+    sectionHintLocked:
+      'In diesem Haushalt gibt es bereits Aktivität, daher ist die Währung gesperrt. Für eine andere Währung einen neuen Haushalt anlegen.',
+    sectionHintMember: 'Nur der Haushaltsbesitzer kann die Währung ändern.',
+    createHint: 'Später änderbar – aber nur vor der ersten Ausgabe.',
+    pickerTitle: 'Währung wählen',
+    searchPlaceholder: 'Suchen (z. B. EUR, Euro)…',
+    lockedInlineHint: 'Gesperrt – der Haushalt hat bereits Ausgaben oder Zahlungen.',
+    changeConfirmTitle: 'Währung ändern?',
+    changeConfirmBody:
+      'Symbol und Format werden auf allen Bildschirmen dieses Haushalts auf %{code} umgestellt. Bis zur ersten Ausgabe kannst du sie weiterhin ändern.',
+    lockedTitle: 'Währung gesperrt',
+    lockedBody:
+      'Soeben wurde eine Ausgabe oder Zahlung hinzugefügt, daher kann die Währung nicht mehr geändert werden. Erstelle einen neuen Haushalt für eine andere Währung.',
   },
 
   // Navigation & Tabs
