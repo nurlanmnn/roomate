@@ -16,7 +16,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
-import { expensesApi, Expense, ExpenseShare } from '../../api/expensesApi';
+import { expensesApi, Expense, ExpenseShare, PairwiseBalance } from '../../api/expensesApi';
 import { expenseTemplatesApi, ExpenseTemplate } from '../../api/expenseTemplatesApi';
 import { FormTextInput } from '../../components/FormTextInput';
 import { PrimaryButton } from '../../components/PrimaryButton';
@@ -31,6 +31,15 @@ import { EXPENSE_CATEGORIES, getCategoryById } from '../../constants/expenseCate
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '../../components/AppText';
 import { useLanguage } from '../../context/LanguageContext';
+import { invalidateCache, updateCached } from '../../utils/queryCache';
+
+/** Mirrors the snapshot shape cached by ExpensesScreen — keep in sync. */
+type ExpensesSnapshot = {
+  expenses: Expense[];
+  total: number;
+  balances: PairwiseBalance[];
+  mode: boolean;
+};
 import { SettingsSection } from '../../components/Settings/SettingsSection';
 import { SettingsGroupCard } from '../../components/Settings/SettingsGroupCard';
 
@@ -752,30 +761,57 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
 
     setLoading(true);
     try {
-      if (isEditing && editingExpense) {
-        await expensesApi.updateExpense(editingExpense._id, {
-          description,
-          totalAmount: parseFloat(totalAmount),
-          paidBy,
-          participants: selectedParticipants,
-          splitMethod,
-          shares,
-          date: date.toISOString(),
-          category: category ? getCategoryById(category)?.name : undefined,
-        });
-      } else {
-        await expensesApi.createExpense({
-          householdId: selectedHousehold._id,
-          description,
-          totalAmount: parseFloat(totalAmount),
-          paidBy,
-          participants: selectedParticipants,
-          splitMethod,
-          shares,
-          date: date.toISOString(),
-          category: category ? getCategoryById(category)?.name : undefined,
-        });
-      }
+      const saved = isEditing && editingExpense
+        ? await expensesApi.updateExpense(editingExpense._id, {
+            description,
+            totalAmount: parseFloat(totalAmount),
+            paidBy,
+            participants: selectedParticipants,
+            splitMethod,
+            shares,
+            date: date.toISOString(),
+            category: category ? getCategoryById(category)?.name : undefined,
+          })
+        : await expensesApi.createExpense({
+            householdId: selectedHousehold._id,
+            description,
+            totalAmount: parseFloat(totalAmount),
+            paidBy,
+            participants: selectedParticipants,
+            splitMethod,
+            shares,
+            date: date.toISOString(),
+            category: category ? getCategoryById(category)?.name : undefined,
+          });
+
+      // Patch any cached ExpensesScreen snapshots so the list reflects the
+      // change the moment we pop back — subscribers on that screen update
+      // state synchronously instead of waiting for the focus-refetch.
+      // Balances are intentionally left as-is here (the server recomputes
+      // them from all expenses); the focus-refetch reconciles.
+      const patchSnapshot = (prev: ExpensesSnapshot): ExpensesSnapshot => {
+        if (isEditing && editingExpense) {
+          return {
+            ...prev,
+            expenses: prev.expenses.map((e) => (e._id === saved._id ? saved : e)),
+          };
+        }
+        // New expense — prepend so it shows at the top of the default
+        // newest-first list.
+        const alreadyThere = prev.expenses.some((e) => e._id === saved._id);
+        if (alreadyThere) return prev;
+        return {
+          ...prev,
+          expenses: [saved, ...prev.expenses],
+          total: prev.total + 1,
+        };
+      };
+      updateCached<ExpensesSnapshot>(`expenses:${selectedHousehold._id}:page0`, patchSnapshot);
+      updateCached<ExpensesSnapshot>(`expenses:${selectedHousehold._id}:full`, patchSnapshot);
+
+      // Home dashboard aggregates (spending totals, insights) need the server
+      // to recompute — drop so the next focus refetches fresh numbers.
+      invalidateCache(`home:dashboard:${selectedHousehold._id}`);
       navigation.goBack();
     } catch (error: any) {
       Alert.alert(t('common.error'), error.response?.data?.error || t('alerts.somethingWentWrong'));

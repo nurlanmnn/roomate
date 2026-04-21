@@ -36,6 +36,20 @@ import { SettingsSection } from '../../components/Settings/SettingsSection';
 import { SettingsGroupCard } from '../../components/Settings/SettingsGroupCard';
 import { SettingsRow } from '../../components/Settings/SettingsRow';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { getCached, dedupedFetch, invalidateCache, subscribe as subscribeCache } from '../../utils/queryCache';
+
+type ExpensesSnapshot = {
+  expenses: Expense[];
+  total: number;
+  balances: PairwiseBalance[];
+  mode: boolean; // true === full list, false === paginated first page
+};
+
+const expensesKey = (householdId: string, fullMode: boolean) =>
+  `expenses:${householdId}:${fullMode ? 'full' : 'page0'}`;
+
+/** All cache keys that depend on household expenses — used on mutations. */
+const expensesInvalidatePrefix = (householdId: string) => `expenses:${householdId}`;
 
 export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { selectedHousehold, setSelectedHousehold } = useHousehold();
@@ -148,6 +162,13 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
    */
   const [filteredVisibleCount, setFilteredVisibleCount] = useState(EXPENSES_PAGE_SIZE);
   const listRef = useRef<FlatList>(null);
+  /** Mirror of expenses/totalCount so the delete handler can roll back without
+   *  taking `expenses` as a dep (which would re-render every memoized row). */
+  const expensesRef = useRef<Expense[]>([]);
+  const totalCountRef = useRef(0);
+  /** Latest `loadData` — lets the focus effect call it without adding it as a
+   *  dep and re-subscribing on every render. */
+  const loadDataRef = useRef<(() => void) | undefined>(undefined);
   /**
    * Tracks which fetch mode the currently-loaded `expenses` represents so we
    * can show a loading skeleton the moment the mode flips (instead of briefly
@@ -185,50 +206,74 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     }, [])
   );
 
+  /** On focus, kick a background revalidation. When the cache is warm the
+   *  UI doesn't flinch; when a CreateExpense save invalidated it, we fetch
+   *  fresh data automatically instead of making the user pull-to-refresh. */
+  useFocusEffect(
+    React.useCallback(() => {
+      if (selectedHousehold) loadDataRef.current?.();
+    }, [selectedHousehold?._id]) // eslint-disable-line react-hooks/exhaustive-deps
+  );
+
   const loadData = useCallback(async () => {
     if (!selectedHousehold) return;
 
     const requestId = ++loadRequestIdRef.current;
     const fetchMode = needsFullExpenseList;
+    const key = expensesKey(selectedHousehold._id, fetchMode);
 
-    // Mode flipped (paginated ↔ full) → wipe the stale slice immediately so
-    // the user sees the loading skeleton instead of a momentary "no results"
-    // flash while we refetch against the full dataset.
+    // Mode flipped (paginated ↔ full) → try the cache for the new mode first
+    // so we paint the list instantly instead of a blank skeleton flash.
     if (lastLoadedModeRef.current !== null && lastLoadedModeRef.current !== fetchMode) {
-      setExpenses([]);
-      setTotalCount(0);
+      const cached = getCached<ExpensesSnapshot>(key);
+      if (cached) {
+        setExpenses(cached.expenses);
+        setTotalCount(cached.total);
+        setBalances(cached.balances);
+      } else {
+        setExpenses([]);
+        setTotalCount(0);
+      }
     }
 
     setLoading(true);
     try {
-      const expensesPromise = fetchMode
-        ? expensesApi.getExpenses(selectedHousehold._id)
-        : expensesApi.getExpenses(selectedHousehold._id, {
-            limit: EXPENSES_PAGE_SIZE,
-            skip: 0,
-          });
-
-      const [expensesRaw, balancesData] = await Promise.all([
-        expensesPromise,
-        expensesApi.getBalances(selectedHousehold._id),
-      ]);
+      const snapshot = await dedupedFetch<ExpensesSnapshot>(key, async () => {
+        const expensesPromise = fetchMode
+          ? expensesApi.getExpenses(selectedHousehold._id)
+          : expensesApi.getExpenses(selectedHousehold._id, {
+              limit: EXPENSES_PAGE_SIZE,
+              skip: 0,
+            });
+        const [expensesRaw, balancesData] = await Promise.all([
+          expensesPromise,
+          expensesApi.getBalances(selectedHousehold._id),
+        ]);
+        let nextExpenses: Expense[];
+        let nextTotal: number;
+        if (Array.isArray(expensesRaw)) {
+          nextExpenses = expensesRaw;
+          nextTotal = expensesRaw.length;
+        } else {
+          nextExpenses = expensesRaw.items;
+          nextTotal = expensesRaw.total;
+        }
+        return {
+          expenses: nextExpenses,
+          total: nextTotal,
+          balances: balancesData,
+          mode: fetchMode,
+        };
+      });
 
       // Ignore any response that's been superseded by a newer load.
       if (requestId !== loadRequestIdRef.current) return;
 
-      let nextExpenses: Expense[];
-      let nextTotal: number;
-      if (Array.isArray(expensesRaw)) {
-        nextExpenses = expensesRaw;
-        nextTotal = expensesRaw.length;
-      } else {
-        nextExpenses = expensesRaw.items;
-        nextTotal = expensesRaw.total;
-      }
-
-      setExpenses(nextExpenses);
-      setTotalCount(nextTotal);
-      setBalances(balancesData);
+      setExpenses(snapshot.expenses);
+      setTotalCount(snapshot.total);
+      setBalances(snapshot.balances);
+      expensesRef.current = snapshot.expenses;
+      totalCountRef.current = snapshot.total;
       lastLoadedModeRef.current = fetchMode;
     } catch (error: any) {
       if (__DEV__) console.error('Failed to load expenses:', error);
@@ -255,8 +300,13 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
       });
       if (Array.isArray(raw)) return;
       const { items, total } = raw;
-      setExpenses((prev) => [...prev, ...items]);
+      setExpenses((prev) => {
+        const next = [...prev, ...items];
+        expensesRef.current = next;
+        return next;
+      });
       setTotalCount(total);
+      totalCountRef.current = total;
     } catch (error: any) {
       if (__DEV__) console.error('Failed to load more expenses:', error);
     } finally {
@@ -272,9 +322,36 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   ]);
 
   useEffect(() => {
+    loadDataRef.current = loadData;
+  }, [loadData]);
+
+  useEffect(() => {
     if (!selectedHousehold) return;
     loadData();
   }, [selectedHousehold, needsFullExpenseList, loadData]);
+
+  /**
+   * Keep the list in sync with the shared query cache. Other screens (the
+   * Create/Edit expense screen, specifically) patch the cached snapshot the
+   * moment their API call returns — subscribing here makes that patch visible
+   * instantly when the user navigates back, without waiting for the focus
+   * refetch to round-trip. We intentionally don't pull balances from the
+   * patched snapshot (they need server recomputation); the focus-refetch
+   * reconciles them shortly after.
+   */
+  useEffect(() => {
+    if (!selectedHousehold) return;
+    const key = expensesKey(selectedHousehold._id, needsFullExpenseList);
+    const sync = () => {
+      const snapshot = getCached<ExpensesSnapshot>(key);
+      if (!snapshot) return;
+      setExpenses(snapshot.expenses);
+      setTotalCount(snapshot.total);
+      expensesRef.current = snapshot.expenses;
+      totalCountRef.current = snapshot.total;
+    };
+    return subscribeCache(key, sync);
+  }, [selectedHousehold?._id, needsFullExpenseList]);
 
   // Any filter / sort / group change → restart the client-side pager and scroll
   // the list back to the top so the user sees the first page of matches.
@@ -299,17 +376,42 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   // and re-render every row on each filter keystroke.
   const handleDeleteExpense = useCallback(
     async (expenseId: string) => {
+      if (!selectedHousehold) return;
+
+      // Snapshot state via refs — using `expenses`/`totalCount` as deps would
+      // change this callback's identity on every list update and defeat
+      // React.memo on each ExpenseCard row.
+      const prevExpenses = expensesRef.current;
+      const prevTotal = totalCountRef.current;
+
+      const nextExpenses = prevExpenses.filter((e) => e._id !== expenseId);
+      expensesRef.current = nextExpenses;
+      totalCountRef.current = Math.max(0, prevTotal - 1);
+      setExpenses(nextExpenses);
+      setTotalCount(totalCountRef.current);
+
       try {
         await expensesApi.deleteExpense(expenseId);
-        await loadData();
+        // Balances + home summary depend on this expense — drop any cached
+        // snapshots so the next read refetches. loadData() kicks off a fresh
+        // fetch in the background; the UI is already correct thanks to the
+        // optimistic removal above.
+        invalidateCache(expensesInvalidatePrefix(selectedHousehold._id));
+        invalidateCache(`home:dashboard:${selectedHousehold._id}`);
+        loadData();
       } catch (error: any) {
+        // Roll back.
+        expensesRef.current = prevExpenses;
+        totalCountRef.current = prevTotal;
+        setExpenses(prevExpenses);
+        setTotalCount(prevTotal);
         Alert.alert(
           t('common.error'),
           error.response?.data?.error || t('alerts.somethingWentWrong')
         );
       }
     },
-    [loadData, t]
+    [selectedHousehold, loadData, t]
   );
 
   const handleEditExpense = useCallback(

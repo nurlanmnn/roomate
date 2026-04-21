@@ -26,6 +26,8 @@ interface CalendarViewProps {
   selectedDate: Date;
   onSelectDate: (date: Date) => void;
   eventDates: string[]; // Array of ISO date strings that have events
+  /** ISO date strings (yyyy-MM-dd or full ISO) where the current user is on chore duty. */
+  choreDates?: string[];
   onAddEvent?: (date: Date) => void;
   /** When true, sits inside a SettingsGroupCard (no outer margin / border / shadow). */
   embedded?: boolean;
@@ -35,6 +37,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   selectedDate,
   onSelectDate,
   eventDates,
+  choreDates = [],
   onAddEvent,
   embedded = false,
 }) => {
@@ -138,15 +141,28 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           color: colors.primary,
           fontWeight: fontWeights.bold,
         },
-        eventDot: {
+        dotsRow: {
           position: 'absolute',
           bottom: 2,
+          flexDirection: 'row',
+          gap: 2,
+        },
+        eventDot: {
           width: 5,
           height: 5,
           borderRadius: 2.5,
           backgroundColor: colors.primary,
         },
         eventDotSelected: {
+          backgroundColor: colors.surface,
+        },
+        choreDot: {
+          width: 5,
+          height: 5,
+          borderRadius: 2.5,
+          backgroundColor: colors.accent,
+        },
+        choreDotSelected: {
           backgroundColor: colors.surface,
         },
         addButton: {
@@ -169,6 +185,18 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     });
     return set;
   }, [eventDates]);
+
+  const choreDatesSet = useMemo(() => {
+    const set = new Set<string>();
+    choreDates.forEach((dateStr) => {
+      // Accept either yyyy-MM-dd or a full ISO string.
+      const d = /^\d{4}-\d{2}-\d{2}$/.test(dateStr)
+        ? parseISO(`${dateStr}T00:00:00`)
+        : parseISO(dateStr);
+      if (!Number.isNaN(d.getTime())) set.add(format(d, 'yyyy-MM-dd'));
+    });
+    return set;
+  }, [choreDates]);
 
   // Generate calendar days
   const calendarDays = useMemo(() => {
@@ -239,6 +267,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           const isSelected = isSameDay(day, selectedDate);
           const isDayToday = isToday(day);
           const hasEvent = eventDatesSet.has(dayKey);
+          const hasChore = choreDatesSet.has(dayKey);
 
           return (
             <View key={index} style={styles.dayCell}>
@@ -262,13 +291,25 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                 >
                   {format(day, 'd')}
                 </AppText>
-                {hasEvent && (
-                  <View
-                    style={[
-                      styles.eventDot,
-                      isSelected && styles.eventDotSelected,
-                    ]}
-                  />
+                {(hasEvent || hasChore) && (
+                  <View style={styles.dotsRow}>
+                    {hasEvent && (
+                      <View
+                        style={[
+                          styles.eventDot,
+                          isSelected && styles.eventDotSelected,
+                        ]}
+                      />
+                    )}
+                    {hasChore && (
+                      <View
+                        style={[
+                          styles.choreDot,
+                          isSelected && styles.choreDotSelected,
+                        ]}
+                      />
+                    )}
+                  </View>
                 )}
               </TouchableOpacity>
             </View>

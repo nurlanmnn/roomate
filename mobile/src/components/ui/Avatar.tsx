@@ -1,5 +1,6 @@
 import React from 'react';
-import { Image, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { Image } from 'expo-image';
 import { AppText } from '../AppText';
 import { useThemeColors, fontSizes, fontWeights, radii, spacing } from '../../theme';
 
@@ -46,6 +47,11 @@ export const Avatar: React.FC<AvatarProps> = ({ name, uri, size = 44 }) => {
       <Image
         source={{ uri }}
         style={[styles.image, dim]}
+        // expo-image disk-caches avatars natively so re-renders and list
+        // scrolls never re-decode or re-download the same file.
+        cachePolicy="memory-disk"
+        contentFit="cover"
+        transition={120}
       />
     );
   }

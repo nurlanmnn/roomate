@@ -26,6 +26,7 @@ import { SettingsRow } from '../../components/Settings/SettingsRow';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { useHouseholdCurrency } from '../../utils/useHouseholdCurrency';
+import { invalidateCache } from '../../utils/queryCache';
 import {
   alertOpenSettingsForPhotoLibrary,
   ensureMediaLibraryPermission,
@@ -490,6 +491,9 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         date: new Date().toISOString(),
         proofImageUrl: proofImage || undefined,
       });
+      // Balances + home summary are now stale.
+      invalidateCache(`expenses:${selectedHousehold._id}`);
+      invalidateCache(`home:dashboard:${selectedHousehold._id}`);
       setSettleModalVisible(false);
       setProofImage(null);
       loadBalances();
@@ -588,6 +592,8 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
           : t('settleUp.debtForgivenNote'),
         date: new Date().toISOString(),
       });
+      invalidateCache(`expenses:${selectedHousehold._id}`);
+      invalidateCache(`home:dashboard:${selectedHousehold._id}`);
       setForgiveModalVisible(false);
       loadBalances();
       Alert.alert(t('common.success'), t('alerts.debtForgiven', { amount: formatCurrency(amountToForgive, currency), user: fromUserName }));

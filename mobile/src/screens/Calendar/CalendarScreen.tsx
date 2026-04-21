@@ -24,7 +24,36 @@ import { SettingsGroupCard } from '../../components/Settings/SettingsGroupCard';
 import { formatDate } from '../../utils/dateHelpers';
 import { useThemeColors, fontSizes, fontWeights, spacing, radii, TAB_BAR_HEIGHT } from '../../theme';
 import { Ionicons } from '@expo/vector-icons';
-import { format, isSameDay, parseISO, startOfWeek } from 'date-fns';
+import {
+  addDays,
+  addMonths,
+  endOfMonth,
+  endOfWeek,
+  format,
+  isSameDay,
+  parseISO,
+  startOfMonth,
+  startOfWeek,
+  subMonths,
+} from 'date-fns';
+import {
+  getCached,
+  dedupedFetch,
+  invalidateCache,
+  subscribe as subscribeCache,
+  updateCached,
+} from '../../utils/queryCache';
+import { Avatar } from '../../components/ui/Avatar';
+import {
+  getChoreAssigneeAt,
+  getChorePeriodBounds,
+  isPeriodCompleted,
+} from '../../utils/choreSchedule';
+
+type CalendarSnapshot = { events: Event[]; chores: ChoreRotation[] };
+const calendarKey = (householdId: string, weekKey: string) =>
+  `calendar:${householdId}:${weekKey}`;
+const calendarInvalidatePrefix = (householdId: string) => `calendar:${householdId}`;
 
 type ViewMode = 'upcoming' | 'past' | 'all';
 
@@ -45,6 +74,7 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   const [viewMode, setViewMode] = useState<ViewMode>('upcoming');
   const [calendarListVisibleCount, setCalendarListVisibleCount] = useState(CALENDAR_LIST_PAGE_SIZE);
   const scrollRef = useRef<ScrollView>(null);
+  const loadEventsRef = useRef<(() => void) | undefined>(undefined);
 
   const isCreator = (event: Event) => event.createdBy?._id === user?._id;
 
@@ -55,22 +85,36 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   useFocusEffect(
     useCallback(() => {
       scrollRef.current?.scrollTo({ y: 0, animated: true });
+      loadEventsRef.current?.();
     }, [])
   );
 
   const loadEvents = useCallback(async () => {
     if (!selectedHousehold) return;
-    setLoading(true);
+    const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+    const weekKey = format(weekStart, 'yyyy-MM-dd');
+    const key = calendarKey(selectedHousehold._id, weekKey);
+
+    // Paint from cache synchronously; only show the spinner if we truly
+    // have nothing yet for this household + week.
+    const cached = getCached<CalendarSnapshot>(key);
+    if (cached) {
+      setEvents(cached.events);
+      setChores(cached.chores);
+    } else {
+      setLoading(true);
+    }
     try {
-      const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
-      const weekKey = format(weekStart, 'yyyy-MM-dd');
-      const [eventsRaw, choresData] = await Promise.all([
-        eventsApi.getEvents(selectedHousehold._id),
-        choresApi.getChores(selectedHousehold._id, weekKey).catch(() => []),
-      ]);
-      const eventsData = Array.isArray(eventsRaw) ? eventsRaw : eventsRaw.items;
-      setEvents(eventsData);
-      setChores(choresData);
+      const snapshot = await dedupedFetch<CalendarSnapshot>(key, async () => {
+        const [eventsRaw, choresData] = await Promise.all([
+          eventsApi.getEvents(selectedHousehold._id),
+          choresApi.getChores(selectedHousehold._id, weekKey).catch(() => []),
+        ]);
+        const eventsData = Array.isArray(eventsRaw) ? eventsRaw : eventsRaw.items;
+        return { events: eventsData, chores: choresData };
+      });
+      setEvents(snapshot.events);
+      setChores(snapshot.chores);
     } catch (error: any) {
       if (__DEV__) console.error('Failed to load events:', error);
       if (error?.response?.status === 403) {
@@ -82,8 +126,31 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   }, [selectedHousehold, setSelectedHousehold]);
 
   useEffect(() => {
+    loadEventsRef.current = loadEvents;
+  }, [loadEvents]);
+
+  useEffect(() => {
     if (selectedHousehold) loadEvents();
   }, [selectedHousehold, loadEvents]);
+
+  /**
+   * Keep the list in sync with the shared query cache. When CreateEventScreen
+   * patches the cache after saving, this subscription fires and copies the
+   * updated snapshot into local state — so the new event is visible the
+   * instant we pop back, without waiting for the focus refetch to round-trip.
+   */
+  useEffect(() => {
+    if (!selectedHousehold) return;
+    const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+    const key = calendarKey(selectedHousehold._id, format(weekStart, 'yyyy-MM-dd'));
+    const sync = () => {
+      const snapshot = getCached<CalendarSnapshot>(key);
+      if (!snapshot) return;
+      setEvents(snapshot.events);
+      setChores(snapshot.chores);
+    };
+    return subscribeCache(key, sync);
+  }, [selectedHousehold?._id]);
 
   const handleEditEvent = (event: Event) => {
     navigation.navigate('CreateEvent', { editingEvent: event });
@@ -96,10 +163,17 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
+          // Optimistic remove.
+          const prev = events;
+          setEvents((curr) => curr.filter((e) => e._id !== event._id));
           try {
             await eventsApi.deleteEvent(event._id);
-            loadEvents();
+            if (selectedHousehold) {
+              invalidateCache(calendarInvalidatePrefix(selectedHousehold._id));
+              invalidateCache(`home:dashboard:${selectedHousehold._id}`);
+            }
           } catch (error: any) {
+            setEvents(prev); // rollback
             Alert.alert(t('common.error'), error.response?.data?.error || t('alerts.somethingWentWrong'));
           }
         },
@@ -111,11 +185,149 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     navigation.navigate('CreateEvent', { preselectedDate: date.toISOString() });
   };
 
+  /**
+   * Toggle completion for the chore's current period. We flip local state
+   * (and the shared cache) immediately, then reconcile with the server.
+   * On failure we roll back so the UI doesn't lie.
+   */
+  const handleToggleChoreComplete = useCallback(
+    async (chore: ChoreRotation) => {
+      if (!selectedHousehold || !user) return;
+
+      const wasCompleted = chore.currentPeriodCompleted === true;
+      const periodStartIso =
+        chore.currentPeriodStart ??
+        new Date(new Date().setHours(0, 0, 0, 0)).toISOString();
+
+      const patchOne = (c: ChoreRotation): ChoreRotation => {
+        if (c._id !== chore._id) return c;
+        const existing = c.completions ?? [];
+        const withoutThis = existing.filter(
+          (rec) =>
+            new Date(rec.periodStart).getTime() !==
+            new Date(periodStartIso).getTime()
+        );
+        return {
+          ...c,
+          currentPeriodCompleted: !wasCompleted,
+          completions: wasCompleted
+            ? withoutThis
+            : [
+                ...withoutThis,
+                {
+                  periodStart: periodStartIso,
+                  completedBy: user._id,
+                  completedAt: new Date().toISOString(),
+                },
+              ],
+        };
+      };
+
+      // Optimistic: local + cache.
+      setChores((prev) => prev.map(patchOne));
+      const weekKey = format(
+        startOfWeek(new Date(), { weekStartsOn: 1 }),
+        'yyyy-MM-dd'
+      );
+      const cacheKey = calendarKey(selectedHousehold._id, weekKey);
+      updateCached<CalendarSnapshot>(cacheKey, (prev) => ({
+        ...prev,
+        chores: prev.chores.map(patchOne),
+      }));
+
+      try {
+        const updated = wasCompleted
+          ? await choresApi.markIncomplete(chore._id, periodStartIso)
+          : await choresApi.markComplete(chore._id, periodStartIso);
+
+        // Replace with the authoritative server record (keeps completions
+        // array fully in sync, not just the currentPeriod flag).
+        const replaceOne = (c: ChoreRotation): ChoreRotation =>
+          c._id === updated._id ? { ...c, ...updated } : c;
+        setChores((prev) => prev.map(replaceOne));
+        updateCached<CalendarSnapshot>(cacheKey, (prev) => ({
+          ...prev,
+          chores: prev.chores.map(replaceOne),
+        }));
+        invalidateCache(`home:dashboard:${selectedHousehold._id}`);
+      } catch (error: any) {
+        // Rollback to the pre-toggle state.
+        const rollback = (c: ChoreRotation): ChoreRotation =>
+          c._id === chore._id ? chore : c;
+        setChores((prev) => prev.map(rollback));
+        updateCached<CalendarSnapshot>(cacheKey, (prev) => ({
+          ...prev,
+          chores: prev.chores.map(rollback),
+        }));
+        Alert.alert(
+          t('common.error'),
+          error?.response?.data?.error || t('alerts.somethingWentWrong')
+        );
+      }
+    },
+    [selectedHousehold, user, t]
+  );
+
   const eventDates = useMemo(() => events.map((e) => e.date), [events]);
+
+  /**
+   * Pre-compute the ISO dates (yyyy-MM-dd) across the visible calendar window
+   * where the current user is the chore assignee. We scan a ~3 month range
+   * (prev / current / next) so scrolling the calendar to adjacent months
+   * still shows the indicator without another pass. Cheap — at most
+   * ~90 days * chores.length iterations of a constant-time modulo.
+   */
+  const userChoreDates = useMemo(() => {
+    if (!user || chores.length === 0) return [] as string[];
+    const today = new Date();
+    const rangeStart = startOfWeek(startOfMonth(subMonths(today, 1)), { weekStartsOn: 0 });
+    const rangeEnd = endOfWeek(endOfMonth(addMonths(today, 1)), { weekStartsOn: 0 });
+    const set = new Set<string>();
+    for (let d = rangeStart; d <= rangeEnd; d = addDays(d, 1)) {
+      for (const chore of chores) {
+        const assignee = getChoreAssigneeAt(chore, d);
+        if (assignee?._id !== user._id) continue;
+        // Once the period is ticked off, stop painting it on the calendar —
+        // that's the whole point of "done": out of sight, out of mind.
+        if (isPeriodCompleted(chore, d)) continue;
+        set.add(format(d, 'yyyy-MM-dd'));
+        break;
+      }
+    }
+    return Array.from(set);
+  }, [chores, user]);
 
   const selectedDateEvents = useMemo(() => {
     return events.filter((e) => isSameDay(parseISO(e.date), selectedDate));
   }, [events, selectedDate]);
+
+  /** Chores whose current period contains the selected date, with the
+   *  assignee resolved for that period. Powers the "Selected Day" section so
+   *  tapping a future date tells you who's on duty that week. */
+  const selectedDateChores = useMemo(() => {
+    if (chores.length === 0) return [] as Array<{
+      chore: ChoreRotation;
+      assignee: ReturnType<typeof getChoreAssigneeAt>;
+      periodStart: Date;
+      periodEnd: Date;
+    }>;
+    return chores
+      .map((chore) => {
+        const bounds = getChorePeriodBounds(chore, selectedDate);
+        const assignee = getChoreAssigneeAt(chore, selectedDate);
+        if (!bounds || !assignee) return null;
+        // Hide completed chores from the selected-day list — same rationale as
+        // the calendar dots: the user has already taken care of it.
+        if (isPeriodCompleted(chore, selectedDate)) return null;
+        return {
+          chore,
+          assignee,
+          periodStart: bounds.start,
+          periodEnd: bounds.end,
+        };
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null);
+  }, [chores, selectedDate]);
 
   const filteredEvents = useMemo(() => {
     // Compare full date+time so today's events move to Past after they occur (not at midnight).
@@ -192,33 +404,6 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
           onRightPress={() => navigation.navigate('CreateEvent')}
         />
 
-        <SettingsSection title={t('calendar.sectionShow')}>
-          <SettingsGroupCard>
-            <View style={styles.filterBlock}>
-              <View style={styles.filterRow}>
-                {VIEW_MODES.map((mode) => (
-                  <TouchableOpacity
-                    key={mode}
-                    style={[styles.filterChip, viewMode === mode && styles.filterChipActive]}
-                    onPress={() => setViewMode(mode)}
-                    activeOpacity={0.85}
-                  >
-                    <AppText
-                      style={[styles.filterChipText, viewMode === mode && styles.filterChipTextActive]}
-                      numberOfLines={1}
-                    >
-                      {filterLabel(mode)}
-                    </AppText>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <AppText style={styles.eventCountLine}>
-                {filteredEvents.length} {t('home.events')}
-              </AppText>
-            </View>
-          </SettingsGroupCard>
-        </SettingsSection>
-
         <SettingsSection title={t('calendar.sectionCalendar')}>
           <SettingsGroupCard>
             <CalendarView
@@ -226,8 +411,19 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
               selectedDate={selectedDate}
               onSelectDate={setSelectedDate}
               eventDates={eventDates}
+              choreDates={userChoreDates}
               onAddEvent={handleAddEventOnDate}
             />
+            <View style={styles.calendarLegend}>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: colors.primary }]} />
+                <AppText style={styles.legendText}>{t('home.events')}</AppText>
+              </View>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: colors.accent }]} />
+                <AppText style={styles.legendText}>{t('chores.yourTurn')}</AppText>
+              </View>
+            </View>
             <View style={styles.calendarHint}>
               <Ionicons name="information-circle-outline" size={16} color={colors.textTertiary} />
               <AppText style={styles.calendarHintText}>{t('calendar.longPressToAdd')}</AppText>
@@ -237,42 +433,154 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
 
         <SettingsSection title={t('chores.choreRotation')}>
           <SettingsGroupCard>
-            <View style={styles.choreInner}>
-              <View style={styles.choreSectionHeader}>
-                <View style={styles.choreTitleRow}>
-                  <View style={styles.choreIconWrap}>
-                    <Ionicons name="repeat-outline" size={20} color={colors.primary} />
-                  </View>
-                  <View style={styles.choreTitleBlock}>
-                    <AppText style={styles.choreSectionDescription}>
-                      {chores.length > 0 ? t('chores.thisWeekAssignments') : t('chores.setUpDescription')}
-                    </AppText>
-                  </View>
+            <View style={styles.choreHeader}>
+              <View style={styles.choreHeaderTitleRow}>
+                <View style={styles.choreHeaderIcon}>
+                  <Ionicons name="repeat" size={18} color={colors.primary} />
                 </View>
-                <TouchableOpacity
-                  onPress={() => navigation.getParent()?.navigate('ChoreRotation')}
-                  style={styles.choreActionButton}
-                  activeOpacity={0.8}
-                >
-                  <AppText style={styles.choreActionLabel}>
-                    {chores.length > 0 ? t('chores.manage') : t('chores.setUp')}
+                <View style={styles.choreHeaderText}>
+                  <AppText style={styles.choreHeaderTitle}>
+                    {chores.length > 0
+                      ? t('chores.thisWeek')
+                      : t('chores.setUpDescription')}
                   </AppText>
-                  <Ionicons name="chevron-forward" size={16} color={colors.primary} />
-                </TouchableOpacity>
-              </View>
-              {chores.length > 0 ? (
-                <View style={styles.choreChips}>
-                  {chores.slice(0, 5).map((chore) => (
-                    <View key={chore._id} style={styles.choreChip}>
-                      <Ionicons name="sparkles-outline" size={14} color={colors.primary} />
-                      <AppText style={styles.choreChipText} numberOfLines={1}>
-                        {chore.name}: {chore.currentAssignee?.name ?? '—'}
-                      </AppText>
-                    </View>
-                  ))}
+                  {chores.length > 0 ? (
+                    <AppText style={styles.choreHeaderSubtitle}>
+                      {format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'MMM d')}
+                      {' – '}
+                      {format(
+                        addDays(startOfWeek(new Date(), { weekStartsOn: 1 }), 6),
+                        'MMM d'
+                      )}
+                    </AppText>
+                  ) : null}
                 </View>
-              ) : null}
+              </View>
+              <TouchableOpacity
+                onPress={() => navigation.getParent()?.navigate('ChoreRotation')}
+                style={styles.choreManageButton}
+                activeOpacity={0.8}
+              >
+                <AppText style={styles.choreManageLabel}>
+                  {chores.length > 0 ? t('chores.manage') : t('chores.setUp')}
+                </AppText>
+                <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+              </TouchableOpacity>
             </View>
+
+            {chores.length > 0 ? (
+              <View style={styles.choreList}>
+                {chores.map((chore, index) => {
+                  const assignee = chore.currentAssignee;
+                  const isMyTurn = !!user && assignee?._id === user._id;
+                  const isCompleted = chore.currentPeriodCompleted === true;
+                  const memberData = assignee
+                    ? chore.rotationOrder.find((m) => m._id === assignee._id)
+                    : null;
+                  const isLast = index === chores.length - 1;
+                  return (
+                    <View
+                      key={chore._id}
+                      style={[
+                        styles.choreRow,
+                        isMyTurn && !isCompleted && styles.choreRowMine,
+                        isCompleted && styles.choreRowDone,
+                        !isLast && !isCompleted && !isMyTurn && styles.choreRowBorder,
+                      ]}
+                    >
+                      <View
+                        style={[
+                          styles.choreRowIcon,
+                          isMyTurn && !isCompleted && styles.choreRowIconMine,
+                          isCompleted && styles.choreRowIconDone,
+                        ]}
+                      >
+                        <Ionicons
+                          name={isCompleted ? 'checkmark' : 'sparkles'}
+                          size={18}
+                          color={
+                            isCompleted
+                              ? colors.success
+                              : isMyTurn
+                                ? colors.accent
+                                : colors.primary
+                          }
+                        />
+                      </View>
+                      <View style={styles.choreRowBody}>
+                        <AppText
+                          style={[
+                            styles.choreRowName,
+                            isCompleted && styles.choreRowNameDone,
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {chore.name}
+                        </AppText>
+                        <View style={styles.choreRowAssigneeRow}>
+                          {assignee && !isCompleted ? (
+                            <Avatar
+                              name={assignee.name}
+                              uri={memberData?.avatarUrl}
+                              size={18}
+                            />
+                          ) : null}
+                          <AppText
+                            style={[
+                              styles.choreRowAssigneeName,
+                              isCompleted && styles.choreRowAssigneeNameDone,
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {isCompleted
+                              ? t('chores.done')
+                              : isMyTurn
+                                ? t('chores.youreOn')
+                                : assignee?.name ?? t('chores.noAssignee')}
+                            {'  ·  '}
+                            {chore.frequency === 'biweekly'
+                              ? t('chores.biweekly')
+                              : t('chores.weekly')}
+                          </AppText>
+                        </View>
+                      </View>
+                      {isMyTurn ? (
+                        <TouchableOpacity
+                          onPress={() => handleToggleChoreComplete(chore)}
+                          activeOpacity={0.8}
+                          style={[
+                            styles.choreDoneButton,
+                            isCompleted && styles.choreDoneButtonCompleted,
+                          ]}
+                          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                        >
+                          <Ionicons
+                            name={isCompleted ? 'arrow-undo' : 'checkmark-circle'}
+                            size={16}
+                            color={isCompleted ? colors.textSecondary : colors.surface}
+                          />
+                          <AppText
+                            style={[
+                              styles.choreDoneButtonText,
+                              isCompleted && styles.choreDoneButtonTextCompleted,
+                            ]}
+                          >
+                            {isCompleted ? t('chores.undo') : t('chores.markDone')}
+                          </AppText>
+                        </TouchableOpacity>
+                      ) : isCompleted ? (
+                        <View style={styles.choreDoneBadge}>
+                          <Ionicons name="checkmark-circle" size={14} color={colors.success} />
+                          <AppText style={styles.choreDoneBadgeText}>
+                            {t('chores.done')}
+                          </AppText>
+                        </View>
+                      ) : null}
+                    </View>
+                  );
+                })}
+              </View>
+            ) : null}
           </SettingsGroupCard>
         </SettingsSection>
 
@@ -288,6 +596,40 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                 <Ionicons name="add-circle" size={28} color={colors.primary} />
               </TouchableOpacity>
             </View>
+
+            {selectedDateChores.length > 0 ? (
+              <View style={styles.selectedDayChores}>
+                {selectedDateChores.map(({ chore, assignee }) => {
+                  const isMyTurn = !!user && assignee?._id === user._id;
+                  return (
+                    <View
+                      key={`sel-${chore._id}`}
+                      style={[
+                        styles.selectedDayChoreRow,
+                        isMyTurn && styles.selectedDayChoreRowMine,
+                      ]}
+                    >
+                      <Ionicons
+                        name={isMyTurn ? 'sparkles' : 'sparkles-outline'}
+                        size={16}
+                        color={isMyTurn ? colors.accent : colors.primary}
+                      />
+                      <AppText
+                        style={[
+                          styles.selectedDayChoreText,
+                          isMyTurn && styles.selectedDayChoreTextMine,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {chore.name}
+                        {' · '}
+                        {isMyTurn ? t('chores.youreOn') : assignee?.name ?? '—'}
+                      </AppText>
+                    </View>
+                  );
+                })}
+              </View>
+            ) : null}
 
             {selectedDateEvents.length > 0 ? (
               selectedDateEvents.map((event) => (
@@ -321,6 +663,33 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                 </TouchableOpacity>
               </View>
             )}
+          </SettingsGroupCard>
+        </SettingsSection>
+
+        <SettingsSection title={t('calendar.sectionShow')}>
+          <SettingsGroupCard>
+            <View style={styles.filterBlock}>
+              <View style={styles.filterRow}>
+                {VIEW_MODES.map((mode) => (
+                  <TouchableOpacity
+                    key={mode}
+                    style={[styles.filterChip, viewMode === mode && styles.filterChipActive]}
+                    onPress={() => setViewMode(mode)}
+                    activeOpacity={0.85}
+                  >
+                    <AppText
+                      style={[styles.filterChipText, viewMode === mode && styles.filterChipTextActive]}
+                      numberOfLines={1}
+                    >
+                      {filterLabel(mode)}
+                    </AppText>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <AppText style={styles.eventCountLine}>
+                {filteredEvents.length} {t('home.events')}
+              </AppText>
+            </View>
           </SettingsGroupCard>
         </SettingsSection>
 
@@ -452,76 +821,227 @@ const createStyles = (colors: any) =>
       color: colors.textTertiary,
       lineHeight: 18,
     },
-    choreInner: {
-      padding: spacing.md,
+    calendarLegend: {
+      flexDirection: 'row',
+      gap: spacing.md,
+      paddingHorizontal: spacing.md,
+      paddingTop: spacing.xs,
+      paddingBottom: spacing.xs,
     },
-    choreSectionHeader: {
+    legendItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+    },
+    legendDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+    },
+    legendText: {
+      fontSize: fontSizes.xs,
+      color: colors.textSecondary,
+      fontWeight: fontWeights.medium,
+    },
+    choreHeader: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
+      padding: spacing.md,
       gap: spacing.md,
     },
-    choreTitleRow: {
+    choreHeaderTitleRow: {
       flex: 1,
       flexDirection: 'row',
-      alignItems: 'flex-start',
+      alignItems: 'center',
       gap: spacing.sm,
       minWidth: 0,
     },
-    choreIconWrap: {
-      width: 40,
-      height: 40,
+    choreHeaderIcon: {
+      width: 36,
+      height: 36,
       borderRadius: radii.md,
       backgroundColor: colors.primaryUltraSoft,
       alignItems: 'center',
       justifyContent: 'center',
     },
-    choreTitleBlock: {
+    choreHeaderText: {
       flex: 1,
       minWidth: 0,
     },
-    choreSectionDescription: {
-      fontSize: fontSizes.sm,
-      color: colors.textSecondary,
-      lineHeight: 20,
+    choreHeaderTitle: {
+      fontSize: fontSizes.md,
+      color: colors.text,
+      fontWeight: fontWeights.semibold,
     },
-    choreActionButton: {
+    choreHeaderSubtitle: {
+      fontSize: fontSizes.xs,
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+    choreManageButton: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: spacing.xxs,
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.sm,
       backgroundColor: colors.primaryUltraSoft,
       borderRadius: radii.pill,
-      marginLeft: spacing.sm,
     },
-    choreActionLabel: {
+    choreManageLabel: {
       fontSize: fontSizes.sm,
       color: colors.primary,
       fontWeight: fontWeights.semibold,
     },
-    choreChips: {
-      marginTop: spacing.md,
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: spacing.sm,
+    choreList: {
+      paddingHorizontal: spacing.md,
+      paddingBottom: spacing.md,
+      gap: spacing.xs,
     },
-    choreChip: {
+    choreRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.sm,
+      borderRadius: radii.md,
+      backgroundColor: 'transparent',
+    },
+    choreRowBorder: {
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.borderLight,
+      borderRadius: 0,
+    },
+    choreRowMine: {
+      backgroundColor: colors.accentUltraSoft,
+      borderBottomWidth: 0,
+      borderRadius: radii.md,
+    },
+    choreRowIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.primaryUltraSoft,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    choreRowIconMine: {
+      backgroundColor: colors.surface,
+    },
+    choreRowBody: {
+      flex: 1,
+      minWidth: 0,
+    },
+    choreRowName: {
+      fontSize: fontSizes.md,
+      color: colors.text,
+      fontWeight: fontWeights.semibold,
+    },
+    choreRowAssigneeRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      marginTop: 2,
+    },
+    choreRowAssigneeName: {
+      fontSize: fontSizes.sm,
+      color: colors.textSecondary,
+      flexShrink: 1,
+    },
+    choreRowAssigneeNameDone: {
+      color: colors.success,
+      fontWeight: fontWeights.semibold,
+    },
+    choreRowFrequency: {
+      fontSize: fontSizes.xs,
+      color: colors.textTertiary,
+    },
+    choreRowBadge: {
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 4,
+      backgroundColor: colors.accent,
+      borderRadius: radii.pill,
+    },
+    choreRowBadgeText: {
+      fontSize: fontSizes.xs,
+      color: colors.surface,
+      fontWeight: fontWeights.bold,
+    },
+    choreRowDone: {
+      backgroundColor: colors.successSoft,
+      borderRadius: radii.md,
+    },
+    choreRowIconDone: {
+      backgroundColor: colors.surface,
+    },
+    choreRowNameDone: {
+      color: colors.textSecondary,
+      textDecorationLine: 'line-through',
+    },
+    choreDoneButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xxs,
+      paddingVertical: 6,
+      paddingHorizontal: spacing.sm,
+      backgroundColor: colors.success,
+      borderRadius: radii.pill,
+    },
+    choreDoneButtonCompleted: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    choreDoneButtonText: {
+      fontSize: fontSizes.xs,
+      fontWeight: fontWeights.bold,
+      color: colors.surface,
+    },
+    choreDoneButtonTextCompleted: {
+      color: colors.textSecondary,
+    },
+    choreDoneBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xxs,
+      paddingVertical: 4,
+      paddingHorizontal: spacing.sm,
+      backgroundColor: colors.surface,
+      borderRadius: radii.pill,
+      borderWidth: 1,
+      borderColor: colors.successSoft,
+    },
+    choreDoneBadgeText: {
+      fontSize: fontSizes.xs,
+      fontWeight: fontWeights.semibold,
+      color: colors.success,
+    },
+    selectedDayChores: {
+      gap: spacing.xs,
+      paddingHorizontal: spacing.md,
+      paddingBottom: spacing.sm,
+    },
+    selectedDayChoreRow: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: spacing.xs,
       paddingVertical: spacing.xs,
       paddingHorizontal: spacing.sm,
-      backgroundColor: colors.background,
-      borderRadius: radii.pill,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      maxWidth: '100%',
+      borderRadius: radii.md,
+      backgroundColor: colors.primaryUltraSoft,
     },
-    choreChipText: {
+    selectedDayChoreRowMine: {
+      backgroundColor: colors.accentUltraSoft,
+    },
+    selectedDayChoreText: {
+      flex: 1,
       fontSize: fontSizes.sm,
       color: colors.text,
-      flex: 1,
+      fontWeight: fontWeights.medium,
+    },
+    selectedDayChoreTextMine: {
+      color: colors.text,
+      fontWeight: fontWeights.bold,
     },
     selectedDayHeader: {
       flexDirection: 'row',

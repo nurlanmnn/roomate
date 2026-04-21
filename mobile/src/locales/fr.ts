@@ -386,6 +386,15 @@ export default {
     enterName: 'Veuillez entrer un nom de tâche',
     addMembersFirst: 'Ajoutez d\'abord les membres du foyer',
     deleteChoreConfirm: 'Supprimer « %{name} » ?',
+    yourTurn: 'Ton tour',
+    yourTurnThisWeek: "C'est ton tour cette semaine",
+    assignedThisWeek: 'Assigné cette semaine',
+    noChoresThisWeek: 'Aucune tâche cette semaine',
+    youreOn: "C'est toi",
+    markDone: 'Fait',
+    done: 'Fait',
+    undo: 'Annuler',
+    completedBy: 'Fait par %{name}',
   },
   // Events (for CreateEventScreen)
   events: {

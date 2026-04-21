@@ -13,6 +13,7 @@ import { EventCard } from '../../components/EventCard';
 import { BalanceSummary } from '../../components/BalanceSummary';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { SpendingChart } from '../../components/SpendingChart';
+import { DeferredRender } from '../../components/DeferredRender';
 import { DashboardHero } from '../../components/Home/DashboardHero';
 import { HomeInviteCard } from '../../components/Home/HomeInviteCard';
 import { HomeSetupStep } from '../../components/Home/HomeSetupStep';
@@ -25,6 +26,16 @@ import { useHouseholdCurrency } from '../../utils/useHouseholdCurrency';
 import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows, TAB_BAR_HEIGHT } from '../../theme';
 import { Ionicons } from '@expo/vector-icons';
 import { LoadingSkeleton, SkeletonCard } from '../../components/LoadingSkeleton';
+import { getCached, dedupedFetch } from '../../utils/queryCache';
+
+type HomeDashboardSnapshot = {
+  homeSummary: HomeExpenseSummary;
+  balances: PairwiseBalance[];
+  events: Event[];
+  shoppingStats: { total: number; pending: number };
+};
+
+const homeDashboardKey = (householdId: string) => `home:dashboard:${householdId}`;
 
 export const HomeScreen: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -49,10 +60,15 @@ export const HomeScreen: React.FC = () => {
   /** Only the latest home fetch may commit (avoids duplicate effects + out-of-order responses). */
   const loadGenRef = useRef(0);
   const prevHouseholdIdRef = useRef<string | undefined>(undefined);
+  const loadDataRef = useRef<(() => void) | undefined>(undefined);
 
   useFocusEffect(
     React.useCallback(() => {
       scrollRef.current?.scrollTo({ y: 0, animated: true });
+      // SWR-style: call loadData on focus. If the cache is still warm it's a
+      // no-op flash for the user (deduped / instant); if a create/delete
+      // invalidated it we quietly refetch in the background.
+      loadDataRef.current?.();
     }, [])
   );
 
@@ -246,13 +262,28 @@ export const HomeScreen: React.FC = () => {
     if (prevHouseholdIdRef.current !== hid) {
       prevHouseholdIdRef.current = hid;
       loadGenRef.current += 1;
-      setEvents([]);
-      setBalances([]);
-      setHomeSummary(null);
-      setShoppingStats({ total: 0, pending: 0 });
-      setInsights(null);
-      setInitialLoading(true);
-      setDashboardLoadOk(false);
+
+      // Hydrate synchronously from the SWR cache so a returning user sees the
+      // last-seen dashboard immediately; the background fetch below will
+      // refresh it. Only fall back to skeleton when we truly have nothing.
+      const snapshot = getCached<HomeDashboardSnapshot>(homeDashboardKey(hid));
+      if (snapshot) {
+        setEvents(snapshot.events);
+        setBalances(snapshot.balances);
+        setHomeSummary(snapshot.homeSummary);
+        setInsights(snapshot.homeSummary.insights);
+        setShoppingStats(snapshot.shoppingStats);
+        setDashboardLoadOk(true);
+        setInitialLoading(false);
+      } else {
+        setEvents([]);
+        setBalances([]);
+        setHomeSummary(null);
+        setShoppingStats({ total: 0, pending: 0 });
+        setInsights(null);
+        setInitialLoading(true);
+        setDashboardLoadOk(false);
+      }
       setLoadError(false);
     }
   }, [selectedHousehold?._id]);
@@ -268,26 +299,35 @@ export const HomeScreen: React.FC = () => {
     setLoading(true);
     setLoadError(false);
     try {
-      const [homeData, balancesData, eventsRaw, shoppingStatsData] = await Promise.all([
-        expensesApi.getHomeExpenseSummary(householdId),
-        expensesApi.getBalances(householdId),
-        eventsApi.getEvents(householdId, { upcoming: true, limit: 40 }),
-        shoppingApi.getHouseholdItemStats(householdId),
-      ]);
-
-      const eventsData = Array.isArray(eventsRaw) ? eventsRaw : eventsRaw.items;
-
-      const upcomingEvents = eventsData
-        .filter((e) => new Date(e.date) >= new Date())
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      const snapshot = await dedupedFetch<HomeDashboardSnapshot>(
+        homeDashboardKey(householdId),
+        async () => {
+          const [homeData, balancesData, eventsRaw, shoppingStatsData] = await Promise.all([
+            expensesApi.getHomeExpenseSummary(householdId),
+            expensesApi.getBalances(householdId),
+            eventsApi.getEvents(householdId, { upcoming: true, limit: 40 }),
+            shoppingApi.getHouseholdItemStats(householdId),
+          ]);
+          const eventsData = Array.isArray(eventsRaw) ? eventsRaw : eventsRaw.items;
+          const upcomingEvents = eventsData
+            .filter((e) => new Date(e.date) >= new Date())
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+          return {
+            homeSummary: homeData,
+            balances: balancesData,
+            events: upcomingEvents,
+            shoppingStats: shoppingStatsData,
+          };
+        }
+      );
 
       if (gen !== loadGenRef.current) return;
 
-      setEvents(upcomingEvents);
-      setBalances(balancesData);
-      setHomeSummary(homeData);
-      setInsights(homeData.insights);
-      setShoppingStats(shoppingStatsData);
+      setEvents(snapshot.events);
+      setBalances(snapshot.balances);
+      setHomeSummary(snapshot.homeSummary);
+      setInsights(snapshot.homeSummary.insights);
+      setShoppingStats(snapshot.shoppingStats);
       setDashboardLoadOk(true);
     } catch (error: any) {
       if (gen !== loadGenRef.current) return;
@@ -313,7 +353,13 @@ export const HomeScreen: React.FC = () => {
     }
   }, [householdId, setSelectedHousehold]);
 
-  /** Load on mount and when household changes — not on every tab focus (keeps tab switches instant). Pull-to-refresh still calls loadData. */
+  useEffect(() => {
+    loadDataRef.current = loadData;
+  }, [loadData]);
+
+  /** Load on mount and when household changes. The focus effect also calls
+   *  loadData on every tab focus, but via the SWR cache it's non-blocking
+   *  (instant paint, background refresh). */
   useEffect(() => {
     if (householdId) {
       loadData();
@@ -575,14 +621,16 @@ export const HomeScreen: React.FC = () => {
           title={t('home.spendingInsights')}
           description={t('home.spendingDescription')}
         >
-          <SpendingChart
-            byCategory={spendingByCategory}
-            monthlyTrend={insights?.monthlyTrend || []}
-            predictions={insights?.predictions}
-            selectedRange={spendingRange}
-            onChangeRange={setSpendingRange}
-            hidePrediction
-          />
+          <DeferredRender>
+            <SpendingChart
+              byCategory={spendingByCategory}
+              monthlyTrend={insights?.monthlyTrend || []}
+              predictions={insights?.predictions}
+              selectedRange={spendingRange}
+              onChangeRange={setSpendingRange}
+              hidePrediction
+            />
+          </DeferredRender>
           {insights?.monthlyTrend && insights.monthlyTrend.length >= 2 && (() => {
             const thisMonth = stats.monthlyExpenses;
             const lastMonth = insights.monthlyTrend[insights.monthlyTrend.length - 2]?.amount || 0;

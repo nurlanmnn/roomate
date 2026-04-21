@@ -399,6 +399,15 @@ export default {
     enterName: 'Lütfen görev adı girin',
     addMembersFirst: 'Önce ev arkadaşlarını ekleyin',
     deleteChoreConfirm: '"%{name}" silinsin mi?',
+    yourTurn: 'Senin sıran',
+    yourTurnThisWeek: 'Bu hafta senin sıran',
+    assignedThisWeek: 'Bu hafta atandı',
+    noChoresThisWeek: 'Bu hafta görev yok',
+    youreOn: 'Sen varsın',
+    markDone: 'Bitti',
+    done: 'Bitti',
+    undo: 'Geri al',
+    completedBy: '%{name} bitirdi',
   },
   // Events (for CreateEventScreen)
   events: {

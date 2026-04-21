@@ -386,6 +386,15 @@ export default {
     enterName: 'Bitte Namen der Aufgabe eingeben',
     addMembersFirst: 'Zuerst Mitbewohner hinzufügen',
     deleteChoreConfirm: '"%{name}" löschen?',
+    yourTurn: 'Du bist dran',
+    yourTurnThisWeek: 'Du bist diese Woche dran',
+    assignedThisWeek: 'Diese Woche zugewiesen',
+    noChoresThisWeek: 'Keine Aufgaben diese Woche',
+    youreOn: 'Du bist dran',
+    markDone: 'Erledigt',
+    done: 'Erledigt',
+    undo: 'Rückgängig',
+    completedBy: 'Erledigt von %{name}',
   },
   // Events (for CreateEventScreen)
   events: {

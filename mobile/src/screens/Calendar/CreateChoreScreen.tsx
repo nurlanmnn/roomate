@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { startOfWeek, format } from 'date-fns';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Platform } from 'react-native';
+import { invalidateCache } from '../../utils/queryCache';
 
 export const CreateChoreScreen: React.FC<{ navigation: any; route: any }> = ({ navigation, route }) => {
   const editingChore: ChoreRotation | undefined = route.params?.editingChore;
@@ -90,6 +91,8 @@ export const CreateChoreScreen: React.FC<{ navigation: any; route: any }> = ({ n
       } else {
         await choresApi.createChore(payload);
       }
+      invalidateCache(`calendar:${selectedHousehold._id}`);
+      invalidateCache(`chores:${selectedHousehold._id}`);
       navigation.goBack();
     } catch (e: any) {
       Alert.alert(t('common.error'), e.response?.data?.error || t('alerts.somethingWentWrong'));

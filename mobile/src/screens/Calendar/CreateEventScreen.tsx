@@ -4,12 +4,18 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHousehold } from '../../context/HouseholdContext';
 import { eventsApi, Event } from '../../api/eventsApi';
+import { ChoreRotation } from '../../api/choresApi';
 import { FormTextInput } from '../../components/FormTextInput';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
 import { useThemeColors, useTheme, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../../context/LanguageContext';
+import { invalidateCache, updateCached } from '../../utils/queryCache';
+import { format, startOfWeek } from 'date-fns';
+
+/** Mirrors the snapshot shape cached by CalendarScreen — keep in sync. */
+type CalendarSnapshot = { events: Event[]; chores: ChoreRotation[] };
 
 // Event types with icons
 const EVENT_TYPES = [
@@ -105,11 +111,31 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
 
     try {
       setSaving(true);
-      if (isEditing && editingEvent) {
-        await eventsApi.updateEvent(editingEvent._id, eventData);
-      } else {
-        await eventsApi.createEvent(eventData);
-      }
+      const saved = isEditing && editingEvent
+        ? await eventsApi.updateEvent(editingEvent._id, eventData)
+        : await eventsApi.createEvent(eventData);
+
+      // Patch the cached CalendarScreen snapshot so the list reflects the
+      // change the instant we pop back — the subscribe() on that screen
+      // runs its sync() handler synchronously. The focus-refetch that
+      // follows reconciles any server-side tweaks (timestamps, creator
+      // population, etc.).
+      const weekKey = format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd');
+      const cacheKey = `calendar:${selectedHousehold._id}:${weekKey}`;
+      updateCached<CalendarSnapshot>(cacheKey, (prev) => {
+        if (isEditing && editingEvent) {
+          return {
+            ...prev,
+            events: prev.events.map((e) => (e._id === saved._id ? saved : e)),
+          };
+        }
+        if (prev.events.some((e) => e._id === saved._id)) return prev;
+        return { ...prev, events: [saved, ...prev.events] };
+      });
+
+      // Home dashboard aggregates need the server to recompute — drop so
+      // the next focus refetches fresh numbers.
+      invalidateCache(`home:dashboard:${selectedHousehold._id}`);
       navigation.goBack();
     } catch (error: any) {
       Alert.alert(t('common.error'), error.response?.data?.error || t('alerts.somethingWentWrong'));

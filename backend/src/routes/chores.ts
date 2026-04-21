@@ -40,20 +40,47 @@ const choresScheduleQuerySchema = z.object({
   to: isoDateSchema.optional(),
 });
 
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
 // Helper: get assignee index for a given date
 function getAssigneeIndexForDate(chore: { startDate: Date; frequency: string; rotationOrder: mongoose.Types.ObjectId[] }, date: Date): number {
   const start = new Date(chore.startDate);
   start.setHours(0, 0, 0, 0);
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
-  const msPerDay = 24 * 60 * 60 * 1000;
-  const daysSinceStart = Math.floor((d.getTime() - start.getTime()) / msPerDay);
+  const daysSinceStart = Math.floor((d.getTime() - start.getTime()) / MS_PER_DAY);
   const periodDays = chore.frequency === 'biweekly' ? 14 : 7;
-  const periodIndex = Math.floor(daysSinceStart / periodDays);
+  // When `date` falls before the rotation's start date, the raw periodIndex
+  // is negative and JS's modulo wraps backwards (e.g. -1 % 3 === -1, which
+  // would then point at the LAST person in the rotation). Clamp to 0 so the
+  // UI shows whoever is first in the rotation as the upcoming assignee —
+  // matches the behaviour of the /schedule endpoint below.
+  const periodIndex = Math.max(0, Math.floor(daysSinceStart / periodDays));
   const order = chore.rotationOrder || [];
   if (order.length === 0) return -1;
-  const index = ((periodIndex % order.length) + order.length) % order.length;
+  const index = periodIndex % order.length;
   return index;
+}
+
+/** Midnight of the first day of the rotation period containing `date`. */
+function getPeriodStartForDate(chore: { startDate: Date; frequency: string }, date: Date): Date {
+  const start = new Date(chore.startDate);
+  start.setHours(0, 0, 0, 0);
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const periodDays = chore.frequency === 'biweekly' ? 14 : 7;
+  const daysSinceStart = Math.floor((d.getTime() - start.getTime()) / MS_PER_DAY);
+  // Mirror the assignee clamp: treat pre-start dates as period 0 so the UI's
+  // "this week" toggle still targets a consistent period record.
+  const periodIndex = Math.max(0, Math.floor(daysSinceStart / periodDays));
+  return new Date(start.getTime() + periodIndex * periodDays * MS_PER_DAY);
+}
+
+/** True when `completions` contains a record for the exact `periodStart` date. */
+function isPeriodCompleted(completions: { periodStart: Date }[] | undefined, periodStart: Date): boolean {
+  if (!completions || completions.length === 0) return false;
+  const target = periodStart.getTime();
+  return completions.some((c) => new Date(c.periodStart).getTime() === target);
 }
 
 // GET /chores/household/:householdId — list chores with current assignee for "this week"
@@ -86,6 +113,11 @@ router.get('/household/:householdId', authMiddleware, async (req: Request, res: 
         refDate
       );
       const assignee = index >= 0 && index < rotationOrder.length ? rotationOrder[index] : null;
+      const currentPeriodStart = getPeriodStartForDate(
+        { startDate: chore.startDate, frequency: chore.frequency },
+        refDate
+      );
+      const completions = chore.completions ?? [];
       return {
         _id: chore._id,
         householdId: chore.householdId,
@@ -100,6 +132,13 @@ router.get('/household/:householdId', authMiddleware, async (req: Request, res: 
         startDate: chore.startDate,
         createdAt: chore.createdAt,
         currentAssignee: assignee ? { _id: assignee._id, name: assignee.name } : null,
+        currentPeriodStart: currentPeriodStart.toISOString(),
+        currentPeriodCompleted: isPeriodCompleted(completions, currentPeriodStart),
+        completions: completions.map((c) => ({
+          periodStart: new Date(c.periodStart).toISOString(),
+          completedBy: c.completedBy?.toString(),
+          completedAt: c.completedAt ? new Date(c.completedAt).toISOString() : null,
+        })),
       };
     });
 
@@ -256,6 +295,121 @@ router.patch('/:id', authMiddleware, async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+const completeBodySchema = z.object({
+  /** Optional — if omitted, server uses the current period relative to "now". */
+  periodStart: isoDateSchema.optional(),
+});
+
+/** Shared handler body for complete / uncomplete endpoints. */
+async function toggleChoreCompletion(
+  req: Request,
+  res: Response,
+  action: 'complete' | 'uncomplete'
+) {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    const { id } = choreIdParamsSchema.parse(req.params);
+    const { periodStart: periodStartInput } = completeBodySchema.parse(req.body ?? {});
+
+    const chore = await ChoreRotation.findById(id);
+    if (!chore) return res.status(404).json({ error: 'Chore not found' });
+
+    const household = await Household.findById(chore.householdId);
+    if (!household) return res.status(404).json({ error: 'Household not found' });
+
+    const userIdObj = new mongoose.Types.ObjectId(userId);
+    if (!household.members.some((m: mongoose.Types.ObjectId) => m.equals(userIdObj))) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const refDate = periodStartInput ? new Date(periodStartInput) : new Date();
+    const periodStart = getPeriodStartForDate(
+      { startDate: chore.startDate, frequency: chore.frequency },
+      refDate
+    );
+    const periodTime = periodStart.getTime();
+
+    if (action === 'complete') {
+      const already = (chore.completions ?? []).some(
+        (c) => new Date(c.periodStart).getTime() === periodTime
+      );
+      if (!already) {
+        chore.completions.push({
+          periodStart,
+          completedBy: userIdObj,
+          completedAt: new Date(),
+        });
+      }
+    } else {
+      chore.completions = (chore.completions ?? []).filter(
+        (c) => new Date(c.periodStart).getTime() !== periodTime
+      ) as typeof chore.completions;
+    }
+
+    await chore.save();
+    await chore.populate('rotationOrder', 'name email avatarUrl');
+
+    // Return the same shape as the list endpoint so the client can just swap
+    // the updated record into its cached snapshot.
+    const rotationOrder = chore.rotationOrder as unknown as {
+      _id: mongoose.Types.ObjectId;
+      name: string;
+      email?: string;
+      avatarUrl?: string;
+    }[];
+    const ids = rotationOrder.map((u) => u._id);
+    const assigneeIndex = getAssigneeIndexForDate(
+      { startDate: chore.startDate, frequency: chore.frequency, rotationOrder: ids },
+      new Date()
+    );
+    const assignee =
+      assigneeIndex >= 0 && assigneeIndex < rotationOrder.length
+        ? rotationOrder[assigneeIndex]
+        : null;
+    const nowPeriodStart = getPeriodStartForDate(
+      { startDate: chore.startDate, frequency: chore.frequency },
+      new Date()
+    );
+
+    res.json({
+      _id: chore._id,
+      householdId: chore.householdId,
+      name: chore.name,
+      rotationOrder: rotationOrder.map((u) => ({
+        _id: u._id,
+        name: u.name,
+        email: u.email,
+        avatarUrl: u.avatarUrl,
+      })),
+      frequency: chore.frequency,
+      startDate: chore.startDate,
+      createdAt: chore.createdAt,
+      currentAssignee: assignee ? { _id: assignee._id, name: assignee.name } : null,
+      currentPeriodStart: nowPeriodStart.toISOString(),
+      currentPeriodCompleted: isPeriodCompleted(chore.completions, nowPeriodStart),
+      completions: (chore.completions ?? []).map((c) => ({
+        periodStart: new Date(c.periodStart).toISOString(),
+        completedBy: c.completedBy?.toString(),
+        completedAt: c.completedAt ? new Date(c.completedAt).toISOString() : null,
+      })),
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+    }
+    console.error(`${action} chore error:`, error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
+// POST /chores/:id/complete — mark the current (or given) period as done
+router.post('/:id/complete', authMiddleware, (req, res) => toggleChoreCompletion(req, res, 'complete'));
+
+// POST /chores/:id/uncomplete — unmark the current (or given) period
+router.post('/:id/uncomplete', authMiddleware, (req, res) => toggleChoreCompletion(req, res, 'uncomplete'));
 
 // DELETE /chores/:id
 router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {

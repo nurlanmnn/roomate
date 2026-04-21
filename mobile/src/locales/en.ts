@@ -436,6 +436,15 @@ export default {
     enterName: 'Please enter a chore name',
     addMembersFirst: 'Add household members first',
     deleteChoreConfirm: 'Delete "%{name}"?',
+    yourTurn: 'Your turn',
+    yourTurnThisWeek: "It's your turn this week",
+    assignedThisWeek: 'Assigned this week',
+    noChoresThisWeek: 'No chores this week',
+    youreOn: "You're on",
+    markDone: 'Mark done',
+    done: 'Done',
+    undo: 'Undo',
+    completedBy: 'Done by %{name}',
   },
 
   // Events (for CreateEventScreen)

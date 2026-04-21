@@ -9,6 +9,13 @@ export interface ChoreRotationMember {
   avatarUrl?: string;
 }
 
+export interface ChoreCompletion {
+  /** ISO timestamp of the first day (midnight) of the completed period. */
+  periodStart: string;
+  completedBy: string;
+  completedAt: string | null;
+}
+
 export interface ChoreRotation {
   _id: string;
   householdId: string;
@@ -18,6 +25,11 @@ export interface ChoreRotation {
   startDate: string;
   createdAt: string;
   currentAssignee: { _id: string; name: string } | null;
+  /** Server-computed ISO start of the period containing "now". */
+  currentPeriodStart?: string;
+  /** True when `currentPeriodStart` is in `completions`. */
+  currentPeriodCompleted?: boolean;
+  completions?: ChoreCompletion[];
 }
 
 export interface ChoreScheduleAssignment {
@@ -70,6 +82,23 @@ export const choresApi = {
 
   deleteChore: async (id: string): Promise<{ success: boolean }> => {
     const response = await apiClient.instance.delete(`/chores/${id}`);
+    return response.data;
+  },
+
+  /** Marks the chore's current (or provided) period as done. Server returns
+   *  the updated chore in the same shape as `getChores`. */
+  markComplete: async (id: string, periodStart?: string): Promise<ChoreRotation> => {
+    const response = await apiClient.instance.post(`/chores/${id}/complete`, {
+      ...(periodStart ? { periodStart } : {}),
+    });
+    return response.data;
+  },
+
+  /** Unmarks the chore's current (or provided) period as done. */
+  markIncomplete: async (id: string, periodStart?: string): Promise<ChoreRotation> => {
+    const response = await apiClient.instance.post(`/chores/${id}/uncomplete`, {
+      ...(periodStart ? { periodStart } : {}),
+    });
     return response.data;
   },
 };

@@ -19,6 +19,7 @@ import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { householdsApi, getOwnerIdString, HouseholdMember } from '../../api/householdsApi';
+import { invalidateCache } from '../../utils/queryCache';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
 import { SettingsSection } from '../../components/Settings/SettingsSection';
 import { SettingsGroupCard } from '../../components/Settings/SettingsGroupCard';
@@ -104,6 +105,7 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
               const updated = await householdsApi.updateHousehold(selectedHousehold._id, {
                 currency: newCode,
               });
+              invalidateCache('households:list');
               setSelectedHousehold(updated);
             } catch (error: unknown) {
               const err = error as {
@@ -142,6 +144,7 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
         name: editName.trim(),
         address: editAddress.trim() || undefined,
       });
+      invalidateCache('households:list');
       setSelectedHousehold(updated);
       setIsEditing(false);
       Alert.alert(t('common.success'), t('accountSettingsScreen.profileUpdated'));
@@ -229,6 +232,11 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
         onPress: async () => {
           try {
             await householdsApi.leaveHousehold(selectedHousehold._id);
+            invalidateCache('households:list');
+            invalidateCache(`home:dashboard:${selectedHousehold._id}`);
+            invalidateCache(`expenses:${selectedHousehold._id}`);
+            invalidateCache(`calendar:${selectedHousehold._id}`);
+            invalidateCache(`shopping:lists:${selectedHousehold._id}`);
             setSelectedHousehold(null);
             navigation.reset({
               index: 0,
@@ -256,6 +264,11 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
           onPress: async () => {
             try {
               await householdsApi.deleteHousehold(selectedHousehold._id);
+              invalidateCache('households:list');
+              invalidateCache(`home:dashboard:${selectedHousehold._id}`);
+              invalidateCache(`expenses:${selectedHousehold._id}`);
+              invalidateCache(`calendar:${selectedHousehold._id}`);
+              invalidateCache(`shopping:lists:${selectedHousehold._id}`);
               setSelectedHousehold(null);
               navigation.reset({
                 index: 0,

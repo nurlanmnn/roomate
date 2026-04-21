@@ -386,6 +386,15 @@ export default {
     enterName: 'Introduce el nombre de la tarea',
     addMembersFirst: 'Añade primero a los compañeros',
     deleteChoreConfirm: '¿Eliminar "%{name}"?',
+    yourTurn: 'Tu turno',
+    yourTurnThisWeek: 'Es tu turno esta semana',
+    assignedThisWeek: 'Asignado esta semana',
+    noChoresThisWeek: 'Sin tareas esta semana',
+    youreOn: 'Te toca',
+    markDone: 'Marcar hecho',
+    done: 'Hecho',
+    undo: 'Deshacer',
+    completedBy: 'Hecho por %{name}',
   },
   // Events (for CreateEventScreen)
   events: {

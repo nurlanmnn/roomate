@@ -3,6 +3,8 @@ import { User, authApi } from '../api/authApi';
 import * as SecureStore from 'expo-secure-store';
 import { registerPushTokenWithBackend, removePushTokenFromBackend, addNotificationListeners } from '../utils/notifications';
 import { logger } from '../utils/logger';
+import { prefetch, clearAllCache } from '../utils/queryCache';
+import { householdsApi } from '../api/householdsApi';
 
 interface AuthContextType {
   user: User | null;
@@ -57,6 +59,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const login = async (email: string, password: string) => {
     const response = await authApi.login({ email, password });
     setUser(response.user);
+    // Warm the households list immediately — by the time the navigator
+    // finishes its transition into HouseholdSelect the list is already in
+    // the cache, so the screen paints with no spinner.
+    prefetch('households:list', () => householdsApi.getHouseholds());
     // Register push token after login
     registerPushTokenWithBackend().catch((e) => logger.error('Push token registration', e));
   };
@@ -70,6 +76,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Remove push token before logout
     await removePushTokenFromBackend().catch((e) => logger.error('Remove push token', e));
     await authApi.logout();
+    // Drop all cached data on logout so the next account doesn't briefly
+    // see the previous user's dashboard.
+    clearAllCache();
     setUser(null);
   };
 

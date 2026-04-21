@@ -35,11 +35,22 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useThemeColors, fontSizes, fontWeights, radii, spacing, TAB_BAR_HEIGHT, shadows } from '../../theme';
 import { Ionicons } from '@expo/vector-icons';
 import { FormTextInput } from '../../components/FormTextInput';
+import { getCached, dedupedFetch, invalidateCache } from '../../utils/queryCache';
 
 const weightUnits: WeightUnit[] = ['lbs', 'kg', 'g', 'oz', 'liter', 'ml', 'fl oz', 'cup', 'pint', 'quart', 'gallon'];
 
 /** First batch size for to-buy and completed items (same as expenses-style pagination). */
 const SHOPPING_ITEMS_PAGE_SIZE = 5;
+
+type ShoppingItemsPage = {
+  items: ShoppingItem[];
+  completedItems: ShoppingItem[];
+  activeTotal: number;
+  completedTotal: number;
+};
+
+const shoppingListsKey = (householdId: string) => `shopping:lists:${householdId}`;
+const shoppingItemsKey = (listId: string) => `shopping:items:${listId}:page0`;
 
 const unwrapShoppingItems = (r: ShoppingItem[] | { items: ShoppingItem[]; total: number }) =>
   Array.isArray(r) ? { items: r, total: r.length } : r;
@@ -113,12 +124,20 @@ export const ShoppingListScreen: React.FC = () => {
   const loadLists = async () => {
     if (!selectedHousehold) return;
 
-    setLoading(true);
+    // Hydrate synchronously from cache so the tab paints instantly on return.
+    const cachedLists = getCached<ShoppingList[]>(shoppingListsKey(selectedHousehold._id));
+    if (cachedLists) {
+      setLists(cachedLists);
+      if (cachedLists.length > 0 && !selectedList) setSelectedList(cachedLists[0]);
+    } else {
+      setLoading(true);
+    }
     try {
-      const allLists = await shoppingApi.getShoppingLists(selectedHousehold._id);
+      const allLists = await dedupedFetch<ShoppingList[]>(
+        shoppingListsKey(selectedHousehold._id),
+        () => shoppingApi.getShoppingLists(selectedHousehold._id)
+      );
       setLists(allLists);
-      
-      // Auto-select first list if available and none selected
       if (allLists.length > 0 && !selectedList) {
         setSelectedList(allLists[0]);
       }
@@ -135,24 +154,43 @@ export const ShoppingListScreen: React.FC = () => {
   const loadItems = async () => {
     if (!selectedList) return;
 
-    setLoading(true);
+    const cached = getCached<ShoppingItemsPage>(shoppingItemsKey(selectedList._id));
+    if (cached) {
+      setItems(cached.items);
+      setCompletedItems(cached.completedItems);
+      setActiveTotal(cached.activeTotal);
+      setCompletedTotal(cached.completedTotal);
+    } else {
+      setLoading(true);
+    }
     try {
-      const [activeRaw, completedRaw] = await Promise.all([
-        shoppingApi.getShoppingItems(selectedList._id, false, {
-          limit: SHOPPING_ITEMS_PAGE_SIZE,
-          skip: 0,
-        }),
-        shoppingApi.getShoppingItems(selectedList._id, true, {
-          limit: SHOPPING_ITEMS_PAGE_SIZE,
-          skip: 0,
-        }),
-      ]);
-      const active = unwrapShoppingItems(activeRaw);
-      const completed = unwrapShoppingItems(completedRaw);
-      setItems(active.items);
-      setCompletedItems(completed.items);
-      setActiveTotal(active.total);
-      setCompletedTotal(completed.total);
+      const page = await dedupedFetch<ShoppingItemsPage>(
+        shoppingItemsKey(selectedList._id),
+        async () => {
+          const [activeRaw, completedRaw] = await Promise.all([
+            shoppingApi.getShoppingItems(selectedList._id, false, {
+              limit: SHOPPING_ITEMS_PAGE_SIZE,
+              skip: 0,
+            }),
+            shoppingApi.getShoppingItems(selectedList._id, true, {
+              limit: SHOPPING_ITEMS_PAGE_SIZE,
+              skip: 0,
+            }),
+          ]);
+          const active = unwrapShoppingItems(activeRaw);
+          const completed = unwrapShoppingItems(completedRaw);
+          return {
+            items: active.items,
+            completedItems: completed.items,
+            activeTotal: active.total,
+            completedTotal: completed.total,
+          };
+        }
+      );
+      setItems(page.items);
+      setCompletedItems(page.completedItems);
+      setActiveTotal(page.activeTotal);
+      setCompletedTotal(page.completedTotal);
     } catch (error) {
       if (__DEV__) console.error('Failed to load shopping items:', error);
     } finally {
@@ -207,6 +245,7 @@ export const ShoppingListScreen: React.FC = () => {
         householdId: selectedHousehold._id,
         name: newListName.trim(),
       });
+      invalidateCache(shoppingListsKey(selectedHousehold._id));
       setNewListName('');
       setShowListModal(false);
       await loadLists();
@@ -232,6 +271,7 @@ export const ShoppingListScreen: React.FC = () => {
       const updatedList = await shoppingApi.updateShoppingList(editingList._id, {
         name: newListName.trim(),
       });
+      if (selectedHousehold) invalidateCache(shoppingListsKey(selectedHousehold._id));
       setNewListName('');
       setShowListModal(false);
       setEditingList(null);
@@ -328,6 +368,8 @@ export const ShoppingListScreen: React.FC = () => {
         onPress: async () => {
           try {
             await shoppingApi.deleteShoppingList(list._id);
+            invalidateCache(shoppingListsKey(selectedHousehold!._id));
+            invalidateCache(`shopping:items:${list._id}`);
             if (selectedList?._id === list._id) {
               setSelectedList(null);
             }
@@ -343,7 +385,7 @@ export const ShoppingListScreen: React.FC = () => {
 
   const handleAddItem = async () => {
     if (addingItem) return; // Prevent double submission
-    
+
     if (!selectedHousehold || !user || !selectedList || !name.trim()) {
       Alert.alert(t('common.error'), t('shoppingList.enterItemName'));
       return;
@@ -354,27 +396,69 @@ export const ShoppingListScreen: React.FC = () => {
       return;
     }
 
+    // Optimistic add: drop the sheet + insert a pending row immediately so
+    // the keyboard closes and the user sees their item right away. The
+    // temp `_id` starts with `pending-` so we can find it later and replace
+    // it with the real server response (or remove on error).
+    const tempId = `pending-${Date.now()}`;
+    const itemName = name.trim();
+    const itemQuantity = quantity ? parseInt(quantity, 10) : undefined;
+    const itemWeight = weight ? parseInt(weight, 10) : undefined;
+    const itemWeightUnit = (weightUnit || undefined) as WeightUnit | undefined;
+    const itemIsShared = isShared;
+    const itemOwnerId = isShared ? undefined : ownerId;
+
+    // The `ShoppingItem` shape returned by the server has populated user
+    // objects for `ownerId`/`createdBy`. We synthesize a minimal stand-in;
+    // it's swapped out with the real server object as soon as the POST lands.
+    const optimistic = {
+      _id: tempId,
+      householdId: selectedHousehold._id,
+      listId: selectedList._id,
+      name: itemName,
+      quantity: itemQuantity,
+      weight: itemWeight,
+      weightUnit: itemWeightUnit,
+      isShared: itemIsShared,
+      ownerId: itemIsShared
+        ? undefined
+        : { _id: itemOwnerId || '', name: '', email: '' },
+      completed: false,
+      createdBy: { _id: user._id, name: user.name, email: user.email },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    } as unknown as ShoppingItem;
+
+    setItems((prev) => [optimistic, ...prev]);
+    setActiveTotal((n) => n + 1);
+    setName('');
+    setQuantity('');
+    setWeight('');
+    setWeightUnit('');
+    setIsShared(true);
+    setOwnerId('');
+    setShowAddItemModal(false);
+
     setAddingItem(true);
     try {
-      await shoppingApi.createShoppingItem({
+      const created = await shoppingApi.createShoppingItem({
         householdId: selectedHousehold._id,
         listId: selectedList._id,
-        name: name.trim(),
-        quantity: quantity ? parseInt(quantity, 10) : undefined,
-        weight: weight ? parseInt(weight, 10) : undefined,
-        weightUnit: weightUnit || undefined,
-        isShared,
-        ownerId: isShared ? undefined : ownerId,
+        name: itemName,
+        quantity: itemQuantity,
+        weight: itemWeight,
+        weightUnit: itemWeightUnit,
+        isShared: itemIsShared,
+        ownerId: itemOwnerId,
       });
-      setName('');
-      setQuantity('');
-      setWeight('');
-      setWeightUnit('');
-      setIsShared(true);
-      setOwnerId('');
-      setShowAddItemModal(false);
-      loadItems();
+      // Swap the pending row with the real server response (gives us the real
+      // _id, any populated user fields, etc.).
+      setItems((prev) => prev.map((it) => (it._id === tempId ? (created as ShoppingItem) : it)));
+      invalidateCache(`shopping:items:${selectedList._id}`);
     } catch (error: any) {
+      // Roll back the optimistic insert.
+      setItems((prev) => prev.filter((it) => it._id !== tempId));
+      setActiveTotal((n) => Math.max(0, n - 1));
       Alert.alert(t('common.error'), error.response?.data?.error || t('shoppingList.failedToAddItem'));
     } finally {
       setAddingItem(false);
@@ -393,6 +477,8 @@ export const ShoppingListScreen: React.FC = () => {
       await shoppingApi.updateShoppingItem(item._id, {
         completed: !item.completed,
       });
+      if (selectedList) invalidateCache(`shopping:items:${selectedList._id}`);
+      if (selectedHousehold) invalidateCache(`home:dashboard:${selectedHousehold._id}`);
       loadItems();
     } catch (error: any) {
       // If item was already deleted/modified by another user, just refresh
@@ -465,7 +551,9 @@ export const ShoppingListScreen: React.FC = () => {
 
           try {
             await shoppingApi.deleteShoppingItem(item._id);
-            loadItems();
+            if (selectedList) invalidateCache(`shopping:items:${selectedList._id}`);
+            // The home dashboard shows shopping stats — those are stale now.
+            if (selectedHousehold) invalidateCache(`home:dashboard:${selectedHousehold._id}`);
           } catch (error: any) {
             // If item was already deleted by another user, just refresh silently
             if (error.response?.status === 404) {
