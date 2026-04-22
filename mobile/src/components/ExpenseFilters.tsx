@@ -1,5 +1,17 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Modal, ScrollView } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  Modal,
+  ScrollView,
+  Pressable,
+  Platform,
+  Keyboard,
+  Dimensions,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from './AppText';
 import { FormTextInput } from './FormTextInput';
 import { PrimaryButton } from './PrimaryButton';
@@ -7,7 +19,6 @@ import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { EXPENSE_CATEGORIES } from '../constants/expenseCategories';
 import { useThemeColors, useTheme, fontSizes, fontWeights, spacing, radii, shadows } from '../theme';
-import { Platform } from 'react-native';
 import { useLanguage } from '../context/LanguageContext';
 
 export type SortOption = 'newest' | 'oldest' | 'amount' | 'category';
@@ -42,6 +53,30 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
   const colors = useThemeColors();
   const { theme } = useTheme();
   const { t } = useLanguage();
+  const insets = useSafeAreaInsets();
+  const filterScrollRef = useRef<ScrollView>(null);
+  const filterScrollYRef = useRef(0);
+  const dateRangeFieldRef = useRef<View | null>(null);
+
+  const scrollDateRangeIntoView = useCallback(() => {
+    if (Platform.OS !== 'ios') return;
+    const node = dateRangeFieldRef.current;
+    if (!node || !filterScrollRef.current) return;
+    node.measureInWindow((_x, y, _w, h) => {
+      const windowH = Dimensions.get('window').height;
+      const safeBottom = windowH - insets.bottom - 28;
+      const viewBottom = y + h;
+      let delta = viewBottom - safeBottom + 24;
+      delta = Math.max(delta, 220);
+      if (delta > 6) {
+        filterScrollRef.current?.scrollTo({
+          y: Math.max(0, filterScrollYRef.current + delta),
+          animated: true,
+        });
+      }
+    });
+  }, [insets.bottom]);
+
   const [showFilters, setShowFilters] = useState(false);
   const [showDateFromPicker, setShowDateFromPicker] = useState(false); // Android dialog
   const [showDateToPicker, setShowDateToPicker] = useState(false); // Android dialog
@@ -49,7 +84,30 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
   const [showSortPicker, setShowSortPicker] = useState(false);
   const [activePicker, setActivePicker] = useState<null | 'category' | 'person' | 'groupBy'>(null);
 
-  const styles = React.useMemo(() => StyleSheet.create({
+  useEffect(() => {
+    if (Platform.OS !== 'ios' || !iosActiveDatePicker) return;
+    const id = setTimeout(() => scrollDateRangeIntoView(), 200);
+    return () => clearTimeout(id);
+  }, [iosActiveDatePicker, scrollDateRangeIntoView]);
+
+  const filterScrollPaddingBottom =
+    Platform.OS === 'ios' && iosActiveDatePicker ? 340 : spacing.lg;
+
+  const closeFiltersModal = () => {
+    Keyboard.dismiss();
+    setActivePicker(null);
+    setIosActiveDatePicker(null);
+    setShowDateFromPicker(false);
+    setShowDateToPicker(false);
+    setShowFilters(false);
+  };
+
+  const closeSortModal = () => {
+    Keyboard.dismiss();
+    setShowSortPicker(false);
+  };
+
+  const styles = useMemo(() => StyleSheet.create({
     filterBar: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -115,7 +173,11 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
     modalOverlay: {
       flex: 1,
       backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    },
+    modalOverlayInner: {
+      flex: 1,
       justifyContent: 'flex-end',
+      pointerEvents: 'box-none',
     },
     modalContent: {
       backgroundColor: colors.surface,
@@ -310,47 +372,54 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
         visible={showFilters}
         transparent
         animationType="slide"
-        onRequestClose={() => {
-          setActivePicker(null);
-          setShowFilters(false);
-        }}
+        onRequestClose={closeFiltersModal}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <View style={styles.modalHeaderLeft}>
-                {activePicker && (
-                  <TouchableOpacity
-                    style={styles.backButton}
-                    onPress={() => setActivePicker(null)}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name="chevron-back" size={20} color={colors.text} />
-                  </TouchableOpacity>
-                )}
-                <AppText style={styles.modalTitle}>
-                  {activePicker === 'category'
-                    ? t('expenses.selectCategory')
-                    : activePicker === 'person'
-                      ? t('expenses.selectPerson')
-                      : activePicker === 'groupBy'
-                        ? t('expenses.groupBy')
-                        : t('expenses.filters')}
-                </AppText>
-              </View>
-              <TouchableOpacity
-                onPress={() => {
-                  setActivePicker(null);
-                  setShowFilters(false);
-                }}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="close-outline" size={24} color={colors.text} />
-              </TouchableOpacity>
-            </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('common.close')}
+            style={StyleSheet.absoluteFillObject}
+            onPress={closeFiltersModal}
+          />
+          <View style={styles.modalOverlayInner}>
+            <View style={styles.modalContent}>
+              <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                <View>
+                  <View style={styles.modalHeader}>
+                    <View style={styles.modalHeaderLeft}>
+                      {activePicker && (
+                        <TouchableOpacity
+                          style={styles.backButton}
+                          onPress={() => {
+                            Keyboard.dismiss();
+                            setActivePicker(null);
+                          }}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons name="chevron-back" size={20} color={colors.text} />
+                        </TouchableOpacity>
+                      )}
+                      <AppText style={styles.modalTitle}>
+                        {activePicker === 'category'
+                          ? t('expenses.selectCategory')
+                          : activePicker === 'person'
+                            ? t('expenses.selectPerson')
+                            : activePicker === 'groupBy'
+                              ? t('expenses.groupBy')
+                              : t('expenses.filters')}
+                      </AppText>
+                    </View>
+                    <TouchableOpacity onPress={closeFiltersModal} activeOpacity={0.7}>
+                      <Ionicons name="close-outline" size={24} color={colors.text} />
+                    </TouchableOpacity>
+                  </View>
 
-            {activePicker ? (
-              <ScrollView style={styles.filterContent} keyboardShouldPersistTaps="handled">
+                  {activePicker ? (
+                    <ScrollView
+                      style={styles.filterContent}
+                      keyboardShouldPersistTaps="handled"
+                      keyboardDismissMode="on-drag"
+                    >
                 {activePicker === 'category' && (
                   <>
                     <TouchableOpacity
@@ -438,13 +507,21 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
                     ))}
                   </>
                 )}
-              </ScrollView>
-            ) : (
-              <ScrollView
-                style={styles.filterContent}
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-              >
+                </ScrollView>
+                  ) : (
+                    <ScrollView
+                      ref={filterScrollRef}
+                      style={styles.filterContent}
+                      showsVerticalScrollIndicator={false}
+                      keyboardShouldPersistTaps="handled"
+                      keyboardDismissMode="on-drag"
+                      automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+                      contentContainerStyle={{ paddingBottom: filterScrollPaddingBottom }}
+                      onScroll={(e) => {
+                        filterScrollYRef.current = e.nativeEvent.contentOffset.y;
+                      }}
+                      scrollEventThrottle={16}
+                    >
                 <FormTextInput
                   label={t('common.search')}
                   value={filters.search}
@@ -453,7 +530,12 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
                   autoCapitalize="none"
                 />
 
-                <View style={styles.filterSection}>
+                <View
+                  ref={(r) => {
+                    dateRangeFieldRef.current = r;
+                  }}
+                  style={styles.filterSection}
+                >
                   <AppText style={styles.filterLabel}>{t('expenses.dateRange')}</AppText>
                   <View style={styles.dateRow}>
                     <TouchableOpacity
@@ -610,23 +692,23 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
                   </TouchableOpacity>
                 </View>
 
-                <View style={styles.modalActions}>
-                  <PrimaryButton
-                    title={t('expenses.clearAll')}
-                    onPress={clearFilters}
-                    variant="outline"
-                  />
-                  <View style={styles.spacer} />
-                  <PrimaryButton
-                    title={t('expenses.apply')}
-                    onPress={() => {
-                      setActivePicker(null);
-                      setShowFilters(false);
-                    }}
-                  />
+                  <View style={styles.modalActions}>
+                    <PrimaryButton
+                      title={t('expenses.clearAll')}
+                      onPress={() => {
+                        Keyboard.dismiss();
+                        clearFilters();
+                      }}
+                      variant="outline"
+                    />
+                    <View style={styles.spacer} />
+                    <PrimaryButton title={t('expenses.apply')} onPress={closeFiltersModal} />
+                  </View>
+                </ScrollView>
+                  )}
                 </View>
-              </ScrollView>
-            )}
+              </TouchableWithoutFeedback>
+            </View>
           </View>
         </View>
       </Modal>
@@ -662,38 +744,46 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
         visible={showSortPicker}
         transparent
         animationType="slide"
-        onRequestClose={() => setShowSortPicker(false)}
+        onRequestClose={closeSortModal}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <AppText style={styles.modalTitle}>{t('expenses.sortBy')}</AppText>
-              <TouchableOpacity onPress={() => setShowSortPicker(false)}>
-                <Ionicons name="close-outline" size={24} color={colors.text} />
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={styles.filterContent} keyboardShouldPersistTaps="handled">
-              {(['newest', 'oldest', 'amount', 'category'] as SortOption[]).map((option) => (
-                <TouchableOpacity
-                  key={option}
-                  style={styles.optionItem}
-                  activeOpacity={0.7}
-                  onPress={() => {
-                    updateFilter('sortBy', option);
-                    setShowSortPicker(false);
-                  }}
-                >
-                  <AppText style={styles.optionText}>
-                    {option === 'newest' ? t('expenses.newestFirst') :
-                     option === 'oldest' ? t('expenses.oldestFirst') :
-                     option === 'amount' ? t('expenses.amountHighToLow') : t('expenses.category')}
-                  </AppText>
-                  {filters.sortBy === option && (
-                    <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
-                  )}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('common.close')}
+            style={StyleSheet.absoluteFillObject}
+            onPress={closeSortModal}
+          />
+          <View style={styles.modalOverlayInner}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <AppText style={styles.modalTitle}>{t('expenses.sortBy')}</AppText>
+                <TouchableOpacity onPress={closeSortModal}>
+                  <Ionicons name="close-outline" size={24} color={colors.text} />
                 </TouchableOpacity>
-              ))}
-            </ScrollView>
+              </View>
+              <ScrollView style={styles.filterContent} keyboardShouldPersistTaps="handled">
+                {(['newest', 'oldest', 'amount', 'category'] as SortOption[]).map((option) => (
+                  <TouchableOpacity
+                    key={option}
+                    style={styles.optionItem}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      updateFilter('sortBy', option);
+                      setShowSortPicker(false);
+                    }}
+                  >
+                    <AppText style={styles.optionText}>
+                      {option === 'newest' ? t('expenses.newestFirst') :
+                       option === 'oldest' ? t('expenses.oldestFirst') :
+                       option === 'amount' ? t('expenses.amountHighToLow') : t('expenses.category')}
+                    </AppText>
+                    {filters.sortBy === option && (
+                      <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
           </View>
         </View>
       </Modal>

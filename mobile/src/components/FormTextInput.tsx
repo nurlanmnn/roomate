@@ -1,6 +1,7 @@
 import React from 'react';
 import { TextInput, StyleSheet, Text, View, Platform, ViewStyle } from 'react-native';
 import { AppText } from './AppText';
+import { useTheme } from '../context/ThemeContext';
 import { useThemeColors, fontSizes, fontWeights, radii, spacing } from '../theme';
 
 interface FormTextInputProps {
@@ -37,6 +38,8 @@ export const FormTextInput: React.FC<FormTextInputProps> = ({
   onBlur,
   containerStyle,
 }) => {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const colors = useThemeColors();
   const styles = React.useMemo(() => StyleSheet.create({
     container: {
@@ -49,13 +52,13 @@ export const FormTextInput: React.FC<FormTextInputProps> = ({
       color: colors.textSecondary,
     },
     input: {
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: radii.md,
+      borderWidth: 1.5,
+      borderColor: isDark ? 'rgba(74, 222, 128, 0.28)' : 'rgba(34, 197, 94, 0.22)',
+      borderRadius: radii.lg,
       paddingHorizontal: spacing.md,
       paddingVertical: Platform.select({ ios: spacing.md, android: spacing.sm, default: spacing.md }),
       fontSize: fontSizes.md,
-      backgroundColor: colors.surface,
+      backgroundColor: isDark ? 'rgba(30, 38, 52, 0.85)' : 'rgba(255, 255, 255, 0.72)',
       color: colors.text,
     },
     multilineInput: {
@@ -76,7 +79,7 @@ export const FormTextInput: React.FC<FormTextInputProps> = ({
       fontSize: fontSizes.xs,
       marginTop: spacing.xs,
     },
-  }), [colors]);
+  }), [colors, isDark]);
 
   return (
     <View style={[styles.container, containerStyle]}>

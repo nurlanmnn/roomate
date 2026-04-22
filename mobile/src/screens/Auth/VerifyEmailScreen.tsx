@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, KeyboardAvoidingView, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreenShell';
 import { OtpSixDigits } from '../../components/auth/OtpSixDigits';
 import { authApi } from '../../api/authApi';
 import { useLanguage } from '../../context/LanguageContext';
@@ -48,7 +48,7 @@ export const VerifyEmailScreen: React.FC<{ navigation: any; route: any }> = ({ n
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SanctuaryScreenShell edges={['top', 'bottom']} innerStyle={styles.shellInner}>
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -80,14 +80,13 @@ export const VerifyEmailScreen: React.FC<{ navigation: any; route: any }> = ({ n
         </View>
       </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </SanctuaryScreenShell>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  shellInner: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
     justifyContent: 'center',
   },
   keyboardAvoid: {

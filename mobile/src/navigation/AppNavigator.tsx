@@ -2,13 +2,18 @@ import React, { useEffect } from 'react';
 import { NavigationContainer, useNavigation } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { useHousehold } from '../context/HouseholdContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useTheme } from '../context/ThemeContext';
 import { spacing, useThemeColors } from '../theme';
 import { fontSizes, fontWeights, radii } from '../theme';
 import { MainTabBar } from './MainTabBar';
+import {
+  SanctuaryStackHeaderBackground,
+  SanctuaryStackGlassBack,
+} from '../components/sanctuary/SanctuaryStackHeaderBackground';
 
 // Auth Screens
 import { LandingScreen } from '../screens/Auth/LandingScreen';
@@ -42,7 +47,13 @@ const Tab = createBottomTabNavigator();
 
 const AuthNavigator = () => {
   return (
-    <AuthStack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Landing">
+    <AuthStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: 'transparent' },
+      }}
+      initialRouteName="Landing"
+    >
       <AuthStack.Screen name="Landing" component={LandingScreen} />
       <AuthStack.Screen name="Login" component={LoginScreen} />
       <AuthStack.Screen name="Signup" component={SignupScreen} />
@@ -130,24 +141,57 @@ const MainTabsWithGuard = () => {
   return <MainTabs />;
 };
 
+const MAIN_STACK_FULL_BLEED_SCREENS = new Set(['HouseholdSelect', 'Main']);
+/** Native headers that use the brighter “sanctuary” glass + custom back pill. */
+const MAIN_STACK_IMMERSIVE_HEADER_SCREENS = new Set(['AccountSettings', 'HouseholdSettings']);
+
 const MainNavigator = () => {
   const { selectedHousehold } = useHousehold();
   const colors = useThemeColors();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const { t } = useLanguage();
 
   return (
     <MainStack.Navigator
       initialRouteName={selectedHousehold ? 'Main' : 'HouseholdSelect'}
-      screenOptions={{
-        headerStyle: {
-          backgroundColor: colors.background,
-        },
-        headerTitleStyle: {
-          fontWeight: fontWeights.extrabold,
-          fontSize: fontSizes.lg,
-          color: colors.text,
-        },
-        headerTintColor: colors.text,
+      screenOptions={({ route }) => {
+        const fullBleed = MAIN_STACK_FULL_BLEED_SCREENS.has(route.name);
+        const immersiveHeader = MAIN_STACK_IMMERSIVE_HEADER_SCREENS.has(route.name);
+        return {
+          contentStyle: { backgroundColor: 'transparent' },
+          headerShadowVisible: false,
+          headerTitleStyle: {
+            fontWeight: fontWeights.extrabold,
+            fontSize: fontSizes.lg,
+            color: colors.text,
+          },
+          headerTintColor: colors.text,
+          ...(fullBleed
+            ? {
+                headerTransparent: false,
+              }
+            : Platform.select({
+                ios: {
+                  headerTransparent: true,
+                  headerBackground: () => (
+                    <SanctuaryStackHeaderBackground variant={immersiveHeader ? 'immersive' : 'default'} />
+                  ),
+                },
+                default: {
+                  headerTransparent: false,
+                  headerStyle: {
+                    backgroundColor: immersiveHeader
+                      ? isDark
+                        ? 'rgba(22, 40, 32, 0.88)'
+                        : 'rgba(248, 252, 249, 0.92)'
+                      : isDark
+                        ? 'rgba(18, 26, 24, 0.96)'
+                        : 'rgba(247, 252, 249, 0.96)',
+                  },
+                },
+              })),
+        };
       }}
     >
       <MainStack.Screen
@@ -164,17 +208,12 @@ const MainNavigator = () => {
         name="CreateExpense"
         component={CreateExpenseScreen}
         options={({ route }) => ({
-          title: t('expenses.addExpense'),
+          title: (route.params as { expense?: unknown } | undefined)?.expense
+            ? t('expenses.editExpense')
+            : t('expenses.addExpense'),
           presentation: 'modal',
-          headerStyle: {
-            backgroundColor: colors.background,
-          },
-          headerTitleStyle: {
-            fontWeight: fontWeights.extrabold,
-            fontSize: fontSizes.lg,
-            color: colors.text,
-          },
-          headerTintColor: colors.text,
+          // Default native-stack dismiss is horizontal; vertical restores iOS sheet “pull down” feel.
+          ...(Platform.OS === 'ios' ? { gestureDirection: 'vertical' as const } : {}),
         })}
       />
       <MainStack.Screen
@@ -182,83 +221,44 @@ const MainNavigator = () => {
         component={SettleUpScreen}
         options={{
           title: t('expenses.settleUp'),
-          headerStyle: {
-            backgroundColor: colors.background,
-          },
-          headerTitleStyle: {
-            fontWeight: fontWeights.extrabold,
-            fontSize: fontSizes.lg,
-            color: colors.text,
-          },
-          headerTintColor: colors.text,
           headerBackTitleVisible: false,
         }}
       />
       <MainStack.Screen
         name="SettlementHistory"
         component={SettlementHistoryScreen}
-        options={{ 
+        options={{
           title: t('expenses.settlementHistory'),
-          headerStyle: {
-            backgroundColor: colors.background,
-          },
-          headerTitleStyle: {
-            fontWeight: fontWeights.extrabold,
-            fontSize: fontSizes.lg,
-            color: colors.text,
-          },
-          headerTintColor: colors.text,
           headerBackTitleVisible: false,
         }}
       />
       <MainStack.Screen
         name="CreateEvent"
         component={CreateEventScreen}
-        options={{
-          title: t('events.addEvent'),
+        options={({ route }) => ({
+          title: (route.params as { editingEvent?: unknown } | undefined)?.editingEvent
+            ? t('events.editEvent')
+            : t('events.addEvent'),
           presentation: 'modal',
-          headerStyle: {
-            backgroundColor: colors.background,
-          },
-          headerTitleStyle: {
-            fontWeight: fontWeights.extrabold,
-            fontSize: fontSizes.lg,
-            color: colors.text,
-          },
-          headerTintColor: colors.text,
-        }}
+          ...(Platform.OS === 'ios' ? { gestureDirection: 'vertical' as const } : {}),
+        })}
       />
       <MainStack.Screen
         name="ChoreRotation"
         component={ChoreRotationScreen}
         options={{
           title: t('chores.title'),
-          headerStyle: {
-            backgroundColor: colors.background,
-          },
-          headerTitleStyle: {
-            fontWeight: fontWeights.extrabold,
-            fontSize: fontSizes.lg,
-            color: colors.text,
-          },
-          headerTintColor: colors.text,
         }}
       />
       <MainStack.Screen
         name="CreateChore"
         component={CreateChoreScreen}
         options={({ route }) => ({
-          title: route.params?.editingChore ? t('chores.editChore') : t('chores.addChore'),
+          title: (route.params as { editingChore?: unknown } | undefined)?.editingChore
+            ? t('chores.editChore')
+            : t('chores.addChore'),
           presentation: 'modal',
-          headerStyle: {
-            backgroundColor: colors.background,
-          },
-          headerTitleStyle: {
-            fontWeight: fontWeights.extrabold,
-            fontSize: fontSizes.lg,
-            color: colors.text,
-          },
-          headerTintColor: colors.text,
+          ...(Platform.OS === 'ios' ? { gestureDirection: 'vertical' as const } : {}),
         })}
       />
       <MainStack.Screen
@@ -266,15 +266,8 @@ const MainNavigator = () => {
         component={AccountSettingsScreen}
         options={{
           title: t('accountSettingsScreen.title'),
-          headerStyle: {
-            backgroundColor: colors.background,
-          },
-          headerTitleStyle: {
-            fontWeight: fontWeights.extrabold,
-            fontSize: fontSizes.lg,
-            color: colors.text,
-          },
-          headerTintColor: colors.text,
+          headerBackTitleVisible: false,
+          headerLeft: (props) => <SanctuaryStackGlassBack {...props} />,
         }}
       />
       <MainStack.Screen
@@ -282,39 +275,20 @@ const MainNavigator = () => {
         component={HouseholdSettingsScreen}
         options={{
           title: t('householdSettingsScreen.title'),
-          headerStyle: {
-            backgroundColor: colors.background,
-          },
-          headerTitleStyle: {
-            fontWeight: fontWeights.extrabold,
-            fontSize: fontSizes.lg,
-            color: colors.text,
-          },
-          headerTintColor: colors.text,
+          headerBackTitleVisible: false,
+          headerLeft: (props) => <SanctuaryStackGlassBack {...props} />,
         }}
       />
       <MainStack.Screen
         name="Settings"
         component={SettingsScreen}
-        options={({ navigation, route }) => {
-          const fromHouseholdSelect = route.params?.fromHouseholdSelect;
-          return {
-            title: t('settings.title'),
-            headerStyle: {
-              backgroundColor: colors.background,
-            },
-            headerTitleStyle: {
-              fontWeight: fontWeights.extrabold,
-              fontSize: fontSizes.lg,
-              color: colors.text,
-            },
-            headerTintColor: colors.text,
-            headerBackTitleVisible: false,
-            headerShown: true,
-            gestureEnabled: true,
-            headerBackVisible: true,
-          };
-        }}
+        options={() => ({
+          title: t('settings.title'),
+          headerBackTitleVisible: false,
+          headerShown: true,
+          gestureEnabled: true,
+          headerBackVisible: true,
+        })}
       />
     </MainStack.Navigator>
   );

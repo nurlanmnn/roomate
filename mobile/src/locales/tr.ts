@@ -19,6 +19,7 @@ export default {
     seeAll: 'Tümünü Gör',
     copied: 'Kopyalandı!',
     close: 'Kapat',
+    dismissKeyboard: 'Klavyeyi kapat',
     yes: 'Evet',
     no: 'Hayır',
     ok: 'Tamam',

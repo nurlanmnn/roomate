@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, Image, TouchableOpacity, Modal, RefreshControl } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreenShell';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
 import { settlementsApi, Settlement } from '../../api/settlementsApi';
@@ -33,7 +34,7 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = () => {
       StyleSheet.create({
         container: {
           flex: 1,
-          backgroundColor: colors.background,
+          backgroundColor: 'transparent',
         },
         scrollView: {
           flex: 1,
@@ -51,6 +52,8 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = () => {
           flexDirection: 'row',
           padding: spacing.xxs,
           gap: spacing.xxs,
+          backgroundColor: colors.primaryUltraSoft,
+          borderRadius: radii.md,
         },
         filterButton: {
           flex: 1,
@@ -258,19 +261,20 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = () => {
 
   if (!selectedHousehold || !user) {
     return (
-      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <SanctuaryScreenShell edges={['top', 'bottom']} innerStyle={styles.container}>
         <View style={styles.emptyContainer}>
           <AppText>{t('alerts.selectHousehold')}</AppText>
         </View>
-      </SafeAreaView>
+      </SanctuaryScreenShell>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SanctuaryScreenShell edges={['top']} innerStyle={styles.container}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
+        contentInsetAdjustmentBehavior="automatic"
         refreshControl={<RefreshControl refreshing={loading} onRefresh={loadSettlements} />}
         showsVerticalScrollIndicator={false}
       >
@@ -449,7 +453,7 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = () => {
           )}
         </View>
       </Modal>
-    </SafeAreaView>
+    </SanctuaryScreenShell>
   );
 };
 

@@ -19,6 +19,7 @@ export default {
     seeAll: 'Voir Tout',
     copied: 'Copié !',
     close: 'Fermer',
+    dismissKeyboard: 'Masquer le clavier',
     yes: 'Oui',
     no: 'Non',
     ok: 'OK',

@@ -4,6 +4,8 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  TouchableWithoutFeedback,
+  Pressable,
   Alert,
   Modal,
   KeyboardAvoidingView,
@@ -12,7 +14,8 @@ import {
   Keyboard,
   RefreshControl,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreenShell';
 import * as ImagePicker from 'expo-image-picker';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
@@ -64,7 +67,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   const styles = useMemo(() => StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: colors.background,
+      backgroundColor: 'transparent',
     },
     keyboardAvoid: {
       flex: 1,
@@ -228,7 +231,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
       borderColor: colors.border,
       borderStyle: 'dashed',
       borderRadius: radii.md,
-      backgroundColor: colors.background,
+      backgroundColor: colors.primaryUltraSoft,
     },
     addProofText: {
       fontSize: fontSizes.sm,
@@ -530,11 +533,11 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
 
   if (!selectedHousehold || !user) {
     return (
-      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <SanctuaryScreenShell edges={['top', 'bottom']} innerStyle={styles.container}>
         <View style={styles.emptyContainer}>
           <AppText>{t('alerts.selectHousehold')}</AppText>
         </View>
-      </SafeAreaView>
+      </SanctuaryScreenShell>
     );
   }
 
@@ -603,7 +606,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SanctuaryScreenShell edges={['top']} innerStyle={styles.container}>
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -612,6 +615,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
+          contentInsetAdjustmentBehavior="automatic"
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={loading} onRefresh={loadBalances} />}
@@ -826,66 +830,79 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('common.dismissKeyboard')}
+            style={StyleSheet.absoluteFillObject}
+            onPress={Keyboard.dismiss}
+          />
           <View style={styles.modalContent}>
-            <AppText style={styles.modalTitle}>{t('settleUp.markAsPaid')}</AppText>
-            {selectedBalance && (
-              <AppText style={styles.modalSubtitle}>
-                {t('settleUp.paying')} {getUserName(selectedBalance.toUserId)}
-              </AppText>
-            )}
-            <FormTextInput
-              label={t('expenses.amount')}
-              value={amount}
-              onChangeText={setAmount}
-              placeholder="0.00"
-              keyboardType="numeric"
-            />
-            <FormTextInput
-              label={t('settleUp.method')}
-              value={method}
-              onChangeText={setMethod}
-              placeholder={t('settleUp.methodPlaceholder')}
-            />
-            <FormTextInput
-              label={t('settleUp.note')}
-              value={note}
-              onChangeText={setNote}
-              placeholder={t('settleUp.notePlaceholder')}
-              multiline
-            />
-            <View style={styles.proofSection}>
-              <AppText style={styles.proofLabel}>{t('settleUp.proofOptional')}</AppText>
-              {proofImage ? (
-                <View style={styles.proofImageContainer}>
-                  <Image source={{ uri: proofImage }} style={styles.proofImage} />
-                  <TouchableOpacity
-                    style={styles.removeProofButton}
-                    onPress={handleRemoveProofImage}
-                  >
-                    <Ionicons name="close-circle" size={24} color={colors.danger} />
-                  </TouchableOpacity>
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+              <View>
+                <AppText style={styles.modalTitle}>{t('settleUp.markAsPaid')}</AppText>
+                {selectedBalance && (
+                  <AppText style={styles.modalSubtitle}>
+                    {t('settleUp.paying')} {getUserName(selectedBalance.toUserId)}
+                  </AppText>
+                )}
+                <FormTextInput
+                  label={t('expenses.amount')}
+                  value={amount}
+                  onChangeText={setAmount}
+                  placeholder="0.00"
+                  keyboardType="numeric"
+                />
+                <FormTextInput
+                  label={t('settleUp.method')}
+                  value={method}
+                  onChangeText={setMethod}
+                  placeholder={t('settleUp.methodPlaceholder')}
+                />
+                <FormTextInput
+                  label={t('settleUp.note')}
+                  value={note}
+                  onChangeText={setNote}
+                  placeholder={t('settleUp.notePlaceholder')}
+                  multiline
+                />
+                <View style={styles.proofSection}>
+                  <AppText style={styles.proofLabel}>{t('settleUp.proofOptional')}</AppText>
+                  {proofImage ? (
+                    <View style={styles.proofImageContainer}>
+                      <Image source={{ uri: proofImage }} style={styles.proofImage} />
+                      <TouchableOpacity
+                        style={styles.removeProofButton}
+                        onPress={handleRemoveProofImage}
+                      >
+                        <Ionicons name="close-circle" size={24} color={colors.danger} />
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.addProofButton}
+                      onPress={handlePickProofImage}
+                    >
+                      <Ionicons name="camera-outline" size={24} color={colors.primary} />
+                      <AppText style={styles.addProofText}>{t('settleUp.addProof')}</AppText>
+                    </TouchableOpacity>
+                  )}
                 </View>
-              ) : (
-                <TouchableOpacity
-                  style={styles.addProofButton}
-                  onPress={handlePickProofImage}
-                >
-                  <Ionicons name="camera-outline" size={24} color={colors.primary} />
-                  <AppText style={styles.addProofText}>{t('settleUp.addProof')}</AppText>
-                </TouchableOpacity>
-              )}
-            </View>
-            <View style={styles.modalActions}>
-              <PrimaryButton
-                title={t('common.cancel')}
-                onPress={() => setSettleModalVisible(false)}
-              />
-              <View style={styles.spacer} />
-              <PrimaryButton
-                title={t('common.save')}
-                onPress={handleSubmitSettlement}
-              />
-            </View>
+                <View style={styles.modalActions}>
+                  <PrimaryButton
+                    title={t('common.cancel')}
+                    onPress={() => {
+                      Keyboard.dismiss();
+                      setSettleModalVisible(false);
+                    }}
+                  />
+                  <View style={styles.spacer} />
+                  <PrimaryButton
+                    title={t('common.save')}
+                    onPress={handleSubmitSettlement}
+                  />
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -902,83 +919,95 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('common.dismissKeyboard')}
+            style={StyleSheet.absoluteFillObject}
+            onPress={Keyboard.dismiss}
+          />
           <View style={styles.modalContent}>
-            <AppText style={styles.modalTitle}>{t('settleUp.forgiveDebt')}</AppText>
-            {selectedForgiveBalance && (
-              <AppText style={styles.modalSubtitle}>
-                {getUserName(selectedForgiveBalance.fromUserId)} {t('settleUp.owesYou').toLowerCase()}{' '}
-                {formatCurrency(selectedForgiveBalance.amount, currency)}
-              </AppText>
-            )}
-            
-            {/* Amount options */}
-            {selectedForgiveBalance && (
-              <View style={styles.forgiveAmountOptions}>
-                <TouchableOpacity
-                  style={[
-                    styles.forgiveAmountOption,
-                    forgiveAmount === selectedForgiveBalance.amount.toFixed(2) && styles.forgiveAmountOptionSelected,
-                  ]}
-                  onPress={() => setForgiveAmount(selectedForgiveBalance.amount.toFixed(2))}
-                >
-                  <AppText style={[
-                    styles.forgiveAmountOptionText,
-                    forgiveAmount === selectedForgiveBalance.amount.toFixed(2) && styles.forgiveAmountOptionTextSelected,
-                  ]}>{t('settleUp.fullAmount')}</AppText>
-                  <AppText style={styles.forgiveAmountOptionValue}>
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+              <View>
+                <AppText style={styles.modalTitle}>{t('settleUp.forgiveDebt')}</AppText>
+                {selectedForgiveBalance && (
+                  <AppText style={styles.modalSubtitle}>
+                    {getUserName(selectedForgiveBalance.fromUserId)} {t('settleUp.owesYou').toLowerCase()}{' '}
                     {formatCurrency(selectedForgiveBalance.amount, currency)}
                   </AppText>
-                </TouchableOpacity>
-                
-                {selectedForgiveBalance.amount > 1 && (
-                  <TouchableOpacity
-                    style={[
-                      styles.forgiveAmountOption,
-                      forgiveAmount === (selectedForgiveBalance.amount / 2).toFixed(2) && styles.forgiveAmountOptionSelected,
-                    ]}
-                    onPress={() => setForgiveAmount((selectedForgiveBalance.amount / 2).toFixed(2))}
-                  >
-                    <AppText style={[
-                      styles.forgiveAmountOptionText,
-                      forgiveAmount === (selectedForgiveBalance.amount / 2).toFixed(2) && styles.forgiveAmountOptionTextSelected,
-                    ]}>{t('settleUp.halfAmount')}</AppText>
-                    <AppText style={styles.forgiveAmountOptionValue}>
-                      {formatCurrency(selectedForgiveBalance.amount / 2, currency)}
-                    </AppText>
-                  </TouchableOpacity>
                 )}
+
+                {selectedForgiveBalance && (
+                  <View style={styles.forgiveAmountOptions}>
+                    <TouchableOpacity
+                      style={[
+                        styles.forgiveAmountOption,
+                        forgiveAmount === selectedForgiveBalance.amount.toFixed(2) && styles.forgiveAmountOptionSelected,
+                      ]}
+                      onPress={() => setForgiveAmount(selectedForgiveBalance.amount.toFixed(2))}
+                    >
+                      <AppText style={[
+                        styles.forgiveAmountOptionText,
+                        forgiveAmount === selectedForgiveBalance.amount.toFixed(2) && styles.forgiveAmountOptionTextSelected,
+                      ]}>{t('settleUp.fullAmount')}</AppText>
+                      <AppText style={styles.forgiveAmountOptionValue}>
+                        {formatCurrency(selectedForgiveBalance.amount, currency)}
+                      </AppText>
+                    </TouchableOpacity>
+
+                    {selectedForgiveBalance.amount > 1 && (
+                      <TouchableOpacity
+                        style={[
+                          styles.forgiveAmountOption,
+                          forgiveAmount === (selectedForgiveBalance.amount / 2).toFixed(2) && styles.forgiveAmountOptionSelected,
+                        ]}
+                        onPress={() => setForgiveAmount((selectedForgiveBalance.amount / 2).toFixed(2))}
+                      >
+                        <AppText style={[
+                          styles.forgiveAmountOptionText,
+                          forgiveAmount === (selectedForgiveBalance.amount / 2).toFixed(2) && styles.forgiveAmountOptionTextSelected,
+                        ]}>{t('settleUp.halfAmount')}</AppText>
+                        <AppText style={styles.forgiveAmountOptionValue}>
+                          {formatCurrency(selectedForgiveBalance.amount / 2, currency)}
+                        </AppText>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
+
+                <View style={styles.customAmountContainer}>
+                  <FormTextInput
+                    label={t('settleUp.customAmount')}
+                    value={forgiveAmount}
+                    onChangeText={setForgiveAmount}
+                    placeholder="0.00"
+                    keyboardType="numeric"
+                  />
+                </View>
+
+                <View style={styles.forgiveWarning}>
+                  <Ionicons name="warning-outline" size={20} color={colors.warning} />
+                  <AppText style={styles.forgiveWarningText}>
+                    {t('alerts.forgiveWarning')}
+                  </AppText>
+                </View>
+
+                <View style={styles.modalActions}>
+                  <PrimaryButton
+                    title={t('common.cancel')}
+                    onPress={() => {
+                      Keyboard.dismiss();
+                      setForgiveModalVisible(false);
+                    }}
+                  />
+                  <View style={styles.spacer} />
+                  <PrimaryButton
+                    title={t('settleUp.forgive')}
+                    onPress={handleSubmitForgive}
+                    variant="danger"
+                  />
+                </View>
               </View>
-            )}
-            
-            <View style={styles.customAmountContainer}>
-              <FormTextInput
-                label={t('settleUp.customAmount')}
-                value={forgiveAmount}
-                onChangeText={setForgiveAmount}
-                placeholder="0.00"
-                keyboardType="numeric"
-              />
-            </View>
-            
-            <View style={styles.forgiveWarning}>
-              <Ionicons name="warning-outline" size={20} color={colors.warning} />
-              <AppText style={styles.forgiveWarningText}>
-                {t('alerts.forgiveWarning')}
-              </AppText>
-            </View>
-            
-            <View style={styles.modalActions}>
-              <PrimaryButton
-                title={t('common.cancel')}
-                onPress={() => setForgiveModalVisible(false)}
-              />
-              <View style={styles.spacer} />
-              <PrimaryButton
-                title={t('settleUp.forgive')}
-                onPress={handleSubmitForgive}
-                variant="danger"
-              />
-            </View>
+            </TouchableWithoutFeedback>
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -1003,7 +1032,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         </View>
       </Modal>
     </KeyboardAvoidingView>
-    </SafeAreaView>
+    </SanctuaryScreenShell>
   );
 };
 

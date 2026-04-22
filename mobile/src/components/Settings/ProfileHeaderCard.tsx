@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, Pressable } from 'react-native';
+import { View, StyleSheet, Pressable, type ColorValue } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '../AppText';
@@ -29,7 +29,7 @@ export const ProfileHeaderCard: React.FC<ProfileHeaderCardProps> = ({
   const colors = useThemeColors();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
-  const gradientColors = isDark
+  const gradientColors: [ColorValue, ColorValue] = isDark
     ? [colors.surfaceElevated, colors.surface]
     : [colors.surface, colors.background];
 

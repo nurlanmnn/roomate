@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, Alert, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreenShell';
 import { FormTextInput } from '../../components/FormTextInput';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { AppText } from '../../components/AppText';
@@ -49,7 +49,7 @@ export const SignupScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
+    <SanctuaryScreenShell edges={['top', 'bottom']} innerStyle={styles.shellInner}>
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -103,12 +103,12 @@ export const SignupScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </SanctuaryScreenShell>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
+  shellInner: {
     flex: 1,
   },
   keyboardAvoid: {

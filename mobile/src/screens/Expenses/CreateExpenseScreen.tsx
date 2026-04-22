@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState, useEffect } from 'react';
+import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -11,9 +11,11 @@ import {
   Animated,
   PanResponder,
   Dimensions,
+  Pressable,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreenShell';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
 import { expensesApi, Expense, ExpenseShare, PairwiseBalance } from '../../api/expensesApi';
@@ -53,6 +55,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
   const colors = useThemeColors();
   const { theme } = useTheme();
   const { t } = useLanguage();
+  const insets = useSafeAreaInsets();
   const currency = useHouseholdCurrency();
   const currencySymbol = getCurrencyOption(currency).symbol;
   const editingExpense: Expense | undefined = route?.params?.expense;
@@ -75,6 +78,41 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
   const [templateName, setTemplateName] = useState('');
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [deletingTemplateId, setDeletingTemplateId] = useState<string | null>(null);
+
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollYRef = useRef(0);
+  const fieldRefs = useRef<Record<string, View | null>>({});
+
+  const scrollPickerFieldIntoView = useCallback(
+    (key: string) => {
+      if (Platform.OS !== 'ios') return;
+      const node = fieldRefs.current[key];
+      if (!node || !scrollRef.current) return;
+      node.measureInWindow((_x, y, _w, h) => {
+        const windowH = Dimensions.get('window').height;
+        const safeBottom = windowH - insets.bottom - 28;
+        const viewBottom = y + h;
+        let delta = viewBottom - safeBottom + 24;
+        delta = Math.max(delta, 100);
+        if (delta > 6) {
+          scrollRef.current?.scrollTo({
+            y: Math.max(0, scrollYRef.current + delta),
+            animated: true,
+          });
+        }
+      });
+    },
+    [insets.bottom]
+  );
+
+  useEffect(() => {
+    if (Platform.OS !== 'ios' || !showDatePicker) return;
+    const id = setTimeout(() => scrollPickerFieldIntoView('date'), 200);
+    return () => clearTimeout(id);
+  }, [showDatePicker, scrollPickerFieldIntoView]);
+
+  const iosDatePickerOpen = Platform.OS === 'ios' && showDatePicker;
+  const scrollPaddingBottom = iosDatePickerOpen ? 340 : spacing.xxl;
 
   // Prefill when editing
   useEffect(() => {
@@ -200,7 +238,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
   const styles = useMemo(() => StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: colors.background,
+      backgroundColor: 'transparent',
     },
     keyboardAvoid: {
       flex: 1,
@@ -229,7 +267,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
       gap: spacing.xs,
       paddingVertical: spacing.md,
       paddingHorizontal: spacing.sm,
-      backgroundColor: colors.background,
+      backgroundColor: colors.primaryUltraSoft,
       borderRadius: radii.md,
       borderWidth: 1,
       borderColor: colors.borderLight,
@@ -402,10 +440,6 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
       borderRadius: radii.lg,
       alignSelf: 'stretch',
     },
-    modalContainer: {
-      flex: 1,
-      backgroundColor: colors.background,
-    },
     modalContent: {
       flex: 1,
       padding: spacing.md,
@@ -497,11 +531,15 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
     saveTemplateModalOverlay: {
       flex: 1,
       backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    },
+    saveTemplateModalAlign: {
+      ...StyleSheet.absoluteFillObject,
       justifyContent: 'center',
       alignItems: 'center',
+      pointerEvents: 'box-none',
     },
     saveTemplateModalContent: {
-      backgroundColor: colors.background,
+      backgroundColor: colors.surface,
       borderRadius: radii.lg,
       padding: spacing.xl,
       width: '90%',
@@ -555,6 +593,17 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
     } finally {
       setLoadingTemplates(false);
     }
+  };
+
+  const closeSaveTemplateModal = () => {
+    setShowSaveTemplateModal(false);
+    setTemplateName('');
+  };
+
+  const closeEditTemplateModal = () => {
+    setShowEditTemplateModal(false);
+    setEditingTemplate(null);
+    setTemplateName('');
   };
 
   const handleLoadTemplate = (template: ExpenseTemplate) => {
@@ -616,8 +665,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
       });
 
       Alert.alert(t('common.success'), t('expenses.templateSaved'));
-      setShowSaveTemplateModal(false);
-      setTemplateName('');
+      closeSaveTemplateModal();
       await loadTemplates();
     } catch (error: any) {
       Alert.alert(t('common.error'), error.response?.data?.error || t('alerts.somethingWentWrong'));
@@ -645,9 +693,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
         name: templateName.trim(),
       });
       Alert.alert(t('common.success'), t('expenses.templateUpdated'));
-      setShowEditTemplateModal(false);
-      setEditingTemplate(null);
-      setTemplateName('');
+      closeEditTemplateModal();
       await loadTemplates();
     } catch (error: any) {
       Alert.alert(t('common.error'), error.response?.data?.error || t('alerts.somethingWentWrong'));
@@ -822,11 +868,11 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
 
   if (!selectedHousehold) {
     return (
-      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <SanctuaryScreenShell edges={['top', 'bottom']} innerStyle={styles.container}>
         <View style={styles.emptyContainer}>
           <AppText>{t('alerts.selectHousehold')}</AppText>
         </View>
-      </SafeAreaView>
+      </SanctuaryScreenShell>
     );
   }
 
@@ -834,21 +880,31 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
   const canSubmit = splitMethod === 'even' || Math.abs(remaining) < 0.01;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SanctuaryScreenShell edges={['top']} innerStyle={styles.container}>
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        enabled={Platform.OS === 'android'}
+        behavior={Platform.OS === 'android' ? 'padding' : undefined}
+        keyboardVerticalOffset={0}
       >
         <ScrollView
+          ref={scrollRef}
           style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: scrollPaddingBottom }]}
+          contentInsetAdjustmentBehavior="automatic"
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
           showsVerticalScrollIndicator={false}
+          automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+          onScroll={(e) => {
+            scrollYRef.current = e.nativeEvent.contentOffset.y;
+          }}
+          scrollEventThrottle={16}
         >
           <ScreenHeader
             title={isEditing ? t('expenses.editExpense') : t('expenses.addExpense')}
             subtitle={selectedHousehold.name}
+            showTitle={false}
           />
 
           <SettingsSection title={t('expenses.sectionTemplates')}>
@@ -929,7 +985,12 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
 
           <SettingsSection title={t('expenses.sectionDateAndCategory')}>
             <SettingsGroupCard>
-              <View style={styles.cardPad}>
+              <View
+                ref={(r) => {
+                  fieldRefs.current.date = r;
+                }}
+                style={styles.cardPad}
+              >
                 <AppText style={styles.fieldLabel}>{t('expenses.date')}</AppText>
                 <TouchableOpacity
                   style={styles.dateField}
@@ -1105,7 +1166,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
       transparent={false}
       onRequestClose={() => setShowTemplatesModal(false)}
     >
-      <View style={styles.modalContainer}>
+      <SanctuaryScreenShell edges={['top', 'bottom']} innerStyle={{ flex: 1 }}>
         <Animated.View
           style={{ flex: 1, transform: [{ translateX: templateModalTranslateX }] }}
           {...templatesModalPanResponder.panHandlers}
@@ -1178,7 +1239,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
           )}
           </ScrollView>
         </Animated.View>
-      </View>
+      </SanctuaryScreenShell>
     </Modal>
 
     {/* Save Template Modal */}
@@ -1186,34 +1247,32 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
       visible={showSaveTemplateModal}
       animationType="slide"
       transparent={true}
-      onRequestClose={() => setShowSaveTemplateModal(false)}
+      onRequestClose={closeSaveTemplateModal}
     >
       <View style={styles.saveTemplateModalOverlay}>
-        <View style={styles.saveTemplateModalContent}>
-          <AppText style={styles.saveTemplateModalTitle}>{t('expenses.saveAsTemplate')}</AppText>
-          <AppText style={styles.saveTemplateModalDescription}>
-            {t('expenses.saveTemplateDescription')}
-          </AppText>
-          <FormTextInput
-            label={t('expenses.templateName')}
-            value={templateName}
-            onChangeText={setTemplateName}
-            placeholder={t('expenses.templateNamePlaceholder')}
-          />
-          <View style={styles.saveTemplateModalActions}>
-            <PrimaryButton
-              title={t('common.cancel')}
-              onPress={() => {
-                setShowSaveTemplateModal(false);
-                setTemplateName('');
-              }}
-              variant="secondary"
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('common.close')}
+          style={StyleSheet.absoluteFillObject}
+          onPress={closeSaveTemplateModal}
+        />
+        <View style={styles.saveTemplateModalAlign}>
+          <View style={styles.saveTemplateModalContent}>
+            <AppText style={styles.saveTemplateModalTitle}>{t('expenses.saveAsTemplate')}</AppText>
+            <AppText style={styles.saveTemplateModalDescription}>
+              {t('expenses.saveTemplateDescription')}
+            </AppText>
+            <FormTextInput
+              label={t('expenses.templateName')}
+              value={templateName}
+              onChangeText={setTemplateName}
+              placeholder={t('expenses.templateNamePlaceholder')}
             />
-            <View style={styles.spacer} />
-            <PrimaryButton
-              title={t('expenses.saveAsTemplate')}
-              onPress={handleSaveTemplate}
-            />
+            <View style={styles.saveTemplateModalActions}>
+              <PrimaryButton title={t('common.cancel')} onPress={closeSaveTemplateModal} variant="secondary" />
+              <View style={styles.spacer} />
+              <PrimaryButton title={t('expenses.saveAsTemplate')} onPress={handleSaveTemplate} />
+            </View>
           </View>
         </View>
       </View>
@@ -1224,44 +1283,37 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
       visible={showEditTemplateModal}
       animationType="slide"
       transparent={true}
-      onRequestClose={() => {
-        setShowEditTemplateModal(false);
-        setEditingTemplate(null);
-        setTemplateName('');
-      }}
+      onRequestClose={closeEditTemplateModal}
     >
       <View style={styles.saveTemplateModalOverlay}>
-        <View style={styles.saveTemplateModalContent}>
-          <AppText style={styles.saveTemplateModalTitle}>{t('expenses.editTemplate')}</AppText>
-          <AppText style={styles.saveTemplateModalDescription}>
-            {t('expenses.updateTemplateDescription')}
-          </AppText>
-          <FormTextInput
-            label={t('expenses.templateName')}
-            value={templateName}
-            onChangeText={setTemplateName}
-            placeholder={t('expenses.templateNamePlaceholder')}
-          />
-          <View style={styles.saveTemplateModalActions}>
-            <PrimaryButton
-              title={t('common.cancel')}
-              onPress={() => {
-                setShowEditTemplateModal(false);
-                setEditingTemplate(null);
-                setTemplateName('');
-              }}
-              variant="secondary"
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('common.close')}
+          style={StyleSheet.absoluteFillObject}
+          onPress={closeEditTemplateModal}
+        />
+        <View style={styles.saveTemplateModalAlign}>
+          <View style={styles.saveTemplateModalContent}>
+            <AppText style={styles.saveTemplateModalTitle}>{t('expenses.editTemplate')}</AppText>
+            <AppText style={styles.saveTemplateModalDescription}>
+              {t('expenses.updateTemplateDescription')}
+            </AppText>
+            <FormTextInput
+              label={t('expenses.templateName')}
+              value={templateName}
+              onChangeText={setTemplateName}
+              placeholder={t('expenses.templateNamePlaceholder')}
             />
-            <View style={styles.spacer} />
-            <PrimaryButton
-              title={t('common.update')}
-              onPress={handleUpdateTemplate}
-            />
+            <View style={styles.saveTemplateModalActions}>
+              <PrimaryButton title={t('common.cancel')} onPress={closeEditTemplateModal} variant="secondary" />
+              <View style={styles.spacer} />
+              <PrimaryButton title={t('common.update')} onPress={handleUpdateTemplate} />
+            </View>
           </View>
         </View>
       </View>
     </Modal>
-    </SafeAreaView>
+    </SanctuaryScreenShell>
   );
 };
 

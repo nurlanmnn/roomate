@@ -3,9 +3,11 @@ import {
   Modal,
   View,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  Keyboard,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from '../AppText';
@@ -103,43 +105,72 @@ export const AddListSheet: React.FC<AddListSheetProps> = ({
       visible={visible}
       animationType="slide"
       transparent
-      onRequestClose={onClose}
+      onRequestClose={() => {
+        Keyboard.dismiss();
+        onClose();
+      }}
     >
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={0}
       >
-        <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose}>
-          <TouchableOpacity style={styles.sheet} activeOpacity={1} onPress={(e) => { e?.preventDefault?.(); }}>
-                <View style={styles.handle} />
-                <View style={styles.header}>
-                  <AppText style={styles.sheetTitle}>{title}</AppText>
-                  <TouchableOpacity style={styles.closeBtn} onPress={onClose} activeOpacity={0.7}>
-                    <Ionicons name="close" size={20} color={colors.textSecondary} />
-                  </TouchableOpacity>
-                </View>
-                <View style={styles.inputWrap}>
-                  <FormTextInput
-                    value={name}
-                    onChangeText={onNameChange}
-                    placeholder={placeholder}
-                    autoCapitalize="words"
+        <TouchableOpacity
+          style={styles.overlay}
+          activeOpacity={1}
+          onPress={() => {
+            Keyboard.dismiss();
+            onClose();
+          }}
+        >
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View style={styles.sheet}>
+              <View style={styles.handle} />
+              <View style={styles.header}>
+                <AppText style={styles.sheetTitle}>{title}</AppText>
+                <TouchableOpacity
+                  style={styles.closeBtn}
+                  onPress={() => {
+                    Keyboard.dismiss();
+                    onClose();
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="close" size={20} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+              <View style={styles.inputWrap}>
+                <FormTextInput
+                  value={name}
+                  onChangeText={onNameChange}
+                  placeholder={placeholder}
+                  autoCapitalize="words"
+                />
+              </View>
+              <View style={styles.row}>
+                <View style={styles.rowButton}>
+                  <PrimaryButton
+                    title={cancelLabel}
+                    onPress={() => {
+                      Keyboard.dismiss();
+                      onCancel();
+                    }}
+                    variant="outline"
                   />
                 </View>
-                <View style={styles.row}>
-                  <View style={styles.rowButton}>
-                    <PrimaryButton title={cancelLabel} onPress={onCancel} variant="outline" />
-                  </View>
-                  <View style={styles.rowButton}>
-                    <PrimaryButton
-                      title={submitLabel}
-                      onPress={onSubmit}
-                      disabled={!name.trim()}
-                    />
-                  </View>
+                <View style={styles.rowButton}>
+                  <PrimaryButton
+                    title={submitLabel}
+                    onPress={() => {
+                      Keyboard.dismiss();
+                      onSubmit();
+                    }}
+                    disabled={!name.trim()}
+                  />
                 </View>
-          </TouchableOpacity>
+              </View>
+            </View>
+          </TouchableWithoutFeedback>
         </TouchableOpacity>
       </KeyboardAvoidingView>
     </Modal>

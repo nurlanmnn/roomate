@@ -162,15 +162,28 @@ export const MainTabBar: React.FC<Props> = ({ state, descriptors, navigation }) 
         },
       ]}
     >
-      <View style={styles.barOuter} onLayout={onBarLayout} {...panResponder.panHandlers}>
+      <View
+        style={[
+          styles.barOuter,
+          Platform.OS === 'ios' && {
+            shadowColor: colors.primary,
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: isDark ? 0.35 : 0.14,
+            shadowRadius: 20,
+          },
+          Platform.OS === 'android' && { elevation: 8 },
+        ]}
+        onLayout={onBarLayout}
+        {...panResponder.panHandlers}
+      >
         <View style={[StyleSheet.absoluteFill, { borderRadius: 24, overflow: 'hidden' }]}>
-          <BlurView intensity={isDark ? 5 : 10} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
+          <BlurView intensity={isDark ? 12 : 18} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
           <View
             style={[
               StyleSheet.absoluteFill,
               {
                 borderRadius: 24,
-                backgroundColor: isDark ? 'rgba(40,40,40,0.65)' : 'rgba(255,255,255,0.7)',
+                backgroundColor: isDark ? 'rgba(22, 32, 28, 0.72)' : 'rgba(246, 253, 249, 0.78)',
               },
             ]}
           />
@@ -270,17 +283,6 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     minHeight: 48,
     overflow: 'hidden',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.12,
-        shadowRadius: 16,
-      },
-      android: {
-        elevation: 8,
-      },
-    }),
   },
   bubble: {
     position: 'absolute',

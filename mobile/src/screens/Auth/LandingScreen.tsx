@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreenShell';
 import { AppText } from '../../components/AppText';
 import { useLanguage } from '../../context/LanguageContext';
 import { useThemeColors, spacing, fontSizes, fontWeights } from '../../theme';
@@ -11,7 +11,7 @@ export const LandingScreen: React.FC<{ navigation: any }> = ({ navigation }) => 
   const colors = useThemeColors();
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
+    <SanctuaryScreenShell edges={['top', 'bottom']} innerStyle={styles.shellInner}>
       <View style={styles.content}>
         <Image
           source={require('../../../assets/logo-mark.png')}
@@ -28,12 +28,12 @@ export const LandingScreen: React.FC<{ navigation: any }> = ({ navigation }) => 
           <PrimaryButton title={t('auth.createAccount')} onPress={() => navigation.navigate('Signup')} variant="outline" />
         </View>
       </View>
-    </SafeAreaView>
+    </SanctuaryScreenShell>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  shellInner: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',

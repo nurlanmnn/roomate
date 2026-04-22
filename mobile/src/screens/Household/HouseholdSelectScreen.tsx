@@ -12,10 +12,10 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Localization from 'expo-localization';
-import { LinearGradient } from 'expo-linear-gradient';
+import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreenShell';
 import { householdsApi, Household } from '../../api/householdsApi';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -32,8 +32,9 @@ export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigatio
   const colors = useThemeColors();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+  const insets = useSafeAreaInsets();
   const { t } = useLanguage();
-  const styles = React.useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+  const styles = React.useMemo(() => createStyles(colors, isDark, insets.bottom), [colors, isDark, insets.bottom]);
   const [households, setHouseholds] = useState<Household[]>([]);
   const [loading, setLoading] = useState(true);
   const [createModalVisible, setCreateModalVisible] = useState(false);
@@ -126,17 +127,12 @@ export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigatio
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <LinearGradient
-        colors={isDark ? ['#111B2F', '#2A1F47', '#173245'] : ['#D7FFF7', '#F0E7FF', '#DDF4FF']}
-        start={{ x: 0.04, y: 0.08 }}
-        end={{ x: 0.96, y: 0.92 }}
-        style={styles.backgroundGradient}
-      />
+    <SanctuaryScreenShell edges={['top']} innerStyle={styles.safeArea}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         {/* Header */}
         <View style={styles.header}>
@@ -151,7 +147,7 @@ export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigatio
             onPress={() => navigation.navigate('Settings', { fromHouseholdSelect: true })}
             activeOpacity={0.7}
           >
-            <Ionicons name="settings-outline" size={24} color={colors.textSecondary} />
+            <Ionicons name="settings-outline" size={24} color={colors.primary} />
           </TouchableOpacity>
         </View>
 
@@ -325,14 +321,13 @@ export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigatio
           </KeyboardAvoidingView>
         </View>
       </Modal>
-    </SafeAreaView>
+    </SanctuaryScreenShell>
   );
 };
 
-const createStyles = (colors: ReturnType<typeof useThemeColors>, isDark: boolean) => {
+const createStyles = (colors: ReturnType<typeof useThemeColors>, isDark: boolean, insetBottom: number) => {
   const palette = isDark
     ? {
-        pageBase: '#131A29',
         heading: '#EEF3FF',
         body: '#BAC6DB',
         muted: '#8FA0BC',
@@ -340,41 +335,42 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>, isDark: boolean
         glassSoft: 'rgba(28, 36, 56, 0.58)',
         edge: 'rgba(255,255,255,0.08)',
         cardShadow: 'rgba(3, 8, 18, 0.6)',
+        actionsGlow: colors.primary,
         modalOverlay: 'rgba(5,10,22,0.55)',
-        successButton: '#2FAF78',
-        successShadow: '#184C38',
-        outlineTint: '#6AADE2',
+        successButton: colors.primary,
+        successShadow: colors.primaryDark,
+        outlineTint: colors.primary,
         outlineBg: 'rgba(28, 39, 63, 0.55)',
       }
     : {
-        pageBase: '#E8EEF8',
         heading: '#333333',
         body: '#666666',
         muted: '#9AA3B2',
         glassStrong: 'rgba(255,255,255,0.86)',
-        glassSoft: 'rgba(255,255,255,0.58)',
+        glassSoft: 'rgba(255,255,255,0.62)',
         edge: 'rgba(255,255,255,0.9)',
         cardShadow: 'rgba(0,0,0,0.07)',
+        actionsGlow: colors.primary,
         modalOverlay: 'rgba(110,122,145,0.22)',
-        successButton: '#B2F2BB',
-        successShadow: '#5BAE73',
-        outlineTint: '#A5D8FF',
+        successButton: colors.primary,
+        successShadow: colors.primaryDark,
+        outlineTint: colors.primary,
         outlineBg: 'rgba(255,255,255,0.55)',
       };
 
   return StyleSheet.create({
-    container: {
+    safeArea: {
       flex: 1,
-      backgroundColor: palette.pageBase,
-    },
-    backgroundGradient: {
-      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'transparent',
     },
     scrollView: {
       flex: 1,
+      backgroundColor: 'transparent',
     },
     scrollContent: {
-      paddingBottom: spacing.xxxl,
+      flexGrow: 1,
+      paddingBottom: Math.max(spacing.xl, insetBottom + spacing.lg),
+      backgroundColor: 'transparent',
     },
     header: {
       paddingHorizontal: spacing.xl,
@@ -422,7 +418,7 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>, isDark: boolean
     sectionTitle: {
       fontSize: fontSizes.xs,
       fontWeight: fontWeights.semibold,
-      color: palette.muted,
+      color: isDark ? palette.muted : colors.primaryDark,
       letterSpacing: 0.5,
       textTransform: 'uppercase',
       marginBottom: spacing.md,
@@ -442,12 +438,14 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>, isDark: boolean
       width: 88,
       height: 88,
       borderRadius: 44,
-      backgroundColor: palette.glassStrong,
+      backgroundColor: isDark ? palette.glassStrong : colors.primaryUltraSoft,
+      borderWidth: isDark ? 1 : 1,
+      borderColor: isDark ? palette.edge : 'rgba(34, 197, 94, 0.2)',
       alignItems: 'center',
       justifyContent: 'center',
       marginBottom: spacing.lg,
-      shadowColor: palette.cardShadow,
-      shadowOpacity: isDark ? 0.4 : 0.05,
+      shadowColor: isDark ? palette.cardShadow : colors.primary,
+      shadowOpacity: isDark ? 0.4 : 0.14,
       shadowRadius: 16,
       shadowOffset: { width: 8, height: 8 },
       elevation: 5,
@@ -473,10 +471,12 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>, isDark: boolean
       borderRadius: 28,
       marginHorizontal: spacing.lg,
       paddingBottom: spacing.lg,
-      shadowColor: palette.cardShadow,
-      shadowOpacity: isDark ? 0.35 : 0.04,
-      shadowRadius: 18,
-      shadowOffset: { width: 8, height: 10 },
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(74, 222, 128, 0.2)' : 'rgba(34, 197, 94, 0.18)',
+      shadowColor: palette.actionsGlow,
+      shadowOpacity: isDark ? 0.22 : 0.14,
+      shadowRadius: 22,
+      shadowOffset: { width: 0, height: 10 },
       elevation: 5,
     },
     actionsSectionTitle: {
@@ -501,9 +501,9 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>, isDark: boolean
       borderWidth: 2,
       borderRadius: 22,
       backgroundColor: palette.outlineBg,
-      shadowColor: isDark ? '#2A3E56' : '#86B9DF',
-      shadowOpacity: isDark ? 0.28 : 0.18,
-      shadowRadius: 9,
+      shadowColor: palette.actionsGlow,
+      shadowOpacity: isDark ? 0.2 : 0.15,
+      shadowRadius: 10,
       shadowOffset: { width: 0, height: 4 },
       elevation: 3,
     },

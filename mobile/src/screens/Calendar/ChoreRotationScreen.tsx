@@ -8,7 +8,7 @@ import {
   View,
   RefreshControl,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreenShell';
 import { useFocusEffect } from '@react-navigation/native';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
@@ -16,6 +16,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { choresApi, ChoreRotation } from '../../api/choresApi';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { ScreenHeader } from '../../components/ui/ScreenHeader';
 import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows, TAB_BAR_HEIGHT } from '../../theme';
 import { Ionicons } from '@expo/vector-icons';
 import { format, startOfWeek } from 'date-fns';
@@ -82,25 +83,29 @@ export const ChoreRotationScreen: React.FC<{ navigation: any }> = ({ navigation 
 
   if (!selectedHousehold) {
     return (
-      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <SanctuaryScreenShell edges={['top', 'bottom']} innerStyle={styles.container}>
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>{t('alerts.selectHousehold')}</Text>
         </View>
-      </SafeAreaView>
+      </SanctuaryScreenShell>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SanctuaryScreenShell edges={['top']} innerStyle={styles.container}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT + spacing.xl }}
+        contentInsetAdjustmentBehavior="automatic"
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         refreshControl={<RefreshControl refreshing={loading} onRefresh={loadChores} />}
       >
-        <View style={styles.header}>
-          <Text style={styles.title}>{t('chores.title')}</Text>
-          <Text style={styles.subtitle}>{t('chores.thisWeek')} · {format(weekStart, 'MMM d')}</Text>
-        </View>
+        <ScreenHeader
+          title={t('chores.title')}
+          showTitle={false}
+          subtitle={`${t('chores.thisWeek')} · ${format(weekStart, 'MMM d')}`}
+        />
 
         {chores.length === 0 ? (
           <EmptyState
@@ -158,7 +163,7 @@ export const ChoreRotationScreen: React.FC<{ navigation: any }> = ({ navigation 
           </>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </SanctuaryScreenShell>
   );
 };
 
@@ -166,7 +171,7 @@ const createStyles = (colors: any) =>
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: colors.background,
+      backgroundColor: 'transparent',
     },
     scrollView: {
       flex: 1,
@@ -180,21 +185,6 @@ const createStyles = (colors: any) =>
     emptyText: {
       fontSize: fontSizes.md,
       color: colors.muted,
-    },
-    header: {
-      paddingHorizontal: spacing.xl,
-      paddingTop: spacing.lg,
-      paddingBottom: spacing.md,
-    },
-    title: {
-      fontSize: fontSizes.xxl,
-      fontWeight: fontWeights.extrabold,
-      color: colors.text,
-      marginBottom: spacing.xs,
-    },
-    subtitle: {
-      fontSize: fontSizes.sm,
-      color: colors.textSecondary,
     },
     choreList: {
       paddingHorizontal: spacing.xl,

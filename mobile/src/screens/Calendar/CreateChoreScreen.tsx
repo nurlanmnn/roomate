@@ -1,13 +1,18 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
+  Dimensions,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreenShell';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { choresApi, ChoreRotation, ChoreFrequency } from '../../api/choresApi';
@@ -18,8 +23,8 @@ import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows } from 
 import { Ionicons } from '@expo/vector-icons';
 import { startOfWeek, format } from 'date-fns';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { Platform } from 'react-native';
 import { invalidateCache } from '../../utils/queryCache';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export const CreateChoreScreen: React.FC<{ navigation: any; route: any }> = ({ navigation, route }) => {
   const editingChore: ChoreRotation | undefined = route.params?.editingChore;
@@ -27,6 +32,7 @@ export const CreateChoreScreen: React.FC<{ navigation: any; route: any }> = ({ n
 
   const { selectedHousehold } = useHousehold();
   const { t } = useLanguage();
+  const insets = useSafeAreaInsets();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -36,6 +42,38 @@ export const CreateChoreScreen: React.FC<{ navigation: any; route: any }> = ({ n
   const [startDate, setStartDate] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollYRef = useRef(0);
+  const fieldRefs = useRef<Record<string, View | null>>({});
+
+  const scrollPickerFieldIntoView = useCallback(
+    (key: string) => {
+      if (Platform.OS !== 'ios') return;
+      const node = fieldRefs.current[key];
+      if (!node || !scrollRef.current) return;
+      node.measureInWindow((_x, y, _w, h) => {
+        const windowH = Dimensions.get('window').height;
+        const safeBottom = windowH - insets.bottom - 28;
+        const viewBottom = y + h;
+        let delta = viewBottom - safeBottom + 24;
+        delta = Math.max(delta, 200);
+        if (delta > 6) {
+          scrollRef.current?.scrollTo({
+            y: Math.max(0, scrollYRef.current + delta),
+            animated: true,
+          });
+        }
+      });
+    },
+    [insets.bottom]
+  );
+
+  useEffect(() => {
+    if (Platform.OS !== 'ios' || !showDatePicker) return;
+    const id = setTimeout(() => scrollPickerFieldIntoView('startDate'), 200);
+    return () => clearTimeout(id);
+  }, [showDatePicker, scrollPickerFieldIntoView]);
 
   const members = selectedHousehold?.members ?? [];
 
@@ -103,9 +141,32 @@ export const CreateChoreScreen: React.FC<{ navigation: any; route: any }> = ({ n
 
   if (!selectedHousehold) return null;
 
+  const iosPickerOpen = Platform.OS === 'ios' && showDatePicker;
+  const scrollBottomPad = iosPickerOpen ? 340 : spacing.xxl;
+
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+    <SanctuaryScreenShell edges={['bottom']} innerStyle={styles.container}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        enabled={Platform.OS === 'android'}
+        behavior={Platform.OS === 'android' ? 'padding' : undefined}
+        keyboardVerticalOffset={0}
+      >
+        <ScrollView
+          ref={scrollRef}
+          style={styles.scrollView}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: scrollBottomPad }]}
+          contentInsetAdjustmentBehavior="automatic"
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+          onScroll={(e) => {
+            scrollYRef.current = e.nativeEvent.contentOffset.y;
+          }}
+          scrollEventThrottle={16}
+        >
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View>
         <FormTextInput
           label={t('chores.choreName')}
           value={name}
@@ -167,9 +228,17 @@ export const CreateChoreScreen: React.FC<{ navigation: any; route: any }> = ({ n
           )}
         </View>
 
-        <View style={styles.field}>
+        <View
+          ref={(r) => {
+            fieldRefs.current.startDate = r;
+          }}
+          style={styles.field}
+        >
           <Text style={styles.label}>{t('chores.startDate')}</Text>
-          <TouchableOpacity style={styles.dateButton} onPress={() => setShowDatePicker((prev) => !prev)}>
+          <TouchableOpacity
+            style={styles.dateButton}
+            onPress={() => setShowDatePicker((prev) => !prev)}
+          >
             <Ionicons name="calendar-outline" size={20} color={colors.primary} />
             <Text style={styles.dateButtonText}>{format(startDate, 'EEEE, MMM d, yyyy')}</Text>
           </TouchableOpacity>
@@ -199,11 +268,17 @@ export const CreateChoreScreen: React.FC<{ navigation: any; route: any }> = ({ n
 
         <PrimaryButton
           title={isEditing ? t('common.save') : t('chores.addChore')}
-          onPress={handleSave}
+          onPress={() => {
+            Keyboard.dismiss();
+            handleSave();
+          }}
           disabled={!canSubmit || saving}
         />
-      </ScrollView>
-    </SafeAreaView>
+            </View>
+          </TouchableWithoutFeedback>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SanctuaryScreenShell>
   );
 };
 
@@ -211,7 +286,7 @@ const createStyles = (colors: any) =>
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: colors.background,
+      backgroundColor: 'transparent',
     },
     scrollView: {
       flex: 1,

@@ -2,7 +2,7 @@ import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { AppText } from '../AppText';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme, fontSizes, fontWeights, spacing } from '../../theme';
+import { useTheme, useThemeColors, fontSizes, fontWeights, spacing } from '../../theme';
 import { Household } from '../../api/householdsApi';
 import * as Clipboard from 'expo-clipboard';
 import { Alert } from 'react-native';
@@ -23,6 +23,7 @@ export const HouseholdCard: React.FC<HouseholdCardProps> = ({
   memberCount,
 }) => {
   const { theme } = useTheme();
+  const colors = useThemeColors();
   const isDark = theme === 'dark';
   const count = household.members?.length ?? 0;
   const palette = isDark
@@ -30,8 +31,8 @@ export const HouseholdCard: React.FC<HouseholdCardProps> = ({
         card: 'rgba(32,40,60,0.75)',
         border: 'rgba(255,255,255,0.08)',
         shadow: '#060D1D',
-        iconBg: 'rgba(40,63,49,0.9)',
-        icon: '#6EE7A2',
+        iconBg: colors.primaryUltraSoft,
+        icon: colors.primary,
         heading: '#EEF3FF',
         body: '#B8C4DB',
         subtle: '#8FA0BC',
@@ -42,8 +43,8 @@ export const HouseholdCard: React.FC<HouseholdCardProps> = ({
         card: 'rgba(255,255,255,0.88)',
         border: 'rgba(255,255,255,0.92)',
         shadow: '#000',
-        iconBg: '#ECFFF5',
-        icon: '#31C96A',
+        iconBg: colors.primaryUltraSoft,
+        icon: colors.primary,
         heading: '#333333',
         body: '#666666',
         subtle: '#8A95A5',
@@ -59,8 +60,8 @@ export const HouseholdCard: React.FC<HouseholdCardProps> = ({
       marginBottom: spacing.md,
       borderWidth: 1,
       borderColor: palette.border,
-      shadowColor: palette.shadow,
-      shadowOpacity: isDark ? 0.5 : 0.06,
+      shadowColor: isDark ? palette.shadow : colors.primary,
+      shadowOpacity: isDark ? 0.5 : 0.08,
       shadowRadius: 20,
       shadowOffset: { width: 10, height: 10 },
       elevation: 7,
@@ -125,7 +126,7 @@ export const HouseholdCard: React.FC<HouseholdCardProps> = ({
       color: palette.subtle,
       fontWeight: fontWeights.medium,
     },
-  }), [isDark, palette]);
+  }), [isDark, colors]);
 
   const handleCopyCode = (e: { stopPropagation?: () => void }) => {
     e?.stopPropagation?.();

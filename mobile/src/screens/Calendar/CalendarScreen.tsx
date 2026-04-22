@@ -1,13 +1,14 @@
 import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import {
   Alert,
+  Platform,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
   View,
   RefreshControl,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreenShell';
 import { useFocusEffect } from '@react-navigation/native';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
@@ -379,22 +380,24 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
 
   if (!selectedHousehold) {
     return (
-      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <SanctuaryScreenShell edges={['top', 'bottom']} innerStyle={styles.container}>
         <View style={styles.emptyContainer}>
           <AppText style={styles.emptyText}>{t('alerts.selectHousehold')}</AppText>
         </View>
-      </SafeAreaView>
+      </SanctuaryScreenShell>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SanctuaryScreenShell edges={['top']} innerStyle={styles.container}>
       <ScrollView
         ref={scrollRef}
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={loadEvents} />}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
         showsVerticalScrollIndicator={false}
       >
         <ScreenHeader
@@ -744,7 +747,7 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
           </SettingsGroupCard>
         </SettingsSection>
       </ScrollView>
-    </SafeAreaView>
+    </SanctuaryScreenShell>
   );
 };
 
@@ -752,7 +755,7 @@ const createStyles = (colors: any) =>
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: colors.background,
+      backgroundColor: 'transparent',
     },
     scrollView: {
       flex: 1,
@@ -777,7 +780,7 @@ const createStyles = (colors: any) =>
       flexDirection: 'row',
       padding: spacing.xxs,
       gap: spacing.xxs,
-      backgroundColor: colors.background,
+      backgroundColor: colors.primaryUltraSoft,
       borderRadius: radii.md,
     },
     filterChip: {

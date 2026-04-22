@@ -1,7 +1,19 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Alert,
+  Dimensions,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
+} from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreenShell';
 import { useHousehold } from '../../context/HouseholdContext';
 import { eventsApi, Event } from '../../api/eventsApi';
 import { ChoreRotation } from '../../api/choresApi';
@@ -13,6 +25,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../../context/LanguageContext';
 import { invalidateCache, updateCached } from '../../utils/queryCache';
 import { format, startOfWeek } from 'date-fns';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /** Mirrors the snapshot shape cached by CalendarScreen — keep in sync. */
 type CalendarSnapshot = { events: Event[]; chores: ChoreRotation[] };
@@ -43,6 +56,7 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
   const colors = useThemeColors();
   const { theme } = useTheme();
   const { t } = useLanguage();
+  const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -56,6 +70,59 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollYRef = useRef(0);
+  const fieldRefs = useRef<Record<string, View | null>>({});
+
+  /** After the iOS spinner mounts, measure the full field block and scroll so it clears the home indicator. */
+  const scrollPickerFieldIntoView = useCallback(
+    (key: string) => {
+      if (Platform.OS !== 'ios') return;
+      const node = fieldRefs.current[key];
+      if (!node || !scrollRef.current) return;
+      node.measureInWindow((_x, y, _w, h) => {
+        const windowH = Dimensions.get('window').height;
+        const safeBottom = windowH - insets.bottom - 28;
+        const viewBottom = y + h;
+        let delta = viewBottom - safeBottom + 24;
+        if (key === 'endTime' || key === 'endDate') {
+          delta = Math.max(delta, 220);
+        } else if (key === 'time' || key === 'date') {
+          delta = Math.max(delta, 100);
+        }
+        if (delta > 6) {
+          scrollRef.current?.scrollTo({
+            y: Math.max(0, scrollYRef.current + delta),
+            animated: true,
+          });
+        }
+      });
+    },
+    [insets.bottom]
+  );
+
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return;
+    const key = showEndTimePicker
+      ? 'endTime'
+      : showEndDatePicker
+        ? 'endDate'
+        : showTimePicker
+          ? 'time'
+          : showDatePicker
+            ? 'date'
+            : null;
+    if (!key) return;
+    const id = setTimeout(() => scrollPickerFieldIntoView(key), 200);
+    return () => clearTimeout(id);
+  }, [
+    showDatePicker,
+    showTimePicker,
+    showEndDatePicker,
+    showEndTimePicker,
+    scrollPickerFieldIntoView,
+  ]);
 
   // Pre-fill form when editing
   useEffect(() => {
@@ -75,6 +142,11 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
   }, [editingEvent]);
 
   const canSubmit = useMemo(() => title.trim().length > 0, [title]);
+
+  const iosPickerOpen =
+    Platform.OS === 'ios' &&
+    (showDatePicker || showTimePicker || showEndDatePicker || showEndTimePicker);
+  const scrollPaddingBottom = iosPickerOpen ? 340 : spacing.xxl;
 
   const handleSave = async () => {
     if (!selectedHousehold) return;
@@ -146,25 +218,43 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
 
   if (!selectedHousehold) {
     return (
-      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <SanctuaryScreenShell edges={['top', 'bottom']} innerStyle={styles.container}>
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>{t('alerts.selectHousehold')}</Text>
         </View>
-      </SafeAreaView>
+      </SanctuaryScreenShell>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SanctuaryScreenShell edges={['top']} innerStyle={styles.container}>
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        enabled={Platform.OS === 'android'}
+        behavior={Platform.OS === 'android' ? 'padding' : undefined}
+        keyboardVerticalOffset={0}
       >
-        <ScrollView style={styles.scrollView} keyboardShouldPersistTaps="handled">
-          <ScreenHeader title={isEditing ? t('events.editEvent') : t('events.addEvent')} subtitle={selectedHousehold.name} />
+        <ScrollView
+          ref={scrollRef}
+          style={styles.scrollView}
+          contentContainerStyle={{ paddingBottom: scrollPaddingBottom }}
+          contentInsetAdjustmentBehavior="automatic"
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+          onScroll={(e) => {
+            scrollYRef.current = e.nativeEvent.contentOffset.y;
+          }}
+          scrollEventThrottle={16}
+        >
+          <ScreenHeader
+            title={isEditing ? t('events.editEvent') : t('events.addEvent')}
+            subtitle={selectedHousehold.name}
+            showTitle={false}
+          />
 
-          <View style={styles.card}>
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View style={styles.card}>
             <FormTextInput
               label={t('events.eventTitle')}
               value={title}
@@ -201,7 +291,12 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
               </View>
             </View>
 
-            <View style={styles.field}>
+            <View
+              ref={(r) => {
+                fieldRefs.current.date = r;
+              }}
+              style={styles.field}
+            >
               <Text style={styles.label}>{t('events.date')}</Text>
               <TouchableOpacity
                 style={styles.dateButton}
@@ -236,7 +331,12 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
               )}
             </View>
 
-            <View style={styles.field}>
+            <View
+              ref={(r) => {
+                fieldRefs.current.time = r;
+              }}
+              style={styles.field}
+            >
               <Text style={styles.label}>{t('events.time')}</Text>
               <TouchableOpacity
                 style={styles.dateButton}
@@ -271,7 +371,12 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
               )}
             </View>
 
-            <View style={styles.field}>
+            <View
+              ref={(r) => {
+                fieldRefs.current.endDate = r;
+              }}
+              style={styles.field}
+            >
               <Text style={styles.label}>{t('events.endDate')} ({t('common.optional')})</Text>
               <TouchableOpacity
                 style={styles.dateButton}
@@ -308,13 +413,17 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
               )}
             </View>
 
-            <View style={styles.field}>
+            <View
+              ref={(r) => {
+                fieldRefs.current.endTime = r;
+              }}
+              style={styles.field}
+            >
               <Text style={styles.label}>{t('events.endTime')} ({t('common.optional')})</Text>
               <TouchableOpacity
                 style={[styles.dateButton, !endDate && styles.dateButtonDisabled]}
                 onPress={() => {
                   if (!endDate) {
-                    // Auto-set end date to start date if not set
                     setEndDate(date);
                   }
                   setShowEndTimePicker((prev) => !prev);
@@ -352,19 +461,35 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
             </View>
 
             <View style={styles.actions}>
-              <PrimaryButton title={t('common.cancel')} onPress={() => navigation.goBack()} variant="secondary" />
+              <PrimaryButton
+                title={t('common.cancel')}
+                onPress={() => {
+                  Keyboard.dismiss();
+                  navigation.goBack();
+                }}
+                variant="secondary"
+              />
               <View style={styles.spacer} />
-              <PrimaryButton title={isEditing ? t('common.save') : t('common.create')} onPress={handleSave} disabled={!canSubmit} loading={saving} />
+              <PrimaryButton
+                title={isEditing ? t('common.save') : t('common.create')}
+                onPress={() => {
+                  Keyboard.dismiss();
+                  handleSave();
+                }}
+                disabled={!canSubmit}
+                loading={saving}
+              />
             </View>
-          </View>
+            </View>
+          </TouchableWithoutFeedback>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </SanctuaryScreenShell>
   );
 };
 
 const createStyles = (colors: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: { flex: 1, backgroundColor: 'transparent' },
   keyboardAvoid: { flex: 1 },
   scrollView: { flex: 1 },
   emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl },

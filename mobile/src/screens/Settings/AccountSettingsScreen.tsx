@@ -1,7 +1,6 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import {
   Alert,
-  KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
@@ -10,7 +9,9 @@ import {
   Image,
   Keyboard,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useHeaderHeight } from '@react-navigation/elements';
+import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreenShell';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Ionicons } from '@expo/vector-icons';
@@ -56,7 +57,16 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
   const { user, refreshUser, logout } = useAuth();
   const { t } = useLanguage();
   const colors = useThemeColors();
+  const insets = useSafeAreaInsets();
+  const headerHeight = useHeaderHeight();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const scrollInset = useMemo(
+    () => ({
+      paddingTop: headerHeight + spacing.md,
+      paddingBottom: insets.bottom + spacing.lg,
+    }),
+    [headerHeight, insets.bottom]
+  );
 
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
@@ -279,20 +289,17 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
   const displayAvatar = avatarUri;
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
-      <KeyboardAvoidingView
+    <SanctuaryScreenShell edges={[]} innerStyle={styles.container}>
+      <ScrollView
+        ref={scrollRef}
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
+        contentContainerStyle={scrollInset}
+        contentInsetAdjustmentBehavior="never"
+        automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+        keyboardDismissMode="interactive"
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <ScrollView
-          ref={scrollRef}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.topPad} />
-
           <SettingsSection title={t('accountSettingsScreen.profileSection')}>
             <AppText style={styles.sectionHint}>{t('accountSettingsScreen.profileHint')}</AppText>
             <SettingsGroupCard>
@@ -444,10 +451,7 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
               </TouchableOpacity>
             </DangerZoneCard>
           </SettingsSection>
-
-          <View style={styles.bottomSpacer} />
-        </ScrollView>
-      </KeyboardAvoidingView>
+      </ScrollView>
 
       <DeleteAccountModal
         visible={deleteModalVisible}
@@ -462,7 +466,7 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
         cancelLabel={t('common.cancel')}
         confirmLabel={t('accountSettingsScreen.deleteAccount')}
       />
-    </SafeAreaView>
+    </SanctuaryScreenShell>
   );
 };
 
@@ -470,15 +474,9 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: colors.background,
+      backgroundColor: 'transparent',
     },
     flex: { flex: 1 },
-    scrollContent: {
-      paddingBottom: spacing.xxl,
-    },
-    topPad: {
-      height: spacing.sm,
-    },
     sectionHint: {
       fontSize: fontSizes.sm,
       color: colors.textSecondary,
@@ -589,8 +587,5 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
       fontSize: fontSizes.md,
       fontWeight: fontWeights.semibold,
       color: colors.danger,
-    },
-    bottomSpacer: {
-      height: spacing.xl,
     },
   });

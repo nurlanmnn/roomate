@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Alert, Share } from 'react-native';
 import { AppText } from '../../components/AppText';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreenShell';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -75,7 +75,7 @@ export const HomeScreen: React.FC = () => {
   const styles = React.useMemo(() => StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: colors.background,
+      backgroundColor: 'transparent',
     },
     scrollView: {
       flex: 1,
@@ -449,17 +449,17 @@ export const HomeScreen: React.FC = () => {
 
   if (!selectedHousehold) {
     return (
-      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <SanctuaryScreenShell edges={['top', 'bottom']} innerStyle={styles.container}>
         <View style={styles.emptyContainer}>
           <AppText style={styles.emptyText}>{t('home.pleaseSelectHousehold')}</AppText>
         </View>
-      </SafeAreaView>
+      </SanctuaryScreenShell>
     );
   }
 
   if (initialLoading) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SanctuaryScreenShell edges={['top']} innerStyle={styles.container}>
         <ScrollView style={styles.scrollView}>
           <View style={styles.skeletonHero}>
             <LoadingSkeleton width={220} height={28} style={{ marginBottom: spacing.xs }} />
@@ -482,12 +482,12 @@ export const HomeScreen: React.FC = () => {
             ))}
           </View>
         </ScrollView>
-      </SafeAreaView>
+      </SanctuaryScreenShell>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SanctuaryScreenShell edges={['top']} innerStyle={styles.container}>
       <ScrollView
         ref={scrollRef}
         style={styles.scrollView}
@@ -700,6 +700,6 @@ export const HomeScreen: React.FC = () => {
         </View>
       )}
     </ScrollView>
-    </SafeAreaView>
+    </SanctuaryScreenShell>
   );
 };

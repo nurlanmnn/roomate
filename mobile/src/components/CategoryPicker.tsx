@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Modal, ScrollView } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Modal, ScrollView, Pressable } from 'react-native';
 import { AppText } from './AppText';
 import { Ionicons } from '@expo/vector-icons';
-import { EXPENSE_CATEGORIES, ExpenseCategory } from '../constants/expenseCategories';
+import { EXPENSE_CATEGORIES } from '../constants/expenseCategories';
 import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows } from '../theme';
+import { useLanguage } from '../context/LanguageContext';
 
 interface CategoryPickerProps {
   selectedCategory?: string;
@@ -17,6 +18,7 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
   onClear,
 }) => {
   const colors = useThemeColors();
+  const { t } = useLanguage();
   const [modalVisible, setModalVisible] = useState(false);
   const selectedCat = selectedCategory ? EXPENSE_CATEGORIES.find(c => c.id === selectedCategory) : null;
 
@@ -62,7 +64,11 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
     modalOverlay: {
       flex: 1,
       backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    },
+    modalOverlayInner: {
+      flex: 1,
       justifyContent: 'flex-end',
+      pointerEvents: 'box-none',
     },
     modalContent: {
       backgroundColor: colors.surface,
@@ -122,6 +128,8 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
     setModalVisible(false);
   };
 
+  const closeModal = () => setModalVisible(false);
+
   return (
     <>
       <TouchableOpacity
@@ -149,18 +157,25 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
         visible={modalVisible}
         transparent
         animationType="slide"
-        onRequestClose={() => setModalVisible(false)}
+        onRequestClose={closeModal}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <AppText style={styles.modalTitle}>Select Category</AppText>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Ionicons name="close-outline" size={24} color={colors.text} />
-              </TouchableOpacity>
-            </View>
-            
-            <ScrollView style={styles.categoriesList} showsVerticalScrollIndicator={false}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('common.close')}
+            style={StyleSheet.absoluteFillObject}
+            onPress={closeModal}
+          />
+          <View style={styles.modalOverlayInner}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <AppText style={styles.modalTitle}>{t('expenses.selectCategory')}</AppText>
+                <TouchableOpacity onPress={closeModal}>
+                  <Ionicons name="close-outline" size={24} color={colors.text} />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView style={styles.categoriesList} showsVerticalScrollIndicator={false}>
               {onClear && selectedCategory && (
                 <TouchableOpacity
                   style={styles.categoryItem}
@@ -191,7 +206,8 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
                   )}
                 </TouchableOpacity>
               ))}
-            </ScrollView>
+              </ScrollView>
+            </View>
           </View>
         </View>
       </Modal>

@@ -10,7 +10,7 @@ import {
   Share,
   Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreenShell';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '../../components/AppText';
 import { PrimaryButton } from '../../components/PrimaryButton';
@@ -322,11 +322,11 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
 
   if (!selectedHousehold) {
     return (
-      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <SanctuaryScreenShell edges={['top', 'bottom']} innerStyle={styles.container}>
         <View style={styles.emptyContainer}>
           <AppText style={styles.emptyText}>{t('home.pleaseSelectHousehold')}</AppText>
         </View>
-      </SafeAreaView>
+      </SanctuaryScreenShell>
     );
   }
 
@@ -337,14 +337,19 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
       (editAddress.trim() || '') !== (selectedHousehold.address || ''));
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SanctuaryScreenShell edges={['top']} innerStyle={styles.container}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
+        contentInsetAdjustmentBehavior="automatic"
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <ScreenHeader title={t('householdSettingsScreen.title')} subtitle={selectedHousehold.name} />
+        <ScreenHeader
+          title={t('householdSettingsScreen.title')}
+          subtitle={selectedHousehold.name}
+          showTitle={false}
+        />
 
         <SettingsSection title={t('householdSettingsScreen.sectionHousehold')}>
           <SettingsGroupCard>
@@ -550,7 +555,7 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
 
         <View style={styles.bottomPad} />
       </ScrollView>
-    </SafeAreaView>
+    </SanctuaryScreenShell>
   );
 };
 
@@ -558,7 +563,7 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: colors.background,
+      backgroundColor: 'transparent',
     },
     scrollView: { flex: 1 },
     scrollContent: {
@@ -593,7 +598,7 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
       marginTop: spacing.md,
     },
     textInput: {
-      backgroundColor: colors.background,
+      backgroundColor: colors.primaryUltraSoft,
       borderWidth: 1,
       borderColor: colors.border,
       borderRadius: radii.md,
@@ -616,7 +621,7 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
       minHeight: 48,
     },
     chipCancel: {
-      backgroundColor: colors.background,
+      backgroundColor: colors.primaryUltraSoft,
       borderWidth: 1,
       borderColor: colors.border,
     },
@@ -687,7 +692,7 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
     },
     codeBadge: {
       flex: 1,
-      backgroundColor: colors.background,
+      backgroundColor: colors.primaryUltraSoft,
       paddingVertical: spacing.sm,
       paddingHorizontal: spacing.md,
       borderRadius: radii.md,
@@ -768,19 +773,22 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
     leaveOutline: {
       padding: spacing.lg,
       borderRadius: radii.lg,
-      borderWidth: 1,
-      borderColor: colors.border,
-      backgroundColor: colors.surface,
+      backgroundColor: colors.danger,
+      shadowColor: colors.danger,
+      shadowOpacity: 0.22,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 6 },
+      elevation: 4,
     },
     leaveOutlineText: {
       fontSize: fontSizes.md,
       fontWeight: fontWeights.semibold,
-      color: colors.text,
+      color: '#FFFFFF',
       marginBottom: spacing.xs,
     },
     leaveOutlineHint: {
       fontSize: fontSizes.sm,
-      color: colors.textSecondary,
+      color: 'rgba(255, 255, 255, 0.88)',
       lineHeight: 18,
     },
     deleteHint: {

@@ -19,6 +19,7 @@ export default {
     seeAll: 'Alle Anzeigen',
     copied: 'Kopiert!',
     close: 'Schließen',
+    dismissKeyboard: 'Tastatur ausblenden',
     yes: 'Ja',
     no: 'Nein',
     ok: 'OK',

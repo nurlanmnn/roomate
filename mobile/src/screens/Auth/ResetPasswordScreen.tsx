@@ -9,8 +9,8 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreenShell';
 import { FormTextInput } from '../../components/FormTextInput';
 import { OtpSixDigits } from '../../components/auth/OtpSixDigits';
 import { authApi } from '../../api/authApi';
@@ -70,7 +70,7 @@ export const ResetPasswordScreen: React.FC<{ navigation: any; route: any }> = ({
   const canSubmit = otpComplete && newPassword.length >= 8 && confirmPassword.length >= 8;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SanctuaryScreenShell edges={['top', 'bottom']} innerStyle={styles.shellInner}>
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -123,14 +123,13 @@ export const ResetPasswordScreen: React.FC<{ navigation: any; route: any }> = ({
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </SanctuaryScreenShell>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  shellInner: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   keyboardAvoid: {
     flex: 1,

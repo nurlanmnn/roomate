@@ -1,13 +1,16 @@
 import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from '../AppText';
+import { useTheme } from '../../context/ThemeContext';
 import { useThemeColors, fontSizes, fontWeights, spacing } from '../../theme';
 
 type ScreenHeaderProps = {
   title: string;
   subtitle?: string;
+  /** When false, only subtitle / right actions render (native stack already shows `title`). */
+  showTitle?: boolean;
   variant?: 'screen' | 'stack';
   showBackButton?: boolean;
   onBackPress?: () => void;
@@ -18,12 +21,15 @@ type ScreenHeaderProps = {
 export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
   title,
   subtitle,
+  showTitle = true,
   variant = 'screen',
   showBackButton,
   onBackPress,
   rightText,
   onRightPress,
 }) => {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const styles = React.useMemo(() => StyleSheet.create({
@@ -35,7 +41,16 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
       flexDirection: 'row',
       alignItems: 'flex-end',
       justifyContent: 'space-between',
-      backgroundColor: colors.background,
+      backgroundColor: 'transparent',
+    },
+    containerSubtitleOnly: {
+      paddingHorizontal: spacing.xl,
+      paddingTop: spacing.sm,
+      paddingBottom: spacing.md,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: 'transparent',
     },
     // "Stack" variant (matches React Navigation native stack header look)
     containerStack: {
@@ -45,9 +60,9 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: colors.background,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.borderLight,
+      backgroundColor: 'transparent',
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(34, 197, 94, 0.15)',
     },
     left: {
       flex: 1,
@@ -75,9 +90,9 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
       alignItems: 'center',
       justifyContent: 'center',
       borderRadius: 999,
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
+      backgroundColor: isDark ? 'rgba(40, 52, 48, 0.9)' : 'rgba(255, 255, 255, 0.82)',
+      borderWidth: 1.5,
+      borderColor: isDark ? 'rgba(74, 222, 128, 0.22)' : 'rgba(34, 197, 94, 0.2)',
     },
     title: {
       fontSize: fontSizes.xxl,
@@ -115,7 +130,7 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
       fontWeight: fontWeights.semibold,
       color: colors.primary,
     },
-  }), [colors, insets.top]);
+  }), [colors, insets.top, isDark]);
 
   if (variant === 'stack') {
     return (
@@ -128,7 +143,12 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
             accessibilityLabel="Back"
             hitSlop={8}
           >
-            <Ionicons name="chevron-back" size={24} color={colors.text} />
+            <Ionicons
+              name="chevron-back"
+              size={24}
+              color={colors.text}
+              style={Platform.OS === 'ios' ? { transform: [{ translateY: -2 }] } : undefined}
+            />
           </Pressable>
         )}
         <AppText style={styles.titleStack} numberOfLines={1} ellipsizeMode="tail">
@@ -143,6 +163,25 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
     );
   }
 
+  if (!showTitle && (subtitle || (rightText && onRightPress))) {
+    return (
+      <View style={styles.containerSubtitleOnly}>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          {!!subtitle && <AppText style={styles.subtitle}>{subtitle}</AppText>}
+        </View>
+        {!!rightText && !!onRightPress && (
+          <Pressable onPress={onRightPress} style={styles.right}>
+            <AppText style={styles.rightText}>{rightText}</AppText>
+          </Pressable>
+        )}
+      </View>
+    );
+  }
+
+  if (!showTitle) {
+    return <View style={styles.containerSubtitleOnly} />;
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.left}>
@@ -155,7 +194,12 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
               accessibilityLabel="Back"
               hitSlop={8}
             >
-              <Ionicons name="chevron-back" size={24} color={colors.text} />
+              <Ionicons
+                name="chevron-back"
+                size={24}
+                color={colors.text}
+                style={Platform.OS === 'ios' ? { transform: [{ translateY: -2 }] } : undefined}
+              />
             </Pressable>
           )}
           <AppText style={styles.title} numberOfLines={2} ellipsizeMode="tail">

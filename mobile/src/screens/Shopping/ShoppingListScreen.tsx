@@ -12,7 +12,8 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { AppText } from '../../components/AppText';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreenShell';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -580,7 +581,7 @@ export const ShoppingListScreen: React.FC = () => {
 
   if (!selectedHousehold) {
     return (
-      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <SanctuaryScreenShell edges={['top', 'bottom']} innerStyle={styles.container}>
         <View style={styles.emptyContainer}>
           <EmptyState
             icon="home-outline"
@@ -589,7 +590,7 @@ export const ShoppingListScreen: React.FC = () => {
             variant="minimal"
           />
         </View>
-      </SafeAreaView>
+      </SanctuaryScreenShell>
     );
   }
 
@@ -605,7 +606,7 @@ export const ShoppingListScreen: React.FC = () => {
     : completedItems;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SanctuaryScreenShell edges={['top']} innerStyle={styles.container}>
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -1058,14 +1059,14 @@ export const ShoppingListScreen: React.FC = () => {
           />
         </Modal>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </SanctuaryScreenShell>
   );
 };
 
 const createStyles = (colors: any, bottomInset: number) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   },
   keyboardAvoid: {
     flex: 1,

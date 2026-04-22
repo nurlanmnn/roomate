@@ -9,7 +9,7 @@ import {
   ListRenderItem,
   TouchableOpacity,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreenShell';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -61,7 +61,7 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
       StyleSheet.create({
         container: {
           flex: 1,
-          backgroundColor: colors.background,
+          backgroundColor: 'transparent',
         },
         scrollView: {
           flex: 1,
@@ -610,11 +610,11 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
 
   if (!selectedHousehold) {
     return (
-      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <SanctuaryScreenShell edges={['top', 'bottom']} innerStyle={styles.container}>
         <View style={styles.emptyContainer}>
           <AppText style={styles.emptyText}>{t('home.pleaseSelectHousehold')}</AppText>
         </View>
-      </SafeAreaView>
+      </SanctuaryScreenShell>
     );
   }
 
@@ -736,7 +736,7 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     ) : null;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SanctuaryScreenShell edges={['top']} innerStyle={styles.container}>
       <FlatList
         ref={listRef}
         data={listRows}
@@ -797,6 +797,6 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         windowSize={10}
         keyboardShouldPersistTaps="handled"
       />
-    </SafeAreaView>
+    </SanctuaryScreenShell>
   );
 };

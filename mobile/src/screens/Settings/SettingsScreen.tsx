@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Alert, Modal, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreenShell';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '../../components/AppText';
 import { Avatar } from '../../components/ui/Avatar';
@@ -66,13 +66,16 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, rout
       StyleSheet.create({
         container: {
           flex: 1,
-          backgroundColor: colors.background,
+          backgroundColor: 'transparent',
         },
         scrollView: {
           flex: 1,
         },
         scrollContent: {
           paddingBottom: TAB_BAR_HEIGHT + spacing.xl,
+        },
+        stackHeaderSpacer: {
+          height: spacing.sm,
         },
         profileSpacer: {
           marginTop: spacing.xs,
@@ -109,7 +112,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, rout
           paddingHorizontal: spacing.sm,
           borderRadius: radii.md,
           marginBottom: spacing.xs,
-          backgroundColor: colors.background,
+          backgroundColor: colors.primaryUltraSoft,
         },
         languageOptionSelected: {
           backgroundColor: colors.primaryUltraSoft,
@@ -162,9 +165,18 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, rout
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView ref={scrollRef} style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        <ScreenHeader title={t('settings.title')} />
+    <SanctuaryScreenShell edges={['top']} innerStyle={styles.container}>
+      <ScrollView
+        ref={scrollRef}
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        contentInsetAdjustmentBehavior={fromHouseholdSelect ? 'automatic' : 'never'}
+      >
+        {fromHouseholdSelect ? (
+          <View style={styles.stackHeaderSpacer} />
+        ) : (
+          <ScreenHeader title={t('settings.title')} />
+        )}
 
         <View style={styles.profileSpacer}>
           <ProfileHeaderCard
@@ -295,6 +307,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, rout
           </View>
         </TouchableOpacity>
       </Modal>
-    </SafeAreaView>
+    </SanctuaryScreenShell>
   );
 };
