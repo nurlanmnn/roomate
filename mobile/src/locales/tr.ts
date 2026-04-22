@@ -38,6 +38,8 @@ export default {
     none: 'Yok',
     loadMore: 'Daha fazla yükle',
     saving: 'Kaydediliyor…',
+    showMore: 'Daha fazla göster',
+    showLess: 'Daha az göster',
   },
 
   // Para birimi

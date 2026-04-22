@@ -89,7 +89,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
       color: colors.textSecondary,
     },
     cardPad: {
-      padding: spacing.lg,
+      padding: spacing.md,
     },
     mutedLine: {
       fontSize: fontSizes.sm,
@@ -100,54 +100,96 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
       flexDirection: 'row',
       alignItems: 'center',
       gap: spacing.md,
-      marginBottom: spacing.md,
     },
     balanceTextContainer: {
       flex: 1,
+      minWidth: 0,
     },
     balanceText: {
       fontSize: fontSizes.md,
       color: colors.text,
+      lineHeight: 20,
     },
     userName: {
       fontWeight: fontWeights.semibold,
     },
+    amountBlock: {
+      alignItems: 'flex-end',
+    },
     amount: {
       color: colors.danger,
       fontWeight: fontWeights.extrabold,
+      fontSize: fontSizes.lg,
+    },
+    amountPositive: {
+      color: colors.success,
+    },
+    actionsDivider: {
+      height: StyleSheet.hairlineWidth,
+      backgroundColor: colors.borderLight,
+      marginTop: spacing.md,
+      marginBottom: spacing.sm,
+      marginHorizontal: -spacing.md,
     },
     actions: {
-      flexDirection: 'column',
-      gap: spacing.sm,
-      width: '100%',
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      alignItems: 'center',
+      gap: spacing.xs,
     },
     actionButton: {
-      width: '100%',
-      paddingVertical: spacing.md,
-      paddingHorizontal: spacing.lg,
-      borderRadius: radii.lg,
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.md,
+      borderRadius: radii.pill,
       alignItems: 'center',
       justifyContent: 'center',
       flexDirection: 'row',
+      gap: spacing.xxs,
+      minHeight: 34,
     },
     netButton: {
-      backgroundColor: colors.warning,
+      backgroundColor: colors.warningSoft,
+      borderWidth: 1,
+      borderColor: colors.warningSoft,
+    },
+    netButtonText: {
+      color: colors.warning,
+      fontWeight: fontWeights.semibold,
+      fontSize: fontSizes.sm,
     },
     markButton: {
       backgroundColor: colors.primary,
     },
-    forgiveButton: {
-      backgroundColor: colors.danger,
+    markButtonText: {
+      color: colors.surface,
+      fontWeight: fontWeights.semibold,
+      fontSize: fontSizes.sm,
     },
-    amountPositive: {
-      color: colors.success,
-      fontWeight: fontWeights.extrabold,
+    forgiveButton: {
+      backgroundColor: colors.primarySoft,
+      borderWidth: 1,
+      borderColor: colors.primarySoft,
+    },
+    forgiveButtonText: {
+      color: colors.primary,
+      fontWeight: fontWeights.semibold,
+      fontSize: fontSizes.sm,
     },
     mutualDebtNote: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      marginTop: spacing.sm,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+      borderRadius: radii.md,
+      backgroundColor: colors.warningUltraSoft,
+    },
+    mutualDebtNoteText: {
       fontSize: fontSizes.xs,
       color: colors.warning,
-      fontStyle: 'italic',
-      marginBottom: spacing.xs,
+      fontWeight: fontWeights.medium,
+      flex: 1,
     },
     actionButtonText: {
       color: colors.surface,
@@ -663,36 +705,46 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                       >
                         <View style={styles.cardPad}>
                           <View style={styles.balanceHeader}>
-                            <Avatar name={toUserName} uri={toUserAvatar} size={40} />
+                            <Avatar name={toUserName} uri={toUserAvatar} size={44} />
                             <View style={styles.balanceTextContainer}>
-                              <AppText style={styles.balanceText}>
+                              <AppText style={styles.balanceText} numberOfLines={1}>
                                 {t('home.youOwe')}{' '}
-                                <AppText style={styles.userName}>{toUserName}</AppText>{' '}
-                                <AppText style={styles.amount}>{formatCurrency(balance.amount, currency)}</AppText>
+                                <AppText style={styles.userName}>{toUserName}</AppText>
+                              </AppText>
+                            </View>
+                            <View style={styles.amountBlock}>
+                              <AppText style={styles.amount}>
+                                {formatCurrency(balance.amount, currency)}
                               </AppText>
                             </View>
                           </View>
                           {hasMutualDebt ? (
-                            <AppText style={styles.mutualDebtNote}>
-                              💡 {toUserName} {t('settleUp.alsoOwesYou')}
-                            </AppText>
+                            <View style={styles.mutualDebtNote}>
+                              <Ionicons name="bulb-outline" size={14} color={colors.warning} />
+                              <AppText style={styles.mutualDebtNoteText}>
+                                {toUserName} {t('settleUp.alsoOwesYou')}
+                              </AppText>
+                            </View>
                           ) : null}
+                          <View style={styles.actionsDivider} />
                           <View style={styles.actions}>
                             {hasMutualDebt ? (
                               <TouchableOpacity
                                 style={[styles.actionButton, styles.netButton]}
                                 onPress={() => handleNetBalance(balance)}
-                                activeOpacity={0.85}
+                                activeOpacity={0.8}
                               >
-                                <AppText style={styles.actionButtonText}>{t('settleUp.netBalance')}</AppText>
+                                <Ionicons name="swap-horizontal" size={14} color={colors.warning} />
+                                <AppText style={styles.netButtonText}>{t('settleUp.netBalance')}</AppText>
                               </TouchableOpacity>
                             ) : null}
                             <TouchableOpacity
                               style={[styles.actionButton, styles.markButton]}
                               onPress={() => handleMarkAsPaid(balance)}
-                              activeOpacity={0.85}
+                              activeOpacity={0.8}
                             >
-                              <AppText style={styles.actionButtonText}>{t('settleUp.markAsPaid')}</AppText>
+                              <Ionicons name="checkmark-circle" size={14} color={colors.surface} />
+                              <AppText style={styles.markButtonText}>{t('settleUp.markAsPaid')}</AppText>
                             </TouchableOpacity>
                           </View>
                         </View>
@@ -725,30 +777,34 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                       >
                         <View style={styles.cardPad}>
                           <View style={styles.balanceHeader}>
-                            <Avatar name={fromUserName} uri={fromUserAvatar} size={40} />
+                            <Avatar name={fromUserName} uri={fromUserAvatar} size={44} />
                             <View style={styles.balanceTextContainer}>
-                              <AppText style={styles.balanceText}>
+                              <AppText style={styles.balanceText} numberOfLines={1}>
                                 <AppText style={styles.userName}>{fromUserName}</AppText>{' '}
-                                {t('settleUp.owesYou').toLowerCase()}{' '}
-                                <AppText style={[styles.amount, styles.amountPositive]}>
-                                  {formatCurrency(balance.amount, currency)}
-                                </AppText>
+                                {t('settleUp.owesYou').toLowerCase()}
+                              </AppText>
+                            </View>
+                            <View style={styles.amountBlock}>
+                              <AppText style={[styles.amount, styles.amountPositive]}>
+                                {formatCurrency(balance.amount, currency)}
                               </AppText>
                             </View>
                           </View>
+                          <View style={styles.actionsDivider} />
                           <View style={styles.actions}>
                             <TouchableOpacity
                               style={[styles.actionButton, styles.forgiveButton]}
                               onPress={() => handleForgiveDebt(balance)}
-                              activeOpacity={0.85}
+                              activeOpacity={0.8}
                             >
                               <Ionicons
-                                name="close-circle-outline"
-                                size={18}
-                                color={colors.surface}
-                                style={{ marginRight: spacing.xs }}
+                                name="heart-outline"
+                                size={14}
+                                color={colors.primary}
                               />
-                              <AppText style={styles.actionButtonText}>{t('settleUp.forgiveDebt')}</AppText>
+                              <AppText style={styles.forgiveButtonText}>
+                                {t('settleUp.forgiveDebt')}
+                              </AppText>
                             </TouchableOpacity>
                           </View>
                         </View>
@@ -832,9 +888,12 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         >
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={t('common.dismissKeyboard')}
+            accessibilityLabel={t('common.close')}
             style={StyleSheet.absoluteFillObject}
-            onPress={Keyboard.dismiss}
+            onPress={() => {
+              Keyboard.dismiss();
+              setSettleModalVisible(false);
+            }}
           />
           <View style={styles.modalContent}>
             <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
@@ -921,9 +980,12 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         >
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={t('common.dismissKeyboard')}
+            accessibilityLabel={t('common.close')}
             style={StyleSheet.absoluteFillObject}
-            onPress={Keyboard.dismiss}
+            onPress={() => {
+              Keyboard.dismiss();
+              setForgiveModalVisible(false);
+            }}
           />
           <View style={styles.modalContent}>
             <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>

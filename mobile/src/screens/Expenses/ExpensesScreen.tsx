@@ -646,16 +646,23 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
 
       {user && (
         <SettingsSection title={t('expenses.sectionBalances')}>
-          <SettingsGroupCard>
-            <BalanceSummary
-              balances={balances}
-              currentUserId={user._id}
-              getUserName={getUserName}
-              getUserAvatar={getUserAvatar}
-              hideTitle
-              variant="plain"
-            />
-          </SettingsGroupCard>
+          <TouchableOpacity
+            activeOpacity={0.75}
+            onPress={() => navigation.navigate('SettleUp')}
+            accessibilityRole="button"
+            accessibilityLabel={t('expenses.settleUp')}
+          >
+            <SettingsGroupCard>
+              <BalanceSummary
+                balances={balances}
+                currentUserId={user._id}
+                getUserName={getUserName}
+                getUserAvatar={getUserAvatar}
+                hideTitle
+                variant="plain"
+              />
+            </SettingsGroupCard>
+          </TouchableOpacity>
         </SettingsSection>
       )}
 

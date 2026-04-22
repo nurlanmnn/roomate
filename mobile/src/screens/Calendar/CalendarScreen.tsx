@@ -436,7 +436,11 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
 
         <SettingsSection title={t('chores.choreRotation')}>
           <SettingsGroupCard>
-            <View style={styles.choreHeader}>
+            <TouchableOpacity
+              onPress={() => navigation.getParent()?.navigate('ChoreRotation')}
+              activeOpacity={0.7}
+              style={styles.choreHeader}
+            >
               <View style={styles.choreHeaderTitleRow}>
                 <View style={styles.choreHeaderIcon}>
                   <Ionicons name="repeat" size={18} color={colors.primary} />
@@ -459,17 +463,13 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                   ) : null}
                 </View>
               </View>
-              <TouchableOpacity
-                onPress={() => navigation.getParent()?.navigate('ChoreRotation')}
-                style={styles.choreManageButton}
-                activeOpacity={0.8}
-              >
+              <View style={styles.choreManageButton} pointerEvents="none">
                 <AppText style={styles.choreManageLabel}>
                   {chores.length > 0 ? t('chores.manage') : t('chores.setUp')}
                 </AppText>
                 <Ionicons name="chevron-forward" size={16} color={colors.primary} />
-              </TouchableOpacity>
-            </View>
+              </View>
+            </TouchableOpacity>
 
             {chores.length > 0 ? (
               <View style={styles.choreList}>

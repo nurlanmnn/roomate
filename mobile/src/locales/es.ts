@@ -38,6 +38,8 @@ export default {
     none: 'Ninguno',
     loadMore: 'Cargar más',
     saving: 'Guardando…',
+    showMore: 'Mostrar más',
+    showLess: 'Mostrar menos',
   },
 
   // Moneda

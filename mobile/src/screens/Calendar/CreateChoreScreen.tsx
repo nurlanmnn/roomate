@@ -19,7 +19,7 @@ import { choresApi, ChoreRotation, ChoreFrequency } from '../../api/choresApi';
 import { HouseholdMember } from '../../api/householdsApi';
 import { FormTextInput } from '../../components/FormTextInput';
 import { PrimaryButton } from '../../components/PrimaryButton';
-import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows } from '../../theme';
+import { useThemeColors, useTheme, fontSizes, fontWeights, spacing, radii, shadows } from '../../theme';
 import { Ionicons } from '@expo/vector-icons';
 import { startOfWeek, format } from 'date-fns';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -34,6 +34,7 @@ export const CreateChoreScreen: React.FC<{ navigation: any; route: any }> = ({ n
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const colors = useThemeColors();
+  const { theme } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const [name, setName] = useState('');
@@ -247,6 +248,7 @@ export const CreateChoreScreen: React.FC<{ navigation: any; route: any }> = ({ n
               value={startDate}
               mode="date"
               display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              themeVariant={theme}
               onChange={(_, date) => {
                 setShowDatePicker(Platform.OS === 'ios');
                 if (date) setStartDate(date);

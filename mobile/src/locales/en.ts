@@ -38,6 +38,8 @@ export default {
     none: 'None',
     loadMore: 'Load more',
     saving: 'Saving…',
+    showMore: 'Show more',
+    showLess: 'Show less',
   },
 
   // Currency picker + household currency settings

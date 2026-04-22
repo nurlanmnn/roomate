@@ -112,6 +112,7 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
+      gap: spacing.sm,
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.sm,
       backgroundColor: colors.surface,
@@ -119,21 +120,23 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
       borderBottomColor: colors.borderLight,
     },
     filterBarEmbedded: {
-      backgroundColor: colors.background,
+      backgroundColor: 'transparent',
       borderBottomWidth: 0,
-      borderRadius: radii.md,
-      marginBottom: spacing.sm,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
     },
     filterButton: {
+      flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
+      justifyContent: 'center',
       gap: spacing.xs,
-      paddingVertical: spacing.xs,
-      paddingHorizontal: spacing.sm,
-      borderRadius: radii.md,
-      backgroundColor: colors.background,
+      paddingVertical: 10,
+      paddingHorizontal: spacing.md,
+      borderRadius: radii.pill,
+      backgroundColor: colors.surfaceAlt,
       borderWidth: 1,
-      borderColor: colors.border,
+      borderColor: colors.borderLight,
     },
     filterButtonActive: {
       backgroundColor: colors.primary,
@@ -142,7 +145,7 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
     filterButtonText: {
       fontSize: fontSizes.sm,
       color: colors.text,
-      fontWeight: fontWeights.medium,
+      fontWeight: fontWeights.semibold,
     },
     filterButtonTextActive: {
       color: colors.surface,
@@ -152,23 +155,36 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
       height: 8,
       borderRadius: 4,
       backgroundColor: colors.danger,
-      marginLeft: spacing.xs,
+      marginLeft: spacing.xxs,
     },
     filterActions: {
+      flex: 1,
       flexDirection: 'row',
       gap: spacing.sm,
     },
     sortButton: {
+      flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
+      justifyContent: 'center',
       gap: spacing.xs,
-      paddingVertical: spacing.xs,
-      paddingHorizontal: spacing.sm,
+      paddingVertical: 10,
+      paddingHorizontal: spacing.md,
+      borderRadius: radii.pill,
+      backgroundColor: colors.surfaceAlt,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
     },
     sortButtonText: {
       fontSize: fontSizes.sm,
       color: colors.text,
+      fontWeight: fontWeights.semibold,
+    },
+    sortButtonLabel: {
+      fontSize: fontSizes.xs,
+      color: colors.textTertiary,
       fontWeight: fontWeights.medium,
+      marginRight: 2,
     },
     modalOverlay: {
       flex: 1,
@@ -345,26 +361,31 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
         <TouchableOpacity
           style={[styles.filterButton, hasActiveFilters && styles.filterButtonActive]}
           onPress={() => setShowFilters(true)}
+          activeOpacity={0.8}
         >
-          <Ionicons name="filter-outline" size={18} color={hasActiveFilters ? colors.surface : colors.text} />
+          <Ionicons
+            name="options-outline"
+            size={18}
+            color={hasActiveFilters ? colors.surface : colors.text}
+          />
           <AppText style={[styles.filterButtonText, hasActiveFilters && styles.filterButtonTextActive]}>
             {t('expenses.filters')}
           </AppText>
           {hasActiveFilters && <View style={styles.filterBadge} />}
         </TouchableOpacity>
-        <View style={styles.filterActions}>
-          <TouchableOpacity
-            style={styles.sortButton}
-            onPress={() => setShowSortPicker(true)}
-          >
-            <Ionicons name="swap-vertical-outline" size={18} color={colors.text} />
-            <AppText style={styles.sortButtonText}>
-              {filters.sortBy === 'newest' ? t('expenses.newest') : 
-               filters.sortBy === 'oldest' ? t('expenses.oldest') :
-               filters.sortBy === 'amount' ? t('expenses.amount') : t('expenses.category')}
-            </AppText>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          style={styles.sortButton}
+          onPress={() => setShowSortPicker(true)}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="swap-vertical-outline" size={18} color={colors.text} />
+          <AppText style={styles.sortButtonText}>
+            {filters.sortBy === 'newest' ? t('expenses.newest') :
+             filters.sortBy === 'oldest' ? t('expenses.oldest') :
+             filters.sortBy === 'amount' ? t('expenses.amount') : t('expenses.category')}
+          </AppText>
+          <Ionicons name="chevron-down" size={14} color={colors.textTertiary} />
+        </TouchableOpacity>
       </View>
 
       {/* Filters Modal */}

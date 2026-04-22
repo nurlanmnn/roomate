@@ -38,6 +38,8 @@ export default {
     none: 'Aucun',
     loadMore: 'Charger plus',
     saving: 'Enregistrement…',
+    showMore: 'Voir plus',
+    showLess: 'Voir moins',
   },
 
   // Devise
