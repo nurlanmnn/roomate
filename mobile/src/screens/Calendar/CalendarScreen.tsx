@@ -22,7 +22,8 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { AppText } from '../../components/AppText';
 import { SettingsSection } from '../../components/Settings/SettingsSection';
 import { SettingsGroupCard } from '../../components/Settings/SettingsGroupCard';
-import { formatDate } from '../../utils/dateHelpers';
+import { formatCalendarListDateHeader } from '../../utils/dateHelpers';
+import { getDateFnsLocale } from '../../utils/dateLocales';
 import { useThemeColors, fontSizes, fontWeights, spacing, radii, TAB_BAR_HEIGHT } from '../../theme';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -65,9 +66,18 @@ const CALENDAR_LIST_PAGE_SIZE = 5;
 export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { selectedHousehold, setSelectedHousehold } = useHousehold();
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const dateFnsLocale = useMemo(() => getDateFnsLocale(language), [language]);
+  const listRelativeDayLabels = useMemo(
+    () => ({
+      today: t('time.today'),
+      yesterday: t('time.yesterday'),
+      tomorrow: t('time.tomorrow'),
+    }),
+    [t]
+  );
   const [events, setEvents] = useState<Event[]>([]);
   const [chores, setChores] = useState<ChoreRotation[]>([]);
   const [loading, setLoading] = useState(false);
@@ -357,7 +367,7 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   const eventsByDate = useMemo(() => {
     const grouped: Record<string, Event[]> = {};
     pagedListEvents.forEach((event) => {
-      const dateKey = formatDate(event.date);
+      const dateKey = format(parseISO(event.date), 'yyyy-MM-dd');
       (grouped[dateKey] ||= []).push(event);
     });
     return grouped;
@@ -453,11 +463,14 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                   </AppText>
                   {chores.length > 0 ? (
                     <AppText style={styles.choreHeaderSubtitle}>
-                      {format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'MMM d')}
+                      {format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'MMM d', {
+                        locale: dateFnsLocale,
+                      })}
                       {' – '}
                       {format(
                         addDays(startOfWeek(new Date(), { weekStartsOn: 1 }), 6),
-                        'MMM d'
+                        'MMM d',
+                        { locale: dateFnsLocale }
                       )}
                     </AppText>
                   ) : null}
@@ -590,7 +603,9 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         <SettingsSection title={t('calendar.sectionSelectedDay')}>
           <SettingsGroupCard>
             <View style={styles.selectedDayHeader}>
-              <AppText style={styles.selectedDateTitle}>{format(selectedDate, 'EEEE, MMM d')}</AppText>
+              <AppText style={styles.selectedDateTitle}>
+                {format(selectedDate, 'EEEE, MMM d', { locale: dateFnsLocale })}
+              </AppText>
               <TouchableOpacity
                 style={styles.addOnDateButton}
                 onPress={() => handleAddEventOnDate(selectedDate)}
@@ -710,7 +725,9 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
             ) : (
               Object.entries(eventsByDate).map(([dateKey, dateEvents]) => (
                 <View key={dateKey} style={styles.dateSection}>
-                  <AppText style={styles.dateHeader}>{dateKey}</AppText>
+                  <AppText style={styles.dateHeader}>
+                    {formatCalendarListDateHeader(dateKey, dateFnsLocale, listRelativeDayLabels)}
+                  </AppText>
                   {dateEvents.map((event) => (
                     <View key={event._id} style={styles.eventBlock}>
                       <EventCard event={event} />

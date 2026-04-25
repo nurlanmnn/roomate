@@ -20,13 +20,15 @@ import { ScreenHeader } from '../../components/ui/ScreenHeader';
 import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows, TAB_BAR_HEIGHT } from '../../theme';
 import { Ionicons } from '@expo/vector-icons';
 import { format, startOfWeek } from 'date-fns';
+import { getDateFnsLocale } from '../../utils/dateLocales';
 
 export const ChoreRotationScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { selectedHousehold } = useHousehold();
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const dateFnsLocale = useMemo(() => getDateFnsLocale(language), [language]);
   const [chores, setChores] = useState<ChoreRotation[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -104,7 +106,7 @@ export const ChoreRotationScreen: React.FC<{ navigation: any }> = ({ navigation 
         <ScreenHeader
           title={t('chores.title')}
           showTitle={false}
-          subtitle={`${t('chores.thisWeek')} · ${format(weekStart, 'MMM d')}`}
+          subtitle={`${t('chores.thisWeek')} · ${format(weekStart, 'MMM d', { locale: dateFnsLocale })}`}
         />
 
         {chores.length === 0 ? (

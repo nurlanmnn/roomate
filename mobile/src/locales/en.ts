@@ -333,6 +333,8 @@ export default {
     listPaginationHint: '%{loaded} of %{total} loaded',
     addExpenseSubtitle: 'Split with roommates',
     settleUpSubtitle: 'Record payments & clear debts',
+    categoryPickerPlaceholder: 'Select category (optional)',
+    clearCategorySelection: 'Clear selection',
     adjustFiltersHint: 'Try adjusting filters or search to see more expenses.',
     sectionExpenseDetails: 'Expense details',
     sectionTemplates: 'Templates',

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { View, StyleSheet, ScrollView, Image, TouchableOpacity, Modal, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreenShell';
@@ -13,21 +13,57 @@ import { SettingsGroupCard } from '../../components/Settings/SettingsGroupCard';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { useHouseholdCurrency } from '../../utils/useHouseholdCurrency';
 import { formatDate } from '../../utils/dateHelpers';
+import { getDateFnsLocale } from '../../utils/dateLocales';
 import { useThemeColors, fontSizes, fontWeights, radii, spacing } from '../../theme';
 import { Ionicons } from '@expo/vector-icons';
-import { parseISO, subMonths, startOfMonth, startOfYear } from 'date-fns';
+import { subMonths, startOfMonth, startOfYear } from 'date-fns';
 import { useLanguage } from '../../context/LanguageContext';
+import { dedupedFetch, getCached } from '../../utils/queryCache';
 
 type DateFilter = 'all' | 'month' | '3months' | '6months' | 'year';
 
 const SETTLEMENTS_PAGE_SIZE = 5;
+
+type SettlementsSnapshot = {
+  settlements: Settlement[];
+  total: number;
+};
+
+const settlementHistoryKey = (householdId: string, dateFilter: DateFilter) =>
+  `settlements:${householdId}:history:${dateFilter}:page0`;
+
+const getDateFilterStart = (dateFilter: DateFilter): string | undefined => {
+  const now = new Date();
+  switch (dateFilter) {
+    case 'month':
+      return startOfMonth(now).toISOString();
+    case '3months':
+      return subMonths(now, 3).toISOString();
+    case '6months':
+      return subMonths(now, 6).toISOString();
+    case 'year':
+      return startOfYear(now).toISOString();
+    case 'all':
+    default:
+      return undefined;
+  }
+};
 
 export const SettlementHistoryScreen: React.FC<{ navigation: any }> = () => {
   const { selectedHousehold } = useHousehold();
   const { user } = useAuth();
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const dateFnsLocale = useMemo(() => getDateFnsLocale(language), [language]);
+  const relativeDayLabels = useMemo(
+    () => ({
+      today: t('time.today'),
+      yesterday: t('time.yesterday'),
+      tomorrow: t('time.tomorrow'),
+    }),
+    [t]
+  );
   const currency = useHouseholdCurrency();
   const styles = useMemo(
     () =>
@@ -174,35 +210,60 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = () => {
     [colors]
   );
   const [settlements, setSettlements] = useState<Settlement[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [selectedProofImage, setSelectedProofImage] = useState<string | null>(null);
   const [dateFilter, setDateFilter] = useState<DateFilter>('all');
-  const [listVisibleCount, setListVisibleCount] = useState(SETTLEMENTS_PAGE_SIZE);
+  const loadRequestIdRef = useRef(0);
+
+  const loadSettlements = useCallback(async () => {
+    if (!selectedHousehold) return;
+
+    const requestId = ++loadRequestIdRef.current;
+    const key = settlementHistoryKey(selectedHousehold._id, dateFilter);
+    const cached = getCached<SettlementsSnapshot>(key);
+    if (cached) {
+      setSettlements(cached.settlements);
+      setTotalCount(cached.total);
+    } else {
+      setSettlements([]);
+      setTotalCount(0);
+      setLoading(true);
+    }
+
+    try {
+      const snapshot = await dedupedFetch<SettlementsSnapshot>(key, async () => {
+        const raw = await settlementsApi.getSettlements(selectedHousehold._id, {
+          limit: SETTLEMENTS_PAGE_SIZE,
+          skip: 0,
+          fromDate: getDateFilterStart(dateFilter),
+        });
+        if (Array.isArray(raw)) {
+          return { settlements: raw, total: raw.length };
+        }
+        return { settlements: raw.items, total: raw.total };
+      });
+      if (requestId !== loadRequestIdRef.current) return;
+      setSettlements(snapshot.settlements);
+      setTotalCount(snapshot.total);
+    } catch (error) {
+      if (requestId !== loadRequestIdRef.current) return;
+      if (__DEV__) console.error('Failed to load settlements', error);
+      if (!cached) {
+        setSettlements([]);
+        setTotalCount(0);
+      }
+    } finally {
+      if (requestId === loadRequestIdRef.current) setLoading(false);
+    }
+  }, [selectedHousehold, dateFilter]);
 
   useEffect(() => {
     if (selectedHousehold) {
       loadSettlements();
     }
-  }, [selectedHousehold]);
-
-  useEffect(() => {
-    setListVisibleCount(SETTLEMENTS_PAGE_SIZE);
-  }, [settlements, dateFilter]);
-
-  const loadSettlements = async () => {
-    if (!selectedHousehold) return;
-
-    setLoading(true);
-    try {
-      const data = await settlementsApi.getSettlements(selectedHousehold._id);
-      setSettlements(data || []);
-    } catch (error) {
-      if (__DEV__) console.error('Failed to load settlements', error);
-      setSettlements([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [selectedHousehold, dateFilter, loadSettlements]);
 
   const getUserName = (userId: string): string => {
     if (!selectedHousehold) return 'Unknown';
@@ -216,48 +277,27 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = () => {
     return member?.avatarUrl;
   };
 
-  // Filter settlements by date range
-  const filteredSettlements = useMemo(() => {
-    if (dateFilter === 'all') {
-      return settlements;
+  const visibleSettlements = settlements;
+  const hasMoreSettlements = settlements.length < totalCount;
+
+  const loadMoreSettlements = useCallback(async () => {
+    if (!selectedHousehold || loadingMore || !hasMoreSettlements) return;
+    setLoadingMore(true);
+    try {
+      const raw = await settlementsApi.getSettlements(selectedHousehold._id, {
+        limit: SETTLEMENTS_PAGE_SIZE,
+        skip: settlements.length,
+        fromDate: getDateFilterStart(dateFilter),
+      });
+      if (Array.isArray(raw)) return;
+      setSettlements((prev) => [...prev, ...raw.items]);
+      setTotalCount(raw.total);
+    } catch (error) {
+      if (__DEV__) console.error('Failed to load more settlements', error);
+    } finally {
+      setLoadingMore(false);
     }
-
-    const now = new Date();
-    let cutoffDate: Date;
-
-    switch (dateFilter) {
-      case 'month':
-        cutoffDate = startOfMonth(now);
-        break;
-      case '3months':
-        cutoffDate = subMonths(now, 3);
-        break;
-      case '6months':
-        cutoffDate = subMonths(now, 6);
-        break;
-      case 'year':
-        cutoffDate = startOfYear(now);
-        break;
-      default:
-        return settlements;
-    }
-
-    return settlements.filter((settlement) => {
-      const settlementDate = parseISO(settlement.date);
-      return settlementDate >= cutoffDate;
-    });
-  }, [settlements, dateFilter]);
-
-  const visibleSettlements = useMemo(
-    () => filteredSettlements.slice(0, listVisibleCount),
-    [filteredSettlements, listVisibleCount]
-  );
-
-  const hasMoreSettlements = listVisibleCount < filteredSettlements.length;
-
-  const loadMoreSettlements = useCallback(() => {
-    setListVisibleCount((c) => c + SETTLEMENTS_PAGE_SIZE);
-  }, []);
+  }, [selectedHousehold, loadingMore, hasMoreSettlements, settlements.length, dateFilter]);
 
   if (!selectedHousehold || !user) {
     return (
@@ -325,17 +365,17 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = () => {
           <View style={styles.emptyContainer}>
             <AppText style={styles.loadingText}>{t('settlementHistory.loading')}</AppText>
           </View>
-        ) : filteredSettlements.length === 0 ? (
+        ) : settlements.length === 0 ? (
           <View style={styles.emptyContainer}>
             <EmptyState
               icon="receipt-outline"
               title={
-                settlements.length === 0
+                totalCount === 0
                   ? t('settlementHistory.noSettlements')
                   : t('settlementHistory.noSettlementsInPeriod')
               }
               message={
-                settlements.length === 0
+                totalCount === 0
                   ? t('settlementHistory.noSettlementsDescription')
                   : t('settlementHistory.tryDifferentPeriod')
               }
@@ -390,7 +430,9 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = () => {
                     <View style={styles.settlementDetails}>
                       <View style={styles.detailRow}>
                         <Ionicons name="calendar-outline" size={16} color={colors.textSecondary} />
-                        <AppText style={styles.detailText}>{formatDate(settlement.date)}</AppText>
+                        <AppText style={styles.detailText}>
+                          {formatDate(settlement.date, dateFnsLocale, relativeDayLabels)}
+                        </AppText>
                       </View>
                       {settlement.method ? (
                         <View style={styles.detailRow}>
@@ -425,9 +467,13 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = () => {
                 onPress={loadMoreSettlements}
                 activeOpacity={0.75}
               >
-                <AppText style={styles.loadMoreText}>
-                  {t('common.loadMore')} ({visibleSettlements.length}/{filteredSettlements.length})
-                </AppText>
+                {loadingMore ? (
+                  <AppText style={styles.loadMoreText}>{t('settlementHistory.loading')}</AppText>
+                ) : (
+                  <AppText style={styles.loadMoreText}>
+                    {t('common.loadMore')} ({visibleSettlements.length}/{totalCount})
+                  </AppText>
+                )}
               </TouchableOpacity>
             ) : null}
           </SettingsSection>

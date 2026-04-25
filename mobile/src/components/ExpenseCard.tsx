@@ -5,6 +5,8 @@ import { Expense } from '../api/expensesApi';
 import { formatCurrency } from '../utils/formatCurrency';
 import { useHouseholdCurrency } from '../utils/useHouseholdCurrency';
 import { formatDate, formatDateShort } from '../utils/dateHelpers';
+import { getDateFnsLocale } from '../utils/dateLocales';
+import { getExpenseCategoryLabel } from '../constants/expenseCategories';
 import { useThemeColors, fontSizes, fontWeights, radii, spacing, shadows } from '../theme';
 import { Avatar } from './ui/Avatar';
 import { SwipeableRow } from './SwipeableRow';
@@ -28,7 +30,16 @@ const ExpenseCardInner: React.FC<ExpenseCardProps> = ({
   onEdit,
 }) => {
   const colors = useThemeColors();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const dateLocale = React.useMemo(() => getDateFnsLocale(language), [language]);
+  const relativeDayLabels = React.useMemo(
+    () => ({
+      today: t('time.today'),
+      yesterday: t('time.yesterday'),
+      tomorrow: t('time.tomorrow'),
+    }),
+    [t]
+  );
   const currency = useHouseholdCurrency();
   const paidByName = expense.paidBy?.name || 'Unknown';
 
@@ -152,11 +163,11 @@ const ExpenseCardInner: React.FC<ExpenseCardProps> = ({
           <Avatar name={paidByName} uri={expense.paidBy?.avatarUrl} size={20} />
           <View style={styles.paidByContainer}>
             <AppText style={styles.paidBy}>
-              {t('expenses.paidBy')} {paidByName} • {formatDate(expense.date)}
+              {t('expenses.paidBy')} {paidByName} • {formatDate(expense.date, dateLocale, relativeDayLabels)}
             </AppText>
             {expense.createdAt && (
               <AppText style={styles.sinceDate}>
-                {t('time.addedSince')} {formatDateShort(expense.createdAt)}
+                {t('time.addedSince')} {formatDateShort(expense.createdAt, dateLocale)}
               </AppText>
             )}
           </View>
@@ -177,7 +188,7 @@ const ExpenseCardInner: React.FC<ExpenseCardProps> = ({
         )}
       </View>
       {expense.category && (
-        <AppText style={styles.category}>{t(`categories.${expense.category.toLowerCase().replace(/[^a-z]/g, '')}`) !== `categories.${expense.category.toLowerCase().replace(/[^a-z]/g, '')}` ? t(`categories.${expense.category.toLowerCase().replace(/[^a-z]/g, '')}`) : expense.category}</AppText>
+        <AppText style={styles.category}>{getExpenseCategoryLabel(t, expense.category)}</AppText>
       )}
       <AppText style={styles.participants}>
         {t('expenses.splitAmong', { count: expense.participants.length })}

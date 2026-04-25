@@ -9,6 +9,8 @@
  * device locale and the ISO code.
  */
 
+import type { LanguageCode } from '../locales';
+
 export interface CurrencyOption {
   code: string;
   name: string;
@@ -78,6 +80,27 @@ export const getCurrencyOption = (code: string | null | undefined): CurrencyOpti
  * locale. Falls back to `USD` when the locale doesn't map to anything we
  * support. Only used as a picker default; the user can always change it.
  */
+const BCP47_FOR_APP_LANG: Record<LanguageCode, string> = {
+  en: 'en-US',
+  es: 'es',
+  fr: 'fr',
+  de: 'de',
+  tr: 'tr',
+};
+
+/** Localized currency name for the app language (falls back to built-in English label). */
+export const getLocalizedCurrencyName = (code: string, language: LanguageCode): string => {
+  const upper = (code || '').toUpperCase();
+  const fallback = getCurrencyOption(upper).name;
+  try {
+    const tag = BCP47_FOR_APP_LANG[language] ?? 'en-US';
+    const dn = new Intl.DisplayNames([tag, 'en-US'], { type: 'currency' });
+    return dn.of(upper) || fallback;
+  } catch {
+    return fallback;
+  }
+};
+
 export const guessDefaultCurrencyFromLocale = (locale?: string | null): string => {
   if (!locale) return 'USD';
   // Locale tags look like `en-US`, `de-DE`, `tr-TR`, `az-Latn-AZ`, ...

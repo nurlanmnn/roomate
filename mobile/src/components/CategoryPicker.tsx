@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Modal, ScrollView, Pressable } from 'react-native';
 import { AppText } from './AppText';
 import { Ionicons } from '@expo/vector-icons';
-import { EXPENSE_CATEGORIES } from '../constants/expenseCategories';
+import { EXPENSE_CATEGORIES, getExpenseCategoryLabel } from '../constants/expenseCategories';
 import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows } from '../theme';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -142,12 +142,14 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
             <View style={[styles.iconContainer, { backgroundColor: selectedCat.color + '20' }]}>
               <Ionicons name={selectedCat.icon} size={20} color={selectedCat.color} />
             </View>
-            <AppText style={styles.selectedText}>{selectedCat.name}</AppText>
+            <AppText style={styles.selectedText}>
+              {getExpenseCategoryLabel(t, selectedCat.id)}
+            </AppText>
             <Ionicons name="chevron-down-outline" size={20} color={colors.textSecondary} />
           </View>
         ) : (
           <View style={styles.placeholderContainer}>
-            <AppText style={styles.placeholderText}>Select category (optional)</AppText>
+            <AppText style={styles.placeholderText}>{t('expenses.categoryPickerPlaceholder')}</AppText>
             <Ionicons name="chevron-down-outline" size={20} color={colors.textSecondary} />
           </View>
         )}
@@ -184,7 +186,7 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
                   <View style={[styles.iconContainer, { backgroundColor: colors.surfaceAlt }]}>
                     <Ionicons name="close-circle-outline" size={20} color={colors.textSecondary} />
                   </View>
-                  <AppText style={styles.categoryText}>Clear selection</AppText>
+                  <AppText style={styles.categoryText}>{t('expenses.clearCategorySelection')}</AppText>
                 </TouchableOpacity>
               )}
               
@@ -200,7 +202,7 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
                   <View style={[styles.iconContainer, { backgroundColor: category.color + '20' }]}>
                     <Ionicons name={category.icon} size={20} color={category.color} />
                   </View>
-                  <AppText style={styles.categoryText}>{category.name}</AppText>
+                  <AppText style={styles.categoryText}>{getExpenseCategoryLabel(t, category.id)}</AppText>
                   {selectedCategory === category.id && (
                     <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
                   )}

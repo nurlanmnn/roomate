@@ -3,8 +3,10 @@ import { View, StyleSheet } from 'react-native';
 import { AppText } from './AppText';
 import { Event } from '../api/eventsApi';
 import { formatDateTime, formatTime } from '../utils/dateHelpers';
+import { getDateFnsLocale } from '../utils/dateLocales';
 import { useThemeColors, fontSizes, fontWeights, radii, spacing, shadows } from '../theme';
 import { Ionicons } from '@expo/vector-icons';
+import { useLanguage } from '../context/LanguageContext';
 
 interface EventCardProps {
   event: Event;
@@ -12,6 +14,8 @@ interface EventCardProps {
 
 export const EventCard: React.FC<EventCardProps> = ({ event }) => {
   const colors = useThemeColors();
+  const { language } = useLanguage();
+  const dateLocale = React.useMemo(() => getDateFnsLocale(language), [language]);
   const typeIcons: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
     bill: 'receipt-outline',
     cleaning: 'sparkles-outline',
@@ -70,8 +74,8 @@ export const EventCard: React.FC<EventCardProps> = ({ event }) => {
         <View style={styles.content}>
           <AppText style={styles.title} numberOfLines={2} ellipsizeMode="tail">{event.title}</AppText>
           <AppText style={styles.time}>
-            {formatDateTime(event.date)}
-            {event.endDate && ` - ${formatTime(event.endDate)}`}
+            {formatDateTime(event.date, dateLocale)}
+            {event.endDate && ` - ${formatTime(event.endDate, dateLocale)}`}
           </AppText>
         </View>
       </View>

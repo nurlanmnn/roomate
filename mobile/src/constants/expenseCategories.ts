@@ -32,3 +32,14 @@ export const getCategoryByName = (name: string): ExpenseCategory | undefined => 
   );
 };
 
+/** Resolved label for UI using `categories.<id>` in locale files. */
+export const getExpenseCategoryLabel = (
+  t: (scope: string, options?: object) => string,
+  categoryRaw: string | undefined | null
+): string => {
+  if (!categoryRaw) return '';
+  const resolved = getCategoryById(categoryRaw) ?? getCategoryByName(categoryRaw);
+  const id = resolved?.id ?? categoryRaw.toLowerCase().trim().replace(/\s+/g, '');
+  return t(`categories.${id}`);
+};
+

@@ -25,7 +25,13 @@ import { ExpenseCard } from '../../components/ExpenseCard';
 import { BalanceSummary } from '../../components/BalanceSummary';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
 import { ExpenseFilters, ExpenseFilters as ExpenseFiltersType } from '../../components/ExpenseFilters';
-import { EXPENSE_CATEGORIES, getCategoryById, getCategoryByName } from '../../constants/expenseCategories';
+import {
+  EXPENSE_CATEGORIES,
+  getCategoryById,
+  getCategoryByName,
+  getExpenseCategoryLabel,
+} from '../../constants/expenseCategories';
+import { toBcp47Locale } from '../../utils/dateLocales';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows, TAB_BAR_HEIGHT } from '../../theme';
@@ -54,7 +60,7 @@ const expensesInvalidatePrefix = (householdId: string) => `expenses:${householdI
 export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { selectedHousehold, setSelectedHousehold } = useHousehold();
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const colors = useThemeColors();
   const styles = useMemo(
     () =>
@@ -398,6 +404,8 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         // optimistic removal above.
         invalidateCache(expensesInvalidatePrefix(selectedHousehold._id));
         invalidateCache(`home:dashboard:${selectedHousehold._id}`);
+        invalidateCache(`settle-up:${selectedHousehold._id}`);
+        invalidateCache(`household:${selectedHousehold._id}:transaction-count`);
         loadData();
       } catch (error: any) {
         // Roll back.
@@ -433,8 +441,7 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
 
   const getExpenseCategoryName = (category?: string): string | undefined => {
     if (!category) return undefined;
-    if (EXPENSE_CATEGORIES.some((c) => c.id === category)) return getCategoryById(category)?.name;
-    return category;
+    return getExpenseCategoryLabel(t, category);
   };
 
   const filteredAndSortedExpenses = useMemo(() => {
@@ -530,9 +537,13 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
 
       if (filters.groupBy === 'date') {
         const date = parseISO(expense.date);
-        key = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        key = date.toLocaleDateString(toBcp47Locale(language), {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        });
       } else if (filters.groupBy === 'category') {
-        key = getExpenseCategoryName(expense.category) || 'Uncategorized';
+        key = getExpenseCategoryName(expense.category) || t('categories.uncategorized');
       } else if (filters.groupBy === 'person') {
         const paidById =
           typeof expense.paidBy === 'string'
@@ -550,7 +561,7 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     });
 
     return groups;
-  }, [displayedFilteredExpenses, filters.groupBy]);
+  }, [displayedFilteredExpenses, filters.groupBy, language, t]);
 
   const listRows: ExpenseListRow[] = useMemo(() => {
     if (filters.groupBy === 'none') {

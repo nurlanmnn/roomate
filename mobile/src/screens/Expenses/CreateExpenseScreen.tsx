@@ -34,6 +34,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '../../components/AppText';
 import { useLanguage } from '../../context/LanguageContext';
 import { invalidateCache, updateCached } from '../../utils/queryCache';
+import { toBcp47Locale } from '../../utils/dateLocales';
 
 /** Mirrors the snapshot shape cached by ExpensesScreen — keep in sync. */
 type ExpensesSnapshot = {
@@ -54,7 +55,8 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
   const { user } = useAuth();
   const colors = useThemeColors();
   const { theme } = useTheme();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const intlLocale = useMemo(() => toBcp47Locale(language), [language]);
   const insets = useSafeAreaInsets();
   const currency = useHouseholdCurrency();
   const currencySymbol = getCurrencyOption(currency).symbol;
@@ -858,6 +860,8 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
       // Home dashboard aggregates (spending totals, insights) need the server
       // to recompute — drop so the next focus refetches fresh numbers.
       invalidateCache(`home:dashboard:${selectedHousehold._id}`);
+      invalidateCache(`settle-up:${selectedHousehold._id}`);
+      invalidateCache(`household:${selectedHousehold._id}:transaction-count`);
       navigation.goBack();
     } catch (error: any) {
       Alert.alert(t('common.error'), error.response?.data?.error || t('alerts.somethingWentWrong'));
@@ -998,7 +1002,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
                   activeOpacity={0.75}
                 >
                   <AppText style={styles.dateText}>
-                    {date.toLocaleDateString('en-US', {
+                    {date.toLocaleDateString(intlLocale, {
                       year: 'numeric',
                       month: 'long',
                       day: 'numeric',

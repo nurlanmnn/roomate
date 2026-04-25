@@ -30,6 +30,17 @@ const householdParamsSchema = z.object({
   householdId: objectIdSchema,
 });
 
+const householdSettlementsQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+  skip: z.coerce.number().int().min(0).max(100000).optional(),
+  fromDate: isoDateSchema.optional(),
+  toDate: isoDateSchema.optional(),
+  toUserId: objectIdSchema.optional(),
+  proofOnly: z
+    .preprocess((v) => (v === 'true' || v === true ? true : v === 'false' || v === false ? false : v), z.boolean())
+    .optional(),
+});
+
 // GET /settlements/household/:householdId
 router.get('/household/:householdId', authMiddleware, async (req: Request, res: Response) => {
   try {
@@ -49,12 +60,47 @@ router.get('/household/:householdId', authMiddleware, async (req: Request, res: 
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    const settlements = await Settlement.find({
-      householdId,
-    })
+    const query = householdSettlementsQuerySchema.safeParse(req.query);
+    if (!query.success) {
+      return res.status(400).json({ error: 'Invalid query', details: query.error.flatten() });
+    }
+
+    const { limit, skip, fromDate, toDate, toUserId, proofOnly } = query.data;
+    const filter: Record<string, unknown> = { householdId };
+
+    if (fromDate || toDate) {
+      filter.date = {
+        ...(fromDate ? { $gte: new Date(fromDate) } : {}),
+        ...(toDate ? { $lte: new Date(toDate) } : {}),
+      };
+    }
+    if (toUserId) {
+      filter.toUserId = toUserId;
+    }
+    if (proofOnly) {
+      filter.proofImageUrl = { $exists: true, $nin: [null, ''] };
+    }
+
+    if (limit !== undefined) {
+      const [items, total] = await Promise.all([
+        Settlement.find(filter)
+          .populate('fromUserId', 'name email avatarUrl')
+          .populate('toUserId', 'name email avatarUrl')
+          .sort({ date: -1 })
+          .skip(skip ?? 0)
+          .limit(limit)
+          .exec(),
+        Settlement.countDocuments(filter),
+      ]);
+      res.json({ items, total });
+      return;
+    }
+
+    const settlements = await Settlement.find(filter)
       .populate('fromUserId', 'name email avatarUrl')
       .populate('toUserId', 'name email avatarUrl')
-      .sort({ date: -1 });
+      .sort({ date: -1 })
+      .exec();
 
     res.json(settlements);
   } catch (error) {

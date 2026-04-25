@@ -13,6 +13,7 @@ import {
   Image,
   Keyboard,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreenShell';
@@ -29,7 +30,7 @@ import { SettingsRow } from '../../components/Settings/SettingsRow';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { useHouseholdCurrency } from '../../utils/useHouseholdCurrency';
-import { invalidateCache } from '../../utils/queryCache';
+import { dedupedFetch, getCached, invalidateCache } from '../../utils/queryCache';
 import {
   alertOpenSettingsForPhotoLibrary,
   ensureMediaLibraryPermission,
@@ -42,6 +43,15 @@ import { useLanguage } from '../../context/LanguageContext';
 
 const RECEIPTS_WITH_PROOF_PAGE_SIZE = 5;
 
+type SettleUpSnapshot = {
+  balances: PairwiseBalance[];
+  receivedSettlements: Settlement[];
+  receivedSettlementsTotal: number;
+};
+
+const settleUpKey = (householdId: string, userId: string) => `settle-up:${householdId}:${userId}`;
+const settlementsInvalidatePrefix = (householdId: string) => `settlements:${householdId}`;
+
 export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { selectedHousehold } = useHousehold();
   const { user } = useAuth();
@@ -51,7 +61,9 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   const currency = useHouseholdCurrency();
   const [balances, setBalances] = useState<PairwiseBalance[]>([]);
   const [settlements, setSettlements] = useState<Settlement[]>([]);
+  const [receivedSettlementsTotal, setReceivedSettlementsTotal] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [loadingMoreReceipts, setLoadingMoreReceipts] = useState(false);
   const [settleModalVisible, setSettleModalVisible] = useState(false);
   const [forgiveModalVisible, setForgiveModalVisible] = useState(false);
   const [selectedBalance, setSelectedBalance] = useState<PairwiseBalance | null>(null);
@@ -62,7 +74,6 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   const [method, setMethod] = useState('');
   const [note, setNote] = useState('');
   const [proofImage, setProofImage] = useState<string | null>(null);
-  const [receiptsVisibleCount, setReceiptsVisibleCount] = useState(RECEIPTS_WITH_PROOF_PAGE_SIZE);
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -391,22 +402,50 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   }), [colors]);
 
   useEffect(() => {
-    if (selectedHousehold) {
+    if (selectedHousehold && user) {
       loadBalances();
     }
-  }, [selectedHousehold]);
+  }, [selectedHousehold, user]);
 
   const loadBalances = async () => {
-    if (!selectedHousehold) return;
+    if (!selectedHousehold || !user) return;
 
-    setLoading(true);
+    const key = settleUpKey(selectedHousehold._id, user._id);
+    const cached = getCached<SettleUpSnapshot>(key);
+    if (cached) {
+      setBalances(cached.balances);
+      setSettlements(cached.receivedSettlements);
+      setReceivedSettlementsTotal(cached.receivedSettlementsTotal);
+    } else {
+      setLoading(true);
+    }
+
     try {
-      const [balancesData, settlementsData] = await Promise.all([
-        expensesApi.getBalances(selectedHousehold._id),
-        settlementsApi.getSettlements(selectedHousehold._id),
-      ]);
-      setBalances(balancesData);
-      setSettlements(settlementsData || []);
+      const snapshot = await dedupedFetch<SettleUpSnapshot>(key, async () => {
+        const [balancesData, settlementsRaw] = await Promise.all([
+          expensesApi.getBalances(selectedHousehold._id),
+          settlementsApi.getSettlements(selectedHousehold._id, {
+            limit: RECEIPTS_WITH_PROOF_PAGE_SIZE,
+            skip: 0,
+            toUserId: user._id,
+            proofOnly: true,
+          }),
+        ]);
+        const receivedSettlements = Array.isArray(settlementsRaw)
+          ? settlementsRaw
+          : settlementsRaw.items;
+        const receivedSettlementsTotal = Array.isArray(settlementsRaw)
+          ? settlementsRaw.length
+          : settlementsRaw.total;
+        return {
+          balances: balancesData,
+          receivedSettlements,
+          receivedSettlementsTotal,
+        };
+      });
+      setBalances(snapshot.balances);
+      setSettlements(snapshot.receivedSettlements);
+      setReceivedSettlementsTotal(snapshot.receivedSettlementsTotal);
     } catch (error) {
       if (__DEV__) console.error('Failed to load balances:', error);
     } finally {
@@ -506,6 +545,11 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                 householdId: selectedHousehold._id,
                 otherUserId: balance.toUserId,
               });
+              invalidateCache(`settle-up:${selectedHousehold._id}`);
+              invalidateCache(settlementsInvalidatePrefix(selectedHousehold._id));
+              invalidateCache(`expenses:${selectedHousehold._id}`);
+              invalidateCache(`home:dashboard:${selectedHousehold._id}`);
+              invalidateCache(`household:${selectedHousehold._id}:transaction-count`);
               Alert.alert(t('common.success'), t('alerts.balanceNetted'));
               loadBalances();
             } catch (error: any) {
@@ -539,6 +583,9 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
       // Balances + home summary are now stale.
       invalidateCache(`expenses:${selectedHousehold._id}`);
       invalidateCache(`home:dashboard:${selectedHousehold._id}`);
+      invalidateCache(`settle-up:${selectedHousehold._id}`);
+      invalidateCache(settlementsInvalidatePrefix(selectedHousehold._id));
+      invalidateCache(`household:${selectedHousehold._id}:transaction-count`);
       setSettleModalVisible(false);
       setProofImage(null);
       loadBalances();
@@ -558,20 +605,35 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [settlements, user]);
 
-  useEffect(() => {
-    setReceiptsVisibleCount(RECEIPTS_WITH_PROOF_PAGE_SIZE);
-  }, [settlements]);
+  const receivedSettlements = receivedSettlementsAll;
 
-  const receivedSettlements = useMemo(
-    () => receivedSettlementsAll.slice(0, receiptsVisibleCount),
-    [receivedSettlementsAll, receiptsVisibleCount]
-  );
+  const hasMoreReceipts = receivedSettlements.length < receivedSettlementsTotal;
 
-  const hasMoreReceipts = receiptsVisibleCount < receivedSettlementsAll.length;
-
-  const loadMoreReceipts = useCallback(() => {
-    setReceiptsVisibleCount((c) => c + RECEIPTS_WITH_PROOF_PAGE_SIZE);
-  }, []);
+  const loadMoreReceipts = useCallback(async () => {
+    if (!selectedHousehold || !user || loadingMoreReceipts || !hasMoreReceipts) return;
+    setLoadingMoreReceipts(true);
+    try {
+      const raw = await settlementsApi.getSettlements(selectedHousehold._id, {
+        limit: RECEIPTS_WITH_PROOF_PAGE_SIZE,
+        skip: receivedSettlements.length,
+        toUserId: user._id,
+        proofOnly: true,
+      });
+      if (Array.isArray(raw)) return;
+      setSettlements((prev) => [...prev, ...raw.items]);
+      setReceivedSettlementsTotal(raw.total);
+    } catch (error) {
+      if (__DEV__) console.error('Failed to load more receipt settlements:', error);
+    } finally {
+      setLoadingMoreReceipts(false);
+    }
+  }, [
+    selectedHousehold,
+    user,
+    loadingMoreReceipts,
+    hasMoreReceipts,
+    receivedSettlements.length,
+  ]);
 
   if (!selectedHousehold || !user) {
     return (
@@ -598,7 +660,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   const fullySettled =
     userOwedBalances.length === 0 &&
     userOwedToBalances.length === 0 &&
-    receivedSettlementsAll.length === 0;
+    receivedSettlementsTotal === 0;
   const showInitialLoading = loading && balances.length === 0 && settlements.length === 0;
   const showGlobalEmpty = !loading && fullySettled;
 
@@ -639,6 +701,9 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
       });
       invalidateCache(`expenses:${selectedHousehold._id}`);
       invalidateCache(`home:dashboard:${selectedHousehold._id}`);
+      invalidateCache(`settle-up:${selectedHousehold._id}`);
+      invalidateCache(settlementsInvalidatePrefix(selectedHousehold._id));
+      invalidateCache(`household:${selectedHousehold._id}:transaction-count`);
       setForgiveModalVisible(false);
       loadBalances();
       Alert.alert(t('common.success'), t('alerts.debtForgiven', { amount: formatCurrency(amountToForgive, currency), user: fromUserName }));
@@ -861,11 +926,16 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                     <TouchableOpacity
                       style={styles.loadMoreReceipts}
                       onPress={loadMoreReceipts}
+                      disabled={loadingMoreReceipts}
                       activeOpacity={0.75}
                     >
-                      <AppText style={styles.loadMoreReceiptsText}>
-                        {t('common.loadMore')} ({receivedSettlements.length}/{receivedSettlementsAll.length})
-                      </AppText>
+                      {loadingMoreReceipts ? (
+                        <ActivityIndicator color={colors.primary} />
+                      ) : (
+                        <AppText style={styles.loadMoreReceiptsText}>
+                          {t('common.loadMore')} ({receivedSettlements.length}/{receivedSettlementsTotal})
+                        </AppText>
+                      )}
                     </TouchableOpacity>
                   ) : null}
                 </SettingsSection>

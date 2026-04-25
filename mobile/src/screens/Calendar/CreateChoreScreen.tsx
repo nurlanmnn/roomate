@@ -22,6 +22,7 @@ import { PrimaryButton } from '../../components/PrimaryButton';
 import { useThemeColors, useTheme, fontSizes, fontWeights, spacing, radii, shadows } from '../../theme';
 import { Ionicons } from '@expo/vector-icons';
 import { startOfWeek, format } from 'date-fns';
+import { getDateFnsLocale } from '../../utils/dateLocales';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { invalidateCache } from '../../utils/queryCache';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,7 +32,8 @@ export const CreateChoreScreen: React.FC<{ navigation: any; route: any }> = ({ n
   const isEditing = !!editingChore;
 
   const { selectedHousehold } = useHousehold();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const dateFnsLocale = useMemo(() => getDateFnsLocale(language), [language]);
   const insets = useSafeAreaInsets();
   const colors = useThemeColors();
   const { theme } = useTheme();
@@ -241,7 +243,9 @@ export const CreateChoreScreen: React.FC<{ navigation: any; route: any }> = ({ n
             onPress={() => setShowDatePicker((prev) => !prev)}
           >
             <Ionicons name="calendar-outline" size={20} color={colors.primary} />
-            <Text style={styles.dateButtonText}>{format(startDate, 'EEEE, MMM d, yyyy')}</Text>
+            <Text style={styles.dateButtonText}>
+              {format(startDate, 'EEEE, MMM d, yyyy', { locale: dateFnsLocale })}
+            </Text>
           </TouchableOpacity>
           {showDatePicker && (
             <DateTimePicker

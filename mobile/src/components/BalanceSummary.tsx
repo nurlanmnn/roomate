@@ -5,6 +5,7 @@ import { PairwiseBalance } from '../api/expensesApi';
 import { formatCurrency } from '../utils/formatCurrency';
 import { useHouseholdCurrency } from '../utils/useHouseholdCurrency';
 import { formatDateShort } from '../utils/dateHelpers';
+import { getDateFnsLocale } from '../utils/dateLocales';
 import { useThemeColors, fontSizes, fontWeights, radii, spacing, shadows } from '../theme';
 import { Avatar } from './ui/Avatar';
 import { useLanguage } from '../context/LanguageContext';
@@ -29,7 +30,8 @@ export const BalanceSummary: React.FC<BalanceSummaryProps> = ({
   variant = 'card',
 }) => {
   const colors = useThemeColors();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const dateLocale = React.useMemo(() => getDateFnsLocale(language), [language]);
   const currency = useHouseholdCurrency();
   const [visibleRows, setVisibleRows] = useState(BALANCE_ROWS_PAGE_SIZE);
   const userBalances = balances.filter(b => b.fromUserId === currentUserId || b.toUserId === currentUserId);
@@ -203,7 +205,7 @@ export const BalanceSummary: React.FC<BalanceSummaryProps> = ({
                 )}
                 {balance.sinceDate && (
                   <AppText style={styles.sinceDate}>
-                    {t('time.since')} {formatDateShort(balance.sinceDate)}
+                    {t('time.since')} {formatDateShort(balance.sinceDate, dateLocale)}
                   </AppText>
                 )}
               </View>

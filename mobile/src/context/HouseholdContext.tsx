@@ -3,6 +3,7 @@ import { Household } from '../api/householdsApi';
 import { expensesApi } from '../api/expensesApi';
 import { eventsApi } from '../api/eventsApi';
 import { shoppingApi } from '../api/shoppingApi';
+import { settlementsApi } from '../api/settlementsApi';
 import { prefetch } from '../utils/queryCache';
 
 interface HouseholdContextType {
@@ -33,6 +34,13 @@ const warmHomeDashboard = (householdId: string) => {
       events: upcomingEvents,
       shoppingStats: shoppingStatsData,
     };
+  });
+  prefetch(`settlements:${householdId}:history:all:page0`, async () => {
+    const raw = await settlementsApi.getSettlements(householdId, { limit: 5, skip: 0 });
+    if (Array.isArray(raw)) {
+      return { settlements: raw, total: raw.length };
+    }
+    return { settlements: raw.items, total: raw.total };
   });
 };
 

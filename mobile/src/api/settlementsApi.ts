@@ -34,9 +34,28 @@ export interface NetBalanceResponse {
   newNetBalance: number;
 }
 
+export interface PaginatedSettlements {
+  items: Settlement[];
+  total: number;
+}
+
+export interface GetSettlementsOptions {
+  limit?: number;
+  skip?: number;
+  fromDate?: string;
+  toDate?: string;
+  toUserId?: string;
+  proofOnly?: boolean;
+}
+
 export const settlementsApi = {
-  getSettlements: async (householdId: string): Promise<Settlement[]> => {
-    const response = await apiClient.instance.get(`/settlements/household/${householdId}`);
+  getSettlements: async (
+    householdId: string,
+    options?: GetSettlementsOptions
+  ): Promise<Settlement[] | PaginatedSettlements> => {
+    const response = await apiClient.instance.get(`/settlements/household/${householdId}`, {
+      params: options,
+    });
     return response.data;
   },
 

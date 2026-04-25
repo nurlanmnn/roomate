@@ -2,7 +2,12 @@ import React, { useMemo, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Modal, FlatList, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
-import { SUPPORTED_CURRENCIES, getCurrencyOption, CurrencyOption } from '../constants/currencies';
+import {
+  SUPPORTED_CURRENCIES,
+  getCurrencyOption,
+  getLocalizedCurrencyName,
+  CurrencyOption,
+} from '../constants/currencies';
 import { useLanguage } from '../context/LanguageContext';
 import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows } from '../theme';
 
@@ -21,23 +26,27 @@ export const CurrencyPicker: React.FC<CurrencyPickerProps> = ({
   lockedHint,
 }) => {
   const colors = useThemeColors();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [modalVisible, setModalVisible] = useState(false);
   const [search, setSearch] = useState('');
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const selected = getCurrencyOption(value);
+  const selectedDisplayName = getLocalizedCurrencyName(selected.code, language);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return SUPPORTED_CURRENCIES;
-    return SUPPORTED_CURRENCIES.filter(
-      (c) =>
+    return SUPPORTED_CURRENCIES.filter((c) => {
+      const localized = getLocalizedCurrencyName(c.code, language).toLowerCase();
+      return (
         c.code.toLowerCase().includes(q) ||
         c.name.toLowerCase().includes(q) ||
+        localized.includes(q) ||
         c.symbol.toLowerCase().includes(q)
-    );
-  }, [search]);
+      );
+    });
+  }, [search, language]);
 
   const open = () => {
     if (disabled) return;
@@ -54,6 +63,7 @@ export const CurrencyPicker: React.FC<CurrencyPickerProps> = ({
 
   const renderRow = ({ item }: { item: CurrencyOption }) => {
     const isSelected = item.code === value;
+    const displayName = getLocalizedCurrencyName(item.code, language);
     return (
       <TouchableOpacity
         style={[styles.row, isSelected && styles.rowSelected]}
@@ -64,7 +74,7 @@ export const CurrencyPicker: React.FC<CurrencyPickerProps> = ({
           <AppText style={styles.symbolText}>{item.symbol}</AppText>
         </View>
         <View style={styles.rowText}>
-          <AppText style={styles.rowName}>{item.name}</AppText>
+          <AppText style={styles.rowName}>{displayName}</AppText>
           <AppText style={styles.rowCode}>{item.code}</AppText>
         </View>
         {isSelected && <Ionicons name="checkmark-circle" size={22} color={colors.primary} />}
@@ -84,7 +94,7 @@ export const CurrencyPicker: React.FC<CurrencyPickerProps> = ({
             <AppText style={styles.symbolText}>{selected.symbol}</AppText>
           </View>
           <View style={styles.rowText}>
-            <AppText style={styles.rowName}>{selected.name}</AppText>
+            <AppText style={styles.rowName}>{selectedDisplayName}</AppText>
             <AppText style={styles.rowCode}>{selected.code}</AppText>
           </View>
           {!disabled && (

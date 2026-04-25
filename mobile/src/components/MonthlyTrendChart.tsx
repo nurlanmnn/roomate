@@ -5,6 +5,7 @@ import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows } from 
 import { formatCompactCurrency, formatCurrency } from '../utils/formatCurrency';
 import { useHouseholdCurrency } from '../utils/useHouseholdCurrency';
 import { useLanguage } from '../context/LanguageContext';
+import { toBcp47Locale } from '../utils/dateLocales';
 
 const screenWidth = Dimensions.get('window').width;
 const PLOT_HEIGHT = 200;
@@ -34,7 +35,7 @@ const clamp = (value: number, min: number, max: number): number => {
 
 const MonthlyTrendChartComponent = ({ monthlyTrend }: MonthlyTrendChartProps) => {
   const colors = useThemeColors();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const currency = useHouseholdCurrency();
   const [selectedRange, setSelectedRange] = useState<MonthRange>(6);
   const [barAnimations, setBarAnimations] = useState<Animated.Value[]>([]);
@@ -274,8 +275,8 @@ const MonthlyTrendChartComponent = ({ monthlyTrend }: MonthlyTrendChartProps) =>
 
   const formatMonthLabel = (monthKey: string): string => {
     const [year, month] = monthKey.split('-');
-    const date = new Date(parseInt(year), parseInt(month) - 1);
-    return date.toLocaleDateString('en-US', { month: 'short' });
+    const date = new Date(parseInt(year, 10), parseInt(month, 10) - 1);
+    return date.toLocaleDateString(toBcp47Locale(language), { month: 'short' });
   };
 
   // Format Y-axis values (no decimals unless needed)

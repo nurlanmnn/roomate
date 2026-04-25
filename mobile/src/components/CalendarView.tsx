@@ -18,6 +18,7 @@ import {
   isToday,
   parseISO,
 } from 'date-fns';
+import { getDateFnsLocale } from '../utils/dateLocales';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const DAY_SIZE = (SCREEN_WIDTH - spacing.xl * 2 - spacing.xs * 6) / 7;
@@ -42,8 +43,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   embedded = false,
 }) => {
   const colors = useThemeColors();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const dateFnsLocale = useMemo(() => getDateFnsLocale(language), [language]);
 
   const styles = useMemo(
     () =>
@@ -243,7 +245,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           <Ionicons name="chevron-back" size={20} color={colors.text} />
         </TouchableOpacity>
         <AppText style={styles.monthTitle}>
-          {format(currentMonth, 'MMMM yyyy')}
+          {format(currentMonth, 'MMMM yyyy', { locale: dateFnsLocale })}
         </AppText>
         <TouchableOpacity style={styles.navButton} onPress={goToNextMonth}>
           <Ionicons name="chevron-forward" size={20} color={colors.text} />

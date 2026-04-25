@@ -17,7 +17,8 @@ import { FormTextInput } from './FormTextInput';
 import { PrimaryButton } from './PrimaryButton';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { EXPENSE_CATEGORIES } from '../constants/expenseCategories';
+import { EXPENSE_CATEGORIES, getExpenseCategoryLabel } from '../constants/expenseCategories';
+import { toBcp47Locale } from '../utils/dateLocales';
 import { useThemeColors, useTheme, fontSizes, fontWeights, spacing, radii, shadows } from '../theme';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -52,7 +53,7 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
 }) => {
   const colors = useThemeColors();
   const { theme } = useTheme();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const insets = useSafeAreaInsets();
   const filterScrollRef = useRef<ScrollView>(null);
   const filterScrollYRef = useRef(0);
@@ -464,7 +465,7 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
                         }}
                       >
                         <Ionicons name={cat.icon} size={20} color={cat.color} />
-                        <AppText style={styles.optionText}>{cat.name}</AppText>
+                        <AppText style={styles.optionText}>{getExpenseCategoryLabel(t, cat.id)}</AppText>
                         {filters.category === cat.id && (
                           <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
                         )}
@@ -585,7 +586,9 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
                     >
                       <Ionicons name="calendar-outline" size={18} color={colors.textSecondary} />
                       <AppText style={styles.dateButtonText}>
-                        {filters.dateFrom ? filters.dateFrom.toLocaleDateString() : t('time.from')}
+                        {filters.dateFrom
+                          ? filters.dateFrom.toLocaleDateString(toBcp47Locale(language))
+                          : t('time.from')}
                       </AppText>
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -613,7 +616,9 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
                     >
                       <Ionicons name="calendar-outline" size={18} color={colors.textSecondary} />
                       <AppText style={styles.dateButtonText}>
-                        {filters.dateTo ? filters.dateTo.toLocaleDateString() : t('time.to')}
+                        {filters.dateTo
+                          ? filters.dateTo.toLocaleDateString(toBcp47Locale(language))
+                          : t('time.to')}
                       </AppText>
                     </TouchableOpacity>
                   </View>
@@ -655,7 +660,9 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
                     onPress={() => setActivePicker('category')}
                   >
                     <AppText style={styles.pickerButtonText}>
-                      {filters.category ? EXPENSE_CATEGORIES.find(c => c.id === filters.category)?.name : t('expenses.allCategories')}
+                      {filters.category
+                        ? getExpenseCategoryLabel(t, filters.category)
+                        : t('expenses.allCategories')}
                     </AppText>
                     <Ionicons name="chevron-forward-outline" size={20} color={colors.textSecondary} />
                   </TouchableOpacity>

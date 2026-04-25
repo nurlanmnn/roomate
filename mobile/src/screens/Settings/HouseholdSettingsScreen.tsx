@@ -19,7 +19,7 @@ import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { householdsApi, getOwnerIdString, HouseholdMember } from '../../api/householdsApi';
-import { invalidateCache } from '../../utils/queryCache';
+import { dedupedFetch, getCached, invalidateCache } from '../../utils/queryCache';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
 import { SettingsSection } from '../../components/Settings/SettingsSection';
 import { SettingsGroupCard } from '../../components/Settings/SettingsGroupCard';
@@ -47,6 +47,9 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
     null
   );
   const [savingCurrency, setSavingCurrency] = useState(false);
+  const txCountKey = selectedHousehold?._id
+    ? `household:${selectedHousehold._id}:transaction-count`
+    : null;
 
   useEffect(() => {
     if (selectedHousehold && user) {
@@ -68,9 +71,18 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
       setTxCount(null);
       return;
     }
-    setTxCount(null);
-    householdsApi
-      .getTransactionCount(selectedHousehold._id)
+    const cached = getCached<{ expenseCount: number; settlementCount: number }>(
+      `household:${selectedHousehold._id}:transaction-count`
+    );
+    if (cached) {
+      setTxCount(cached);
+    } else {
+      setTxCount(null);
+    }
+    dedupedFetch(
+      `household:${selectedHousehold._id}:transaction-count`,
+      () => householdsApi.getTransactionCount(selectedHousehold._id)
+    )
       .then((res) => {
         if (!cancelled) setTxCount(res);
       })
@@ -106,6 +118,7 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
                 currency: newCode,
               });
               invalidateCache('households:list');
+              if (txCountKey) invalidateCache(txCountKey);
               setSelectedHousehold(updated);
             } catch (error: unknown) {
               const err = error as {
@@ -145,6 +158,7 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
         address: editAddress.trim() || undefined,
       });
       invalidateCache('households:list');
+      if (txCountKey) invalidateCache(txCountKey);
       setSelectedHousehold(updated);
       setIsEditing(false);
       Alert.alert(t('common.success'), t('accountSettingsScreen.profileUpdated'));
@@ -166,7 +180,9 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
     if (!selectedHousehold) return;
     try {
       await Share.share({
-        message: t('householdSettingsScreen.shareMessage', { code: selectedHousehold.joinCode }),
+        message: String(
+          t('householdSettingsScreen.shareMessage', { code: selectedHousehold.joinCode })
+        ),
         title: selectedHousehold.name,
       });
     } catch {

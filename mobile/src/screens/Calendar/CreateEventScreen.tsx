@@ -24,6 +24,7 @@ import { useThemeColors, useTheme, fontSizes, fontWeights, radii, spacing, shado
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../../context/LanguageContext';
 import { invalidateCache, updateCached } from '../../utils/queryCache';
+import { toBcp47Locale } from '../../utils/dateLocales';
 import { format, startOfWeek } from 'date-fns';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -55,7 +56,8 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
   const { selectedHousehold } = useHousehold();
   const colors = useThemeColors();
   const { theme } = useTheme();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const intlLocale = useMemo(() => toBcp47Locale(language), [language]);
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [title, setTitle] = useState('');
@@ -303,7 +305,7 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
                 onPress={() => setShowDatePicker((prev) => !prev)}
               >
                 <Text style={styles.dateText}>
-                  {date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                  {date.toLocaleDateString(intlLocale, { year: 'numeric', month: 'long', day: 'numeric' })}
                 </Text>
               </TouchableOpacity>
               {showDatePicker && (
@@ -343,7 +345,7 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
                 onPress={() => setShowTimePicker((prev) => !prev)}
               >
                 <Text style={styles.dateText}>
-                  {time.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                  {time.toLocaleTimeString(intlLocale, { hour: 'numeric', minute: '2-digit' })}
                 </Text>
               </TouchableOpacity>
               {showTimePicker && (
@@ -384,7 +386,7 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
               >
                 <Text style={[styles.dateText, !endDate && styles.placeholderText]}>
                   {endDate
-                    ? endDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+                    ? endDate.toLocaleDateString(intlLocale, { year: 'numeric', month: 'long', day: 'numeric' })
                     : t('events.selectEndDate')}
                 </Text>
               </TouchableOpacity>
@@ -431,7 +433,7 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
               >
                 <Text style={[styles.dateText, (!endDate || !endTime) && styles.placeholderText]}>
                   {endTime
-                    ? endTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+                    ? endTime.toLocaleTimeString(intlLocale, { hour: 'numeric', minute: '2-digit' })
                     : t('events.selectEndTime')}
                 </Text>
               </TouchableOpacity>
