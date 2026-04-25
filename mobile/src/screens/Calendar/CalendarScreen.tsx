@@ -712,8 +712,8 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         </SettingsSection>
 
         <SettingsSection title={listSectionTitle}>
-          <SettingsGroupCard>
-            {Object.keys(eventsByDate).length === 0 ? (
+          {Object.keys(eventsByDate).length === 0 ? (
+            <SettingsGroupCard>
               <View style={styles.emptyListPad}>
                 <EmptyState
                   icon="calendar-outline"
@@ -722,46 +722,55 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                   variant="minimal"
                 />
               </View>
-            ) : (
-              Object.entries(eventsByDate).map(([dateKey, dateEvents]) => (
-                <View key={dateKey} style={styles.dateSection}>
-                  <AppText style={styles.dateHeader}>
+            </SettingsGroupCard>
+          ) : (
+            Object.entries(eventsByDate).map(([dateKey, dateEvents]) => (
+              <SettingsGroupCard key={dateKey} style={styles.listDateGroupCard}>
+                <View style={styles.listDateHeaderRow}>
+                  <Ionicons name="calendar-clear-outline" size={15} color={colors.textSecondary} />
+                  <AppText style={styles.listDateHeader}>
                     {formatCalendarListDateHeader(dateKey, dateFnsLocale, listRelativeDayLabels)}
                   </AppText>
-                  {dateEvents.map((event) => (
-                    <View key={event._id} style={styles.eventBlock}>
-                      <EventCard event={event} />
-                      {isCreator(event) ? (
-                        <View style={styles.eventActions}>
-                          <TouchableOpacity style={styles.actionButton} onPress={() => handleEditEvent(event)}>
-                            <Ionicons name="pencil-outline" size={16} color={colors.primary} />
-                            <AppText style={styles.editText}>{t('common.edit')}</AppText>
-                          </TouchableOpacity>
-                          <TouchableOpacity style={styles.actionButton} onPress={() => handleDeleteEvent(event)}>
-                            <Ionicons name="trash-outline" size={16} color={colors.danger} />
-                            <AppText style={styles.deleteText}>{t('common.delete')}</AppText>
-                          </TouchableOpacity>
-                        </View>
-                      ) : null}
-                    </View>
-                  ))}
                 </View>
-              ))
-            )}
-            {hasMoreCalendarEvents ? (
-              <TouchableOpacity
-                style={styles.calendarLoadMore}
-                onPress={() =>
-                  setCalendarListVisibleCount((n) => n + CALENDAR_LIST_PAGE_SIZE)
-                }
-                activeOpacity={0.75}
-              >
-                <AppText style={styles.calendarLoadMoreText}>
-                  {t('common.loadMore')} ({pagedListEvents.length}/{filteredEvents.length})
-                </AppText>
-              </TouchableOpacity>
-            ) : null}
-          </SettingsGroupCard>
+                {dateEvents.map((event) => (
+                  <View key={event._id} style={styles.listEventBlock}>
+                    <EventCard event={event} />
+                    {isCreator(event) ? (
+                      <View style={styles.listEventActions}>
+                        <TouchableOpacity
+                          style={[styles.listActionChip, styles.listActionChipEdit]}
+                          onPress={() => handleEditEvent(event)}
+                          activeOpacity={0.8}
+                        >
+                          <Ionicons name="pencil-outline" size={14} color={colors.primary} />
+                          <AppText style={styles.listEditText}>{t('common.edit')}</AppText>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.listActionChip, styles.listActionChipDelete]}
+                          onPress={() => handleDeleteEvent(event)}
+                          activeOpacity={0.8}
+                        >
+                          <Ionicons name="trash-outline" size={14} color={colors.danger} />
+                          <AppText style={styles.listDeleteText}>{t('common.delete')}</AppText>
+                        </TouchableOpacity>
+                      </View>
+                    ) : null}
+                  </View>
+                ))}
+              </SettingsGroupCard>
+            ))
+          )}
+          {hasMoreCalendarEvents ? (
+            <TouchableOpacity
+              style={styles.calendarLoadMore}
+              onPress={() => setCalendarListVisibleCount((n) => n + CALENDAR_LIST_PAGE_SIZE)}
+              activeOpacity={0.75}
+            >
+              <AppText style={styles.calendarLoadMoreText}>
+                {t('common.loadMore')} ({pagedListEvents.length}/{filteredEvents.length})
+              </AppText>
+            </TouchableOpacity>
+          ) : null}
         </SettingsSection>
       </ScrollView>
     </SanctuaryScreenShell>
@@ -1140,18 +1149,64 @@ const createStyles = (colors: any) =>
       paddingBottom: spacing.md,
       paddingTop: spacing.xs,
     },
-    dateSection: {
+    listDateGroupCard: {
       marginBottom: spacing.md,
-      paddingHorizontal: spacing.md,
+      overflow: 'hidden',
     },
-    dateHeader: {
+    listDateHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      paddingHorizontal: spacing.md,
+      paddingTop: spacing.md,
+      paddingBottom: spacing.sm,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.borderLight,
+    },
+    listDateHeader: {
       fontSize: fontSizes.sm,
       fontWeight: fontWeights.semibold,
-      marginBottom: spacing.sm,
-      marginTop: spacing.xs,
       color: colors.textSecondary,
       textTransform: 'uppercase',
       letterSpacing: 0.4,
+    },
+    listEventBlock: {
+      marginBottom: spacing.sm,
+      paddingHorizontal: spacing.md,
+      paddingTop: spacing.sm,
+    },
+    listEventActions: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      gap: spacing.xs,
+      marginTop: spacing.xs,
+    },
+    listActionChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xxs,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+      borderRadius: radii.pill,
+      borderWidth: 1,
+    },
+    listActionChipEdit: {
+      backgroundColor: colors.primaryUltraSoft,
+      borderColor: colors.primarySoft,
+    },
+    listActionChipDelete: {
+      backgroundColor: colors.dangerSoft,
+      borderColor: colors.dangerSoft,
+    },
+    listEditText: {
+      color: colors.primary,
+      fontSize: fontSizes.xs,
+      fontWeight: fontWeights.medium,
+    },
+    listDeleteText: {
+      color: colors.danger,
+      fontSize: fontSizes.xs,
+      fontWeight: fontWeights.medium,
     },
     calendarLoadMore: {
       alignItems: 'center',

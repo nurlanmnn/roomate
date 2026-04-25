@@ -1,5 +1,14 @@
 import React, { useMemo, useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Modal, FlatList, TextInput } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  Modal,
+  FlatList,
+  TextInput,
+  Pressable,
+  Keyboard,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
 import {
@@ -55,10 +64,16 @@ export const CurrencyPicker: React.FC<CurrencyPickerProps> = ({
   };
 
   const handleSelect = (code: string) => {
+    Keyboard.dismiss();
     setModalVisible(false);
     if (code !== value) {
       onChange(code);
     }
+  };
+
+  const closeModal = () => {
+    Keyboard.dismiss();
+    setModalVisible(false);
   };
 
   const renderRow = ({ item }: { item: CurrencyOption }) => {
@@ -110,17 +125,23 @@ export const CurrencyPicker: React.FC<CurrencyPickerProps> = ({
         visible={modalVisible}
         transparent
         animationType="slide"
-        onRequestClose={() => setModalVisible(false)}
+        onRequestClose={closeModal}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={closeModal} />
+          <Pressable style={styles.modalContent} onPress={Keyboard.dismiss}>
             <View style={styles.modalHeader}>
               <AppText style={styles.modalTitle}>{t('currency.pickerTitle')}</AppText>
-              <TouchableOpacity onPress={() => setModalVisible(false)} hitSlop={10}>
+              <TouchableOpacity onPress={closeModal} hitSlop={10}>
                 <Ionicons name="close-outline" size={26} color={colors.text} />
               </TouchableOpacity>
             </View>
-            <View style={styles.searchWrap}>
+            <Pressable
+              style={styles.searchWrap}
+              onPress={(event) => {
+                event.stopPropagation();
+              }}
+            >
               <Ionicons name="search-outline" size={18} color={colors.textSecondary} />
               <TextInput
                 value={search}
@@ -131,7 +152,7 @@ export const CurrencyPicker: React.FC<CurrencyPickerProps> = ({
                 autoCorrect={false}
                 autoCapitalize="characters"
               />
-            </View>
+            </Pressable>
             <FlatList
               data={filtered}
               keyExtractor={(item) => item.code}
@@ -141,7 +162,7 @@ export const CurrencyPicker: React.FC<CurrencyPickerProps> = ({
               showsVerticalScrollIndicator={false}
               initialNumToRender={15}
             />
-          </View>
+          </Pressable>
         </View>
       </Modal>
     </>
