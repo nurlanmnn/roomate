@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, authApi } from '../api/authApi';
+import { User, authApi, NotificationPreferences } from '../api/authApi';
 import * as SecureStore from 'expo-secure-store';
 import { registerPushTokenWithBackend, removePushTokenFromBackend, addNotificationListeners } from '../utils/notifications';
 import { logger } from '../utils/logger';
@@ -13,6 +13,12 @@ interface AuthContextType {
   signup: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  /**
+   * Optimistically updates one or more notification toggles. Sends to the
+   * backend and rolls back on error. The returned promise rejects if the
+   * server rejected the change.
+   */
+  updateNotificationPreferences: (updates: Partial<NotificationPreferences>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -91,8 +97,32 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const updateNotificationPreferences = async (updates: Partial<NotificationPreferences>) => {
+    if (!user) return;
+    const previous = user.notificationPreferences;
+    const merged: NotificationPreferences = {
+      enabled: previous?.enabled ?? true,
+      expenses: previous?.expenses ?? true,
+      calendar: previous?.calendar ?? true,
+      debts: previous?.debts ?? true,
+      household: previous?.household ?? true,
+      ...updates,
+    };
+    // Optimistic — flip the switch instantly, roll back if the server says no.
+    setUser({ ...user, notificationPreferences: merged });
+    try {
+      const res = await authApi.updateNotificationPreferences(updates);
+      setUser((prev) => (prev ? { ...prev, notificationPreferences: res.notificationPreferences } : prev));
+    } catch (error) {
+      setUser((prev) => (prev ? { ...prev, notificationPreferences: previous } : prev));
+      throw error;
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, signup, logout, refreshUser }}>
+    <AuthContext.Provider
+      value={{ user, isLoading, login, signup, logout, refreshUser, updateNotificationPreferences }}
+    >
       {children}
     </AuthContext.Provider>
   );

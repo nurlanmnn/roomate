@@ -269,7 +269,8 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
         creator.name,
         data.description,
         data.totalAmount,
-        data.householdId
+        data.householdId,
+        household.name
       ).catch(err => console.error('Notification error:', err));
     }
 

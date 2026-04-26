@@ -10,12 +10,12 @@ import expenseRoutes from './routes/expenses';
 import expenseTemplateRoutes from './routes/expenseTemplates';
 import settlementRoutes from './routes/settlements';
 import shoppingRoutes from './routes/shopping';
-import goalRoutes from './routes/goals';
 import eventRoutes from './routes/events';
 import choreRoutes from './routes/chores';
 import { schedulerService } from './services/schedulerService';
 import { authRateLimiter, globalApiLimiter } from './middleware/security';
 import { Household } from './models/Household';
+import { User, DEFAULT_NOTIFICATION_PREFERENCES } from './models/User';
 
 const app = express();
 
@@ -65,7 +65,6 @@ app.use('/expenses', expenseRoutes);
 app.use('/expense-templates', expenseTemplateRoutes);
 app.use('/settlements', settlementRoutes);
 app.use('/shopping', shoppingRoutes);
-app.use('/goals', goalRoutes);
 app.use('/events', eventRoutes);
 app.use('/chores', choreRoutes);
 
@@ -106,10 +105,53 @@ const backfillHouseholdCurrency = async () => {
   }
 };
 
+/**
+ * Stamp default notification preferences on any pre-feature user docs so the
+ * mobile NotificationSettings screen never sees `undefined`. Runs once per
+ * deploy; new signups already get defaults via the schema.
+ */
+const backfillNotificationPreferences = async () => {
+  try {
+    const result = await User.updateMany(
+      { notificationPreferences: { $exists: false } },
+      { $set: { notificationPreferences: { ...DEFAULT_NOTIFICATION_PREFERENCES } } }
+    );
+    if (result.modifiedCount > 0) {
+      console.log(
+        `Backfilled notificationPreferences on ${result.modifiedCount} user(s).`
+      );
+    }
+  } catch (err) {
+    console.error('User notificationPreferences backfill failed:', err);
+  }
+};
+
+/**
+ * Older household docs predate the per-household mute list — make sure the
+ * field exists as an empty array so reads don't return undefined.
+ */
+const backfillHouseholdNotificationMute = async () => {
+  try {
+    const result = await Household.updateMany(
+      { notificationMutedBy: { $exists: false } },
+      { $set: { notificationMutedBy: [] } }
+    );
+    if (result.modifiedCount > 0) {
+      console.log(
+        `Backfilled notificationMutedBy on ${result.modifiedCount} household(s).`
+      );
+    }
+  } catch (err) {
+    console.error('Household notificationMutedBy backfill failed:', err);
+  }
+};
+
 const startServer = async () => {
   try {
     await connectDB();
     await backfillHouseholdCurrency();
+    await backfillNotificationPreferences();
+    await backfillHouseholdNotificationMute();
     const port = typeof config.port === 'string' ? parseInt(config.port, 10) : config.port;
     app.listen(port, '0.0.0.0', () => {
       console.log(`Server running on port ${port}`);

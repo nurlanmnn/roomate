@@ -8,10 +8,13 @@
 const BUNDLE_ID = 'com.roomate.app';
 
 module.exports = () => {
+  // Baked into release builds as `extra.apiUrl` — used by the API client and
+  // `getPrivacyPolicyUrl()` (…/legal/privacy). Override with EXPO_PUBLIC_API_URL
+  // in EAS if you add staging vs production later.
   const raw =
     process.env.EXPO_PUBLIC_API_URL ||
     process.env.API_URL ||
-    'https://your-production-api.com';
+    'https://api.roomate.us';
   const apiUrl = raw.startsWith('http') ? raw : `https://${raw}`;
 
   return {
@@ -49,6 +52,7 @@ module.exports = () => {
       },
       plugins: [
         'expo-secure-store',
+        'expo-web-browser',
         [
           'expo-notifications',
           {

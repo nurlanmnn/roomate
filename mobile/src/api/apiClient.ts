@@ -47,6 +47,10 @@ const getApiBaseUrl = (): string => {
 
 const API_BASE_URL = getApiBaseUrl();
 
+/** Hosted HTML from the backend (`GET /legal/privacy`). Uses the same base URL as API calls. */
+export const getPrivacyPolicyUrl = (): string =>
+  `${API_BASE_URL.replace(/\/$/, '')}/legal/privacy`;
+
 class ApiClient {
   private client: AxiosInstance;
   private tokenCache: string | null = null;

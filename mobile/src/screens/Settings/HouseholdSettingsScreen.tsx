@@ -23,6 +23,7 @@ import { dedupedFetch, getCached, invalidateCache } from '../../utils/queryCache
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
 import { SettingsSection } from '../../components/Settings/SettingsSection';
 import { SettingsGroupCard } from '../../components/Settings/SettingsGroupCard';
+import { ToggleRow } from '../../components/Settings/ToggleRow';
 import { MemberRow } from '../../components/Settings/MemberRow';
 import * as Clipboard from 'expo-clipboard';
 import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows } from '../../theme';
@@ -47,6 +48,10 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
     null
   );
   const [savingCurrency, setSavingCurrency] = useState(false);
+  // Per-household mute is the v1.5 escape hatch for users who want a quiet
+  // account from one specific household without disabling notifications globally.
+  const [householdMuted, setHouseholdMuted] = useState(false);
+  const [savingMute, setSavingMute] = useState(false);
   const txCountKey = selectedHousehold?._id
     ? `household:${selectedHousehold._id}:transaction-count`
     : null;
@@ -62,8 +67,38 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
     if (selectedHousehold) {
       setEditName(selectedHousehold.name);
       setEditAddress(selectedHousehold.address || '');
+      const muted =
+        !!user?._id &&
+        (selectedHousehold.notificationMutedBy ?? []).some((id) => id === user._id);
+      setHouseholdMuted(muted);
     }
-  }, [selectedHousehold]);
+  }, [selectedHousehold, user?._id]);
+
+  const handleToggleHouseholdMute = async (next: boolean) => {
+    if (!selectedHousehold) return;
+    const previous = householdMuted;
+    setHouseholdMuted(next);
+    setSavingMute(true);
+    try {
+      await householdsApi.setHouseholdNotificationMute(selectedHousehold._id, next);
+      // Reflect the change in cache + selected household so re-entering the
+      // screen doesn't read a stale `notificationMutedBy` value.
+      const updatedMuted = next
+        ? Array.from(new Set([...(selectedHousehold.notificationMutedBy ?? []), user!._id]))
+        : (selectedHousehold.notificationMutedBy ?? []).filter((id) => id !== user?._id);
+      setSelectedHousehold({ ...selectedHousehold, notificationMutedBy: updatedMuted });
+      invalidateCache('households:list');
+    } catch (error: unknown) {
+      setHouseholdMuted(previous);
+      const err = error as { response?: { data?: { error?: string } } };
+      Alert.alert(
+        t('common.error'),
+        err.response?.data?.error || t('householdSettingsScreen.muteHouseholdError')
+      );
+    } finally {
+      setSavingMute(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -528,6 +563,29 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
                 />
               );
             })}
+          </SettingsGroupCard>
+        </SettingsSection>
+
+        <SettingsSection title={t('householdSettingsScreen.sectionNotifications')}>
+          <AppText style={styles.sectionHint}>
+            {t('householdSettingsScreen.muteHouseholdHint')}
+          </AppText>
+          <SettingsGroupCard>
+            <ToggleRow
+              icon="notifications-off-outline"
+              iconBackgroundColor={colors.warningSoft ?? colors.dangerSoft}
+              iconColor={colors.warning ?? colors.danger}
+              title={t('householdSettingsScreen.muteHouseholdTitle')}
+              subtitle={t('householdSettingsScreen.muteHouseholdSubtitle')}
+              value={householdMuted}
+              onValueChange={handleToggleHouseholdMute}
+              isLast
+            />
+            {savingMute ? (
+              <View style={styles.currencySaving}>
+                <ActivityIndicator size="small" color={colors.primary} />
+              </View>
+            ) : null}
           </SettingsGroupCard>
         </SettingsSection>
 

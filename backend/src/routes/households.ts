@@ -304,6 +304,55 @@ router.get('/:id/transaction-count', authMiddleware, async (req: Request, res: R
   }
 });
 
+// PUT /households/:id/notification-mute — set whether the *current user* mutes
+// notifications for this specific household. Combined with each user's global
+// notificationPreferences server-side.
+const householdMuteSchema = z.object({
+  muted: z.boolean(),
+});
+
+router.put('/:id/notification-mute', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { id } = householdIdParamsSchema.parse(req.params);
+    const { muted } = householdMuteSchema.parse(req.body);
+
+    const household = await Household.findById(id);
+    if (!household) {
+      return res.status(404).json({ error: 'Household not found' });
+    }
+
+    if (!household.members.some((m) => m.toString() === userId)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const userIdObj = new mongoose.Types.ObjectId(userId);
+    const alreadyMuted = household.notificationMutedBy?.some((id) => id.toString() === userId);
+
+    if (muted && !alreadyMuted) {
+      household.notificationMutedBy = [...(household.notificationMutedBy || []), userIdObj];
+      await household.save();
+    } else if (!muted && alreadyMuted) {
+      household.notificationMutedBy = (household.notificationMutedBy || []).filter(
+        (id) => id.toString() !== userId
+      );
+      await household.save();
+    }
+
+    res.json({ muted: !!muted });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+    }
+    console.error('Toggle household mute error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // POST /households/:id/regenerate-invite — new join code (owner only)
 router.post('/:id/regenerate-invite', authMiddleware, async (req: Request, res: Response) => {
   try {

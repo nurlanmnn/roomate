@@ -137,7 +137,8 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
         creator.name,
         data.title,
         new Date(data.date),
-        data.householdId
+        data.householdId,
+        household.name
       ).catch(err => console.error('Notification error:', err));
     }
 
@@ -191,7 +192,8 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
         userId,
         updater.name,
         data.title,
-        event.householdId.toString()
+        event.householdId.toString(),
+        household.name
       ).catch(err => console.error('Notification error:', err));
     }
 

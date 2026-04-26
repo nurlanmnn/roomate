@@ -3,7 +3,7 @@ import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
-import { User } from '../models/User';
+import { User, DEFAULT_NOTIFICATION_PREFERENCES } from '../models/User';
 import { EmailVerificationToken } from '../models/EmailVerificationToken';
 import { Household } from '../models/Household';
 import { authMiddleware, JWTPayload } from '../middleware/auth';
@@ -217,12 +217,60 @@ router.get('/me', authMiddleware, async (req: Request, res: Response) => {
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
-    res.json(user);
+    // Defensive default — even if a legacy doc somehow slipped past the
+    // startup backfill we always hand the client a complete prefs object.
+    const userObj = user.toObject();
+    if (!userObj.notificationPreferences) {
+      userObj.notificationPreferences = { ...DEFAULT_NOTIFICATION_PREFERENCES };
+    }
+    res.json(userObj);
   } catch (error) {
     console.error('Get me error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+// PATCH /auth/me/notification-preferences — partial update of the four toggles
+const notificationPreferencesSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    expenses: z.boolean().optional(),
+    calendar: z.boolean().optional(),
+    debts: z.boolean().optional(),
+    household: z.boolean().optional(),
+  })
+  .strict();
+
+router.patch(
+  '/me/notification-preferences',
+  authMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const updates = notificationPreferencesSchema.parse(req.body);
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      const current = user.notificationPreferences || { ...DEFAULT_NOTIFICATION_PREFERENCES };
+      user.notificationPreferences = { ...current, ...updates };
+      await user.save();
+
+      res.json({ notificationPreferences: user.notificationPreferences });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: 'Invalid input', details: error.errors });
+      }
+      console.error('Update notification preferences error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+);
 
 // PATCH /auth/me (update profile)
 router.patch('/me', authMiddleware, async (req: Request, res: Response) => {

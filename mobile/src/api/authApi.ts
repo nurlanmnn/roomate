@@ -11,12 +11,29 @@ export interface LoginData {
   password: string;
 }
 
+export interface NotificationPreferences {
+  enabled: boolean;
+  expenses: boolean;
+  calendar: boolean;
+  debts: boolean;
+  household: boolean;
+}
+
+export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
+  enabled: true,
+  expenses: true,
+  calendar: true,
+  debts: true,
+  household: true,
+};
+
 export interface User {
   _id: string;
   name: string;
   email: string;
   isEmailVerified: boolean;
   avatarUrl?: string;
+  notificationPreferences?: NotificationPreferences;
 }
 
 export interface AuthResponse {
@@ -102,6 +119,13 @@ export const authApi = {
 
   removePushToken: async (): Promise<{ success: boolean }> => {
     const response = await apiClient.instance.delete('/auth/push-token');
+    return response.data;
+  },
+
+  updateNotificationPreferences: async (
+    updates: Partial<NotificationPreferences>
+  ): Promise<{ notificationPreferences: NotificationPreferences }> => {
+    const response = await apiClient.instance.patch('/auth/me/notification-preferences', updates);
     return response.data;
   },
 };

@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Alert, Modal, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreenShell';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '../../components/AppText';
@@ -16,6 +17,10 @@ import { useLanguage, LANGUAGES } from '../../context/LanguageContext';
 import type { LanguageCode } from '../../context/LanguageContext';
 import { useFocusEffect } from '@react-navigation/native';
 import { fontSizes, fontWeights, radii, spacing, useTheme, useThemeColors, TAB_BAR_HEIGHT } from '../../theme';
+import { getPrivacyPolicyUrl } from '../../api/apiClient';
+
+/** Canonical hosted policy (works when dev API URL is unreachable from the device, e.g. Expo Go + localhost). */
+const PRIVACY_POLICY_PRODUCTION_URL = 'https://api.roomate.us/legal/privacy';
 
 type SettingsScreenProps = {
   navigation: any;
@@ -46,6 +51,28 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, rout
   const handleLanguageSelect = async (code: LanguageCode) => {
     await changeLanguage(code);
     setShowLanguageModal(false);
+  };
+
+  const openPrivacyPolicy = async () => {
+    const primary = getPrivacyPolicyUrl();
+    const open = async (url: string) => {
+      await WebBrowser.openBrowserAsync(url, {
+        presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+      });
+    };
+    try {
+      await open(primary);
+    } catch {
+      if (primary !== PRIVACY_POLICY_PRODUCTION_URL) {
+        try {
+          await open(PRIVACY_POLICY_PRODUCTION_URL);
+          return;
+        } catch {
+          /* fall through */
+        }
+      }
+      Alert.alert(t('common.error'), t('settings.privacyPolicyOpenError'));
+    }
   };
 
   const handleLogout = () => {
@@ -216,6 +243,14 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, rout
 
         <SettingsSection title={t('settings.sectionPreferences')}>
           <SettingsGroupCard>
+            <SettingsRow
+              icon="notifications-outline"
+              iconBackgroundColor={colors.primaryUltraSoft}
+              iconColor={colors.primary}
+              title={t('settings.notifications')}
+              subtitle={t('settings.notificationsDescription')}
+              onPress={() => navigation.navigate('NotificationSettings')}
+            />
             <ToggleRow
               icon={theme === 'dark' ? 'moon' : 'sunny-outline'}
               iconBackgroundColor={colors.accentUltraSoft}
@@ -238,6 +273,20 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, rout
                   : undefined
               }
               onPress={() => setShowLanguageModal(true)}
+              isLast
+            />
+          </SettingsGroupCard>
+        </SettingsSection>
+
+        <SettingsSection title={t('settings.sectionLegal')}>
+          <SettingsGroupCard>
+            <SettingsRow
+              icon="document-text-outline"
+              iconBackgroundColor={colors.primaryUltraSoft}
+              iconColor={colors.primary}
+              title={t('settings.privacyPolicy')}
+              subtitle={t('settings.privacyPolicyDescription')}
+              onPress={openPrivacyPolicy}
               isLast
             />
           </SettingsGroupCard>

@@ -40,6 +40,7 @@ import { CreateChoreScreen } from '../screens/Calendar/CreateChoreScreen';
 import { SettingsScreen } from '../screens/Settings/SettingsScreen';
 import { AccountSettingsScreen } from '../screens/Settings/AccountSettingsScreen';
 import { HouseholdSettingsScreen } from '../screens/Settings/HouseholdSettingsScreen';
+import { NotificationSettingsScreen } from '../screens/Settings/NotificationSettingsScreen';
 
 const AuthStack = createNativeStackNavigator();
 const MainStack = createNativeStackNavigator();
@@ -143,7 +144,11 @@ const MainTabsWithGuard = () => {
 
 const MAIN_STACK_FULL_BLEED_SCREENS = new Set(['HouseholdSelect', 'Main']);
 /** Native headers that use the brighter “sanctuary” glass + custom back pill. */
-const MAIN_STACK_IMMERSIVE_HEADER_SCREENS = new Set(['AccountSettings', 'HouseholdSettings']);
+const MAIN_STACK_IMMERSIVE_HEADER_SCREENS = new Set([
+  'AccountSettings',
+  'HouseholdSettings',
+  'NotificationSettings',
+]);
 
 const MainNavigator = () => {
   const { selectedHousehold } = useHousehold();
@@ -275,6 +280,15 @@ const MainNavigator = () => {
         component={HouseholdSettingsScreen}
         options={{
           title: t('householdSettingsScreen.title'),
+          headerBackTitleVisible: false,
+          headerLeft: (props) => <SanctuaryStackGlassBack {...props} />,
+        }}
+      />
+      <MainStack.Screen
+        name="NotificationSettings"
+        component={NotificationSettingsScreen}
+        options={{
+          title: t('notificationsScreen.title'),
           headerBackTitleVisible: false,
           headerLeft: (props) => <SanctuaryStackGlassBack {...props} />,
         }}

@@ -13,6 +13,8 @@ export interface Household {
   address?: string;
   ownerId: string | HouseholdMember; // Can be string or populated object
   members: HouseholdMember[];
+  /** User ids who have muted notifications for this household specifically. */
+  notificationMutedBy?: string[];
   joinCode: string;
   /** ISO 4217 currency code (e.g. 'USD', 'EUR'). Locked once the household has
    *  any expenses or settlements; see `currencies.ts` for the supported list. */
@@ -99,6 +101,21 @@ export const householdsApi = {
   /** Member-accessible — used by settings to decide if currency is still editable. */
   getTransactionCount: async (householdId: string): Promise<HouseholdTransactionCount> => {
     const response = await apiClient.instance.get(`/households/${householdId}/transaction-count`);
+    return response.data;
+  },
+
+  /**
+   * Toggle whether the *current user* mutes notifications for this household.
+   * Combined server-side with the global notificationPreferences.
+   */
+  setHouseholdNotificationMute: async (
+    householdId: string,
+    muted: boolean
+  ): Promise<{ muted: boolean }> => {
+    const response = await apiClient.instance.put(
+      `/households/${householdId}/notification-mute`,
+      { muted }
+    );
     return response.data;
   },
 };

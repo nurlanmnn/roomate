@@ -56,6 +56,13 @@ export interface IHousehold extends Document {
   address?: string;
   ownerId: mongoose.Types.ObjectId;
   members: mongoose.Types.ObjectId[];
+  /**
+   * Member user ids who have muted *this* household specifically. Combined
+   * with each user's global `notificationPreferences` — a notification is
+   * delivered only when the user's master + category toggles are on AND
+   * their id is not in this list.
+   */
+  notificationMutedBy: mongoose.Types.ObjectId[];
   joinCode: string;
   currency: SupportedCurrency;
   createdAt: Date;
@@ -80,6 +87,10 @@ const HouseholdSchema = new Schema<IHousehold>({
     type: Schema.Types.ObjectId,
     ref: 'User',
   }],
+  notificationMutedBy: {
+    type: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    default: [],
+  },
   joinCode: {
     type: String,
     required: true,
