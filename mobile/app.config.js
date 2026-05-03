@@ -34,6 +34,10 @@ module.exports = () => {
         supportsTablet: true,
         bundleIdentifier: BUNDLE_ID,
         infoPlist: {
+          // Keep in sync with `orientation: 'portrait'` so release builds
+          // (TestFlight) don’t rotate while the UI is portrait-first.
+          UISupportedInterfaceOrientations: ['UIInterfaceOrientationPortrait'],
+          'UISupportedInterfaceOrientations~ipad': ['UIInterfaceOrientationPortrait'],
           CFBundleDisplayName: 'Roomate',
           NSCameraUsageDescription:
             'Roomate uses the camera so you can take a profile or household photo.',

@@ -565,12 +565,12 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>, isDark: boolean
       lineHeight: 16,
     },
     modalActions: {
-      flexDirection: 'row',
+      flexDirection: 'column',
       marginTop: spacing.lg,
       gap: spacing.md,
     },
     modalButton: {
-      flex: 1,
+      alignSelf: 'stretch',
     },
   });
 };

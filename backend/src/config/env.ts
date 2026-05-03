@@ -28,6 +28,12 @@ export const config = {
    * re-enable push sending and the background scheduler.
    */
   notificationsEnabled: (process.env.NOTIFICATIONS_ENABLED || '').toLowerCase() === 'true',
+  /**
+   * If you enable “Enhanced security for push notifications” on expo.dev (account
+   * → access tokens), Expo’s push API returns UNAUTHORIZED without this header.
+   * Create a token with push permissions and set: EXPO_ACCESS_TOKEN=...
+   */
+  expoAccessToken: (process.env.EXPO_ACCESS_TOKEN || '').trim(),
 };
 
 export const getEnv = () => config;

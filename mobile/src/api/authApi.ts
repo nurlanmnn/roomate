@@ -59,7 +59,7 @@ export const authApi = {
     return response.data;
   },
 
-  updateProfile: async (data: { name?: string; avatarUrl?: string }): Promise<User> => {
+  updateProfile: async (data: { name?: string; avatarUrl?: string | null }): Promise<User> => {
     const response = await apiClient.instance.patch('/auth/me', data);
     return response.data;
   },

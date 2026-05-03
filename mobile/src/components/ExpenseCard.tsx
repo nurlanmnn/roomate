@@ -42,6 +42,18 @@ const ExpenseCardInner: React.FC<ExpenseCardProps> = ({
   );
   const currency = useHouseholdCurrency();
   const paidByName = expense.paidBy?.name || 'Unknown';
+  const shareBreakdown = React.useMemo(() => {
+    if (!expense.shares?.length) return '';
+    const memberNameById = new Map(
+      (expense.participants || []).map((participant) => [participant._id, participant.name] as const)
+    );
+    return expense.shares
+      .map((share) => {
+        const name = memberNameById.get(share.userId) || '—';
+        return `${name}: ${formatCurrency(share.amount, currency)}`;
+      })
+      .join(' • ');
+  }, [expense.shares, expense.participants, currency, t]);
 
   const styles = React.useMemo(() => StyleSheet.create({
     card: {
@@ -127,6 +139,30 @@ const ExpenseCardInner: React.FC<ExpenseCardProps> = ({
       fontSize: fontSizes.sm,
       color: colors.textTertiary,
     },
+    breakdownWrap: {
+      marginTop: spacing.xs,
+      paddingTop: spacing.sm,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.borderLight,
+    },
+    breakdownLabel: {
+      fontSize: fontSizes.xs,
+      color: colors.textTertiary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.4,
+      marginBottom: spacing.xxs,
+    },
+    shareBreakdown: {
+      fontSize: fontSizes.xs,
+      color: colors.text,
+      lineHeight: 20,
+      backgroundColor: colors.surfaceAlt,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      borderRadius: radii.sm,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+    },
   }), [colors]);
 
   const handleDelete = () => {
@@ -193,6 +229,12 @@ const ExpenseCardInner: React.FC<ExpenseCardProps> = ({
       <AppText style={styles.participants}>
         {t('expenses.splitAmong', { count: expense.participants.length })}
       </AppText>
+      {shareBreakdown ? (
+        <View style={styles.breakdownWrap}>
+          <AppText style={styles.breakdownLabel}>{t('expenses.shareBreakdown')}</AppText>
+          <AppText style={styles.shareBreakdown}>{shareBreakdown}</AppText>
+        </View>
+      ) : null}
       </View>
     </SwipeableRow>
   );

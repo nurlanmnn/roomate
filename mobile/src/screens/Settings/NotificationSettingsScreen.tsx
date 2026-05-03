@@ -18,7 +18,11 @@ import { ToggleRow } from '../../components/Settings/ToggleRow';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { DEFAULT_NOTIFICATION_PREFERENCES, NotificationPreferences } from '../../api/authApi';
-import { getPermissionStatus, requestPermission } from '../../utils/notifications';
+import {
+  getPermissionStatus,
+  registerPushTokenWithBackend,
+  requestPermission,
+} from '../../utils/notifications';
 import { fontSizes, fontWeights, radii, spacing, useThemeColors } from '../../theme';
 
 type PermissionState = 'granted' | 'denied' | 'undetermined' | 'unavailable';
@@ -43,8 +47,18 @@ export const NotificationSettingsScreen: React.FC<{ navigation: any }> = () => {
   // banner long after they've granted permission.
   useFocusEffect(
     useCallback(() => {
-      refreshPermission();
-    }, [refreshPermission])
+      let cancelled = false;
+      (async () => {
+        const next = await getPermissionStatus();
+        if (!cancelled) setPermission(next);
+        if (!cancelled && next === 'granted') {
+          registerPushTokenWithBackend().catch(() => {});
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, [])
   );
 
   useEffect(() => {
@@ -57,8 +71,21 @@ export const NotificationSettingsScreen: React.FC<{ navigation: any }> = () => {
   ): Promise<void> => {
     try {
       await updateNotificationPreferences({ [key]: next });
-    } catch {
-      Alert.alert(t('common.error'), t('notificationsScreen.saveError'));
+    } catch (error: unknown) {
+      const ax = error as {
+        response?: { status?: number; data?: { error?: string } };
+        message?: string;
+      };
+      const status = ax.response?.status;
+      const serverMsg = ax.response?.data?.error;
+      let body = serverMsg || ax.message || t('notificationsScreen.saveError');
+      if (status === 404) {
+        body = `${body} ${t('notificationsScreen.saveErrorDeployHint')}`;
+      }
+      if (status === 429) {
+        body = serverMsg || t('notificationsScreen.saveErrorRateLimit');
+      }
+      Alert.alert(t('common.error'), body);
     }
   };
 
@@ -73,6 +100,9 @@ export const NotificationSettingsScreen: React.FC<{ navigation: any }> = () => {
   const handleRequestPermission = async () => {
     const status = await requestPermission();
     setPermission(status);
+    if (status === 'granted') {
+      await registerPushTokenWithBackend();
+    }
     if (status === 'denied') {
       // iOS only shows the system dialog once. After that, the user must
       // flip it in Settings — point them there explicitly.

@@ -122,6 +122,9 @@ export default {
     iosUndeterminedBody: 'Tap to enable notifications for Roomate.',
     iosUndeterminedAction: 'Allow',
     saveError: 'Could not update your preferences. Try again.',
+    saveErrorDeployHint:
+      'The server may not have the latest version yet. Update the backend on your host, then try again.',
+    saveErrorRateLimit: 'Too many requests. Wait a few minutes, then try again.',
   },
 
   // Account Settings
@@ -170,6 +173,7 @@ export default {
     permissionNeeded: 'Permission needed',
     grantPhotoPermission: 'Please grant camera roll permissions to select a photo.',
     failedToPickImage: 'Failed to pick image',
+    deleteProfilePhoto: 'Delete profile photo',
     photoSaved: 'Your profile photo has been updated.',
     failedToUpdatePhoto: 'Failed to update profile photo',
     passwordMinLength: 'New password must be at least 8 characters.',
@@ -307,6 +311,7 @@ export default {
     evenSplit: 'Even split',
     participants: 'Participants',
     splitAmong: 'Split among %{count} people',
+    shareBreakdown: 'Per person',
     settleUp: 'Settle Up',
     settlementHistory: 'Settlement History',
     viewSettlementHistory: 'View Settlement History',

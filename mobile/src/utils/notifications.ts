@@ -62,7 +62,15 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
   if (finalStatus !== 'granted') return null;
 
   try {
-    const tokenData = await Notifications.getExpoPushTokenAsync();
+    // Required for EAS/standalone — token must be scoped to your Expo project.
+    const projectId =
+      Constants.expoConfig?.extra?.eas?.projectId ??
+      (Constants as unknown as { easConfig?: { projectId?: string } }).easConfig?.projectId;
+
+    const tokenData = projectId
+      ? await Notifications.getExpoPushTokenAsync({ projectId })
+      : await Notifications.getExpoPushTokenAsync();
+
     return tokenData.data;
   } catch {
     return null;

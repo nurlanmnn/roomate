@@ -79,7 +79,7 @@ const verifyOtpSchema = z.object({
 
 const updateProfileSchema = z.object({
   name: trimmedString(1, 80).optional(),
-  avatarUrl: z.string().trim().max(1000000).optional(), // Accept data URLs (base64 images can be large)
+  avatarUrl: z.union([z.string().trim().max(1000000), z.null()]).optional(), // Accept data URLs (base64 images can be large) or explicit removal
 });
 
 const requestEmailChangeSchema = z.object({
@@ -291,6 +291,8 @@ router.patch('/me', authMiddleware, async (req: Request, res: Response) => {
     }
     if (typeof data.avatarUrl === 'string') {
       user.avatarUrl = data.avatarUrl.trim();
+    } else if (data.avatarUrl === null) {
+      user.avatarUrl = undefined;
     }
     await user.save();
 

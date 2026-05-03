@@ -177,6 +177,48 @@ class NotificationService {
     };
   }
 
+  private pushHeaders(): Record<string, string> {
+    const h: Record<string, string> = {
+      Accept: 'application/json',
+      'Accept-Encoding': 'gzip, deflate',
+      'Content-Type': 'application/json',
+    };
+    if (config.expoAccessToken) {
+      h.Authorization = `Bearer ${config.expoAccessToken}`;
+    }
+    return h;
+  }
+
+  /** Parse Expo push API response; logs and returns whether send was accepted. */
+  private logExpoPushResult(body: unknown, context: string): boolean {
+    const err = (msg: string, extra?: unknown) =>
+      console.error(`[push] ${context}: ${msg}`, extra ?? '');
+
+    if (!body || typeof body !== 'object') {
+      err('empty or invalid response body', body);
+      return false;
+    }
+    const o = body as Record<string, unknown>;
+    if (Array.isArray(o.errors) && o.errors.length > 0) {
+      err('API errors', o.errors);
+      return false;
+    }
+    const data = o.data as ExpoPushTicket | ExpoPushTicket[] | undefined;
+    if (!data) {
+      err('no data field', JSON.stringify(body).slice(0, 500));
+      return false;
+    }
+    const tickets = Array.isArray(data) ? data : [data];
+    let ok = true;
+    for (const t of tickets) {
+      if (t?.status === 'error') {
+        err('ticket error', { message: t.message, details: t.details });
+        ok = false;
+      }
+    }
+    return ok;
+  }
+
   private async sendPushNotification(
     token: string,
     payload: NotificationPayload
@@ -191,20 +233,24 @@ class NotificationService {
     try {
       const response = await fetch(this.EXPO_PUSH_URL, {
         method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'Accept-Encoding': 'gzip, deflate',
-          'Content-Type': 'application/json',
-        },
+        headers: this.pushHeaders(),
         body: JSON.stringify(message),
       });
 
-      const result = (await response.json()) as { data: ExpoPushTicket };
-      if (result.data.status === 'error') {
-        console.error('Push notification error:', result.data.message);
+      const text = await response.text();
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(text) as unknown;
+      } catch {
+        console.error('[push] Non-JSON Expo response', response.status, text.slice(0, 400));
         return false;
       }
-      return true;
+
+      if (!response.ok) {
+        console.error('[push] HTTP error', response.status, text.slice(0, 500));
+      }
+
+      return this.logExpoPushResult(parsed, 'single');
     } catch (error) {
       console.error('Failed to send push notification:', error);
       return false;
@@ -224,15 +270,23 @@ class NotificationService {
     const batches = this.chunkArray(messages, 100);
     for (const batch of batches) {
       try {
-        await fetch(this.EXPO_PUSH_URL, {
+        const response = await fetch(this.EXPO_PUSH_URL, {
           method: 'POST',
-          headers: {
-            Accept: 'application/json',
-            'Accept-Encoding': 'gzip, deflate',
-            'Content-Type': 'application/json',
-          },
+          headers: this.pushHeaders(),
           body: JSON.stringify(batch),
         });
+        const text = await response.text();
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(text) as unknown;
+        } catch {
+          console.error('[push] batch non-JSON', response.status, text.slice(0, 400));
+          continue;
+        }
+        if (!response.ok) {
+          console.error('[push] batch HTTP', response.status, text.slice(0, 500));
+        }
+        this.logExpoPushResult(parsed, 'batch');
       } catch (error) {
         console.error('Failed to send batch notifications:', error);
       }

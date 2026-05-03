@@ -118,7 +118,7 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
   const profileDirty = useMemo(() => {
     if (!user) return false;
     const nameChanged = name.trim() !== user.name;
-    const avatarChanged = !!avatarUri && avatarUri !== (user.avatarUrl || '');
+    const avatarChanged = avatarUri !== (user.avatarUrl || null);
     return (nameChanged || avatarChanged) && name.trim().length > 0;
   }, [name, avatarUri, user]);
 
@@ -192,9 +192,9 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
 
     try {
       setSavingProfile(true);
-      const payload: { name?: string; avatarUrl?: string } = {};
+      const payload: { name?: string; avatarUrl?: string | null } = {};
       if (name.trim() !== user.name) payload.name = name.trim();
-      if (avatarUri && avatarUri !== (user.avatarUrl || '')) payload.avatarUrl = avatarUri;
+      if (avatarUri !== (user.avatarUrl || null)) payload.avatarUrl = avatarUri;
 
       const updated = await authApi.updateProfile(payload);
       await refreshUser();
@@ -209,6 +209,11 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
     } finally {
       setSavingProfile(false);
     }
+  };
+
+  const handleDeleteProfilePhoto = () => {
+    if (!avatarUri) return;
+    setAvatarUri(null);
   };
 
   const handleRequestEmailCode = async () => {
@@ -323,6 +328,16 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
                   <AppText style={styles.inlineEmail} numberOfLines={1}>
                     {email || user?.email || ''}
                   </AppText>
+                  <TouchableOpacity
+                    onPress={handleDeleteProfilePhoto}
+                    disabled={!avatarUri}
+                    activeOpacity={avatarUri ? 0.75 : 1}
+                    style={styles.removePhotoButton}
+                  >
+                    <AppText style={[styles.removePhotoLabel, !avatarUri && styles.removePhotoLabelDisabled]}>
+                      {t('accountSettingsScreen.deleteProfilePhoto')}
+                    </AppText>
+                  </TouchableOpacity>
                 </View>
               </View>
 
@@ -526,6 +541,24 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
       fontSize: fontSizes.sm,
       color: colors.textSecondary,
       marginTop: 4,
+    },
+    removePhotoButton: {
+      alignSelf: 'flex-start',
+      marginTop: spacing.sm,
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.sm,
+      borderRadius: radii.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+    },
+    removePhotoLabel: {
+      fontSize: fontSizes.xs,
+      fontWeight: fontWeights.semibold,
+      color: colors.danger,
+    },
+    removePhotoLabelDisabled: {
+      color: colors.textTertiary,
     },
     fieldDivider: {
       height: StyleSheet.hairlineWidth,

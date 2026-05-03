@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
+import { AppState, type AppStateStatus } from 'react-native';
 import { User, authApi, NotificationPreferences } from '../api/authApi';
 import * as SecureStore from 'expo-secure-store';
 import { registerPushTokenWithBackend, removePushTokenFromBackend, addNotificationListeners } from '../utils/notifications';
@@ -61,6 +62,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     );
     return cleanup;
   }, []);
+
+  // Re-register push token when the app returns to foreground — e.g. user
+  // just enabled notifications in iOS Settings, or first launch had not
+  // granted yet when login ran.
+  const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (next) => {
+      if (appStateRef.current.match(/inactive|background/) && next === 'active' && user) {
+        registerPushTokenWithBackend().catch((e) => logger.error('Push token registration (resume)', e));
+      }
+      appStateRef.current = next;
+    });
+    return () => sub.remove();
+  }, [user]);
 
   const login = async (email: string, password: string) => {
     const response = await authApi.login({ email, password });
