@@ -27,6 +27,7 @@ import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows, TAB_BA
 import { Ionicons } from '@expo/vector-icons';
 import { LoadingSkeleton, SkeletonCard } from '../../components/LoadingSkeleton';
 import { getCached, dedupedFetch } from '../../utils/queryCache';
+import { prefetchBalanceHistoryData } from '../../utils/balanceHistoryDataCache';
 
 type HomeDashboardSnapshot = {
   homeSummary: HomeExpenseSummary;
@@ -36,6 +37,11 @@ type HomeDashboardSnapshot = {
 };
 
 const homeDashboardKey = (householdId: string) => `home:dashboard:${householdId}`;
+
+const navigateBalanceHistory = (navigation: { getParent: () => { navigate: (name: string) => void } | undefined }, householdId?: string) => {
+  if (householdId) prefetchBalanceHistoryData(householdId);
+  navigation.getParent()?.navigate('BalanceHistory');
+};
 
 export const HomeScreen: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -601,9 +607,12 @@ export const HomeScreen: React.FC = () => {
           title={t('home.balanceSummary')}
           description={t('home.balanceDescription')}
           actionLabel={t('common.seeAll')}
-          onAction={() => navigation.getParent()?.navigate('SettleUp')}
+          onAction={() => navigateBalanceHistory(navigation, selectedHousehold?._id)}
         >
-          <TouchableOpacity activeOpacity={0.9} onPress={() => navigation.getParent()?.navigate('SettleUp')}>
+          <TouchableOpacity
+            activeOpacity={0.9}
+            onPress={() => navigateBalanceHistory(navigation, selectedHousehold?._id)}
+          >
             <BalanceSummary
               balances={balances}
               currentUserId={user._id}

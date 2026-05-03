@@ -43,6 +43,7 @@ import { SettingsGroupCard } from '../../components/Settings/SettingsGroupCard';
 import { SettingsRow } from '../../components/Settings/SettingsRow';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { getCached, dedupedFetch, invalidateCache, subscribe as subscribeCache } from '../../utils/queryCache';
+import { fetchExpensesFullSnapshot, prefetchBalanceHistoryData } from '../../utils/balanceHistoryDataCache';
 
 type ExpensesSnapshot = {
   expenses: Expense[];
@@ -245,14 +246,14 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     setLoading(true);
     try {
       const snapshot = await dedupedFetch<ExpensesSnapshot>(key, async () => {
-        const expensesPromise = fetchMode
-          ? expensesApi.getExpenses(selectedHousehold._id)
-          : expensesApi.getExpenses(selectedHousehold._id, {
-              limit: EXPENSES_PAGE_SIZE,
-              skip: 0,
-            });
+        if (fetchMode) {
+          return fetchExpensesFullSnapshot(selectedHousehold._id);
+        }
         const [expensesRaw, balancesData] = await Promise.all([
-          expensesPromise,
+          expensesApi.getExpenses(selectedHousehold._id, {
+            limit: EXPENSES_PAGE_SIZE,
+            skip: 0,
+          }),
           expensesApi.getBalances(selectedHousehold._id),
         ]);
         let nextExpenses: Expense[];
@@ -659,9 +660,12 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         <SettingsSection title={t('expenses.sectionBalances')}>
           <TouchableOpacity
             activeOpacity={0.75}
-            onPress={() => navigation.navigate('SettleUp')}
+            onPress={() => {
+              prefetchBalanceHistoryData(selectedHousehold._id);
+              navigation.navigate('BalanceHistory');
+            }}
             accessibilityRole="button"
-            accessibilityLabel={t('expenses.settleUp')}
+            accessibilityLabel={t('expenses.balanceHistory')}
           >
             <SettingsGroupCard>
               <BalanceSummary

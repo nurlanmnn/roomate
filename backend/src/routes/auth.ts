@@ -11,7 +11,7 @@ import { sendVerificationEmail, sendEmailChangeVerificationEmail, sendPasswordRe
 import { config } from '../config/env';
 import mongoose from 'mongoose';
 import { emailSchema, optionalTrimmedString, otpSchema, trimmedString } from '../utils/validation';
-import { otpRateLimiter } from '../middleware/security';
+import { loginRateLimiter, otpRateLimiter, signupRateLimiter } from '../middleware/security';
 
 const router = express.Router();
 const OTP_EXPIRY_MINUTES = 10;
@@ -111,7 +111,7 @@ const resetPasswordSchema = z.object({
 });
 
 // POST /auth/signup
-router.post('/signup', async (req: Request, res: Response) => {
+router.post('/signup', signupRateLimiter, async (req: Request, res: Response) => {
   try {
     const { name, email, password } = signupSchema.parse(req.body);
 
@@ -169,7 +169,7 @@ router.post('/signup', async (req: Request, res: Response) => {
 });
 
 // POST /auth/login
-router.post('/login', async (req: Request, res: Response) => {
+router.post('/login', loginRateLimiter, async (req: Request, res: Response) => {
   try {
     const { email, password } = loginSchema.parse(req.body);
 

@@ -13,7 +13,7 @@ import shoppingRoutes from './routes/shopping';
 import eventRoutes from './routes/events';
 import choreRoutes from './routes/chores';
 import { schedulerService } from './services/schedulerService';
-import { authRateLimiter, globalApiLimiter } from './middleware/security';
+import { globalApiLimiter } from './middleware/security';
 import { Household } from './models/Household';
 import { User, DEFAULT_NOTIFICATION_PREFERENCES } from './models/User';
 
@@ -59,7 +59,7 @@ app.use(globalApiLimiter);
 app.use(express.json({ limit: '10mb' }));
 
 // Routes
-app.use('/auth', authRateLimiter, authRoutes);
+app.use('/auth', authRoutes);
 app.use('/households', householdRoutes);
 app.use('/expenses', expenseRoutes);
 app.use('/expense-templates', expenseTemplateRoutes);

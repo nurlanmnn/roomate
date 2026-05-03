@@ -32,6 +32,7 @@ import { ExpensesScreen } from '../screens/Expenses/ExpensesScreen';
 import { CreateExpenseScreen } from '../screens/Expenses/CreateExpenseScreen';
 import { SettleUpScreen } from '../screens/Expenses/SettleUpScreen';
 import { SettlementHistoryScreen } from '../screens/Expenses/SettlementHistoryScreen';
+import { BalanceHistoryScreen } from '../screens/Expenses/BalanceHistoryScreen';
 import { ShoppingListScreen } from '../screens/Shopping/ShoppingListScreen';
 import { CalendarScreen } from '../screens/Calendar/CalendarScreen';
 import { CreateEventScreen } from '../screens/Calendar/CreateEventScreen';
@@ -234,6 +235,14 @@ const MainNavigator = () => {
         component={SettlementHistoryScreen}
         options={{
           title: t('expenses.settlementHistory'),
+          headerBackTitleVisible: false,
+        }}
+      />
+      <MainStack.Screen
+        name="BalanceHistory"
+        component={BalanceHistoryScreen}
+        options={{
+          title: t('expenses.balanceHistory'),
           headerBackTitleVisible: false,
         }}
       />
