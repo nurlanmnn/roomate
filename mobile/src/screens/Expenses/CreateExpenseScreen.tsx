@@ -438,9 +438,17 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
       paddingTop: spacing.lg,
       paddingBottom: spacing.xl,
     },
-    saveButton: {
+    footerButtonsRow: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+    },
+    cancelButton: {
+      flex: 1,
       borderRadius: radii.lg,
-      alignSelf: 'stretch',
+    },
+    saveButton: {
+      flex: 1,
+      borderRadius: radii.lg,
     },
     modalContent: {
       flex: 1,
@@ -909,6 +917,8 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
             title={isEditing ? t('expenses.editExpense') : t('expenses.addExpense')}
             subtitle={selectedHousehold.name}
             showTitle={false}
+            rightText={t('common.close')}
+            onRightPress={() => navigation.goBack()}
           />
 
           <SettingsSection title={t('expenses.sectionTemplates')}>
@@ -1152,13 +1162,21 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
           ) : null}
 
           <View style={styles.footerActions}>
-            <PrimaryButton
-              title={isEditing ? t('expenses.updateExpense') : t('expenses.saveExpense')}
-              onPress={handleSubmit}
-              loading={loading}
-              disabled={!canSubmit}
-              style={styles.saveButton}
-            />
+            <View style={styles.footerButtonsRow}>
+              <PrimaryButton
+                title={t('common.cancel')}
+                onPress={() => navigation.goBack()}
+                variant="secondary"
+                style={styles.cancelButton}
+              />
+              <PrimaryButton
+                title={isEditing ? t('expenses.updateExpense') : t('expenses.saveExpense')}
+                onPress={handleSubmit}
+                loading={loading}
+                disabled={!canSubmit}
+                style={styles.saveButton}
+              />
+            </View>
           </View>
         </ScrollView>
     </KeyboardAvoidingView>

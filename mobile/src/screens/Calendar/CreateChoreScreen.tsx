@@ -272,14 +272,23 @@ export const CreateChoreScreen: React.FC<{ navigation: any; route: any }> = ({ n
           )}
         </View>
 
-        <PrimaryButton
-          title={isEditing ? t('common.save') : t('chores.addChore')}
-          onPress={() => {
-            Keyboard.dismiss();
-            handleSave();
-          }}
-          disabled={!canSubmit || saving}
-        />
+        <View style={styles.footerButtonsRow}>
+          <PrimaryButton
+            title={t('common.cancel')}
+            onPress={() => navigation.goBack()}
+            variant="secondary"
+            style={styles.cancelButton}
+          />
+          <PrimaryButton
+            title={isEditing ? t('common.save') : t('chores.addChore')}
+            onPress={() => {
+              Keyboard.dismiss();
+              handleSave();
+            }}
+            disabled={!canSubmit || saving}
+            style={styles.saveButton}
+          />
+        </View>
             </View>
           </TouchableWithoutFeedback>
         </ScrollView>
@@ -411,5 +420,15 @@ const createStyles = (colors: any) =>
     mutedText: {
       fontSize: fontSizes.sm,
       color: colors.muted,
+    },
+    footerButtonsRow: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+    },
+    cancelButton: {
+      flex: 1,
+    },
+    saveButton: {
+      flex: 1,
     },
   });
