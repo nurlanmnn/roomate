@@ -654,14 +654,22 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                 <View key={event._id} style={styles.eventBlock}>
                   <EventCard event={event} />
                   {isCreator(event) ? (
-                    <View style={styles.eventActions}>
-                      <TouchableOpacity style={styles.actionButton} onPress={() => handleEditEvent(event)}>
-                        <Ionicons name="pencil-outline" size={16} color={colors.primary} />
-                        <AppText style={styles.editText}>{t('common.edit')}</AppText>
+                    <View style={styles.listEventActions}>
+                      <TouchableOpacity
+                        style={[styles.listActionChip, styles.listActionChipEdit]}
+                        onPress={() => handleEditEvent(event)}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons name="pencil-outline" size={14} color={colors.primary} />
+                        <AppText style={styles.listEditText}>{t('common.edit')}</AppText>
                       </TouchableOpacity>
-                      <TouchableOpacity style={styles.actionButton} onPress={() => handleDeleteEvent(event)}>
-                        <Ionicons name="trash-outline" size={16} color={colors.danger} />
-                        <AppText style={styles.deleteText}>{t('common.delete')}</AppText>
+                      <TouchableOpacity
+                        style={[styles.listActionChip, styles.listActionChipDelete]}
+                        onPress={() => handleDeleteEvent(event)}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons name="trash-outline" size={14} color={colors.danger} />
+                        <AppText style={styles.listDeleteText}>{t('common.delete')}</AppText>
                       </TouchableOpacity>
                     </View>
                   ) : null}
@@ -1120,29 +1128,6 @@ const createStyles = (colors: any) =>
     eventBlock: {
       marginBottom: spacing.sm,
       paddingHorizontal: spacing.sm,
-    },
-    eventActions: {
-      flexDirection: 'row',
-      justifyContent: 'flex-end',
-      gap: spacing.md,
-      marginTop: spacing.xs,
-      paddingHorizontal: spacing.xs,
-    },
-    actionButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.xxs,
-      padding: spacing.xs,
-    },
-    editText: {
-      color: colors.primary,
-      fontSize: fontSizes.sm,
-      fontWeight: fontWeights.medium,
-    },
-    deleteText: {
-      color: colors.danger,
-      fontSize: fontSizes.sm,
-      fontWeight: fontWeights.medium,
     },
     emptyListPad: {
       paddingHorizontal: spacing.sm,

@@ -19,9 +19,9 @@ import { formatDate } from '../../utils/dateHelpers';
 import { getDateFnsLocale } from '../../utils/dateLocales';
 import { getCached } from '../../utils/queryCache';
 import {
+  balanceHistoryExpensesKey,
   balanceHistorySettlementsKey,
-  expensesFullCacheKey,
-  type ExpensesFullSnapshot,
+  type BalanceHistoryExpensesSnapshot,
   type SettlementsAllSnapshot,
   revalidateBalanceHistoryData,
 } from '../../utils/balanceHistoryDataCache';
@@ -364,12 +364,15 @@ export const BalanceHistoryScreen: React.FC = () => {
         (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
       );
 
+      const expenseByEntryId = new Map(expenses.map((e) => [`exp-${e._id}`, e]));
+      const settlementByEntryId = new Map(settlements.map((s) => [`set-${s._id}`, s]));
+
       // Pairwise running ledger (same model as /balances summary):
       // +value => that user owes you, -value => you owe that user.
       const pairwise = new Map<string, number>();
       for (const entry of merged) {
         if (entry.kind === 'expense') {
-          const exp = expenses.find((e) => `exp-${e._id}` === entry.id);
+          const exp = expenseByEntryId.get(entry.id);
           if (exp) {
             const payerId = toUserId(exp.paidBy);
             if (payerId === userId) {
@@ -387,7 +390,7 @@ export const BalanceHistoryScreen: React.FC = () => {
             }
           }
         } else {
-          const set = settlements.find((s) => `set-${s._id}` === entry.id);
+          const set = settlementByEntryId.get(entry.id);
           if (set) {
             const fromId = toUserId(set.fromUserId);
             const toId = toUserId(set.toUserId);
@@ -424,10 +427,10 @@ export const BalanceHistoryScreen: React.FC = () => {
       const hid = selectedHousehold._id;
       const userId = user._id;
       const members = selectedHousehold.members;
-      const expKey = expensesFullCacheKey(hid);
+      const expKey = balanceHistoryExpensesKey(hid);
       const setKey = balanceHistorySettlementsKey(hid);
 
-      const cachedExp = getCached<ExpensesFullSnapshot>(expKey);
+      const cachedExp = getCached<BalanceHistoryExpensesSnapshot>(expKey);
       const cachedSet = getCached<SettlementsAllSnapshot>(setKey);
       const canPaintStale = Boolean(cachedExp?.expenses && cachedSet?.settlements);
 
@@ -442,7 +445,11 @@ export const BalanceHistoryScreen: React.FC = () => {
       }
 
       try {
-        const [expSnap, setSnap] = await revalidateBalanceHistoryData(hid);
+        const [expSnap, setSnap] = await revalidateBalanceHistoryData(hid, (expenses, settlements) => {
+          setAllEntries(mergeToEntries(expenses, settlements, userId, members));
+          setVisibleCount(BALANCE_HISTORY_PAGE_SIZE);
+          setInitialLoading(false);
+        });
         setAllEntries(mergeToEntries(expSnap.expenses, setSnap.settlements, userId, members));
         setVisibleCount(BALANCE_HISTORY_PAGE_SIZE);
       } catch (error) {

@@ -129,6 +129,12 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
           marginBottom: spacing.sm,
           marginTop: spacing.md,
         },
+        groupHeaderContainer: {
+          paddingHorizontal: spacing.xl,
+        },
+        listItemContainer: {
+          paddingHorizontal: spacing.xl,
+        },
         expenseListPad: {
           paddingHorizontal: spacing.xl,
           gap: 0,
@@ -218,7 +224,10 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
    *  fresh data automatically instead of making the user pull-to-refresh. */
   useFocusEffect(
     React.useCallback(() => {
-      if (selectedHousehold) loadDataRef.current?.();
+      if (selectedHousehold) {
+        loadDataRef.current?.();
+        prefetchBalanceHistoryData(selectedHousehold._id);
+      }
     }, [selectedHousehold?._id]) // eslint-disable-line react-hooks/exhaustive-deps
   );
 
@@ -584,7 +593,7 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     ({ item }) => {
       if (item.kind === 'groupHeader') {
         return (
-          <View style={{ paddingHorizontal: spacing.xl }}>
+          <View style={styles.groupHeaderContainer}>
             <AppText style={styles.groupTitle}>{item.title}</AppText>
           </View>
         );
@@ -599,7 +608,7 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         ((creatorId && creatorId === currentUserId) ||
           (!creatorId && (expense as any).paidBy?._id === currentUserId));
       return (
-        <View style={{ paddingHorizontal: spacing.xl }}>
+        <View style={styles.listItemContainer}>
           <ExpenseCard
             expense={expense}
             onDelete={handleDeleteExpense}
@@ -617,7 +626,15 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
       handleQuickSettle,
       handleEditExpense,
       styles.groupTitle,
+      styles.groupHeaderContainer,
+      styles.listItemContainer,
     ]
+  );
+
+  const keyExtractor = useCallback(
+    (item: ExpenseListRow, index: number) =>
+      item.kind === 'groupHeader' ? `h-${item.title}-${index}` : `e-${item.expense._id}`,
+    []
   );
 
   if (!selectedHousehold) {
@@ -762,9 +779,7 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
       <FlatList
         ref={listRef}
         data={listRows}
-        keyExtractor={(item, index) =>
-          item.kind === 'groupHeader' ? `h-${item.title}-${index}` : `e-${item.expense._id}`
-        }
+        keyExtractor={keyExtractor}
         renderItem={renderItem}
         ListHeaderComponent={listHeader}
         ListEmptyComponent={

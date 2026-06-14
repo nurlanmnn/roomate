@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -57,45 +57,41 @@ export const CurrencyPicker: React.FC<CurrencyPickerProps> = ({
     });
   }, [search, language]);
 
-  const open = () => {
+  const open = useCallback(() => {
     if (disabled) return;
     setSearch('');
     setModalVisible(true);
-  };
+  }, [disabled]);
 
-  const handleSelect = (code: string) => {
+  const handleSelect = useCallback(
+    (code: string) => {
     Keyboard.dismiss();
     setModalVisible(false);
     if (code !== value) {
       onChange(code);
     }
-  };
+    },
+    [onChange, value]
+  );
 
-  const closeModal = () => {
+  const closeModal = useCallback(() => {
     Keyboard.dismiss();
     setModalVisible(false);
-  };
+  }, []);
 
-  const renderRow = ({ item }: { item: CurrencyOption }) => {
-    const isSelected = item.code === value;
-    const displayName = getLocalizedCurrencyName(item.code, language);
-    return (
-      <TouchableOpacity
-        style={[styles.row, isSelected && styles.rowSelected]}
-        onPress={() => handleSelect(item.code)}
-        activeOpacity={0.7}
-      >
-        <View style={styles.symbolBadge}>
-          <AppText style={styles.symbolText}>{item.symbol}</AppText>
-        </View>
-        <View style={styles.rowText}>
-          <AppText style={styles.rowName}>{displayName}</AppText>
-          <AppText style={styles.rowCode}>{item.code}</AppText>
-        </View>
-        {isSelected && <Ionicons name="checkmark-circle" size={22} color={colors.primary} />}
-      </TouchableOpacity>
-    );
-  };
+  const renderRow = useCallback(
+    ({ item }: { item: CurrencyOption }) => (
+      <CurrencyRow
+        item={item}
+        isSelected={item.code === value}
+        language={language}
+        colorsPrimary={colors.primary}
+        styles={styles}
+        onSelect={handleSelect}
+      />
+    ),
+    [colors.primary, handleSelect, language, styles, value]
+  );
 
   return (
     <>
@@ -157,6 +153,7 @@ export const CurrencyPicker: React.FC<CurrencyPickerProps> = ({
               data={filtered}
               keyExtractor={(item) => item.code}
               renderItem={renderRow}
+              extraData={value}
               keyboardShouldPersistTaps="handled"
               contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
@@ -168,6 +165,40 @@ export const CurrencyPicker: React.FC<CurrencyPickerProps> = ({
     </>
   );
 };
+
+const CurrencyRow = React.memo(function CurrencyRow({
+  item,
+  isSelected,
+  language,
+  colorsPrimary,
+  styles,
+  onSelect,
+}: {
+  item: CurrencyOption;
+  isSelected: boolean;
+  language: string;
+  colorsPrimary: string;
+  styles: ReturnType<typeof createStyles>;
+  onSelect: (code: string) => void;
+}) {
+  const displayName = getLocalizedCurrencyName(item.code, language);
+  return (
+    <TouchableOpacity
+      style={[styles.row, isSelected && styles.rowSelected]}
+      onPress={() => onSelect(item.code)}
+      activeOpacity={0.7}
+    >
+      <View style={styles.symbolBadge}>
+        <AppText style={styles.symbolText}>{item.symbol}</AppText>
+      </View>
+      <View style={styles.rowText}>
+        <AppText style={styles.rowName}>{displayName}</AppText>
+        <AppText style={styles.rowCode}>{item.code}</AppText>
+      </View>
+      {isSelected && <Ionicons name="checkmark-circle" size={22} color={colorsPrimary} />}
+    </TouchableOpacity>
+  );
+});
 
 const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
   StyleSheet.create({
