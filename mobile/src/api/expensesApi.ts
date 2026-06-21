@@ -67,6 +67,11 @@ export interface HomeExpenseSummary {
   insights: ExpenseInsightsPayload;
 }
 
+export interface BalanceHistoryFeed {
+  expenses: Expense[];
+  settlements: import('./settlementsApi').Settlement[];
+}
+
 export const expensesApi = {
   getHomeExpenseSummary: async (householdId: string): Promise<HomeExpenseSummary> => {
     const response = await apiClient.instance.get(`/expenses/household/${householdId}/home-summary`);
@@ -88,6 +93,13 @@ export const expensesApi = {
 
   getBalances: async (householdId: string): Promise<PairwiseBalance[]> => {
     const response = await apiClient.instance.get(`/expenses/household/${householdId}/balances`);
+    return response.data;
+  },
+
+  getBalanceHistoryFeed: async (householdId: string): Promise<BalanceHistoryFeed> => {
+    const response = await apiClient.instance.get(
+      `/expenses/household/${householdId}/balance-history-feed`
+    );
     return response.data;
   },
 

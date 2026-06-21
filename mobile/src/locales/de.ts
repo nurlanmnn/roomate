@@ -324,6 +324,8 @@ export default {
     balanceHistoryYouPaid: 'Sie haben gezahlt: %{amount}',
     balanceHistoryYouReceived: 'Sie haben erhalten: %{amount}',
     balanceHistoryWithUser: 'Ausgleich mit %{name}',
+    balanceHistoryLoadError:
+      'Kontostand-Verlauf konnte nicht geladen werden. Ziehen Sie nach unten, um es erneut zu versuchen.',
     settleUp: 'Abrechnen',
     settlementHistory: 'Abrechnungsverlauf',
     viewSettlementHistory: 'Abrechnungsverlauf Anzeigen',

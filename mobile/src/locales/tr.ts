@@ -324,6 +324,8 @@ export default {
     balanceHistoryYouPaid: 'Ödediğin: %{amount}',
     balanceHistoryYouReceived: 'Aldığın: %{amount}',
     balanceHistoryWithUser: '%{name} ile hesaplaşma',
+    balanceHistoryLoadError:
+      'Bakiye geçmişi yüklenemedi. Yeniden denemek için aşağı çekin.',
     settleUp: 'Hesaplaş',
     settlementHistory: 'Hesaplaşma Geçmişi',
     viewSettlementHistory: 'Hesaplaşma Geçmişini Görüntüle',

@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import { z } from 'zod';
 import { Expense, IExpenseShare } from '../models/Expense';
+import { Settlement } from '../models/Settlement';
 import { User } from '../models/User';
 import { authMiddleware } from '../middleware/auth';
 import { computeBalancesWithSince } from '../utils/balancesAggregate';
@@ -145,6 +146,54 @@ router.get('/household/:householdId/balances', authMiddleware, async (req: Reque
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+/** Max rows returned for balance-history feed (each side). Keeps one response small. */
+const BALANCE_HISTORY_FEED_CAP = 2000;
+
+// GET /expenses/household/:householdId/balance-history-feed
+// Slim, single-shot payload for the mobile Balance History screen — no populated
+// user blobs, no settlement proof images, no client-side pagination loop.
+router.get(
+  '/household/:householdId/balance-history-feed',
+  authMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const { householdId } = householdParamsSchema.parse(req.params);
+      const access = await checkHouseholdMember(householdId, userId);
+      if (!access.ok) {
+        return res.status(access.status).json({ error: access.error });
+      }
+
+      const [expenses, settlements] = await Promise.all([
+        Expense.find({ householdId })
+          .select('description totalAmount paidBy shares date createdAt')
+          .sort({ date: -1 })
+          .limit(BALANCE_HISTORY_FEED_CAP)
+          .lean()
+          .exec(),
+        Settlement.find({ householdId })
+          .select('fromUserId toUserId amount date createdAt')
+          .sort({ date: -1 })
+          .limit(BALANCE_HISTORY_FEED_CAP)
+          .lean()
+          .exec(),
+      ]);
+
+      res.json({ expenses, settlements });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: 'Invalid input', details: error.errors });
+      }
+      console.error('Get balance history feed error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+);
 
 // POST /expenses
 router.post('/', authMiddleware, async (req: Request, res: Response) => {

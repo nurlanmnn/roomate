@@ -1,5 +1,5 @@
 import { expensesApi, Expense } from '../api/expensesApi';
-import { settlementsApi, Settlement } from '../api/settlementsApi';
+import { Settlement } from '../api/settlementsApi';
 import { dedupedFetch, prefetch, setCached } from './queryCache';
 
 /** Same shape as ExpensesScreen’s full snapshot so both share `expenses:${id}:full`. */
@@ -52,8 +52,6 @@ export type SettlementsAllSnapshot = {
 export const balanceHistorySettlementsKey = (householdId: string) =>
   `settlements:${householdId}:balanceHistory:all`;
 
-const BALANCE_HISTORY_FETCH_PAGE = 80;
-
 const balanceHistoryInflightKey = (householdId: string) => `balanceHistory:inflight:${householdId}`;
 
 type PartialListener = (expenses: Expense[], settlements: Settlement[]) => void;
@@ -87,93 +85,20 @@ const clearPartialState = (householdId: string) => {
   partialListeners.delete(householdId);
 };
 
-async function fetchAllExpensesPaginated(
-  householdId: string,
-  onPage?: (accumulated: Expense[]) => void
-): Promise<Expense[]> {
-  const first = await expensesApi.getExpenses(householdId, {
-    limit: BALANCE_HISTORY_FETCH_PAGE,
-    skip: 0,
-  });
-  if (Array.isArray(first)) {
-    onPage?.(first);
-    return first;
-  }
-
-  const all = [...first.items];
-  onPage?.(all);
-  let skip = all.length;
-  while (skip < first.total) {
-    const page = await expensesApi.getExpenses(householdId, {
-      limit: BALANCE_HISTORY_FETCH_PAGE,
-      skip,
-    });
-    if (Array.isArray(page)) break;
-    all.push(...page.items);
-    onPage?.(all);
-    skip += page.items.length;
-    if (page.items.length === 0) break;
-  }
-  return all;
-}
-
-async function fetchAllSettlementsPaginated(
-  householdId: string,
-  onPage?: (accumulated: Settlement[]) => void
-): Promise<Settlement[]> {
-  const first = await settlementsApi.getSettlements(householdId, {
-    limit: BALANCE_HISTORY_FETCH_PAGE,
-    skip: 0,
-    includeProof: false,
-  });
-  if (Array.isArray(first)) {
-    onPage?.(first);
-    return first;
-  }
-
-  const all = [...first.items];
-  onPage?.(all);
-  let skip = all.length;
-  while (skip < first.total) {
-    const page = await settlementsApi.getSettlements(householdId, {
-      limit: BALANCE_HISTORY_FETCH_PAGE,
-      skip,
-      includeProof: false,
-    });
-    if (Array.isArray(page)) break;
-    all.push(...page.items);
-    onPage?.(all);
-    skip += page.items.length;
-    if (page.items.length === 0) break;
-  }
-  return all;
-}
-
 async function fetchBalanceHistoryCore(
   householdId: string
 ): Promise<[BalanceHistoryExpensesSnapshot, SettlementsAllSnapshot]> {
-  let expenses: Expense[] = [];
-  let settlements: Settlement[] = [];
-
   try {
-    const [finalExpenses, finalSettlements] = await Promise.all([
-      fetchAllExpensesPaginated(householdId, (partial) => {
-        expenses = partial;
-        emitPartial(householdId, expenses, settlements);
-      }),
-      fetchAllSettlementsPaginated(householdId, (partial) => {
-        settlements = partial;
-        emitPartial(householdId, expenses, settlements);
-      }),
-    ]);
+    const feed = await expensesApi.getBalanceHistoryFeed(householdId);
+    emitPartial(householdId, feed.expenses, feed.settlements);
 
     const expSnap: BalanceHistoryExpensesSnapshot = {
-      expenses: finalExpenses,
-      total: finalExpenses.length,
+      expenses: feed.expenses,
+      total: feed.expenses.length,
     };
     const setSnap: SettlementsAllSnapshot = {
-      settlements: finalSettlements,
-      total: finalSettlements.length,
+      settlements: feed.settlements,
+      total: feed.settlements.length,
     };
 
     setCached(balanceHistoryExpensesKey(householdId), expSnap);
@@ -183,12 +108,6 @@ async function fetchBalanceHistoryCore(
   } finally {
     clearPartialState(householdId);
   }
-}
-
-/** @deprecated Use fetchAllSettlementsPaginated via core loader; kept for any external callers. */
-export async function fetchAllSettlementsSnapshot(householdId: string): Promise<SettlementsAllSnapshot> {
-  const settlements = await fetchAllSettlementsPaginated(householdId);
-  return { settlements, total: settlements.length };
 }
 
 /** Warm cache before navigating to Balance History (dedupes with in-flight fetches). */

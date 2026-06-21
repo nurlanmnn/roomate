@@ -263,6 +263,7 @@ export const BalanceHistoryScreen: React.FC = () => {
   /** True until we have something to show (from cache or network). */
   const [initialLoading, setInitialLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   const displayedEntries = useMemo(
     () => allEntries.slice(0, visibleCount),
@@ -274,6 +275,7 @@ export const BalanceHistoryScreen: React.FC = () => {
     setAllEntries([]);
     setVisibleCount(BALANCE_HISTORY_PAGE_SIZE);
     setInitialLoading(true);
+    setLoadError(false);
   }, [selectedHousehold?._id]);
 
   const mergeToEntries = useCallback(
@@ -447,6 +449,7 @@ export const BalanceHistoryScreen: React.FC = () => {
       } else {
         setInitialLoading(true);
       }
+      setLoadError(false);
 
       try {
         const [expSnap, setSnap] = await revalidateBalanceHistoryData(hid, (expenses, settlements) => {
@@ -458,6 +461,7 @@ export const BalanceHistoryScreen: React.FC = () => {
         setVisibleCount(BALANCE_HISTORY_PAGE_SIZE);
       } catch (error) {
         if (__DEV__) console.error('Failed to load balance history', error);
+        setLoadError(true);
         if (!canPaintStale) {
           setAllEntries([]);
         }
@@ -468,7 +472,7 @@ export const BalanceHistoryScreen: React.FC = () => {
         }
       }
     },
-    [mergeToEntries, selectedHousehold?._id, user?._id]
+    [mergeToEntries, selectedHousehold?._id, selectedHousehold?.members, user?._id]
   );
 
   useEffect(() => {
@@ -502,7 +506,16 @@ export const BalanceHistoryScreen: React.FC = () => {
           </View>
         </SettingsSection>
 
-        {!initialLoading && allEntries.length === 0 ? (
+        {!initialLoading && loadError && allEntries.length === 0 ? (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl }}>
+            <EmptyState
+              icon="cloud-offline-outline"
+              title={t('common.error')}
+              message={t('expenses.balanceHistoryLoadError')}
+              variant="minimal"
+            />
+          </View>
+        ) : !initialLoading && allEntries.length === 0 ? (
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl }}>
             <EmptyState
               icon="swap-horizontal-outline"

@@ -324,6 +324,8 @@ export default {
     balanceHistoryYouPaid: 'Pagaste: %{amount}',
     balanceHistoryYouReceived: 'Recibiste: %{amount}',
     balanceHistoryWithUser: 'Liquidación con %{name}',
+    balanceHistoryLoadError:
+      'No se pudo cargar el historial de saldo. Desliza hacia abajo para reintentar.',
     settleUp: 'Liquidar',
     settlementHistory: 'Historial de Liquidaciones',
     viewSettlementHistory: 'Ver Historial de Liquidaciones',

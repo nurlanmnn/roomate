@@ -325,6 +325,7 @@ export default {
     balanceHistoryYouPaid: 'You paid: %{amount}',
     balanceHistoryYouReceived: 'You received: %{amount}',
     balanceHistoryWithUser: 'Settlement with %{name}',
+    balanceHistoryLoadError: 'Could not load balance history. Pull down to retry.',
     settleUp: 'Settle Up',
     settlementHistory: 'Settlement History',
     viewSettlementHistory: 'View Settlement History',

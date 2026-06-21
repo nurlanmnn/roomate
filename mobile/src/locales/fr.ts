@@ -324,6 +324,8 @@ export default {
     balanceHistoryYouPaid: 'Vous avez payé : %{amount}',
     balanceHistoryYouReceived: 'Vous avez reçu : %{amount}',
     balanceHistoryWithUser: 'Règlement avec %{name}',
+    balanceHistoryLoadError:
+      'Impossible de charger l’historique du solde. Tirez vers le bas pour réessayer.',
     settleUp: 'Régler',
     settlementHistory: 'Historique des Règlements',
     viewSettlementHistory: 'Voir l\'Historique des Règlements',
