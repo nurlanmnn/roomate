@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   Alert,
   ScrollView,
@@ -15,13 +15,17 @@ import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { choresApi, ChoreRotation } from '../../api/choresApi';
 import { getCached, dedupedFetch, invalidateCache, DEFAULT_STALE_TIME_MS } from '../../utils/queryCache';
+import { AppText } from '../../components/AppText';
+import { ChoreRotationRow } from '../../components/ChoreRotationRow';
+import { useChoreCompletion } from '../../hooks/useChoreCompletion';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
-import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows, TAB_BAR_HEIGHT } from '../../theme';
+import { useThemeColors, fontSizes, spacing, radii, shadows, TAB_BAR_HEIGHT } from '../../theme';
 import { Ionicons } from '@expo/vector-icons';
 import { format, startOfWeek } from 'date-fns';
 import { getDateFnsLocale } from '../../utils/dateLocales';
+import { getChorePeriodStart, getUpcomingAssignees } from '../../utils/choreSchedule';
 
 export const ChoreRotationScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { selectedHousehold } = useHousehold();
@@ -36,11 +40,18 @@ export const ChoreRotationScreen: React.FC<{ navigation: any }> = ({ navigation 
   const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
   const weekKey = format(weekStart, 'yyyy-MM-dd');
 
-  const loadChores = async (opts?: { allowStale?: boolean }) => {
+  const { handleToggleChoreComplete } = useChoreCompletion({
+    selectedHousehold,
+    user,
+    setChores,
+    t,
+    cacheKeyPrefix: 'chores',
+  });
+
+  const loadChores = useCallback(async (opts?: { allowStale?: boolean }) => {
     if (!selectedHousehold) return;
     const key = `chores:${selectedHousehold._id}:${weekKey}`;
 
-    // Paint instantly from the last snapshot; only spin when we have nothing.
     const cached = getCached<ChoreRotation[]>(key);
     if (cached) {
       setChores(cached);
@@ -56,22 +67,72 @@ export const ChoreRotationScreen: React.FC<{ navigation: any }> = ({ navigation 
       setChores(data);
     } catch (error: any) {
       if (__DEV__) console.error('Failed to load chores:', error);
-      if (error?.response?.status === 403) {
-        // handled by guard
-      }
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedHousehold, weekKey]);
+
+  const handleGiveToChore = useCallback(
+    (chore: ChoreRotation, referenceDate: Date) => {
+      if (!selectedHousehold || !user) return;
+
+      const periodStart = getChorePeriodStart(chore, referenceDate);
+      if (!periodStart) return;
+
+      const otherMembers = chore.rotationOrder.filter((m) => m._id !== user._id);
+      if (otherMembers.length === 0) return;
+
+      const periodStartIso = periodStart.toISOString();
+
+      Alert.alert(
+        t('chores.giveTo'),
+        undefined,
+        [
+          { text: t('common.cancel'), style: 'cancel' },
+          ...otherMembers.map((member) => ({
+            text: t('chores.swapWeek', { name: member.name }),
+            onPress: () => {
+              Alert.alert(
+                t('chores.giveTo'),
+                t('chores.overrideConfirm', { name: member.name }),
+                [
+                  { text: t('common.cancel'), style: 'cancel' },
+                  {
+                    text: t('common.confirm'),
+                    onPress: async () => {
+                      try {
+                        await choresApi.setOverride(chore._id, periodStartIso, member._id);
+                        invalidateCache(`chores:${selectedHousehold._id}`);
+                        invalidateCache(`calendar:${selectedHousehold._id}`);
+                        invalidateCache(`home:dashboard:${selectedHousehold._id}`);
+                        loadChores();
+                      } catch (e: any) {
+                        Alert.alert(
+                          t('common.error'),
+                          e.response?.data?.error || t('alerts.somethingWentWrong')
+                        );
+                      }
+                    },
+                  },
+                ]
+              );
+            },
+          })),
+        ],
+        { cancelable: true }
+      );
+    },
+    [selectedHousehold, user, t, loadChores]
+  );
 
   useEffect(() => {
     if (selectedHousehold) loadChores();
-  }, [selectedHousehold]);
+  }, [selectedHousehold, loadChores]);
 
   useFocusEffect(
     React.useCallback(() => {
       if (selectedHousehold) loadChores({ allowStale: true });
-    }, [selectedHousehold])
+    }, [selectedHousehold, loadChores])
   );
 
   const handleDeleteChore = (chore: ChoreRotation) => {
@@ -138,40 +199,45 @@ export const ChoreRotationScreen: React.FC<{ navigation: any }> = ({ navigation 
         ) : (
           <>
             <View style={styles.choreList}>
-              {chores.map((chore) => (
+              {chores.map((chore) => {
+                const upcoming = getUpcomingAssignees(chore, new Date(), 3, dateFnsLocale);
+                return (
                 <View key={chore._id} style={styles.choreCard}>
-                  <View style={styles.choreRow}>
-                    <View style={styles.choreIconWrap}>
-                      <Ionicons name="sparkles-outline" size={22} color={colors.primary} />
-                    </View>
-                    <View style={styles.choreContent}>
-                      <Text style={styles.choreName}>{chore.name}</Text>
-                      <Text style={styles.choreAssignee}>
-                        {chore.currentAssignee
-                          ? t('chores.assignedTo', { name: chore.currentAssignee.name })
-                          : t('chores.noAssignee')}
-                      </Text>
-                      <Text style={styles.choreFrequency}>
-                        {chore.frequency === 'biweekly' ? t('chores.biweekly') : t('chores.weekly')}
-                      </Text>
-                    </View>
-                    <View style={styles.choreActions}>
-                      <TouchableOpacity
-                        style={styles.editButton}
-                        onPress={() => navigation.navigate('CreateChore', { editingChore: chore })}
-                      >
-                        <Ionicons name="pencil-outline" size={20} color={colors.primary} />
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={styles.deleteButton}
-                        onPress={() => handleDeleteChore(chore)}
-                      >
-                        <Ionicons name="trash-outline" size={20} color={colors.danger} />
-                      </TouchableOpacity>
-                    </View>
+                  <ChoreRotationRow
+                    chore={chore}
+                    user={user}
+                    referenceDate={new Date()}
+                    onToggleComplete={handleToggleChoreComplete}
+                    onGiveTo={handleGiveToChore}
+                    dateFnsLocale={dateFnsLocale}
+                    t={t}
+                    colors={colors}
+                    showPeriodRange
+                    showFrequency
+                    variant="compact"
+                  />
+                  {upcoming.length > 0 && (
+                    <AppText style={styles.upcomingText}>
+                      {t('chores.upcoming', { list: upcoming.map((u) => u.label).join(', ') })}
+                    </AppText>
+                  )}
+                  <View style={styles.choreActions}>
+                    <TouchableOpacity
+                      style={styles.editButton}
+                      onPress={() => navigation.navigate('CreateChore', { editingChore: chore })}
+                    >
+                      <Ionicons name="pencil-outline" size={20} color={colors.primary} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.deleteButton}
+                      onPress={() => handleDeleteChore(chore)}
+                    >
+                      <Ionicons name="trash-outline" size={20} color={colors.danger} />
+                    </TouchableOpacity>
                   </View>
                 </View>
-              ))}
+                );
+              })}
             </View>
             <View style={styles.addButtonWrap}>
               <PrimaryButton
@@ -212,46 +278,25 @@ const createStyles = (colors: any) =>
     choreCard: {
       backgroundColor: colors.surface,
       borderRadius: radii.lg,
-      padding: spacing.lg,
+      padding: spacing.md,
       marginBottom: spacing.md,
       borderWidth: 1,
       borderColor: colors.borderLight,
       ...(shadows.sm as object),
     },
-    choreRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    choreIconWrap: {
-      width: 44,
-      height: 44,
-      borderRadius: radii.md,
-      backgroundColor: colors.primaryUltraSoft,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginRight: spacing.md,
-    },
-    choreContent: {
-      flex: 1,
-    },
-    choreName: {
-      fontSize: fontSizes.lg,
-      fontWeight: fontWeights.semibold,
-      color: colors.text,
-      marginBottom: 2,
-    },
-    choreAssignee: {
-      fontSize: fontSizes.sm,
-      color: colors.textSecondary,
-      marginBottom: 2,
-    },
-    choreFrequency: {
+    upcomingText: {
       fontSize: fontSizes.xs,
-      color: colors.muted,
+      color: colors.textTertiary,
+      marginTop: spacing.xs,
     },
     choreActions: {
       flexDirection: 'row',
+      justifyContent: 'flex-end',
       gap: spacing.sm,
+      marginTop: spacing.sm,
+      paddingTop: spacing.sm,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.borderLight,
     },
     editButton: {
       padding: spacing.sm,

@@ -16,6 +16,12 @@ export interface ChoreCompletion {
   completedAt: string | null;
 }
 
+export interface PeriodOverride {
+  periodStart: string;
+  assigneeId: string;
+  createdBy: string;
+}
+
 export interface ChoreRotation {
   _id: string;
   householdId: string;
@@ -30,6 +36,7 @@ export interface ChoreRotation {
   /** True when `currentPeriodStart` is in `completions`. */
   currentPeriodCompleted?: boolean;
   completions?: ChoreCompletion[];
+  periodOverrides?: PeriodOverride[];
 }
 
 export interface ChoreScheduleAssignment {
@@ -98,6 +105,23 @@ export const choresApi = {
   markIncomplete: async (id: string, periodStart?: string): Promise<ChoreRotation> => {
     const response = await apiClient.instance.post(`/chores/${id}/uncomplete`, {
       ...(periodStart ? { periodStart } : {}),
+    });
+    return response.data;
+  },
+
+  /** Swap assignee for a specific rotation period. */
+  setOverride: async (id: string, periodStart: string, assigneeId: string): Promise<ChoreRotation> => {
+    const response = await apiClient.instance.post(`/chores/${id}/override`, {
+      periodStart,
+      assigneeId,
+    });
+    return response.data;
+  },
+
+  /** Remove assignee override for a specific rotation period. */
+  clearOverride: async (id: string, periodStart: string): Promise<ChoreRotation> => {
+    const response = await apiClient.instance.delete(`/chores/${id}/override`, {
+      data: { periodStart },
     });
     return response.data;
   },

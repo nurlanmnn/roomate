@@ -9,6 +9,12 @@ export interface IChoreCompletion {
   completedAt: Date;
 }
 
+export interface IPeriodOverride {
+  periodStart: Date;
+  assigneeId: mongoose.Types.ObjectId;
+  createdBy: mongoose.Types.ObjectId;
+}
+
 export interface IChoreRotation extends Document {
   householdId: mongoose.Types.ObjectId;
   name: string;           // e.g. "Kitchen", "Bathroom", "Living room"
@@ -17,6 +23,8 @@ export interface IChoreRotation extends Document {
   startDate: Date;        // start of first period (e.g. Monday of first week)
   /** One record per completed period. Members can toggle on/off. */
   completions: IChoreCompletion[];
+  /** Per-period assignee swaps (e.g. give my week to someone else). */
+  periodOverrides: IPeriodOverride[];
   createdAt: Date;
 }
 
@@ -25,6 +33,15 @@ const ChoreCompletionSchema = new Schema<IChoreCompletion>(
     periodStart: { type: Date, required: true },
     completedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     completedAt: { type: Date, default: Date.now },
+  },
+  { _id: false }
+);
+
+const PeriodOverrideSchema = new Schema<IPeriodOverride>(
+  {
+    periodStart: { type: Date, required: true },
+    assigneeId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },
   { _id: false }
 );
@@ -55,6 +72,10 @@ const ChoreRotationSchema = new Schema<IChoreRotation>({
   },
   completions: {
     type: [ChoreCompletionSchema],
+    default: [],
+  },
+  periodOverrides: {
+    type: [PeriodOverrideSchema],
     default: [],
   },
   createdAt: {

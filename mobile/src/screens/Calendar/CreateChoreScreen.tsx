@@ -103,7 +103,17 @@ export const CreateChoreScreen: React.FC<{ navigation: any; route: any }> = ({ n
     setRotationOrder(newOrder);
   };
 
-  const canSubmit = name.trim().length > 0 && rotationOrder.length > 0;
+  const toggleMemberInRotation = (member: HouseholdMember) => {
+    setRotationOrder((prev) => {
+      const index = prev.findIndex((m) => m._id === member._id);
+      if (index >= 0) {
+        return prev.filter((m) => m._id !== member._id);
+      }
+      return [...prev, member];
+    });
+  };
+
+  const canSubmit = name.trim().length > 0 && rotationOrder.length >= 1;
 
   const handleSave = async () => {
     if (!selectedHousehold) return;
@@ -202,32 +212,74 @@ export const CreateChoreScreen: React.FC<{ navigation: any; route: any }> = ({ n
 
         <View style={styles.field}>
           <Text style={styles.label}>{t('chores.rotationOrder')}</Text>
+          <Text style={styles.hint}>{t('chores.rotationMembersHint')}</Text>
           <Text style={styles.hint}>{t('chores.rotationOrderHint')}</Text>
-          {rotationOrder.length === 0 ? (
+          {members.length === 0 ? (
             <Text style={styles.mutedText}>{t('chores.addMembersFirst')}</Text>
           ) : (
-            rotationOrder.map((member, index) => (
-              <View key={member._id} style={styles.orderRow}>
-                <Text style={styles.orderNumber}>{index + 1}.</Text>
-                <Text style={styles.orderName}>{member.name}</Text>
-                <View style={styles.orderActions}>
+            members.map((member) => {
+              const orderIndex = rotationOrder.findIndex((m) => m._id === member._id);
+              const isIncluded = orderIndex >= 0;
+              return (
+                <View
+                  key={member._id}
+                  style={[styles.orderRow, !isIncluded && styles.orderRowExcluded]}
+                >
                   <TouchableOpacity
-                    onPress={() => moveMember(index, 'up')}
-                    disabled={index === 0}
-                    style={[styles.orderBtn, index === 0 && styles.orderBtnDisabled]}
+                    onPress={() => toggleMemberInRotation(member)}
+                    style={styles.checkboxBtn}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: isIncluded }}
                   >
-                    <Ionicons name="chevron-up" size={20} color={index === 0 ? colors.muted : colors.text} />
+                    <Ionicons
+                      name={isIncluded ? 'checkbox' : 'checkbox-outline'}
+                      size={22}
+                      color={isIncluded ? colors.primary : colors.muted}
+                    />
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => moveMember(index, 'down')}
-                    disabled={index === rotationOrder.length - 1}
-                    style={[styles.orderBtn, index === rotationOrder.length - 1 && styles.orderBtnDisabled]}
-                  >
-                    <Ionicons name="chevron-down" size={20} color={index === rotationOrder.length - 1 ? colors.muted : colors.text} />
-                  </TouchableOpacity>
+                  {isIncluded ? (
+                    <>
+                      <Text style={styles.orderNumber}>{orderIndex + 1}.</Text>
+                      <Text style={styles.orderName}>{member.name}</Text>
+                      <View style={styles.orderActions}>
+                        <TouchableOpacity
+                          onPress={() => moveMember(orderIndex, 'up')}
+                          disabled={orderIndex === 0}
+                          style={[styles.orderBtn, orderIndex === 0 && styles.orderBtnDisabled]}
+                        >
+                          <Ionicons
+                            name="chevron-up"
+                            size={20}
+                            color={orderIndex === 0 ? colors.muted : colors.text}
+                          />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => moveMember(orderIndex, 'down')}
+                          disabled={orderIndex === rotationOrder.length - 1}
+                          style={[
+                            styles.orderBtn,
+                            orderIndex === rotationOrder.length - 1 && styles.orderBtnDisabled,
+                          ]}
+                        >
+                          <Ionicons
+                            name="chevron-down"
+                            size={20}
+                            color={
+                              orderIndex === rotationOrder.length - 1 ? colors.muted : colors.text
+                            }
+                          />
+                        </TouchableOpacity>
+                      </View>
+                    </>
+                  ) : (
+                    <>
+                      <View style={styles.orderNumber} />
+                      <Text style={[styles.orderName, styles.orderNameMuted]}>{member.name}</Text>
+                    </>
+                  )}
                 </View>
-              </View>
-            ))
+              );
+            })
           )}
         </View>
 
@@ -238,6 +290,7 @@ export const CreateChoreScreen: React.FC<{ navigation: any; route: any }> = ({ n
           style={styles.field}
         >
           <Text style={styles.label}>{t('chores.startDate')}</Text>
+          <Text style={styles.hint}>{t('chores.startDateHint')}</Text>
           <TouchableOpacity
             style={styles.dateButton}
             onPress={() => setShowDatePicker((prev) => !prev)}
@@ -359,6 +412,13 @@ const createStyles = (colors: any) =>
       borderWidth: 1,
       borderColor: colors.borderLight,
     },
+    orderRowExcluded: {
+      opacity: 0.65,
+    },
+    checkboxBtn: {
+      padding: spacing.xs,
+      marginRight: spacing.xs,
+    },
     orderNumber: {
       fontSize: fontSizes.sm,
       color: colors.muted,
@@ -368,6 +428,9 @@ const createStyles = (colors: any) =>
       flex: 1,
       fontSize: fontSizes.md,
       color: colors.text,
+    },
+    orderNameMuted: {
+      color: colors.muted,
     },
     orderActions: {
       flexDirection: 'row',
