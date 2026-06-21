@@ -17,7 +17,7 @@ interface ShoppingItemRowProps {
   inGroupCard?: boolean;
 }
 
-export const ShoppingItemRow: React.FC<ShoppingItemRowProps> = ({
+const ShoppingItemRowComponent: React.FC<ShoppingItemRowProps> = ({
   item,
   onToggle,
   onEdit,
@@ -196,3 +196,27 @@ export const ShoppingItemRow: React.FC<ShoppingItemRowProps> = ({
     </SwipeableRow>
   );
 };
+
+/**
+ * Memoized so that re-renders of the parent list (e.g. typing in the search
+ * box, toggling another row) don't re-render every row. We compare only the
+ * fields this row actually renders plus its position flags. Callback identity is
+ * intentionally ignored: the handlers only close over `selectedList` /
+ * `selectedHousehold`, which always change in lockstep with the items array
+ * being replaced, so a skipped re-render can never run a stale closure.
+ */
+export const ShoppingItemRow = React.memo(
+  ShoppingItemRowComponent,
+  (prev, next) =>
+    prev.item._id === next.item._id &&
+    prev.item.name === next.item.name &&
+    prev.item.completed === next.item.completed &&
+    prev.item.quantity === next.item.quantity &&
+    prev.item.weight === next.item.weight &&
+    prev.item.weightUnit === next.item.weightUnit &&
+    prev.item.isShared === next.item.isShared &&
+    prev.item.ownerId?.name === next.item.ownerId?.name &&
+    prev.isFirst === next.isFirst &&
+    prev.isLast === next.isLast &&
+    prev.inGroupCard === next.inGroupCard
+);

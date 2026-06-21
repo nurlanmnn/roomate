@@ -2,10 +2,9 @@ import express, { Request, Response } from 'express';
 import { z } from 'zod';
 import mongoose from 'mongoose';
 import { Settlement } from '../models/Settlement';
-import { Household } from '../models/Household';
 import { Expense } from '../models/Expense';
 import { authMiddleware } from '../middleware/auth';
-import { computeBalances } from '../utils/balances';
+import { checkHouseholdMember } from '../utils/householdAccess';
 import { isoDateSchema, objectIdSchema, optionalTrimmedString } from '../utils/validation';
 
 const router = express.Router();
@@ -50,14 +49,9 @@ router.get('/household/:householdId', authMiddleware, async (req: Request, res: 
     }
 
     const { householdId } = householdParamsSchema.parse(req.params);
-    const household = await Household.findById(householdId);
-    if (!household) {
-      return res.status(404).json({ error: 'Household not found' });
-    }
-
-    const userIdObjectId = new mongoose.Types.ObjectId(userId);
-    if (!household.members.some(m => m.equals(userIdObjectId))) {
-      return res.status(403).json({ error: 'Access denied' });
+    const access = await checkHouseholdMember(householdId, userId);
+    if (!access.ok) {
+      return res.status(access.status).json({ error: access.error });
     }
 
     const query = householdSettlementsQuerySchema.safeParse(req.query);
@@ -89,6 +83,7 @@ router.get('/household/:householdId', authMiddleware, async (req: Request, res: 
           .sort({ date: -1 })
           .skip(skip ?? 0)
           .limit(limit)
+          .lean()
           .exec(),
         Settlement.countDocuments(filter),
       ]);
@@ -96,10 +91,15 @@ router.get('/household/:householdId', authMiddleware, async (req: Request, res: 
       return;
     }
 
+    // Cap unpaginated history so a household with a long settlement log (each
+    // potentially carrying a base64 proof image) can't return a multi-MB blob.
+    const DEFAULT_UNPAGINATED_CAP = 500;
     const settlements = await Settlement.find(filter)
       .populate('fromUserId', 'name email avatarUrl')
       .populate('toUserId', 'name email avatarUrl')
       .sort({ date: -1 })
+      .limit(DEFAULT_UNPAGINATED_CAP)
+      .lean()
       .exec();
 
     res.json(settlements);
@@ -123,15 +123,11 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
     const data = createSettlementSchema.parse(req.body);
 
     // Verify household exists and user is member
-    const household = await Household.findById(data.householdId);
-    if (!household) {
-      return res.status(404).json({ error: 'Household not found' });
+    const access = await checkHouseholdMember(data.householdId, userId);
+    if (!access.ok) {
+      return res.status(access.status).json({ error: access.error });
     }
-
-    const userIdObjectId = new mongoose.Types.ObjectId(userId);
-    if (!household.members.some(m => m.equals(userIdObjectId))) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const household = access.household;
 
     // Validate fromUserId and toUserId are members and different
     const memberIds = household.members.map(m => m.toString());
@@ -182,15 +178,11 @@ router.post('/net-balance', authMiddleware, async (req: Request, res: Response) 
     const data = netBalanceSchema.parse(req.body);
 
     // Verify household exists and user is member
-    const household = await Household.findById(data.householdId);
-    if (!household) {
-      return res.status(404).json({ error: 'Household not found' });
+    const access = await checkHouseholdMember(data.householdId, userId);
+    if (!access.ok) {
+      return res.status(access.status).json({ error: access.error });
     }
-
-    const userIdObjectId = new mongoose.Types.ObjectId(userId);
-    if (!household.members.some(m => m.equals(userIdObjectId))) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const household = access.household;
 
     const otherUserIdObjectId = new mongoose.Types.ObjectId(data.otherUserId);
     if (!household.members.some(m => m.equals(otherUserIdObjectId))) {
@@ -201,9 +193,14 @@ router.post('/net-balance', authMiddleware, async (req: Request, res: Response) 
       return res.status(400).json({ error: 'Cannot net balance with yourself' });
     }
 
-    // Get all expenses and settlements
-    const expenses = await Expense.find({ householdId: data.householdId });
-    const existingSettlements = await Settlement.find({ householdId: data.householdId });
+    // Get all expenses and settlements (only the fields needed to net debts —
+    // crucially skipping the base64 proofImageUrl on settlements).
+    const expenses = await Expense.find({ householdId: data.householdId })
+      .select('paidBy shares')
+      .lean();
+    const existingSettlements = await Settlement.find({ householdId: data.householdId })
+      .select('fromUserId toUserId amount')
+      .lean();
 
     // Calculate raw debts (before settlements) between the two users
     let debtUserToOther = 0;

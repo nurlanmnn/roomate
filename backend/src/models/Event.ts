@@ -51,5 +51,8 @@ const EventSchema = new Schema<IEvent>({
   },
 });
 
+EventSchema.index({ householdId: 1, date: -1 });
+EventSchema.index({ date: 1 });
+
 export const Event = mongoose.model<IEvent>('Event', EventSchema);
 

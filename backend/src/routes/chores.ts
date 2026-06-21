@@ -2,8 +2,8 @@ import express, { Request, Response } from 'express';
 import { z } from 'zod';
 import mongoose from 'mongoose';
 import { ChoreRotation } from '../models/ChoreRotation';
-import { Household } from '../models/Household';
 import { authMiddleware } from '../middleware/auth';
+import { checkHouseholdMember } from '../utils/householdAccess';
 import { isoDateSchema, objectIdSchema, trimmedString } from '../utils/validation';
 
 const router = express.Router();
@@ -91,17 +91,15 @@ router.get('/household/:householdId', authMiddleware, async (req: Request, res: 
 
     const { householdId } = householdParamsSchema.parse(req.params);
     const { week } = choresWeekQuerySchema.parse(req.query);
-    const household = await Household.findById(householdId);
-    if (!household) return res.status(404).json({ error: 'Household not found' });
-
-    const userIdObj = new mongoose.Types.ObjectId(userId);
-    if (!household.members.some((m: mongoose.Types.ObjectId) => m.equals(userIdObj))) {
-      return res.status(403).json({ error: 'Access denied' });
+    const access = await checkHouseholdMember(householdId, userId);
+    if (!access.ok) {
+      return res.status(access.status).json({ error: access.error });
     }
 
     const chores = await ChoreRotation.find({ householdId })
       .populate('rotationOrder', 'name email avatarUrl')
-      .sort({ createdAt: 1 });
+      .sort({ createdAt: 1 })
+      .lean();
 
     const refDate = week ?? new Date();
 
@@ -160,12 +158,9 @@ router.get('/household/:householdId/schedule', authMiddleware, async (req: Reque
 
     const { householdId } = householdParamsSchema.parse(req.params);
     const { from, to } = choresScheduleQuerySchema.parse(req.query);
-    const household = await Household.findById(householdId);
-    if (!household) return res.status(404).json({ error: 'Household not found' });
-
-    const userIdObj = new mongoose.Types.ObjectId(userId);
-    if (!household.members.some((m: mongoose.Types.ObjectId) => m.equals(userIdObj))) {
-      return res.status(403).json({ error: 'Access denied' });
+    const access = await checkHouseholdMember(householdId, userId);
+    if (!access.ok) {
+      return res.status(access.status).json({ error: access.error });
     }
 
     const fromDate = from ?? new Date();
@@ -176,7 +171,8 @@ router.get('/household/:householdId/schedule', authMiddleware, async (req: Reque
 
     const chores = await ChoreRotation.find({ householdId })
       .populate('rotationOrder', 'name')
-      .sort({ createdAt: 1 });
+      .sort({ createdAt: 1 })
+      .lean();
 
     const assignments: { choreId: string; choreName: string; assigneeId: string; assigneeName: string; periodStart: string; periodEnd: string }[] = [];
 
@@ -225,12 +221,9 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
 
     const data = createChoreSchema.parse(req.body);
 
-    const household = await Household.findById(data.householdId);
-    if (!household) return res.status(404).json({ error: 'Household not found' });
-
-    const userIdObj = new mongoose.Types.ObjectId(userId);
-    if (!household.members.some((m: mongoose.Types.ObjectId) => m.equals(userIdObj))) {
-      return res.status(403).json({ error: 'Access denied' });
+    const access = await checkHouseholdMember(data.householdId, userId);
+    if (!access.ok) {
+      return res.status(access.status).json({ error: access.error });
     }
 
     const startDate = new Date(data.startDate);
@@ -266,12 +259,9 @@ router.patch('/:id', authMiddleware, async (req: Request, res: Response) => {
     const chore = await ChoreRotation.findById(id);
     if (!chore) return res.status(404).json({ error: 'Chore not found' });
 
-    const household = await Household.findById(chore.householdId);
-    if (!household) return res.status(404).json({ error: 'Household not found' });
-
-    const userIdObj = new mongoose.Types.ObjectId(userId);
-    if (!household.members.some((m: mongoose.Types.ObjectId) => m.equals(userIdObj))) {
-      return res.status(403).json({ error: 'Access denied' });
+    const access = await checkHouseholdMember(chore.householdId, userId);
+    if (!access.ok) {
+      return res.status(access.status).json({ error: access.error });
     }
 
     const data = updateChoreSchema.parse(req.body);
@@ -317,13 +307,11 @@ async function toggleChoreCompletion(
     const chore = await ChoreRotation.findById(id);
     if (!chore) return res.status(404).json({ error: 'Chore not found' });
 
-    const household = await Household.findById(chore.householdId);
-    if (!household) return res.status(404).json({ error: 'Household not found' });
-
-    const userIdObj = new mongoose.Types.ObjectId(userId);
-    if (!household.members.some((m: mongoose.Types.ObjectId) => m.equals(userIdObj))) {
-      return res.status(403).json({ error: 'Access denied' });
+    const access = await checkHouseholdMember(chore.householdId, userId);
+    if (!access.ok) {
+      return res.status(access.status).json({ error: access.error });
     }
+    const userIdObj = new mongoose.Types.ObjectId(userId);
 
     const refDate = periodStartInput ? new Date(periodStartInput) : new Date();
     const periodStart = getPeriodStartForDate(
@@ -421,12 +409,9 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
     const chore = await ChoreRotation.findById(id);
     if (!chore) return res.status(404).json({ error: 'Chore not found' });
 
-    const household = await Household.findById(chore.householdId);
-    if (!household) return res.status(404).json({ error: 'Household not found' });
-
-    const userIdObj = new mongoose.Types.ObjectId(userId);
-    if (!household.members.some((m: mongoose.Types.ObjectId) => m.equals(userIdObj))) {
-      return res.status(403).json({ error: 'Access denied' });
+    const access = await checkHouseholdMember(chore.householdId, userId);
+    if (!access.ok) {
+      return res.status(access.status).json({ error: access.error });
     }
 
     await ChoreRotation.deleteOne({ _id: chore._id });

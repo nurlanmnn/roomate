@@ -2,10 +2,12 @@ import React, { createContext, useContext, useState, useEffect, useRef, ReactNod
 import { AppState, type AppStateStatus } from 'react-native';
 import { User, authApi, NotificationPreferences } from '../api/authApi';
 import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { registerPushTokenWithBackend, removePushTokenFromBackend, addNotificationListeners } from '../utils/notifications';
 import { logger } from '../utils/logger';
 import { prefetch, clearAllCache } from '../utils/queryCache';
 import { householdsApi } from '../api/householdsApi';
+import { SELECTED_HOUSEHOLD_STORAGE_KEY } from './HouseholdContext';
 
 interface AuthContextType {
   user: User | null;
@@ -100,6 +102,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Drop all cached data on logout so the next account doesn't briefly
     // see the previous user's dashboard.
     clearAllCache();
+    await AsyncStorage.removeItem(SELECTED_HOUSEHOLD_STORAGE_KEY).catch(() => {});
     setUser(null);
   };
 

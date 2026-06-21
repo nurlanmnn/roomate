@@ -44,6 +44,7 @@ import {
   invalidateCache,
   subscribe as subscribeCache,
   updateCached,
+  DEFAULT_STALE_TIME_MS,
 } from '../../utils/queryCache';
 import { Avatar } from '../../components/ui/Avatar';
 import {
@@ -85,7 +86,7 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   const [viewMode, setViewMode] = useState<ViewMode>('upcoming');
   const [calendarListVisibleCount, setCalendarListVisibleCount] = useState(CALENDAR_LIST_PAGE_SIZE);
   const scrollRef = useRef<ScrollView>(null);
-  const loadEventsRef = useRef<(() => void) | undefined>(undefined);
+  const loadEventsRef = useRef<((opts?: { allowStale?: boolean }) => void) | undefined>(undefined);
 
   const isCreator = (event: Event) => event.createdBy?._id === user?._id;
 
@@ -96,11 +97,11 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   useFocusEffect(
     useCallback(() => {
       scrollRef.current?.scrollTo({ y: 0, animated: true });
-      loadEventsRef.current?.();
+      loadEventsRef.current?.({ allowStale: true });
     }, [])
   );
 
-  const loadEvents = useCallback(async () => {
+  const loadEvents = useCallback(async (opts?: { allowStale?: boolean }) => {
     if (!selectedHousehold) return;
     const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
     const weekKey = format(weekStart, 'yyyy-MM-dd');
@@ -123,7 +124,7 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         ]);
         const eventsData = Array.isArray(eventsRaw) ? eventsRaw : eventsRaw.items;
         return { events: eventsData, chores: choresData };
-      });
+      }, { staleTime: opts?.allowStale ? DEFAULT_STALE_TIME_MS : 0 });
       setEvents(snapshot.events);
       setChores(snapshot.chores);
     } catch (error: any) {

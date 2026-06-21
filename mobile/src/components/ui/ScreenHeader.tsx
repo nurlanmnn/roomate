@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from '../AppText';
 import { useTheme } from '../../context/ThemeContext';
-import { useThemeColors, fontSizes, fontWeights, spacing } from '../../theme';
+import { useThemeColors, fontSizes, fontWeights, spacing, radii, lineHeights } from '../../theme';
 
 type ScreenHeaderProps = {
   title: string;
@@ -39,7 +39,7 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
       paddingTop: spacing.md,
       paddingBottom: spacing.lg,
       flexDirection: 'row',
-      alignItems: 'flex-end',
+      alignItems: 'center',
       justifyContent: 'space-between',
       backgroundColor: 'transparent',
     },
@@ -94,9 +94,20 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
       borderWidth: 1.5,
       borderColor: isDark ? 'rgba(74, 222, 128, 0.22)' : 'rgba(34, 197, 94, 0.2)',
     },
+    eyebrow: {
+      fontSize: fontSizes.xs,
+      lineHeight: lineHeights.xs,
+      fontWeight: fontWeights.bold,
+      letterSpacing: 1.2,
+      textTransform: 'uppercase',
+      color: colors.primary,
+      marginBottom: spacing.xxs,
+    },
     title: {
-      fontSize: fontSizes.xxl,
+      fontSize: fontSizes.xxxl,
+      lineHeight: lineHeights.xxxl,
       fontWeight: fontWeights.extrabold,
+      letterSpacing: -0.8,
       color: colors.text,
       flexShrink: 1,
     },
@@ -113,9 +124,12 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
       color: colors.textSecondary,
     },
     right: {
-      paddingHorizontal: spacing.sm,
+      paddingHorizontal: spacing.md,
       paddingVertical: spacing.xs,
-      minHeight: 44, // Minimum touch target
+      minHeight: 38,
+      borderRadius: radii.pill,
+      backgroundColor: colors.primarySoft,
+      alignItems: 'center',
       justifyContent: 'center',
     },
     rightStack: {
@@ -127,8 +141,8 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
     },
     rightText: {
       fontSize: fontSizes.sm,
-      fontWeight: fontWeights.semibold,
-      color: colors.primary,
+      fontWeight: fontWeights.bold,
+      color: isDark ? colors.primary : colors.primaryDark,
     },
   }), [colors, insets.top, isDark]);
 
@@ -185,6 +199,11 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
   return (
     <View style={styles.container}>
       <View style={styles.left}>
+        {!!subtitle && (
+          <AppText style={styles.eyebrow} numberOfLines={1} ellipsizeMode="tail">
+            {subtitle}
+          </AppText>
+        )}
         <View style={styles.leftRow}>
           {!!showBackButton && !!onBackPress && (
             <Pressable
@@ -206,10 +225,14 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
             {title}
           </AppText>
         </View>
-        {!!subtitle && <AppText style={styles.subtitle}>{subtitle}</AppText>}
       </View>
       {!!rightText && !!onRightPress && (
-        <Pressable onPress={onRightPress} style={styles.right}>
+        <Pressable
+          onPress={onRightPress}
+          style={styles.right}
+          accessibilityRole="button"
+          hitSlop={8}
+        >
           <AppText style={styles.rightText}>{rightText}</AppText>
         </Pressable>
       )}

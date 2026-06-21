@@ -79,5 +79,8 @@ ExpenseTemplateSchema.pre('save', function(next) {
   next();
 });
 
+ExpenseTemplateSchema.index({ userId: 1 });
+ExpenseTemplateSchema.index({ householdId: 1 });
+
 export const ExpenseTemplate = mongoose.model<IExpenseTemplate>('ExpenseTemplate', ExpenseTemplateSchema);
 

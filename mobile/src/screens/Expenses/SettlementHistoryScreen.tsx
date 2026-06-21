@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { View, StyleSheet, ScrollView, Image, TouchableOpacity, Modal, RefreshControl } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Modal, RefreshControl } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreenShell';
 import { useHousehold } from '../../context/HouseholdContext';
@@ -495,7 +496,13 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = () => {
             <Ionicons name="close-circle" size={40} color="#FFFFFF" />
           </TouchableOpacity>
           {selectedProofImage && (
-            <Image source={{ uri: selectedProofImage }} style={styles.proofModalImage} resizeMode="contain" />
+            <ExpoImage
+              source={{ uri: selectedProofImage }}
+              style={styles.proofModalImage}
+              contentFit="contain"
+              cachePolicy="memory-disk"
+              transition={150}
+            />
           )}
         </View>
       </Modal>

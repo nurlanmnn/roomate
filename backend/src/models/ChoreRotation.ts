@@ -63,4 +63,6 @@ const ChoreRotationSchema = new Schema<IChoreRotation>({
   },
 });
 
+ChoreRotationSchema.index({ householdId: 1 });
+
 export const ChoreRotation = mongoose.model<IChoreRotation>('ChoreRotation', ChoreRotationSchema);

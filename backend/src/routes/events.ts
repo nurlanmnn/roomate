@@ -1,10 +1,10 @@
 import express, { Request, Response } from 'express';
 import { z } from 'zod';
-import mongoose from 'mongoose';
 import { Event } from '../models/Event';
 import { Household } from '../models/Household';
 import { User } from '../models/User';
 import { authMiddleware } from '../middleware/auth';
+import { checkHouseholdMember } from '../utils/householdAccess';
 import { notificationService } from '../services/notificationService';
 import { isoDateSchema, objectIdSchema, optionalTrimmedString, trimmedString } from '../utils/validation';
 
@@ -47,14 +47,9 @@ router.get('/household/:householdId', authMiddleware, async (req: Request, res: 
       return res.status(400).json({ error: 'Invalid query', details: query.error.flatten() });
     }
 
-    const household = await Household.findById(householdId);
-    if (!household) {
-      return res.status(404).json({ error: 'Household not found' });
-    }
-
-    const userIdObjectId = new mongoose.Types.ObjectId(userId);
-    if (!household.members.some(m => m.equals(userIdObjectId))) {
-      return res.status(403).json({ error: 'Access denied' });
+    const access = await checkHouseholdMember(householdId, userId);
+    if (!access.ok) {
+      return res.status(access.status).json({ error: access.error });
     }
 
     const { limit, skip, upcoming } = query.data;
@@ -75,14 +70,16 @@ router.get('/household/:householdId', authMiddleware, async (req: Request, res: 
       const take = limit ?? 100;
       const offset = skip ?? 0;
       const [items, total] = await Promise.all([
-        base.clone().skip(offset).limit(take).exec(),
+        base.clone().skip(offset).limit(take).lean().exec(),
         Event.countDocuments(filter),
       ]);
       res.json({ items, total });
       return;
     }
 
-    const events = await base.exec();
+    // Cap unpaginated reads to avoid returning an unbounded event history.
+    const DEFAULT_UNPAGINATED_CAP = 500;
+    const events = await base.limit(DEFAULT_UNPAGINATED_CAP).lean().exec();
     res.json(events);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -104,15 +101,11 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
     const data = createEventSchema.parse(req.body);
 
     // Verify household exists and user is member
-    const household = await Household.findById(data.householdId);
-    if (!household) {
-      return res.status(404).json({ error: 'Household not found' });
+    const access = await checkHouseholdMember(data.householdId, userId);
+    if (!access.ok) {
+      return res.status(access.status).json({ error: access.error });
     }
-
-    const userIdObjectId = new mongoose.Types.ObjectId(userId);
-    if (!household.members.some(m => m.equals(userIdObjectId))) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const household = access.household;
 
     // Create event
     const event = new Event({
@@ -184,7 +177,7 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
     await event.populate('createdBy', 'name email avatarUrl');
 
     // Send notification to household members
-    const household = await Household.findById(event.householdId);
+    const household = await Household.findById(event.householdId).select('members name').lean();
     const updater = await User.findById(userId);
     if (household && updater) {
       notificationService.notifyEventUpdated(

@@ -29,5 +29,7 @@ const ShoppingListSchema = new Schema<IShoppingList>({
   },
 });
 
+ShoppingListSchema.index({ householdId: 1 });
+
 export const ShoppingList = mongoose.model<IShoppingList>('ShoppingList', ShoppingListSchema);
 

@@ -42,7 +42,7 @@ import { SettingsSection } from '../../components/Settings/SettingsSection';
 import { SettingsGroupCard } from '../../components/Settings/SettingsGroupCard';
 import { SettingsRow } from '../../components/Settings/SettingsRow';
 import { EmptyState } from '../../components/ui/EmptyState';
-import { getCached, dedupedFetch, invalidateCache, subscribe as subscribeCache } from '../../utils/queryCache';
+import { getCached, dedupedFetch, invalidateCache, subscribe as subscribeCache, DEFAULT_STALE_TIME_MS } from '../../utils/queryCache';
 import { fetchExpensesFullSnapshot, prefetchBalanceHistoryData } from '../../utils/balanceHistoryDataCache';
 
 type ExpensesSnapshot = {
@@ -181,7 +181,7 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   const totalCountRef = useRef(0);
   /** Latest `loadData` — lets the focus effect call it without adding it as a
    *  dep and re-subscribing on every render. */
-  const loadDataRef = useRef<(() => void) | undefined>(undefined);
+  const loadDataRef = useRef<((opts?: { allowStale?: boolean }) => void) | undefined>(undefined);
   /**
    * Tracks which fetch mode the currently-loaded `expenses` represents so we
    * can show a loading skeleton the moment the mode flips (instead of briefly
@@ -225,13 +225,13 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   useFocusEffect(
     React.useCallback(() => {
       if (selectedHousehold) {
-        loadDataRef.current?.();
+        loadDataRef.current?.({ allowStale: true });
         prefetchBalanceHistoryData(selectedHousehold._id);
       }
     }, [selectedHousehold?._id]) // eslint-disable-line react-hooks/exhaustive-deps
   );
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (opts?: { allowStale?: boolean }) => {
     if (!selectedHousehold) return;
 
     const requestId = ++loadRequestIdRef.current;
@@ -280,7 +280,7 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
           balances: balancesData,
           mode: fetchMode,
         };
-      });
+      }, { staleTime: opts?.allowStale ? DEFAULT_STALE_TIME_MS : 0 });
 
       // Ignore any response that's been superseded by a newer load.
       if (requestId !== loadRequestIdRef.current) return;

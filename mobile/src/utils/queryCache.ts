@@ -20,6 +20,15 @@ const cachedAt = new Map<string, number>();
 const inflight = new Map<string, Promise<unknown>>();
 const listeners = new Map<string, Set<Listener>>();
 
+/**
+ * Default freshness window for focus-driven reads. When a screen re-runs its
+ * loader on tab focus we only want to hit the network if the cached snapshot is
+ * older than this — otherwise switching tabs back and forth fires a redundant
+ * request every time. 30s is short enough that real changes still show up
+ * quickly (mutations also invalidate the key explicitly).
+ */
+export const DEFAULT_STALE_TIME_MS = 30_000;
+
 /** Read the last-seen value for a key (sync). Returns `undefined` if we've
  *  never fetched it or it was invalidated. */
 export const getCached = <T,>(key: string): T | undefined => {
@@ -88,16 +97,32 @@ export const clearAllCache = (): void => {
   // Intentionally don't clear listeners — components will re-subscribe.
 };
 
+/** Returns true when `key` has a cached value newer than `staleMs`. */
+export const isFresh = (key: string, staleMs: number): boolean => {
+  if (staleMs <= 0 || !cache.has(key)) return false;
+  const at = cachedAt.get(key);
+  return at !== undefined && Date.now() - at < staleMs;
+};
+
 /**
  * Run `fetcher` but collapse concurrent calls with the same key into one
  * shared promise, and on success store the result in the cache.
+ *
+ * Pass `opts.staleTime` to skip the network entirely when a cached value is
+ * still fresh (used by focus effects so re-entering a tab doesn't refetch).
+ * Omitting it preserves the original always-refetch behaviour.
  */
 export const dedupedFetch = async <T,>(
   key: string,
-  fetcher: () => Promise<T>
+  fetcher: () => Promise<T>,
+  opts?: { staleTime?: number }
 ): Promise<T> => {
   const existing = inflight.get(key);
   if (existing) return existing as Promise<T>;
+
+  if (opts?.staleTime && isFresh(key, opts.staleTime)) {
+    return cache.get(key) as T;
+  }
 
   const p = (async () => {
     try {

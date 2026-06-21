@@ -59,7 +59,8 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
 
     const templates = await ExpenseTemplate.find(query)
       .populate('defaultParticipants', 'name email avatarUrl')
-      .sort({ updatedAt: -1 });
+      .sort({ updatedAt: -1 })
+      .lean();
 
     res.json(templates);
   } catch (error) {

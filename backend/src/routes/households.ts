@@ -55,7 +55,10 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
 
     const households = await Household.find({
       members: new mongoose.Types.ObjectId(userId),
-    }).populate('ownerId', 'name email avatarUrl').populate('members', 'name email avatarUrl');
+    })
+      .populate('ownerId', 'name email avatarUrl')
+      .populate('members', 'name email avatarUrl')
+      .lean();
 
     res.json(households);
   } catch (error) {

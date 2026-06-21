@@ -56,5 +56,7 @@ const SettlementSchema = new Schema<ISettlement>({
   },
 });
 
+SettlementSchema.index({ householdId: 1, date: -1 });
+
 export const Settlement = mongoose.model<ISettlement>('Settlement', SettlementSchema);
 

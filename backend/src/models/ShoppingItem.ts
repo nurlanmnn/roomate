@@ -90,5 +90,8 @@ const ShoppingItemSchema = new Schema<IShoppingItem>({
   },
 });
 
+ShoppingItemSchema.index({ listId: 1, completed: 1, createdAt: -1 });
+ShoppingItemSchema.index({ householdId: 1 });
+
 export const ShoppingItem = mongoose.model<IShoppingItem>('ShoppingItem', ShoppingItemSchema);
 

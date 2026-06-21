@@ -1,13 +1,12 @@
 import express, { Request, Response } from 'express';
 import { z } from 'zod';
 import { Expense, IExpenseShare } from '../models/Expense';
-import { Settlement } from '../models/Settlement';
-import { Household } from '../models/Household';
 import { User } from '../models/User';
 import { authMiddleware } from '../middleware/auth';
-import { computeBalances } from '../utils/balances';
-import { calculateExpenseInsights } from '../utils/expenseInsights';
+import { computeBalancesWithSince } from '../utils/balancesAggregate';
+import { computeExpenseInsights } from '../utils/expenseInsightsAggregate';
 import { computeHomeExpenseSummary } from '../utils/expenseHomeSummary';
+import { checkHouseholdMember } from '../utils/householdAccess';
 import { notificationService } from '../services/notificationService';
 import mongoose from 'mongoose';
 import { isoDateSchema, objectIdSchema, optionalTrimmedString, trimmedString } from '../utils/validation';
@@ -65,14 +64,9 @@ router.get('/household/:householdId', authMiddleware, async (req: Request, res: 
     }
 
     const { householdId } = householdParamsSchema.parse(req.params);
-    const household = await Household.findById(householdId);
-    if (!household) {
-      return res.status(404).json({ error: 'Household not found' });
-    }
-
-    const userIdObjectId = new mongoose.Types.ObjectId(userId);
-    if (!household.members.some(m => m.equals(userIdObjectId))) {
-      return res.status(403).json({ error: 'Access denied' });
+    const access = await checkHouseholdMember(householdId, userId);
+    if (!access.ok) {
+      return res.status(access.status).json({ error: access.error });
     }
 
     const query = householdExpensesQuerySchema.safeParse(req.query);
@@ -81,6 +75,10 @@ router.get('/household/:householdId', authMiddleware, async (req: Request, res: 
     }
 
     const { limit, skip } = query.data;
+    // Cap unpaginated reads so a large household can't pull thousands of fully
+    // populated expense docs in one response. Callers that need the full list
+    // (home aggregates) now go through the dedicated aggregation endpoints.
+    const DEFAULT_UNPAGINATED_CAP = 500;
     const usePagination = limit !== undefined;
 
     const filter = { householdId };
@@ -96,6 +94,7 @@ router.get('/household/:householdId', authMiddleware, async (req: Request, res: 
           .sort({ date: -1 })
           .skip(offset)
           .limit(take)
+          .lean()
           .exec(),
         Expense.countDocuments(filter),
       ]);
@@ -108,6 +107,8 @@ router.get('/household/:householdId', authMiddleware, async (req: Request, res: 
       .populate('paidBy', 'name email avatarUrl')
       .populate('participants', 'name email avatarUrl')
       .sort({ date: -1 })
+      .limit(DEFAULT_UNPAGINATED_CAP)
+      .lean()
       .exec();
     res.json(expenses);
   } catch (error) {
@@ -128,50 +129,12 @@ router.get('/household/:householdId/balances', authMiddleware, async (req: Reque
     }
 
     const { householdId } = householdParamsSchema.parse(req.params);
-    const household = await Household.findById(householdId);
-    if (!household) {
-      return res.status(404).json({ error: 'Household not found' });
+    const access = await checkHouseholdMember(householdId, userId);
+    if (!access.ok) {
+      return res.status(access.status).json({ error: access.error });
     }
 
-    const userIdObjectId = new mongoose.Types.ObjectId(userId);
-    if (!household.members.some(m => m.equals(userIdObjectId))) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
-
-    const expenses = await Expense.find({
-      householdId,
-    });
-    const settlements = await Settlement.find({
-      householdId,
-    });
-
-    const balances = computeBalances(expenses, settlements);
-
-    // Calculate oldest expense date for each balance (when the debt started)
-    const balancesWithSinceDate = balances.map(balance => {
-      // Find all expenses that contribute to this balance
-      const contributingExpenses = expenses.filter(expense => {
-        const paidById = expense.paidBy.toString();
-        return expense.shares.some(share => {
-          const shareUserId = share.userId.toString();
-          // Check if this expense creates debt from fromUserId to toUserId
-          return (shareUserId === balance.fromUserId && paidById === balance.toUserId);
-        });
-      });
-
-      // Find the oldest expense date (when expense was created, not when it was made)
-      const oldestDate = contributingExpenses.length > 0
-        ? contributingExpenses.reduce((oldest, expense) => {
-            const expenseDate = expense.createdAt || expense.date;
-            return expenseDate < oldest ? expenseDate : oldest;
-          }, contributingExpenses[0].createdAt || contributingExpenses[0].date)
-        : null;
-
-      return {
-        ...balance,
-        sinceDate: oldestDate ? oldestDate.toISOString() : null,
-      };
-    });
+    const balancesWithSinceDate = await computeBalancesWithSince(householdId);
 
     res.json(balancesWithSinceDate);
   } catch (error) {
@@ -194,15 +157,12 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
     const data = createExpenseSchema.parse(req.body);
 
     // Verify household exists and user is member
-    const household = await Household.findById(data.householdId);
-    if (!household) {
-      return res.status(404).json({ error: 'Household not found' });
+    const access = await checkHouseholdMember(data.householdId, userId);
+    if (!access.ok) {
+      return res.status(access.status).json({ error: access.error });
     }
-
+    const household = access.household;
     const userIdObjectId = new mongoose.Types.ObjectId(userId);
-    if (!household.members.some(m => m.equals(userIdObjectId))) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
 
     // Validate participants are all members
     const participantIds = data.participants.map(p => p.toString());
@@ -293,14 +253,9 @@ router.get('/household/:householdId/home-summary', authMiddleware, async (req: R
     }
 
     const { householdId } = householdParamsSchema.parse(req.params);
-    const household = await Household.findById(householdId);
-    if (!household) {
-      return res.status(404).json({ error: 'Household not found' });
-    }
-
-    const userIdObjectId = new mongoose.Types.ObjectId(userId);
-    if (!household.members.some((m) => m.equals(userIdObjectId))) {
-      return res.status(403).json({ error: 'Access denied' });
+    const access = await checkHouseholdMember(householdId, userId);
+    if (!access.ok) {
+      return res.status(access.status).json({ error: access.error });
     }
 
     const summary = await computeHomeExpenseSummary(householdId);
@@ -323,21 +278,12 @@ router.get('/household/:householdId/insights', authMiddleware, async (req: Reque
     }
 
     const { householdId } = householdParamsSchema.parse(req.params);
-    const household = await Household.findById(householdId);
-    if (!household) {
-      return res.status(404).json({ error: 'Household not found' });
+    const access = await checkHouseholdMember(householdId, userId);
+    if (!access.ok) {
+      return res.status(access.status).json({ error: access.error });
     }
 
-    const userIdObjectId = new mongoose.Types.ObjectId(userId);
-    if (!household.members.some(m => m.equals(userIdObjectId))) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
-
-    const expenses = await Expense.find({
-      householdId,
-    });
-
-    const insights = calculateExpenseInsights(expenses);
+    const insights = await computeExpenseInsights(householdId);
 
     res.json(insights);
   } catch (error) {
@@ -363,15 +309,11 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Expense not found' });
     }
 
-    const household = await Household.findById(expense.householdId);
-    if (!household) {
-      return res.status(404).json({ error: 'Household not found' });
+    const access = await checkHouseholdMember(expense.householdId, userId);
+    if (!access.ok) {
+      return res.status(access.status).json({ error: access.error });
     }
-
-    const userIdObjectId = new mongoose.Types.ObjectId(userId);
-    if (!household.members.some(m => m.equals(userIdObjectId))) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
+    const household = access.household;
 
     const creatorId = (expense as any).createdBy ? (expense as any).createdBy.toString() : expense.paidBy.toString();
     if (creatorId !== userId) {
@@ -448,14 +390,9 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
     }
 
     // Verify user is member of household
-    const household = await Household.findById(expense.householdId);
-    if (!household) {
-      return res.status(404).json({ error: 'Household not found' });
-    }
-    
-    const userIdObjectId = new mongoose.Types.ObjectId(userId);
-    if (!household.members.some(m => m.equals(userIdObjectId))) {
-      return res.status(403).json({ error: 'Access denied' });
+    const access = await checkHouseholdMember(expense.householdId, userId);
+    if (!access.ok) {
+      return res.status(access.status).json({ error: access.error });
     }
 
     // Only the creator of the expense can delete it.

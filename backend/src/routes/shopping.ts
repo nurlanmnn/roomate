@@ -3,8 +3,8 @@ import { z } from 'zod';
 import mongoose from 'mongoose';
 import { ShoppingItem } from '../models/ShoppingItem';
 import { ShoppingList } from '../models/ShoppingList';
-import { Household } from '../models/Household';
 import { authMiddleware } from '../middleware/auth';
+import { checkHouseholdMember } from '../utils/householdAccess';
 import { booleanQuerySchema, objectIdSchema, optionalTrimmedString, trimmedString } from '../utils/validation';
 
 const router = express.Router();
@@ -50,14 +50,9 @@ router.get('/household/:householdId/item-stats', authMiddleware, async (req: Req
     }
 
     const { householdId } = householdParamsSchema.parse(req.params);
-    const household = await Household.findById(householdId);
-    if (!household) {
-      return res.status(404).json({ error: 'Household not found' });
-    }
-
-    const userIdObjectId = new mongoose.Types.ObjectId(userId);
-    if (!household.members.some((m) => m.equals(userIdObjectId))) {
-      return res.status(403).json({ error: 'Access denied' });
+    const access = await checkHouseholdMember(householdId, userId);
+    if (!access.ok) {
+      return res.status(access.status).json({ error: access.error });
     }
 
     const lists = await ShoppingList.find({ householdId }).select('_id').lean();
@@ -92,19 +87,15 @@ router.get('/lists/household/:householdId', authMiddleware, async (req: Request,
     }
 
     const { householdId } = householdParamsSchema.parse(req.params);
-    const household = await Household.findById(householdId);
-    if (!household) {
-      return res.status(404).json({ error: 'Household not found' });
-    }
-
-    const userIdObjectId = new mongoose.Types.ObjectId(userId);
-    if (!household.members.some(m => m.equals(userIdObjectId))) {
-      return res.status(403).json({ error: 'Access denied' });
+    const access = await checkHouseholdMember(householdId, userId);
+    if (!access.ok) {
+      return res.status(access.status).json({ error: access.error });
     }
 
     const lists = await ShoppingList.find({ householdId })
       .populate('createdBy', 'name email avatarUrl')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
     res.json(lists);
   } catch (error) {
@@ -127,15 +118,12 @@ router.post('/lists', authMiddleware, async (req: Request, res: Response) => {
     const data = createShoppingListSchema.parse(req.body);
 
     // Verify household exists and user is member
-    const household = await Household.findById(data.householdId);
-    if (!household) {
-      return res.status(404).json({ error: 'Household not found' });
+    const access = await checkHouseholdMember(data.householdId, userId);
+    if (!access.ok) {
+      return res.status(access.status).json({ error: access.error });
     }
 
     const userIdObjectId = new mongoose.Types.ObjectId(userId);
-    if (!household.members.some(m => m.equals(userIdObjectId))) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
 
     // Create list
     const list = new ShoppingList({
@@ -175,13 +163,9 @@ router.patch('/lists/:id', authMiddleware, async (req: Request, res: Response) =
     }
 
     // Verify user is member of household
-    const household = await Household.findById(list.householdId);
-    if (!household) {
-      return res.status(404).json({ error: 'Household not found' });
-    }
-    const userIdObjectId = new mongoose.Types.ObjectId(userId);
-    if (!household.members.some(m => m.equals(userIdObjectId))) {
-      return res.status(403).json({ error: 'Access denied' });
+    const access = await checkHouseholdMember(list.householdId, userId);
+    if (!access.ok) {
+      return res.status(access.status).json({ error: access.error });
     }
 
     list.name = data.name.trim();
@@ -214,13 +198,9 @@ router.delete('/lists/:id', authMiddleware, async (req: Request, res: Response) 
     }
 
     // Verify user is member of household
-    const household = await Household.findById(list.householdId);
-    if (!household) {
-      return res.status(404).json({ error: 'Household not found' });
-    }
-    const userIdObjectId = new mongoose.Types.ObjectId(userId);
-    if (!household.members.some(m => m.equals(userIdObjectId))) {
-      return res.status(403).json({ error: 'Access denied' });
+    const access = await checkHouseholdMember(list.householdId, userId);
+    if (!access.ok) {
+      return res.status(access.status).json({ error: access.error });
     }
 
     // Delete all items in the list
@@ -339,13 +319,9 @@ router.get('/items/list/:listId', authMiddleware, async (req: Request, res: Resp
     }
 
     // Verify user is member of household
-    const household = await Household.findById(list.householdId);
-    if (!household) {
-      return res.status(404).json({ error: 'Household not found' });
-    }
-    const userIdObjectId = new mongoose.Types.ObjectId(userId);
-    if (!household.members.some(m => m.equals(userIdObjectId))) {
-      return res.status(403).json({ error: 'Access denied' });
+    const access = await checkHouseholdMember(list.householdId, userId);
+    if (!access.ok) {
+      return res.status(access.status).json({ error: access.error });
     }
 
     const query: any = { listId };
@@ -364,14 +340,16 @@ router.get('/items/list/:listId', authMiddleware, async (req: Request, res: Resp
       const take = limit ?? 80;
       const offset = skip ?? 0;
       const [items, total] = await Promise.all([
-        baseFind.clone().skip(offset).limit(take).exec(),
+        baseFind.clone().skip(offset).limit(take).lean().exec(),
         ShoppingItem.countDocuments(query),
       ]);
       res.json({ items, total });
       return;
     }
 
-    const items = await baseFind.exec();
+    // Cap unpaginated reads to avoid returning an unbounded item list.
+    const DEFAULT_UNPAGINATED_CAP = 500;
+    const items = await baseFind.limit(DEFAULT_UNPAGINATED_CAP).lean().exec();
     res.json(items);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -399,19 +377,14 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
     }
 
     // Verify household exists and user is member
-    const household = await Household.findById(data.householdId);
-    if (!household) {
-      return res.status(404).json({ error: 'Household not found' });
+    const access = await checkHouseholdMember(data.householdId, userId);
+    if (!access.ok) {
+      return res.status(access.status).json({ error: access.error });
     }
 
     // Verify list belongs to household
     if (list.householdId.toString() !== data.householdId) {
       return res.status(400).json({ error: 'Shopping list does not belong to this household' });
-    }
-
-    const userIdObjectId = new mongoose.Types.ObjectId(userId);
-    if (!household.members.some(m => m.equals(userIdObjectId))) {
-      return res.status(403).json({ error: 'Access denied' });
     }
 
     // If not shared, require ownerId
@@ -456,21 +429,15 @@ router.patch('/:id', authMiddleware, async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    // Log incoming data for debugging
-    console.log('Update shopping item request body:', JSON.stringify(req.body));
-    
     const data = updateShoppingItemSchema.parse(req.body);
-    
+
     // Additional validation: ensure weight is never a string that looks like a unit
     if (data.weight !== undefined) {
       // Ensure weight is a valid number
       if (typeof data.weight !== 'number' || isNaN(data.weight) || data.weight <= 0) {
-        console.warn('Invalid weight value:', data.weight);
         data.weight = undefined;
       }
     }
-    
-    console.log('Parsed and validated data:', JSON.stringify(data));
 
     const { id } = itemIdParamsSchema.parse(req.params);
     const item = await ShoppingItem.findById(id);
@@ -479,13 +446,9 @@ router.patch('/:id', authMiddleware, async (req: Request, res: Response) => {
     }
 
     // Verify user is member of household
-    const household = await Household.findById(item.householdId);
-    if (!household) {
-      return res.status(404).json({ error: 'Household not found' });
-    }
-    const userIdObjectId = new mongoose.Types.ObjectId(userId);
-    if (!household.members.some(m => m.equals(userIdObjectId))) {
-      return res.status(403).json({ error: 'Access denied' });
+    const access = await checkHouseholdMember(item.householdId, userId);
+    if (!access.ok) {
+      return res.status(access.status).json({ error: access.error });
     }
 
     // Update fields
@@ -542,13 +505,9 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
     }
 
     // Verify user is member of household
-    const household = await Household.findById(item.householdId);
-    if (!household) {
-      return res.status(404).json({ error: 'Household not found' });
-    }
-    const userIdObjectId = new mongoose.Types.ObjectId(userId);
-    if (!household.members.some(m => m.equals(userIdObjectId))) {
-      return res.status(403).json({ error: 'Access denied' });
+    const access = await checkHouseholdMember(item.householdId, userId);
+    if (!access.ok) {
+      return res.status(access.status).json({ error: access.error });
     }
 
     await ShoppingItem.deleteOne({ _id: item._id });

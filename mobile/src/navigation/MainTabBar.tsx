@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
@@ -39,6 +40,78 @@ const ROUTE_TO_ICON: Record<string, string> = {
   Shopping: 'cart',
   Calendar: 'calendar',
   Settings: 'settings',
+};
+
+const AnimatedIonicons = Animated.createAnimatedComponent(Ionicons);
+
+type TabItemProps = {
+  isFocused: boolean;
+  iconSet: { outline: React.ComponentProps<typeof Ionicons>['name']; filled: React.ComponentProps<typeof Ionicons>['name'] };
+  label: string;
+  color: string;
+  onPress: () => void;
+  onLongPress: () => void;
+  accessibilityLabel?: string;
+  testID?: string;
+};
+
+const TabItem: React.FC<TabItemProps> = ({
+  isFocused,
+  iconSet,
+  label,
+  color,
+  onPress,
+  onLongPress,
+  accessibilityLabel,
+  testID,
+}) => {
+  const focusAnim = useRef(new Animated.Value(isFocused ? 1 : 0)).current;
+
+  useEffect(() => {
+    Animated.spring(focusAnim, {
+      toValue: isFocused ? 1 : 0,
+      useNativeDriver: true,
+      friction: 7,
+      tension: 90,
+    }).start();
+  }, [isFocused, focusAnim]);
+
+  const iconScale = focusAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.18] });
+  const iconLift = focusAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -4] });
+  const labelLift = focusAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -1] });
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={isFocused ? { selected: true } : {}}
+      accessibilityLabel={accessibilityLabel}
+      testID={testID}
+      onPress={onPress}
+      onLongPress={onLongPress}
+      style={styles.tabPressable}
+    >
+      <AnimatedIonicons
+        name={isFocused ? iconSet.filled : iconSet.outline}
+        size={ICON_SIZE}
+        color={color}
+        style={{ transform: [{ translateY: iconLift }, { scale: iconScale }] }}
+      />
+      <Animated.View style={{ transform: [{ translateY: labelLift }] }}>
+        <AppText
+          numberOfLines={1}
+          style={[
+            styles.label,
+            {
+              color,
+              fontWeight: isFocused ? fontWeights.bold : fontWeights.medium,
+            },
+          ]}
+        >
+          {label}
+        </AppText>
+      </Animated.View>
+    </Pressable>
+  );
 };
 
 type Props = BottomTabBarProps;
@@ -149,8 +222,10 @@ export const MainTabBar: React.FC<Props> = ({ state, descriptors, navigation }) 
   const inactiveColor = isDark ? 'rgba(255,255,255,0.75)' : colors.textTertiary;
   const activeColor = colors.primary;
   /** Bubble tint — matches brand green, not blue accent */
-  const bubbleBg = isDark ? 'rgba(74, 222, 128, 0.22)' : 'rgba(34, 197, 94, 0.15)';
   const bubbleBorder = isDark ? 'rgba(134, 239, 172, 0.42)' : 'rgba(34, 197, 94, 0.32)';
+  const bubbleGradient = (isDark
+    ? ['rgba(74, 222, 128, 0.34)', 'rgba(34, 197, 94, 0.14)']
+    : ['rgba(74, 222, 128, 0.28)', 'rgba(34, 197, 94, 0.10)']) as [string, string];
 
   return (
     <View
@@ -192,18 +267,26 @@ export const MainTabBar: React.FC<Props> = ({ state, descriptors, navigation }) 
         {barWidth > 0 && bubbleW > 0 && (
           <Animated.View
             pointerEvents="none"
+            renderToHardwareTextureAndroid
+            shouldRasterizeIOS
             style={[
               styles.bubble,
               {
                 width: bubbleW,
                 height: BUBBLE_HEIGHT,
                 top: 5,
-                backgroundColor: bubbleBg,
                 borderColor: bubbleBorder,
                 transform: [{ translateX: bubbleX }],
               },
             ]}
-          />
+          >
+            <LinearGradient
+              colors={bubbleGradient}
+              start={{ x: 0.5, y: 0 }}
+              end={{ x: 0.5, y: 1 }}
+              style={styles.bubbleFill}
+            />
+          </Animated.View>
         )}
 
         <View style={[styles.tabsRow, { paddingHorizontal: innerPaddingH, paddingTop: 10, paddingBottom: 14 }]}>
@@ -240,30 +323,17 @@ export const MainTabBar: React.FC<Props> = ({ state, descriptors, navigation }) 
             };
 
             return (
-              <Pressable
+              <TabItem
                 key={route.key}
-                accessibilityRole="button"
-                accessibilityState={isFocused ? { selected: true } : {}}
-                accessibilityLabel={options.tabBarAccessibilityLabel}
-                testID={options.tabBarTestID}
+                isFocused={isFocused}
+                iconSet={iconSet}
+                label={labelText}
+                color={color}
                 onPress={onPress}
                 onLongPress={onLongPress}
-                style={styles.tabPressable}
-              >
-                <Ionicons name={isFocused ? iconSet.filled : iconSet.outline} size={ICON_SIZE} color={color} />
-                <AppText
-                  numberOfLines={1}
-                  style={[
-                    styles.label,
-                    {
-                      color,
-                      fontWeight: isFocused ? fontWeights.semibold : fontWeights.medium,
-                    },
-                  ]}
-                >
-                  {labelText}
-                </AppText>
-              </Pressable>
+                accessibilityLabel={options.tabBarAccessibilityLabel}
+                testID={options.tabBarTestID}
+              />
             );
           })}
         </View>
@@ -289,6 +359,10 @@ const styles = StyleSheet.create({
     left: 0,
     borderRadius: 29,
     borderWidth: StyleSheet.hairlineWidth,
+  },
+  bubbleFill: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 29,
   },
   tabsRow: {
     flexDirection: 'row',

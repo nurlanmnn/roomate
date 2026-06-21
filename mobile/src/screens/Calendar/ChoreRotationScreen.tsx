@@ -14,6 +14,7 @@ import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { choresApi, ChoreRotation } from '../../api/choresApi';
+import { getCached, dedupedFetch, invalidateCache, DEFAULT_STALE_TIME_MS } from '../../utils/queryCache';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
@@ -35,11 +36,23 @@ export const ChoreRotationScreen: React.FC<{ navigation: any }> = ({ navigation 
   const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
   const weekKey = format(weekStart, 'yyyy-MM-dd');
 
-  const loadChores = async () => {
+  const loadChores = async (opts?: { allowStale?: boolean }) => {
     if (!selectedHousehold) return;
-    setLoading(true);
+    const key = `chores:${selectedHousehold._id}:${weekKey}`;
+
+    // Paint instantly from the last snapshot; only spin when we have nothing.
+    const cached = getCached<ChoreRotation[]>(key);
+    if (cached) {
+      setChores(cached);
+    } else {
+      setLoading(true);
+    }
     try {
-      const data = await choresApi.getChores(selectedHousehold._id, weekKey);
+      const data = await dedupedFetch<ChoreRotation[]>(
+        key,
+        () => choresApi.getChores(selectedHousehold._id, weekKey),
+        { staleTime: opts?.allowStale ? DEFAULT_STALE_TIME_MS : 0 }
+      );
       setChores(data);
     } catch (error: any) {
       if (__DEV__) console.error('Failed to load chores:', error);
@@ -57,7 +70,7 @@ export const ChoreRotationScreen: React.FC<{ navigation: any }> = ({ navigation 
 
   useFocusEffect(
     React.useCallback(() => {
-      if (selectedHousehold) loadChores();
+      if (selectedHousehold) loadChores({ allowStale: true });
     }, [selectedHousehold])
   );
 
@@ -73,6 +86,10 @@ export const ChoreRotationScreen: React.FC<{ navigation: any }> = ({ navigation 
           onPress: async () => {
             try {
               await choresApi.deleteChore(chore._id);
+              if (selectedHousehold) {
+                invalidateCache(`chores:${selectedHousehold._id}`);
+                invalidateCache(`calendar:${selectedHousehold._id}`);
+              }
               loadChores();
             } catch (e: any) {
               Alert.alert(t('common.error'), e.response?.data?.error || t('alerts.somethingWentWrong'));

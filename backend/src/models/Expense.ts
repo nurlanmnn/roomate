@@ -85,5 +85,7 @@ const ExpenseSchema = new Schema<IExpense>({
   },
 });
 
+ExpenseSchema.index({ householdId: 1, date: -1 });
+
 export const Expense = mongoose.model<IExpense>('Expense', ExpenseSchema);
 

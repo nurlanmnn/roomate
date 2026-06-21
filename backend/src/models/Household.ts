@@ -111,5 +111,7 @@ const HouseholdSchema = new Schema<IHousehold>({
   },
 });
 
+HouseholdSchema.index({ members: 1 });
+
 export const Household = mongoose.model<IHousehold>('Household', HouseholdSchema);
 

@@ -26,7 +26,7 @@ import { useHouseholdCurrency } from '../../utils/useHouseholdCurrency';
 import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows, TAB_BAR_HEIGHT } from '../../theme';
 import { Ionicons } from '@expo/vector-icons';
 import { LoadingSkeleton, SkeletonCard } from '../../components/LoadingSkeleton';
-import { getCached, dedupedFetch } from '../../utils/queryCache';
+import { getCached, dedupedFetch, DEFAULT_STALE_TIME_MS } from '../../utils/queryCache';
 import { prefetchBalanceHistoryData } from '../../utils/balanceHistoryDataCache';
 
 type HomeDashboardSnapshot = {
@@ -66,15 +66,15 @@ export const HomeScreen: React.FC = () => {
   /** Only the latest home fetch may commit (avoids duplicate effects + out-of-order responses). */
   const loadGenRef = useRef(0);
   const prevHouseholdIdRef = useRef<string | undefined>(undefined);
-  const loadDataRef = useRef<(() => void) | undefined>(undefined);
+  const loadDataRef = useRef<((opts?: { allowStale?: boolean }) => void) | undefined>(undefined);
 
   useFocusEffect(
     React.useCallback(() => {
       scrollRef.current?.scrollTo({ y: 0, animated: true });
-      // SWR-style: call loadData on focus. If the cache is still warm it's a
-      // no-op flash for the user (deduped / instant); if a create/delete
-      // invalidated it we quietly refetch in the background.
-      loadDataRef.current?.();
+      // SWR-style: call loadData on focus, but allow a fresh cache snapshot to
+      // satisfy it so flipping between tabs doesn't refetch every time. A
+      // create/delete invalidates the key, so real changes still refetch.
+      loadDataRef.current?.({ allowStale: true });
     }, [])
   );
 
@@ -298,7 +298,7 @@ export const HomeScreen: React.FC = () => {
     setHomeEventsVisible(5);
   }, [events.length]);
 
-  const loadData = React.useCallback(async () => {
+  const loadData = React.useCallback(async (opts?: { allowStale?: boolean }) => {
     if (!householdId) return;
 
     const gen = ++loadGenRef.current;
@@ -324,7 +324,8 @@ export const HomeScreen: React.FC = () => {
             events: upcomingEvents,
             shoppingStats: shoppingStatsData,
           };
-        }
+        },
+        { staleTime: opts?.allowStale ? DEFAULT_STALE_TIME_MS : 0 }
       );
 
       if (gen !== loadGenRef.current) return;
