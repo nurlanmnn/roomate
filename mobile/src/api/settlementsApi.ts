@@ -46,6 +46,8 @@ export interface GetSettlementsOptions {
   toDate?: string;
   toUserId?: string;
   proofOnly?: boolean;
+  /** Pass true when the UI needs proof thumbnails (settlement history). Omit for balance history. */
+  includeProof?: boolean;
 }
 
 export const settlementsApi = {

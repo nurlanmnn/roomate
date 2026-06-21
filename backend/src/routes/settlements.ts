@@ -38,7 +38,23 @@ const householdSettlementsQuerySchema = z.object({
   proofOnly: z
     .preprocess((v) => (v === 'true' || v === true ? true : v === 'false' || v === false ? false : v), z.boolean())
     .optional(),
+  /** When true, include base64 proofImageUrl blobs. Default false — list views
+   *  (e.g. balance history aggregating hundreds of rows) must stay lightweight. */
+  includeProof: z
+    .preprocess((v) => (v === 'true' || v === true ? true : v === 'false' || v === false ? false : v), z.boolean())
+    .optional(),
 });
+
+const settlementListQuery = (filter: Record<string, unknown>, includeProof: boolean) => {
+  let q = Settlement.find(filter)
+    .populate('fromUserId', 'name email avatarUrl')
+    .populate('toUserId', 'name email avatarUrl')
+    .sort({ date: -1 });
+  if (!includeProof) {
+    q = q.select('-proofImageUrl');
+  }
+  return q;
+};
 
 // GET /settlements/household/:householdId
 router.get('/household/:householdId', authMiddleware, async (req: Request, res: Response) => {
@@ -59,7 +75,8 @@ router.get('/household/:householdId', authMiddleware, async (req: Request, res: 
       return res.status(400).json({ error: 'Invalid query', details: query.error.flatten() });
     }
 
-    const { limit, skip, fromDate, toDate, toUserId, proofOnly } = query.data;
+    const { limit, skip, fromDate, toDate, toUserId, proofOnly, includeProof } = query.data;
+    const withProof = includeProof === true;
     const filter: Record<string, unknown> = { householdId };
 
     if (fromDate || toDate) {
@@ -77,10 +94,7 @@ router.get('/household/:householdId', authMiddleware, async (req: Request, res: 
 
     if (limit !== undefined) {
       const [items, total] = await Promise.all([
-        Settlement.find(filter)
-          .populate('fromUserId', 'name email avatarUrl')
-          .populate('toUserId', 'name email avatarUrl')
-          .sort({ date: -1 })
+        settlementListQuery(filter, withProof)
           .skip(skip ?? 0)
           .limit(limit)
           .lean()
@@ -94,10 +108,7 @@ router.get('/household/:householdId', authMiddleware, async (req: Request, res: 
     // Cap unpaginated history so a household with a long settlement log (each
     // potentially carrying a base64 proof image) can't return a multi-MB blob.
     const DEFAULT_UNPAGINATED_CAP = 500;
-    const settlements = await Settlement.find(filter)
-      .populate('fromUserId', 'name email avatarUrl')
-      .populate('toUserId', 'name email avatarUrl')
-      .sort({ date: -1 })
+    const settlements = await settlementListQuery(filter, withProof)
       .limit(DEFAULT_UNPAGINATED_CAP)
       .lean()
       .exec();

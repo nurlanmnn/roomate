@@ -124,6 +124,7 @@ async function fetchAllSettlementsPaginated(
   const first = await settlementsApi.getSettlements(householdId, {
     limit: BALANCE_HISTORY_FETCH_PAGE,
     skip: 0,
+    includeProof: false,
   });
   if (Array.isArray(first)) {
     onPage?.(first);
@@ -137,6 +138,7 @@ async function fetchAllSettlementsPaginated(
     const page = await settlementsApi.getSettlements(householdId, {
       limit: BALANCE_HISTORY_FETCH_PAGE,
       skip,
+      includeProof: false,
     });
     if (Array.isArray(page)) break;
     all.push(...page.items);

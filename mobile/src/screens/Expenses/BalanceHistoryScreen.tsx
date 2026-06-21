@@ -286,7 +286,9 @@ export const BalanceHistoryScreen: React.FC = () => {
       const expenseEntries: BalanceHistoryEntry[] = expenses
         .map((expense): BalanceHistoryEntry | null => {
           const payerId = toUserId(expense.paidBy);
-          const userShare = expense.shares.find((share) => share.userId === userId)?.amount ?? 0;
+          const userShare =
+            expense.shares.find((share) => toUserId(share.userId as { _id: string } | string) === userId)
+              ?.amount ?? 0;
           let delta = 0;
           let debtDelta = 0;
           let loanDelta = 0;
@@ -377,12 +379,14 @@ export const BalanceHistoryScreen: React.FC = () => {
             const payerId = toUserId(exp.paidBy);
             if (payerId === userId) {
               for (const share of exp.shares) {
-                if (share.userId === userId || share.amount <= 0) continue;
-                const prev = pairwise.get(share.userId) ?? 0;
-                pairwise.set(share.userId, prev + share.amount);
+                const shareUserId = toUserId(share.userId as { _id: string } | string);
+                if (!shareUserId || shareUserId === userId || share.amount <= 0) continue;
+                const prev = pairwise.get(shareUserId) ?? 0;
+                pairwise.set(shareUserId, prev + share.amount);
               }
             } else if (payerId) {
-              const myShare = exp.shares.find((s) => s.userId === userId)?.amount ?? 0;
+              const myShare =
+                exp.shares.find((s) => toUserId(s.userId as { _id: string } | string) === userId)?.amount ?? 0;
               if (myShare > 0) {
                 const prev = pairwise.get(payerId) ?? 0;
                 pairwise.set(payerId, prev - myShare);

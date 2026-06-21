@@ -239,6 +239,7 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = () => {
           limit: SETTLEMENTS_PAGE_SIZE,
           skip: 0,
           fromDate: getDateFilterStart(dateFilter),
+          includeProof: true,
         });
         if (Array.isArray(raw)) {
           return { settlements: raw, total: raw.length };
@@ -289,6 +290,7 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = () => {
         limit: SETTLEMENTS_PAGE_SIZE,
         skip: settlements.length,
         fromDate: getDateFilterStart(dateFilter),
+        includeProof: true,
       });
       if (Array.isArray(raw)) return;
       setSettlements((prev) => [...prev, ...raw.items]);

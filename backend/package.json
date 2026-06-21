@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
+    "build:server": "NODE_OPTIONS=--max-old-space-size=768 tsc",
     "start": "node dist/index.js"
   },
   "keywords": [],
