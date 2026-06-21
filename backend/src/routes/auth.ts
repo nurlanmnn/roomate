@@ -199,6 +199,8 @@ router.post('/login', loginRateLimiter, async (req: Request, res: Response) => {
         email: user.email,
         isEmailVerified: user.isEmailVerified,
         avatarUrl: user.avatarUrl,
+        notificationPreferences:
+          user.notificationPreferences || { ...DEFAULT_NOTIFICATION_PREFERENCES },
       },
     });
   } catch (error) {

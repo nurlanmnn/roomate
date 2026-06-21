@@ -70,7 +70,16 @@ export const NotificationSettingsScreen: React.FC<{ navigation: any }> = () => {
     next: boolean
   ): Promise<void> => {
     try {
-      await updateNotificationPreferences({ [key]: next });
+      const updates: Partial<NotificationPreferences> = { [key]: next };
+      // Category rows look off when master is off, but turning one back on
+      // should re-enable the master switch too.
+      if (key !== 'enabled' && next && !masterOn) {
+        updates.enabled = true;
+      }
+      await updateNotificationPreferences(updates);
+      if (updates.enabled === true || (key === 'enabled' && next)) {
+        await registerPushTokenWithBackend();
+      }
     } catch (error: unknown) {
       const ax = error as {
         response?: { status?: number; data?: { error?: string } };
@@ -180,9 +189,8 @@ export const NotificationSettingsScreen: React.FC<{ navigation: any }> = () => {
     [colors]
   );
 
-  // Categories are visually disabled (and locked OFF semantically) when the
-  // master switch is off. Tapping them rolls them on AND flips master back
-  // on — handled with the `effectiveEnabled` guard below.
+  // Categories appear off when master is off; turning one back on also
+  // re-enables master in `handleToggle`.
   const masterOn = prefs.enabled !== false;
 
   const renderPermissionBanner = () => {

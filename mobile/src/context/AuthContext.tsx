@@ -80,8 +80,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [user]);
 
   const login = async (email: string, password: string) => {
-    const response = await authApi.login({ email, password });
-    setUser(response.user);
+    await authApi.login({ email, password });
+    const currentUser = await authApi.getMe();
+    setUser(currentUser);
     // Warm the households list immediately — by the time the navigator
     // finishes its transition into HouseholdSelect the list is already in
     // the cache, so the screen paints with no spinner.
