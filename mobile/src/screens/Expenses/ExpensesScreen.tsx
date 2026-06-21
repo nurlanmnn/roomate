@@ -42,7 +42,14 @@ import { SettingsSection } from '../../components/Settings/SettingsSection';
 import { SettingsGroupCard } from '../../components/Settings/SettingsGroupCard';
 import { SettingsRow } from '../../components/Settings/SettingsRow';
 import { EmptyState } from '../../components/ui/EmptyState';
-import { getCached, dedupedFetch, invalidateCache, isFresh, DEFAULT_STALE_TIME_MS } from '../../utils/queryCache';
+import {
+  getCached,
+  dedupedFetch,
+  invalidateCache,
+  isFresh,
+  subscribe as subscribeCache,
+  DEFAULT_STALE_TIME_MS,
+} from '../../utils/queryCache';
 import { fetchExpensesFullSnapshot, prefetchBalanceHistoryData } from '../../utils/balanceHistoryDataCache';
 
 type ExpensesSnapshot = {
