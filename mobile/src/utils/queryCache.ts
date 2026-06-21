@@ -89,6 +89,12 @@ export const invalidateCache = (prefix: string): void => {
       listeners.get(k)?.forEach((fn) => fn());
     }
   }
+  // Drop in-flight fetches for invalidated keys so stale responses can't repopulate cache.
+  for (const k of Array.from(inflight.keys())) {
+    if (k === prefix || k.startsWith(prefix)) {
+      inflight.delete(k);
+    }
+  }
 };
 
 export const clearAllCache = (): void => {

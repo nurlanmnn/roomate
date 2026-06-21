@@ -42,7 +42,7 @@ import { SettingsSection } from '../../components/Settings/SettingsSection';
 import { SettingsGroupCard } from '../../components/Settings/SettingsGroupCard';
 import { SettingsRow } from '../../components/Settings/SettingsRow';
 import { EmptyState } from '../../components/ui/EmptyState';
-import { getCached, dedupedFetch, invalidateCache, subscribe as subscribeCache, DEFAULT_STALE_TIME_MS } from '../../utils/queryCache';
+import { getCached, dedupedFetch, invalidateCache, isFresh, DEFAULT_STALE_TIME_MS } from '../../utils/queryCache';
 import { fetchExpensesFullSnapshot, prefetchBalanceHistoryData } from '../../utils/balanceHistoryDataCache';
 
 type ExpensesSnapshot = {
@@ -252,7 +252,13 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
       }
     }
 
-    setLoading(true);
+    const skipSpinner =
+      Boolean(getCached<ExpensesSnapshot>(key)) &&
+      Boolean(opts?.allowStale) &&
+      isFresh(key, DEFAULT_STALE_TIME_MS);
+    if (!skipSpinner) {
+      setLoading(true);
+    }
     try {
       const snapshot = await dedupedFetch<ExpensesSnapshot>(key, async () => {
         if (fetchMode) {

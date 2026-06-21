@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   View,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreenShell';
 import { useFocusEffect } from '@react-navigation/native';
@@ -187,7 +188,11 @@ export const ChoreRotationScreen: React.FC<{ navigation: any }> = ({ navigation 
           subtitle={`${t('chores.thisWeek')} · ${format(weekStart, 'MMM d', { locale: dateFnsLocale })}`}
         />
 
-        {chores.length === 0 ? (
+        {loading && chores.length === 0 ? (
+          <View style={{ paddingVertical: spacing.xxl, alignItems: 'center' }}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        ) : chores.length === 0 ? (
           <EmptyState
             icon="repeat-outline"
             title={t('chores.noChores')}

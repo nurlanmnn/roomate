@@ -26,7 +26,7 @@ import { useHouseholdCurrency } from '../../utils/useHouseholdCurrency';
 import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows, TAB_BAR_HEIGHT } from '../../theme';
 import { Ionicons } from '@expo/vector-icons';
 import { LoadingSkeleton, SkeletonCard } from '../../components/LoadingSkeleton';
-import { getCached, dedupedFetch, DEFAULT_STALE_TIME_MS } from '../../utils/queryCache';
+import { getCached, dedupedFetch, DEFAULT_STALE_TIME_MS, isFresh } from '../../utils/queryCache';
 import { prefetchBalanceHistoryData } from '../../utils/balanceHistoryDataCache';
 
 type HomeDashboardSnapshot = {
@@ -302,7 +302,13 @@ export const HomeScreen: React.FC = () => {
     if (!householdId) return;
 
     const gen = ++loadGenRef.current;
-    setLoading(true);
+    const skipSpinner =
+      Boolean(getCached<HomeDashboardSnapshot>(homeDashboardKey(householdId))) &&
+      Boolean(opts?.allowStale) &&
+      isFresh(homeDashboardKey(householdId), DEFAULT_STALE_TIME_MS);
+    if (!skipSpinner) {
+      setLoading(true);
+    }
     setLoadError(false);
     try {
       const snapshot = await dedupedFetch<HomeDashboardSnapshot>(

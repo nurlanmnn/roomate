@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   View,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreenShell';
 import { useFocusEffect } from '@react-navigation/native';
@@ -89,6 +90,7 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   const [calendarListVisibleCount, setCalendarListVisibleCount] = useState(CALENDAR_LIST_PAGE_SIZE);
   const scrollRef = useRef<ScrollView>(null);
   const loadEventsRef = useRef<((opts?: { allowStale?: boolean }) => void) | undefined>(undefined);
+  const loadRequestIdRef = useRef(0);
 
   const isCreator = (event: Event) => event.createdBy?._id === user?._id;
 
@@ -105,9 +107,11 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
 
   const loadEvents = useCallback(async (opts?: { allowStale?: boolean }) => {
     if (!selectedHousehold) return;
+    const requestId = ++loadRequestIdRef.current;
+    const householdId = selectedHousehold._id;
     const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
     const weekKey = format(weekStart, 'yyyy-MM-dd');
-    const key = calendarKey(selectedHousehold._id, weekKey);
+    const key = calendarKey(householdId, weekKey);
 
     // Paint from cache synchronously; only show the spinner if we truly
     // have nothing yet for this household + week.
@@ -121,21 +125,25 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     try {
       const snapshot = await dedupedFetch<CalendarSnapshot>(key, async () => {
         const [eventsRaw, choresData] = await Promise.all([
-          eventsApi.getEvents(selectedHousehold._id),
-          choresApi.getChores(selectedHousehold._id, weekKey).catch(() => []),
+          eventsApi.getEvents(householdId),
+          choresApi.getChores(householdId, weekKey).catch(() => []),
         ]);
         const eventsData = Array.isArray(eventsRaw) ? eventsRaw : eventsRaw.items;
         return { events: eventsData, chores: choresData };
       }, { staleTime: opts?.allowStale ? DEFAULT_STALE_TIME_MS : 0 });
+      if (requestId !== loadRequestIdRef.current) return;
       setEvents(snapshot.events);
       setChores(snapshot.chores);
     } catch (error: any) {
+      if (requestId !== loadRequestIdRef.current) return;
       if (__DEV__) console.error('Failed to load events:', error);
       if (error?.response?.status === 403) {
         setSelectedHousehold(null);
       }
     } finally {
-      setLoading(false);
+      if (requestId === loadRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, [selectedHousehold, setSelectedHousehold]);
 
@@ -594,7 +602,11 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         </SettingsSection>
 
         <SettingsSection title={listSectionTitle}>
-          {Object.keys(eventsByDate).length === 0 ? (
+          {loading && events.length === 0 ? (
+            <View style={{ paddingVertical: spacing.xxl, alignItems: 'center' }}>
+              <ActivityIndicator size="large" color={colors.primary} />
+            </View>
+          ) : Object.keys(eventsByDate).length === 0 ? (
             <SettingsGroupCard>
               <View style={styles.emptyListPad}>
                 <EmptyState

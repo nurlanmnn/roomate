@@ -94,6 +94,7 @@ export const ShoppingListScreen: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [addingItem, setAddingItem] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
+  const loadGenRef = useRef(0);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -124,9 +125,11 @@ export const ShoppingListScreen: React.FC = () => {
 
   const loadLists = async () => {
     if (!selectedHousehold) return;
+    const gen = ++loadGenRef.current;
+    const householdId = selectedHousehold._id;
 
     // Hydrate synchronously from cache so the tab paints instantly on return.
-    const cachedLists = getCached<ShoppingList[]>(shoppingListsKey(selectedHousehold._id));
+    const cachedLists = getCached<ShoppingList[]>(shoppingListsKey(householdId));
     if (cachedLists) {
       setLists(cachedLists);
       if (cachedLists.length > 0 && !selectedList) setSelectedList(cachedLists[0]);
@@ -135,27 +138,33 @@ export const ShoppingListScreen: React.FC = () => {
     }
     try {
       const allLists = await dedupedFetch<ShoppingList[]>(
-        shoppingListsKey(selectedHousehold._id),
-        () => shoppingApi.getShoppingLists(selectedHousehold._id)
+        shoppingListsKey(householdId),
+        () => shoppingApi.getShoppingLists(householdId)
       );
+      if (gen !== loadGenRef.current) return;
       setLists(allLists);
       if (allLists.length > 0 && !selectedList) {
         setSelectedList(allLists[0]);
       }
     } catch (error: any) {
+      if (gen !== loadGenRef.current) return;
       if (__DEV__) console.error('Failed to load shopping lists:', error);
       if (error?.response?.status === 403) {
         setSelectedHousehold(null);
       }
     } finally {
-      setLoading(false);
+      if (gen === loadGenRef.current) {
+        setLoading(false);
+      }
     }
   };
 
   const loadItems = async () => {
     if (!selectedList) return;
+    const gen = ++loadGenRef.current;
+    const listId = selectedList._id;
 
-    const cached = getCached<ShoppingItemsPage>(shoppingItemsKey(selectedList._id));
+    const cached = getCached<ShoppingItemsPage>(shoppingItemsKey(listId));
     if (cached) {
       setItems(cached.items);
       setCompletedItems(cached.completedItems);
@@ -166,14 +175,14 @@ export const ShoppingListScreen: React.FC = () => {
     }
     try {
       const page = await dedupedFetch<ShoppingItemsPage>(
-        shoppingItemsKey(selectedList._id),
+        shoppingItemsKey(listId),
         async () => {
           const [activeRaw, completedRaw] = await Promise.all([
-            shoppingApi.getShoppingItems(selectedList._id, false, {
+            shoppingApi.getShoppingItems(listId, false, {
               limit: SHOPPING_ITEMS_PAGE_SIZE,
               skip: 0,
             }),
-            shoppingApi.getShoppingItems(selectedList._id, true, {
+            shoppingApi.getShoppingItems(listId, true, {
               limit: SHOPPING_ITEMS_PAGE_SIZE,
               skip: 0,
             }),
@@ -188,14 +197,18 @@ export const ShoppingListScreen: React.FC = () => {
           };
         }
       );
+      if (gen !== loadGenRef.current) return;
       setItems(page.items);
       setCompletedItems(page.completedItems);
       setActiveTotal(page.activeTotal);
       setCompletedTotal(page.completedTotal);
     } catch (error) {
+      if (gen !== loadGenRef.current) return;
       if (__DEV__) console.error('Failed to load shopping items:', error);
     } finally {
-      setLoading(false);
+      if (gen === loadGenRef.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -526,10 +539,10 @@ export const ShoppingListScreen: React.FC = () => {
                 if (__DEV__) console.error('Some items failed to restore:', realFailures);
               }
               
-              loadItems();
+              await loadItems();
             } catch (error) {
               if (__DEV__) console.error('Failed to restore items:', error);
-              loadItems(); // Still refresh to show current state
+              await loadItems();
             } finally {
               setLoading(false);
             }
@@ -687,6 +700,10 @@ export const ShoppingListScreen: React.FC = () => {
                     actionLabel={t('shopping.addItem')}
                     onAction={() => setShowAddItemModal(true)}
                   />
+                </View>
+              ) : loading && items.length === 0 && completedItems.length === 0 ? (
+                <View style={{ paddingVertical: spacing.xxl, alignItems: 'center' }}>
+                  <ActivityIndicator size="large" color={colors.primary} />
                 </View>
               ) : (
                 <>

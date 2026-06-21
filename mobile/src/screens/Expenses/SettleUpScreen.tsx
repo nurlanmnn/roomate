@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -63,6 +63,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [receivedSettlementsTotal, setReceivedSettlementsTotal] = useState(0);
   const [loading, setLoading] = useState(false);
+  const loadBalancesGenRef = useRef(0);
   const [loadingMoreReceipts, setLoadingMoreReceipts] = useState(false);
   const [settleModalVisible, setSettleModalVisible] = useState(false);
   const [forgiveModalVisible, setForgiveModalVisible] = useState(false);
@@ -409,6 +410,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
 
   const loadBalances = async () => {
     if (!selectedHousehold || !user) return;
+    const gen = ++loadBalancesGenRef.current;
 
     const key = settleUpKey(selectedHousehold._id, user._id);
     const cached = getCached<SettleUpSnapshot>(key);
@@ -429,6 +431,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
             skip: 0,
             toUserId: user._id,
             proofOnly: true,
+            includeProof: true,
           }),
         ]);
         const receivedSettlements = Array.isArray(settlementsRaw)
@@ -443,13 +446,17 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
           receivedSettlementsTotal,
         };
       });
+      if (gen !== loadBalancesGenRef.current) return;
       setBalances(snapshot.balances);
       setSettlements(snapshot.receivedSettlements);
       setReceivedSettlementsTotal(snapshot.receivedSettlementsTotal);
     } catch (error) {
+      if (gen !== loadBalancesGenRef.current) return;
       if (__DEV__) console.error('Failed to load balances:', error);
     } finally {
-      setLoading(false);
+      if (gen === loadBalancesGenRef.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -618,6 +625,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         skip: receivedSettlements.length,
         toUserId: user._id,
         proofOnly: true,
+        includeProof: true,
       });
       if (Array.isArray(raw)) return;
       setSettlements((prev) => [...prev, ...raw.items]);

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreenShell';
@@ -264,6 +264,7 @@ export const BalanceHistoryScreen: React.FC = () => {
   const [initialLoading, setInitialLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [loadError, setLoadError] = useState(false);
+  const loadRequestIdRef = useRef(0);
 
   const displayedEntries = useMemo(
     () => allEntries.slice(0, visibleCount),
@@ -429,7 +430,11 @@ export const BalanceHistoryScreen: React.FC = () => {
 
   const loadHistory = useCallback(
     async (fromPullRefresh = false) => {
-      if (!selectedHousehold?._id || !user?._id) return;
+      if (!selectedHousehold?._id || !user?._id) {
+        setInitialLoading(false);
+        return;
+      }
+      const requestId = ++loadRequestIdRef.current;
       const hid = selectedHousehold._id;
       const userId = user._id;
       const members = selectedHousehold.members;
@@ -453,22 +458,27 @@ export const BalanceHistoryScreen: React.FC = () => {
 
       try {
         const [expSnap, setSnap] = await revalidateBalanceHistoryData(hid, (expenses, settlements) => {
+          if (requestId !== loadRequestIdRef.current) return;
           setAllEntries(mergeToEntries(expenses, settlements, userId, members));
           setVisibleCount(BALANCE_HISTORY_PAGE_SIZE);
           setInitialLoading(false);
         });
+        if (requestId !== loadRequestIdRef.current) return;
         setAllEntries(mergeToEntries(expSnap.expenses, setSnap.settlements, userId, members));
         setVisibleCount(BALANCE_HISTORY_PAGE_SIZE);
       } catch (error) {
+        if (requestId !== loadRequestIdRef.current) return;
         if (__DEV__) console.error('Failed to load balance history', error);
         setLoadError(true);
         if (!canPaintStale) {
           setAllEntries([]);
         }
       } finally {
-        setInitialLoading(false);
-        if (fromPullRefresh) {
-          setRefreshing(false);
+        if (requestId === loadRequestIdRef.current) {
+          setInitialLoading(false);
+          if (fromPullRefresh) {
+            setRefreshing(false);
+          }
         }
       }
     },
