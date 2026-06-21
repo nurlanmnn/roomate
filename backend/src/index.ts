@@ -68,9 +68,13 @@ app.use('/shopping', shoppingRoutes);
 app.use('/events', eventRoutes);
 app.use('/chores', choreRoutes);
 
-// Health check
+// Health check — includes notification flag so release QA can verify server config
+// without SSH (curl https://api.roomate.us/health).
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
+  res.json({
+    status: 'ok',
+    notificationsEnabled: config.notificationsEnabled,
+  });
 });
 
 /** Public privacy policy (App Store Connect). Canonical: https://api.roomate.us/legal/privacy */
