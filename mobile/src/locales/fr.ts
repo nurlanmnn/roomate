@@ -530,6 +530,7 @@ export default {
     selectEndDate: 'Sélectionner la date de fin',
     endTime: 'Heure de Fin',
     selectEndTime: 'Sélectionner l\'heure de fin',
+    clearEnd: 'Supprimer l\'heure de fin',
   },
 
   // Event Types

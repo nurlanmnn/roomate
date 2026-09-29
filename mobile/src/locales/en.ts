@@ -535,6 +535,7 @@ export default {
     selectEndDate: 'Select end date',
     endTime: 'End Time',
     selectEndTime: 'Select end time',
+    clearEnd: 'Remove end time',
   },
 
   // Event Types

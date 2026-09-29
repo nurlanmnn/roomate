@@ -530,6 +530,7 @@ export default {
     selectEndDate: 'Bitiş tarihi seç',
     endTime: 'Bitiş Saati',
     selectEndTime: 'Bitiş saati seç',
+    clearEnd: 'Bitiş saatini kaldır',
   },
 
   // Event Types

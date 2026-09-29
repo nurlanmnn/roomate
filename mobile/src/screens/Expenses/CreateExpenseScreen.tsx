@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -28,8 +28,7 @@ import { getCurrencyOption } from '../../constants/currencies';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
 import { Avatar } from '../../components/ui/Avatar';
 import { useThemeColors, useTheme, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
-import { CategoryPicker } from '../../components/CategoryPicker';
-import { EXPENSE_CATEGORIES, getCategoryById } from '../../constants/expenseCategories';
+import { EXPENSE_CATEGORIES, getCategoryById, getExpenseCategoryLabel } from '../../constants/expenseCategories';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '../../components/AppText';
 import { useLanguage } from '../../context/LanguageContext';
@@ -66,7 +65,6 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
   const [totalAmount, setTotalAmount] = useState('');
   const [paidBy, setPaidBy] = useState('');
   const [date, setDate] = useState(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [category, setCategory] = useState<string>('');
   const [selectedParticipants, setSelectedParticipants] = useState<string[]>([]);
   const [splitMethod, setSplitMethod] = useState<'even' | 'manual'>('even');
@@ -80,41 +78,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
   const [templateName, setTemplateName] = useState('');
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [deletingTemplateId, setDeletingTemplateId] = useState<string | null>(null);
-
-  const scrollRef = useRef<ScrollView>(null);
-  const scrollYRef = useRef(0);
-  const fieldRefs = useRef<Record<string, View | null>>({});
-
-  const scrollPickerFieldIntoView = useCallback(
-    (key: string) => {
-      if (Platform.OS !== 'ios') return;
-      const node = fieldRefs.current[key];
-      if (!node || !scrollRef.current) return;
-      node.measureInWindow((_x, y, _w, h) => {
-        const windowH = Dimensions.get('window').height;
-        const safeBottom = windowH - insets.bottom - 28;
-        const viewBottom = y + h;
-        let delta = viewBottom - safeBottom + 24;
-        delta = Math.max(delta, 100);
-        if (delta > 6) {
-          scrollRef.current?.scrollTo({
-            y: Math.max(0, scrollYRef.current + delta),
-            animated: true,
-          });
-        }
-      });
-    },
-    [insets.bottom]
-  );
-
-  useEffect(() => {
-    if (Platform.OS !== 'ios' || !showDatePicker) return;
-    const id = setTimeout(() => scrollPickerFieldIntoView('date'), 200);
-    return () => clearTimeout(id);
-  }, [showDatePicker, scrollPickerFieldIntoView]);
-
-  const iosDatePickerOpen = Platform.OS === 'ios' && showDatePicker;
-  const scrollPaddingBottom = iosDatePickerOpen ? 340 : spacing.xxl;
+  const [activePicker, setActivePicker] = useState<'paidBy' | 'split' | 'date' | 'category' | null>(null);
 
   // Prefill when editing
   useEffect(() => {
@@ -288,6 +252,44 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
       borderTopWidth: StyleSheet.hairlineWidth,
       borderTopColor: colors.borderLight,
     },
+    summaryRow: {
+      minHeight: 58,
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.borderLight,
+    },
+    summaryRowLast: {
+      borderBottomWidth: 0,
+    },
+    summaryIcon: {
+      width: 34,
+      height: 34,
+      borderRadius: radii.md,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.primaryUltraSoft,
+      marginRight: spacing.md,
+    },
+    summaryCopy: {
+      flex: 1,
+      minWidth: 0,
+    },
+    summaryLabel: {
+      fontSize: fontSizes.xs,
+      fontWeight: fontWeights.semibold,
+      color: colors.textTertiary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
+    summaryValue: {
+      marginTop: 2,
+      fontSize: fontSizes.md,
+      fontWeight: fontWeights.medium,
+      color: colors.text,
+    },
     fieldLabel: {
       fontSize: fontSizes.sm,
       fontWeight: fontWeights.semibold,
@@ -435,8 +437,10 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
     },
     footerActions: {
       paddingHorizontal: spacing.xl,
-      paddingTop: spacing.lg,
-      paddingBottom: spacing.xl,
+      paddingTop: spacing.md,
+      backgroundColor: colors.surface,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.borderLight,
     },
     footerButtonsRow: {
       flexDirection: 'row',
@@ -575,7 +579,105 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
     spacer: {
       width: spacing.sm,
     },
-  }), [colors]);
+    pickerBackdrop: {
+      flex: 1,
+      justifyContent: 'flex-end',
+      backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    },
+    pickerSheet: {
+      maxHeight: '86%',
+      backgroundColor: colors.surface,
+      borderTopLeftRadius: radii.lg,
+      borderTopRightRadius: radii.lg,
+      paddingBottom: Math.max(insets.bottom, spacing.md),
+      overflow: 'hidden',
+    },
+    pickerHandle: {
+      width: 36,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: colors.border,
+      alignSelf: 'center',
+      marginTop: spacing.sm,
+    },
+    pickerHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: spacing.xl,
+      paddingVertical: spacing.md,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.borderLight,
+    },
+    pickerTitle: {
+      fontSize: fontSizes.xl,
+      fontWeight: fontWeights.bold,
+      color: colors.text,
+    },
+    pickerClose: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.background,
+    },
+    pickerBody: {
+      paddingHorizontal: spacing.xl,
+      paddingVertical: spacing.md,
+    },
+    pickerDone: {
+      paddingHorizontal: spacing.xl,
+      paddingTop: spacing.sm,
+    },
+    segment: {
+      flexDirection: 'row',
+      padding: 4,
+      borderRadius: radii.lg,
+      backgroundColor: colors.background,
+      marginBottom: spacing.lg,
+    },
+    segmentOption: {
+      flex: 1,
+      minHeight: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: radii.md,
+    },
+    segmentOptionActive: {
+      backgroundColor: colors.surface,
+      ...(shadows.sm as object),
+    },
+    segmentText: {
+      fontSize: fontSizes.sm,
+      fontWeight: fontWeights.medium,
+      color: colors.textSecondary,
+    },
+    segmentTextActive: {
+      color: colors.primary,
+      fontWeight: fontWeights.semibold,
+    },
+    categoryRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      minHeight: 52,
+      gap: spacing.md,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.borderLight,
+    },
+    categoryIcon: {
+      width: 34,
+      height: 34,
+      borderRadius: radii.md,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    categoryLabel: {
+      flex: 1,
+      fontSize: fontSizes.md,
+      color: colors.text,
+    },
+  }), [colors, insets.bottom]);
 
   // Only set default paidBy and participants when creating new (not editing)
   useEffect(() => {
@@ -890,6 +992,12 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
 
   const remaining = getRemainingAmount();
   const canSubmit = splitMethod === 'even' || Math.abs(remaining) < 0.01;
+  const paidByMember = selectedHousehold.members.find((member) => member._id === paidBy);
+  const selectedCategory = category ? getCategoryById(category) : undefined;
+  const participantCount = selectedParticipants.length;
+  const participantLabel =
+    participantCount === 1 ? t('expenses.participant') : t('expenses.participantPlural');
+  const splitSummary = `${splitMethod === 'even' ? t('expenses.splitEvenly') : t('expenses.splitManually')} • ${participantCount} ${participantLabel}`;
 
   return (
     <SanctuaryScreenShell edges={['top']} innerStyle={styles.container}>
@@ -900,18 +1008,13 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
         keyboardVerticalOffset={0}
       >
         <ScrollView
-          ref={scrollRef}
           style={styles.scrollView}
-          contentContainerStyle={[styles.scrollContent, { paddingBottom: scrollPaddingBottom }]}
+          contentContainerStyle={styles.scrollContent}
           contentInsetAdjustmentBehavior="automatic"
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
           showsVerticalScrollIndicator={false}
           automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
-          onScroll={(e) => {
-            scrollYRef.current = e.nativeEvent.contentOffset.y;
-          }}
-          scrollEventThrottle={16}
         >
           <ScreenHeader
             title={isEditing ? t('expenses.editExpense') : t('expenses.addExpense')}
@@ -920,36 +1023,6 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
             rightText={t('common.close')}
             onRightPress={() => navigation.goBack()}
           />
-
-          <SettingsSection title={t('expenses.sectionTemplates')}>
-            <SettingsGroupCard>
-              <View style={styles.templateActionsInCard}>
-                <TouchableOpacity
-                  style={styles.templateButtonInCard}
-                  onPress={() => setShowTemplatesModal(true)}
-                  disabled={loadingTemplates}
-                  activeOpacity={0.75}
-                >
-                  <Ionicons name="document-text-outline" size={20} color={colors.primary} />
-                  <AppText style={styles.templateButtonText} numberOfLines={2}>
-                    {templates.length > 0
-                      ? `${t('expenses.loadTemplate')} (${templates.length})`
-                      : t('expenses.loadTemplate')}
-                  </AppText>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.templateButtonInCard}
-                  onPress={() => setShowSaveTemplateModal(true)}
-                  activeOpacity={0.75}
-                >
-                  <Ionicons name="bookmark-outline" size={20} color={colors.accent} />
-                  <AppText style={styles.templateButtonText} numberOfLines={2}>
-                    {t('expenses.saveAsTemplate')}
-                  </AppText>
-                </TouchableOpacity>
-              </View>
-            </SettingsGroupCard>
-          </SettingsSection>
 
           <SettingsSection title={t('expenses.sectionExpenseDetails')}>
             <SettingsGroupCard>
@@ -975,139 +1048,65 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
 
           <SettingsSection title={t('expenses.sectionPaidBy')}>
             <SettingsGroupCard>
-              {selectedHousehold.members.map((member, index) => {
-                const isLast = index === selectedHousehold.members.length - 1;
-                const selected = paidBy === member._id;
-                return (
-                  <TouchableOpacity
-                    key={member._id}
-                    style={[
-                      styles.selectableRow,
-                      !isLast && styles.selectableRowBorder,
-                      selected && styles.paidByRowSelected,
-                    ]}
-                    onPress={() => setPaidBy(member._id)}
-                    activeOpacity={0.75}
-                  >
-                    <Avatar name={member.name} uri={member.avatarUrl} size={32} />
-                    <AppText style={[styles.rowName, selected && styles.rowNameSelected]}>{member.name}</AppText>
-                  </TouchableOpacity>
-                );
-              })}
+              <TouchableOpacity style={[styles.summaryRow, styles.summaryRowLast]} onPress={() => setActivePicker('paidBy')}>
+                <View style={styles.summaryIcon}>
+                  <Ionicons name="person-outline" size={19} color={colors.primary} />
+                </View>
+                <View style={styles.summaryCopy}>
+                  <AppText style={styles.summaryLabel}>{t('expenses.sectionPaidBy')}</AppText>
+                  <AppText style={styles.summaryValue} numberOfLines={1}>{paidByMember?.name || t('expenses.sectionPaidBy')}</AppText>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+              </TouchableOpacity>
+            </SettingsGroupCard>
+          </SettingsSection>
+
+          <SettingsSection title={t('expenses.splitMethod')}>
+            <SettingsGroupCard>
+              <TouchableOpacity style={[styles.summaryRow, styles.summaryRowLast]} onPress={() => setActivePicker('split')}>
+                <View style={styles.summaryIcon}>
+                  <Ionicons name="people-outline" size={19} color={colors.primary} />
+                </View>
+                <View style={styles.summaryCopy}>
+                  <AppText style={styles.summaryLabel}>{t('expenses.splitMethod')}</AppText>
+                  <AppText style={styles.summaryValue} numberOfLines={1}>{splitSummary}</AppText>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+              </TouchableOpacity>
             </SettingsGroupCard>
           </SettingsSection>
 
           <SettingsSection title={t('expenses.sectionDateAndCategory')}>
             <SettingsGroupCard>
-              <View
-                ref={(r) => {
-                  fieldRefs.current.date = r;
-                }}
-                style={styles.cardPad}
-              >
-                <AppText style={styles.fieldLabel}>{t('expenses.date')}</AppText>
-                <TouchableOpacity
-                  style={styles.dateField}
-                  onPress={() => setShowDatePicker((prev) => !prev)}
-                  activeOpacity={0.75}
-                >
-                  <AppText style={styles.dateText}>
-                    {date.toLocaleDateString(intlLocale, {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })}
+              <TouchableOpacity style={styles.summaryRow} onPress={() => setActivePicker('date')}>
+                <View style={styles.summaryIcon}>
+                  <Ionicons name="calendar-outline" size={19} color={colors.primary} />
+                </View>
+                <View style={styles.summaryCopy}>
+                  <AppText style={styles.summaryLabel}>{t('expenses.date')}</AppText>
+                  <AppText style={styles.summaryValue}>
+                    {date.toLocaleDateString(intlLocale, { year: 'numeric', month: 'long', day: 'numeric' })}
                   </AppText>
-                </TouchableOpacity>
-                {showDatePicker ? (
-                  <DateTimePicker
-                    value={date}
-                    mode="date"
-                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                    maximumDate={new Date()}
-                    themeVariant={theme}
-                    onChange={(event, selectedDate) => {
-                      setShowDatePicker(Platform.OS === 'ios');
-                      if (selectedDate) {
-                        setDate(selectedDate);
-                      }
-                    }}
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.summaryRow, styles.summaryRowLast]} onPress={() => setActivePicker('category')}>
+                <View style={styles.summaryIcon}>
+                  <Ionicons
+                    name={(selectedCategory?.icon || 'pricetag-outline') as any}
+                    size={19}
+                    color={selectedCategory?.color || colors.primary}
                   />
-                ) : null}
-                {Platform.OS === 'ios' && showDatePicker ? (
-                  <View style={styles.datePickerActions}>
-                    <TouchableOpacity
-                      style={styles.datePickerButton}
-                      onPress={() => setShowDatePicker(false)}
-                      activeOpacity={0.7}
-                    >
-                      <AppText style={styles.datePickerButtonText}>{t('common.done')}</AppText>
-                    </TouchableOpacity>
-                  </View>
-                ) : null}
-              </View>
-              <View style={[styles.cardPad, styles.cardSectionDivider]}>
-                <AppText style={styles.fieldLabel}>{t('expenses.categoryOptional')}</AppText>
-                <CategoryPicker
-                  selectedCategory={category}
-                  onSelectCategory={setCategory}
-                  onClear={() => setCategory('')}
-                />
-              </View>
-            </SettingsGroupCard>
-          </SettingsSection>
-
-          <View style={styles.customSection}>
-            <View style={styles.participantsHeaderRow}>
-              <AppText style={styles.sectionUpperLabel}>{t('expenses.participants')}</AppText>
-              <TouchableOpacity onPress={toggleSelectAll} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <AppText style={styles.selectAllText}>
-                  {allSelected ? t('common.deselectAll') : t('common.selectAll')}
-                </AppText>
-              </TouchableOpacity>
-            </View>
-            <SettingsGroupCard>
-              {selectedHousehold.members.map((member, index) => {
-                const isLast = index === selectedHousehold.members.length - 1;
-                const selected = selectedParticipants.includes(member._id);
-                return (
-                  <TouchableOpacity
-                    key={member._id}
-                    style={[
-                      styles.selectableRow,
-                      !isLast && styles.selectableRowBorder,
-                      selected && styles.participantRowSelected,
-                    ]}
-                    onPress={() => toggleParticipant(member._id)}
-                    activeOpacity={0.75}
-                  >
-                    <Avatar name={member.name} uri={member.avatarUrl} size={32} />
-                    <AppText style={[styles.rowName, selected && styles.rowNameSelected]}>{member.name}</AppText>
-                  </TouchableOpacity>
-                );
-              })}
-            </SettingsGroupCard>
-          </View>
-
-          <SettingsSection title={t('expenses.splitMethod')}>
-            <SettingsGroupCard>
-              <TouchableOpacity
-                style={[styles.splitRow, styles.splitRowBorder, splitMethod === 'even' && styles.splitRowActive]}
-                onPress={() => setSplitMethod('even')}
-                activeOpacity={0.75}
-              >
-                <AppText style={[styles.splitRowText, splitMethod === 'even' && styles.splitRowTextActive]}>
-                  {t('expenses.splitEvenly')}
-                </AppText>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.splitRow, splitMethod === 'manual' && styles.splitRowActive]}
-                onPress={() => setSplitMethod('manual')}
-                activeOpacity={0.75}
-              >
-                <AppText style={[styles.splitRowText, splitMethod === 'manual' && styles.splitRowTextActive]}>
-                  {t('expenses.splitManually')}
-                </AppText>
+                </View>
+                <View style={styles.summaryCopy}>
+                  <AppText style={styles.summaryLabel}>{t('expenses.categoryOptional')}</AppText>
+                  <AppText style={styles.summaryValue} numberOfLines={1}>
+                    {selectedCategory
+                      ? getExpenseCategoryLabel(t, selectedCategory.id)
+                      : t('expenses.categoryPickerPlaceholder')}
+                  </AppText>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
               </TouchableOpacity>
             </SettingsGroupCard>
           </SettingsSection>
@@ -1132,54 +1131,235 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
             </SettingsSection>
           ) : null}
 
-          {splitMethod === 'manual' ? (
-            <SettingsSection title={t('expenses.manualShares')}>
-              <SettingsGroupCard>
-                <View style={styles.cardPad}>
-                  {selectedParticipants.map((userId) => {
-                    const member = selectedHousehold.members.find((m) => m._id === userId);
-                    return (
-                      <View key={userId} style={styles.manualShareRow}>
-                        <AppText style={styles.manualShareLabel}>{member?.name}</AppText>
-                        <View style={styles.manualShareInputWrap}>
-                          <FormTextInput
-                            value={manualShares[userId] || ''}
-                            onChangeText={(text) => setManualShares({ ...manualShares, [userId]: text })}
-                            placeholder="0.00"
-                            keyboardType="numeric"
-                            containerStyle={{ marginBottom: 0 }}
-                          />
-                        </View>
-                      </View>
-                    );
-                  })}
-                  <AppText style={[styles.remaining, remaining !== 0 && styles.remainingError]}>
-                    {t('expenses.remainingToAssign')}: {formatCurrency(remaining, currency)}
+          <SettingsSection title={t('expenses.sectionTemplates')}>
+            <SettingsGroupCard>
+              <View style={styles.templateActionsInCard}>
+                <TouchableOpacity
+                  style={styles.templateButtonInCard}
+                  onPress={() => setShowTemplatesModal(true)}
+                  disabled={loadingTemplates}
+                  activeOpacity={0.75}
+                >
+                  <Ionicons name="document-text-outline" size={20} color={colors.primary} />
+                  <AppText style={styles.templateButtonText} numberOfLines={1}>
+                    {templates.length > 0 ? `${t('expenses.loadTemplate')} (${templates.length})` : t('expenses.loadTemplate')}
                   </AppText>
-                </View>
-              </SettingsGroupCard>
-            </SettingsSection>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.templateButtonInCard}
+                  onPress={() => setShowSaveTemplateModal(true)}
+                  activeOpacity={0.75}
+                >
+                  <Ionicons name="bookmark-outline" size={20} color={colors.accent} />
+                  <AppText style={styles.templateButtonText} numberOfLines={1}>{t('expenses.saveAsTemplate')}</AppText>
+                </TouchableOpacity>
+              </View>
+            </SettingsGroupCard>
+          </SettingsSection>
+        </ScrollView>
+        <View style={[styles.footerActions, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
+          <View style={styles.footerButtonsRow}>
+            <PrimaryButton
+              title={t('common.cancel')}
+              onPress={() => navigation.goBack()}
+              variant="secondary"
+              style={styles.cancelButton}
+            />
+            <PrimaryButton
+              title={isEditing ? t('expenses.updateExpense') : t('expenses.saveExpense')}
+              onPress={handleSubmit}
+              loading={loading}
+              disabled={!canSubmit}
+              style={styles.saveButton}
+            />
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+
+    <Modal visible={activePicker !== null} transparent animationType="slide" onRequestClose={() => setActivePicker(null)}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <Pressable style={styles.pickerBackdrop} onPress={() => setActivePicker(null)}>
+          <Pressable style={styles.pickerSheet} onPress={(event) => event.stopPropagation()}>
+          <View style={styles.pickerHandle} />
+          <View style={styles.pickerHeader}>
+            <AppText style={styles.pickerTitle}>
+              {activePicker === 'paidBy'
+                ? t('expenses.sectionPaidBy')
+                : activePicker === 'split'
+                  ? t('expenses.splitMethod')
+                  : activePicker === 'date'
+                    ? t('expenses.date')
+                    : t('expenses.selectCategory')}
+            </AppText>
+            <TouchableOpacity style={styles.pickerClose} onPress={() => setActivePicker(null)}>
+              <Ionicons name="close" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+
+          {activePicker === 'paidBy' ? (
+            <ScrollView>
+              {selectedHousehold.members.map((member, index) => {
+                const selected = paidBy === member._id;
+                return (
+                  <TouchableOpacity
+                    key={member._id}
+                    style={[
+                      styles.selectableRow,
+                      index < selectedHousehold.members.length - 1 && styles.selectableRowBorder,
+                      selected && styles.paidByRowSelected,
+                    ]}
+                    onPress={() => {
+                      setPaidBy(member._id);
+                      setActivePicker(null);
+                    }}
+                  >
+                    <Avatar name={member.name} uri={member.avatarUrl} size={32} />
+                    <AppText style={[styles.rowName, selected && styles.rowNameSelected]}>{member.name}</AppText>
+                    {selected ? <Ionicons name="checkmark-circle" size={22} color={colors.primary} /> : null}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
           ) : null}
 
-          <View style={styles.footerActions}>
-            <View style={styles.footerButtonsRow}>
-              <PrimaryButton
-                title={t('common.cancel')}
-                onPress={() => navigation.goBack()}
-                variant="secondary"
-                style={styles.cancelButton}
+          {activePicker === 'split' ? (
+            <>
+              <ScrollView contentContainerStyle={styles.pickerBody} keyboardShouldPersistTaps="handled">
+                <View style={styles.segment}>
+                  <TouchableOpacity
+                    style={[styles.segmentOption, splitMethod === 'even' && styles.segmentOptionActive]}
+                    onPress={() => setSplitMethod('even')}
+                  >
+                    <AppText style={[styles.segmentText, splitMethod === 'even' && styles.segmentTextActive]}>
+                      {t('expenses.splitEvenly')}
+                    </AppText>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.segmentOption, splitMethod === 'manual' && styles.segmentOptionActive]}
+                    onPress={() => setSplitMethod('manual')}
+                  >
+                    <AppText style={[styles.segmentText, splitMethod === 'manual' && styles.segmentTextActive]}>
+                      {t('expenses.splitManually')}
+                    </AppText>
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.participantsHeaderRow}>
+                  <AppText style={styles.sectionUpperLabel}>{t('expenses.participants')}</AppText>
+                  <TouchableOpacity onPress={toggleSelectAll}>
+                    <AppText style={styles.selectAllText}>
+                      {allSelected ? t('common.deselectAll') : t('common.selectAll')}
+                    </AppText>
+                  </TouchableOpacity>
+                </View>
+                <SettingsGroupCard>
+                  {selectedHousehold.members.map((member, index) => {
+                    const selected = selectedParticipants.includes(member._id);
+                    return (
+                      <TouchableOpacity
+                        key={member._id}
+                        style={[
+                          styles.selectableRow,
+                          index < selectedHousehold.members.length - 1 && styles.selectableRowBorder,
+                          selected && styles.participantRowSelected,
+                        ]}
+                        onPress={() => toggleParticipant(member._id)}
+                      >
+                        <Avatar name={member.name} uri={member.avatarUrl} size={32} />
+                        <AppText style={[styles.rowName, selected && styles.rowNameSelected]}>{member.name}</AppText>
+                        {selected ? <Ionicons name="checkmark-circle" size={22} color={colors.primary} /> : null}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </SettingsGroupCard>
+                {splitMethod === 'manual' ? (
+                  <View style={{ marginTop: spacing.lg }}>
+                    <AppText style={styles.sharesTitle}>{t('expenses.manualShares')}</AppText>
+                    {selectedParticipants.map((userId) => {
+                      const member = selectedHousehold.members.find((item) => item._id === userId);
+                      return (
+                        <View key={userId} style={styles.manualShareRow}>
+                          <AppText style={styles.manualShareLabel}>{member?.name}</AppText>
+                          <View style={styles.manualShareInputWrap}>
+                            <FormTextInput
+                              value={manualShares[userId] || ''}
+                              onChangeText={(text) => setManualShares({ ...manualShares, [userId]: text })}
+                              placeholder="0.00"
+                              keyboardType="numeric"
+                              containerStyle={{ marginBottom: 0 }}
+                            />
+                          </View>
+                        </View>
+                      );
+                    })}
+                    <AppText style={[styles.remaining, remaining !== 0 && styles.remainingError]}>
+                      {t('expenses.remainingToAssign')}: {formatCurrency(remaining, currency)}
+                    </AppText>
+                  </View>
+                ) : null}
+              </ScrollView>
+              <View style={styles.pickerDone}>
+                <PrimaryButton title={t('common.done')} onPress={() => setActivePicker(null)} />
+              </View>
+            </>
+          ) : null}
+
+          {activePicker === 'date' ? (
+            <View style={styles.pickerBody}>
+              <DateTimePicker
+                value={date}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                maximumDate={new Date()}
+                themeVariant={theme}
+                onChange={(event, selectedDate) => {
+                  if (selectedDate) setDate(selectedDate);
+                  if (Platform.OS !== 'ios') setActivePicker(null);
+                }}
               />
-              <PrimaryButton
-                title={isEditing ? t('expenses.updateExpense') : t('expenses.saveExpense')}
-                onPress={handleSubmit}
-                loading={loading}
-                disabled={!canSubmit}
-                style={styles.saveButton}
-              />
+              {Platform.OS === 'ios' ? (
+                <PrimaryButton title={t('common.done')} onPress={() => setActivePicker(null)} />
+              ) : null}
             </View>
-          </View>
-        </ScrollView>
-    </KeyboardAvoidingView>
+          ) : null}
+
+          {activePicker === 'category' ? (
+            <ScrollView contentContainerStyle={styles.pickerBody}>
+              {category ? (
+                <TouchableOpacity
+                  style={styles.categoryRow}
+                  onPress={() => {
+                    setCategory('');
+                    setActivePicker(null);
+                  }}
+                >
+                  <View style={[styles.categoryIcon, { backgroundColor: colors.background }]}>
+                    <Ionicons name="close-circle-outline" size={20} color={colors.textSecondary} />
+                  </View>
+                  <AppText style={styles.categoryLabel}>{t('expenses.clearCategorySelection')}</AppText>
+                </TouchableOpacity>
+              ) : null}
+              {EXPENSE_CATEGORIES.map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={styles.categoryRow}
+                  onPress={() => {
+                    setCategory(item.id);
+                    setActivePicker(null);
+                  }}
+                >
+                  <View style={[styles.categoryIcon, { backgroundColor: `${item.color}20` }]}>
+                    <Ionicons name={item.icon as any} size={20} color={item.color} />
+                  </View>
+                  <AppText style={styles.categoryLabel}>{getExpenseCategoryLabel(t, item.id)}</AppText>
+                  {category === item.id ? <Ionicons name="checkmark-circle" size={22} color={colors.primary} /> : null}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          ) : null}
+          </Pressable>
+        </Pressable>
+      </KeyboardAvoidingView>
+    </Modal>
 
     {/* Templates Modal */}
     <Modal

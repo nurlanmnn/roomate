@@ -1,13 +1,13 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
-  Dimensions,
   Keyboard,
   KeyboardAvoidingView,
+  Modal,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
@@ -27,6 +27,7 @@ import { invalidateCache, updateCached } from '../../utils/queryCache';
 import { toBcp47Locale } from '../../utils/dateLocales';
 import { format, startOfWeek } from 'date-fns';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AppText } from '../../components/AppText';
 
 /** Mirrors the snapshot shape cached by CalendarScreen — keep in sync. */
 type CalendarSnapshot = { events: Event[]; chores: ChoreRotation[] };
@@ -67,70 +68,17 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
   const [time, setTime] = useState(new Date());
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [endTime, setEndTime] = useState<Date | null>(null);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
-  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
-  const [showEndTimePicker, setShowEndTimePicker] = useState(false);
   const [saving, setSaving] = useState(false);
-
-  const scrollRef = useRef<ScrollView>(null);
-  const scrollYRef = useRef(0);
-  const fieldRefs = useRef<Record<string, View | null>>({});
-
-  /** After the iOS spinner mounts, measure the full field block and scroll so it clears the home indicator. */
-  const scrollPickerFieldIntoView = useCallback(
-    (key: string) => {
-      if (Platform.OS !== 'ios') return;
-      const node = fieldRefs.current[key];
-      if (!node || !scrollRef.current) return;
-      node.measureInWindow((_x, y, _w, h) => {
-        const windowH = Dimensions.get('window').height;
-        const safeBottom = windowH - insets.bottom - 28;
-        const viewBottom = y + h;
-        let delta = viewBottom - safeBottom + 24;
-        if (key === 'endTime' || key === 'endDate') {
-          delta = Math.max(delta, 220);
-        } else if (key === 'time' || key === 'date') {
-          delta = Math.max(delta, 100);
-        }
-        if (delta > 6) {
-          scrollRef.current?.scrollTo({
-            y: Math.max(0, scrollYRef.current + delta),
-            animated: true,
-          });
-        }
-      });
-    },
-    [insets.bottom]
-  );
-
-  useEffect(() => {
-    if (Platform.OS !== 'ios') return;
-    const key = showEndTimePicker
-      ? 'endTime'
-      : showEndDatePicker
-        ? 'endDate'
-        : showTimePicker
-          ? 'time'
-          : showDatePicker
-            ? 'date'
-            : null;
-    if (!key) return;
-    const id = setTimeout(() => scrollPickerFieldIntoView(key), 200);
-    return () => clearTimeout(id);
-  }, [
-    showDatePicker,
-    showTimePicker,
-    showEndDatePicker,
-    showEndTimePicker,
-    scrollPickerFieldIntoView,
-  ]);
+  const [activeSheet, setActiveSheet] = useState<'type' | 'start' | 'end' | null>(null);
+  const [pickerPart, setPickerPart] = useState<'date' | 'time'>('date');
+  const [showDescription, setShowDescription] = useState(false);
 
   // Pre-fill form when editing
   useEffect(() => {
     if (editingEvent) {
       setTitle(editingEvent.title);
       setDescription(editingEvent.description || '');
+      setShowDescription(!!editingEvent.description);
       setType(editingEvent.type);
       const eventDate = new Date(editingEvent.date);
       setDate(eventDate);
@@ -144,11 +92,6 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
   }, [editingEvent]);
 
   const canSubmit = useMemo(() => title.trim().length > 0, [title]);
-
-  const iosPickerOpen =
-    Platform.OS === 'ios' &&
-    (showDatePicker || showTimePicker || showEndDatePicker || showEndTimePicker);
-  const scrollPaddingBottom = iosPickerOpen ? 340 : spacing.xxl;
 
   const handleSave = async () => {
     if (!selectedHousehold) return;
@@ -222,11 +165,26 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
     return (
       <SanctuaryScreenShell edges={['top', 'bottom']} innerStyle={styles.container}>
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>{t('alerts.selectHousehold')}</Text>
+          <AppText style={styles.emptyText}>{t('alerts.selectHousehold')}</AppText>
         </View>
       </SanctuaryScreenShell>
     );
   }
+
+  const selectedEventType = EVENT_TYPES.find((eventType) => eventType.id === type) ?? EVENT_TYPES[EVENT_TYPES.length - 1];
+  const startSummary = `${date.toLocaleDateString(intlLocale, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })} • ${time.toLocaleTimeString(intlLocale, { hour: 'numeric', minute: '2-digit' })}`;
+  const endSummary =
+    endDate && endTime
+      ? `${endDate.toLocaleDateString(intlLocale, {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+        })} • ${endTime.toLocaleTimeString(intlLocale, { hour: 'numeric', minute: '2-digit' })}`
+      : t('common.optional');
 
   return (
     <SanctuaryScreenShell edges={['top']} innerStyle={styles.container}>
@@ -237,255 +195,257 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
         keyboardVerticalOffset={0}
       >
         <ScrollView
-          ref={scrollRef}
           style={styles.scrollView}
-          contentContainerStyle={{ paddingBottom: scrollPaddingBottom }}
+          contentContainerStyle={styles.scrollContent}
           contentInsetAdjustmentBehavior="automatic"
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
-          onScroll={(e) => {
-            scrollYRef.current = e.nativeEvent.contentOffset.y;
-          }}
-          scrollEventThrottle={16}
+          showsVerticalScrollIndicator={false}
         >
           <ScreenHeader
             title={isEditing ? t('events.editEvent') : t('events.addEvent')}
             subtitle={selectedHousehold.name}
             showTitle={false}
+            rightText={t('common.close')}
+            onRightPress={() => navigation.goBack()}
           />
 
           <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <View style={styles.card}>
-            <FormTextInput
-              label={t('events.eventTitle')}
-              value={title}
-              onChangeText={setTitle}
-              placeholder={t('events.titlePlaceholder')}
-            />
-            <FormTextInput
-              label={`${t('events.eventDescription')} (${t('common.optional')})`}
-              value={description}
-              onChangeText={setDescription}
-              placeholder={t('events.descriptionPlaceholder')}
-              multiline
-            />
-
-            <View style={styles.field}>
-              <Text style={styles.label}>{t('events.eventType')}</Text>
-              <View style={styles.typeGrid}>
-                {EVENT_TYPES.map((eventType) => (
-                  <TouchableOpacity
-                    key={eventType.id}
-                    style={[styles.typeOption, type === eventType.id && styles.typeOptionActive]}
-                    onPress={() => setType(eventType.id)}
-                  >
-                    <Ionicons
-                      name={eventType.icon as any}
-                      size={20}
-                      color={type === eventType.id ? colors.primary : colors.textSecondary}
-                    />
-                    <Text style={[styles.typeOptionText, type === eventType.id && styles.typeOptionTextActive]}>
-                      {t(eventType.labelKey)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+            <View>
+              <View style={[styles.card, styles.inputCard]}>
+                <FormTextInput
+                  label={t('events.eventTitle')}
+                  value={title}
+                  onChangeText={setTitle}
+                  placeholder={t('events.titlePlaceholder')}
+                  containerStyle={{ marginBottom: 0 }}
+                />
               </View>
-            </View>
 
-            <View
-              ref={(r) => {
-                fieldRefs.current.date = r;
-              }}
-              style={styles.field}
-            >
-              <Text style={styles.label}>{t('events.date')}</Text>
-              <TouchableOpacity
-                style={styles.dateButton}
-                onPress={() => setShowDatePicker((prev) => !prev)}
-              >
-                <Text style={styles.dateText}>
-                  {date.toLocaleDateString(intlLocale, { year: 'numeric', month: 'long', day: 'numeric' })}
-                </Text>
-              </TouchableOpacity>
-              {showDatePicker && (
-                <DateTimePicker
-                  value={date}
-                  mode="date"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  themeVariant={theme}
-                  onChange={(event, selectedDate) => {
-                    setShowDatePicker(Platform.OS === 'ios');
-                    if (selectedDate) setDate(selectedDate);
+              <View style={styles.card}>
+                <TouchableOpacity style={styles.summaryRow} onPress={() => setActiveSheet('type')}>
+                  <View style={styles.summaryIcon}>
+                    <Ionicons name={selectedEventType.icon as any} size={20} color={colors.primary} />
+                  </View>
+                  <View style={styles.summaryCopy}>
+                    <AppText style={styles.summaryLabel}>{t('events.eventType')}</AppText>
+                    <AppText style={styles.summaryValue}>{t(selectedEventType.labelKey)}</AppText>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.summaryRow}
+                  onPress={() => {
+                    setPickerPart('date');
+                    setActiveSheet('start');
                   }}
-                />
-              )}
-              {Platform.OS === 'ios' && showDatePicker && (
-                <View style={styles.datePickerActions}>
-                  <TouchableOpacity
-                    style={styles.datePickerButton}
-                    onPress={() => setShowDatePicker(false)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.datePickerButtonText}>{t('common.done')}</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
-
-            <View
-              ref={(r) => {
-                fieldRefs.current.time = r;
-              }}
-              style={styles.field}
-            >
-              <Text style={styles.label}>{t('events.time')}</Text>
-              <TouchableOpacity
-                style={styles.dateButton}
-                onPress={() => setShowTimePicker((prev) => !prev)}
-              >
-                <Text style={styles.dateText}>
-                  {time.toLocaleTimeString(intlLocale, { hour: 'numeric', minute: '2-digit' })}
-                </Text>
-              </TouchableOpacity>
-              {showTimePicker && (
-                <DateTimePicker
-                  value={time}
-                  mode="time"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  themeVariant={theme}
-                  onChange={(event, selectedTime) => {
-                    setShowTimePicker(Platform.OS === 'ios');
-                    if (selectedTime) setTime(selectedTime);
+                >
+                  <View style={styles.summaryIcon}>
+                    <Ionicons name="calendar-outline" size={20} color={colors.primary} />
+                  </View>
+                  <View style={styles.summaryCopy}>
+                    <AppText style={styles.summaryLabel}>{t('events.date')}</AppText>
+                    <AppText style={styles.summaryValue} numberOfLines={1}>{startSummary}</AppText>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.summaryRow, styles.summaryRowLast]}
+                  onPress={() => {
+                    setPickerPart('date');
+                    setActiveSheet('end');
                   }}
-                />
-              )}
-              {Platform.OS === 'ios' && showTimePicker && (
-                <View style={styles.datePickerActions}>
-                  <TouchableOpacity
-                    style={styles.datePickerButton}
-                    onPress={() => setShowTimePicker(false)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.datePickerButtonText}>{t('common.done')}</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
+                >
+                  <View style={styles.summaryIcon}>
+                    <Ionicons name="flag-outline" size={20} color={colors.primary} />
+                  </View>
+                  <View style={styles.summaryCopy}>
+                    <AppText style={styles.summaryLabel}>{t('events.endDate')}</AppText>
+                    <AppText style={[styles.summaryValue, !endDate && styles.placeholderText]} numberOfLines={1}>
+                      {endSummary}
+                    </AppText>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+                </TouchableOpacity>
+              </View>
 
-            <View
-              ref={(r) => {
-                fieldRefs.current.endDate = r;
-              }}
-              style={styles.field}
-            >
-              <Text style={styles.label}>{t('events.endDate')} ({t('common.optional')})</Text>
-              <TouchableOpacity
-                style={styles.dateButton}
-                onPress={() => setShowEndDatePicker((prev) => !prev)}
-              >
-                <Text style={[styles.dateText, !endDate && styles.placeholderText]}>
-                  {endDate
-                    ? endDate.toLocaleDateString(intlLocale, { year: 'numeric', month: 'long', day: 'numeric' })
-                    : t('events.selectEndDate')}
-                </Text>
-              </TouchableOpacity>
-              {showEndDatePicker && (
-                <DateTimePicker
-                  value={endDate || new Date()}
-                  mode="date"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  themeVariant={theme}
-                  onChange={(event, selectedDate) => {
-                    setShowEndDatePicker(Platform.OS === 'ios');
-                    if (selectedDate) setEndDate(selectedDate);
-                  }}
-                />
-              )}
-              {Platform.OS === 'ios' && showEndDatePicker && (
-                <View style={styles.datePickerActions}>
-                  <TouchableOpacity
-                    style={styles.datePickerButton}
-                    onPress={() => setShowEndDatePicker(false)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.datePickerButtonText}>{t('common.done')}</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
-
-            <View
-              ref={(r) => {
-                fieldRefs.current.endTime = r;
-              }}
-              style={styles.field}
-            >
-              <Text style={styles.label}>{t('events.endTime')} ({t('common.optional')})</Text>
-              <TouchableOpacity
-                style={[styles.dateButton, !endDate && styles.dateButtonDisabled]}
-                onPress={() => {
-                  if (!endDate) {
-                    setEndDate(date);
-                  }
-                  setShowEndTimePicker((prev) => !prev);
-                }}
-              >
-                <Text style={[styles.dateText, (!endDate || !endTime) && styles.placeholderText]}>
-                  {endTime
-                    ? endTime.toLocaleTimeString(intlLocale, { hour: 'numeric', minute: '2-digit' })
-                    : t('events.selectEndTime')}
-                </Text>
-              </TouchableOpacity>
-              {showEndTimePicker && (
-                <DateTimePicker
-                  value={endTime || new Date()}
-                  mode="time"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  themeVariant={theme}
-                  onChange={(event, selectedTime) => {
-                    setShowEndTimePicker(Platform.OS === 'ios');
-                    if (selectedTime) setEndTime(selectedTime);
-                  }}
-                />
-              )}
-              {Platform.OS === 'ios' && showEndTimePicker && (
-                <View style={styles.datePickerActions}>
-                  <TouchableOpacity
-                    style={styles.datePickerButton}
-                    onPress={() => setShowEndTimePicker(false)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.datePickerButtonText}>{t('common.done')}</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
-
-            <View style={styles.actions}>
-              <PrimaryButton
-                title={t('common.cancel')}
-                onPress={() => {
-                  Keyboard.dismiss();
-                  navigation.goBack();
-                }}
-                variant="secondary"
-              />
-              <View style={styles.spacer} />
-              <PrimaryButton
-                title={isEditing ? t('common.save') : t('common.create')}
-                onPress={() => {
-                  Keyboard.dismiss();
-                  handleSave();
-                }}
-                disabled={!canSubmit}
-                loading={saving}
-              />
-            </View>
+              <View style={styles.card}>
+                <TouchableOpacity
+                  style={[styles.summaryRow, !showDescription && styles.summaryRowLast]}
+                  onPress={() => setShowDescription((current) => !current)}
+                >
+                  <View style={styles.summaryIcon}>
+                    <Ionicons name="document-text-outline" size={20} color={colors.primary} />
+                  </View>
+                  <View style={styles.summaryCopy}>
+                    <AppText style={styles.summaryLabel}>{t('common.optional')}</AppText>
+                    <AppText style={styles.summaryValue}>{t('events.eventDescription')}</AppText>
+                  </View>
+                  <Ionicons
+                    name={showDescription ? 'chevron-up' : 'chevron-down'}
+                    size={18}
+                    color={colors.textTertiary}
+                  />
+                </TouchableOpacity>
+                {showDescription ? (
+                  <View style={styles.descriptionField}>
+                    <FormTextInput
+                      value={description}
+                      onChangeText={setDescription}
+                      placeholder={t('events.descriptionPlaceholder')}
+                      multiline
+                      containerStyle={{ marginBottom: 0 }}
+                    />
+                  </View>
+                ) : null}
+              </View>
             </View>
           </TouchableWithoutFeedback>
         </ScrollView>
+
+        <View style={[styles.actions, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
+          <View style={styles.actionButton}>
+            <PrimaryButton
+              title={t('common.cancel')}
+              onPress={() => {
+                Keyboard.dismiss();
+                navigation.goBack();
+              }}
+              variant="secondary"
+            />
+          </View>
+          <View style={styles.actionButton}>
+            <PrimaryButton
+              title={isEditing ? t('common.save') : t('common.create')}
+              onPress={() => {
+                Keyboard.dismiss();
+                handleSave();
+              }}
+              disabled={!canSubmit}
+              loading={saving}
+            />
+          </View>
+        </View>
       </KeyboardAvoidingView>
+
+      <Modal visible={activeSheet !== null} transparent animationType="slide" onRequestClose={() => setActiveSheet(null)}>
+        <Pressable style={styles.sheetBackdrop} onPress={() => setActiveSheet(null)}>
+          <Pressable style={styles.sheet} onPress={(event) => event.stopPropagation()}>
+            <View style={styles.sheetHandle} />
+            <View style={styles.sheetHeader}>
+              <AppText style={styles.sheetTitle}>
+                {activeSheet === 'type'
+                  ? t('events.eventType')
+                  : activeSheet === 'end'
+                    ? t('events.endDate')
+                    : t('events.date')}
+              </AppText>
+              <TouchableOpacity style={styles.closeButton} onPress={() => setActiveSheet(null)}>
+                <Ionicons name="close" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            {activeSheet === 'type' ? (
+              <ScrollView contentContainerStyle={styles.typeList}>
+                {EVENT_TYPES.map((eventType) => {
+                  const selected = type === eventType.id;
+                  return (
+                    <TouchableOpacity
+                      key={eventType.id}
+                      style={[styles.typeRow, selected && styles.typeRowActive]}
+                      onPress={() => {
+                        setType(eventType.id);
+                        setActiveSheet(null);
+                      }}
+                    >
+                      <View style={[styles.typeIcon, selected && styles.typeIconActive]}>
+                        <Ionicons
+                          name={eventType.icon as any}
+                          size={20}
+                          color={selected ? colors.primary : colors.textSecondary}
+                        />
+                      </View>
+                      <AppText style={[styles.typeText, selected && styles.typeTextActive]}>
+                        {t(eventType.labelKey)}
+                      </AppText>
+                      {selected ? <Ionicons name="checkmark-circle" size={22} color={colors.primary} /> : null}
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            ) : null}
+
+            {activeSheet === 'start' || activeSheet === 'end' ? (
+              <View style={styles.pickerBody}>
+                <View style={styles.segment}>
+                  <TouchableOpacity
+                    style={[styles.segmentOption, pickerPart === 'date' && styles.segmentOptionActive]}
+                    onPress={() => setPickerPart('date')}
+                  >
+                    <AppText style={[styles.segmentText, pickerPart === 'date' && styles.segmentTextActive]}>
+                      {t('events.date')}
+                    </AppText>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.segmentOption, pickerPart === 'time' && styles.segmentOptionActive]}
+                    onPress={() => setPickerPart('time')}
+                  >
+                    <AppText style={[styles.segmentText, pickerPart === 'time' && styles.segmentTextActive]}>
+                      {t('events.time')}
+                    </AppText>
+                  </TouchableOpacity>
+                </View>
+
+                <DateTimePicker
+                  value={
+                    activeSheet === 'end'
+                      ? pickerPart === 'date'
+                        ? endDate || date
+                        : endTime || time
+                      : pickerPart === 'date'
+                        ? date
+                        : time
+                  }
+                  mode={pickerPart}
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  themeVariant={theme}
+                  onChange={(event, selectedValue) => {
+                    if (!selectedValue) return;
+                    if (activeSheet === 'end') {
+                      if (pickerPart === 'date') {
+                        setEndDate(selectedValue);
+                        setEndTime((current) => current || new Date(time));
+                      } else {
+                        setEndTime(selectedValue);
+                        setEndDate((current) => current || new Date(date));
+                      }
+                    } else if (pickerPart === 'date') {
+                      setDate(selectedValue);
+                    } else {
+                      setTime(selectedValue);
+                    }
+                  }}
+                />
+
+                {activeSheet === 'end' ? (
+                  <TouchableOpacity
+                    style={styles.clearEndButton}
+                    onPress={() => {
+                      setEndDate(null);
+                      setEndTime(null);
+                      setActiveSheet(null);
+                    }}
+                  >
+                    <AppText style={styles.clearEndText}>{t('events.clearEnd')}</AppText>
+                  </TouchableOpacity>
+                ) : null}
+                <PrimaryButton title={t('common.done')} onPress={() => setActiveSheet(null)} />
+              </View>
+            ) : null}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SanctuaryScreenShell>
   );
 };
@@ -494,87 +454,161 @@ const createStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
   keyboardAvoid: { flex: 1 },
   scrollView: { flex: 1 },
+  scrollContent: { paddingBottom: spacing.xl },
   emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl },
   emptyText: { fontSize: fontSizes.md, color: colors.muted },
   card: {
-    marginHorizontal: spacing.md,
+    marginHorizontal: spacing.xl,
     marginTop: spacing.md,
-    marginBottom: spacing.xxl,
     backgroundColor: colors.surface,
     borderRadius: radii.lg,
-    padding: spacing.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderLight,
     ...(shadows.sm as object),
+    overflow: 'hidden',
   },
-  field: { marginBottom: spacing.md },
-  label: { fontSize: fontSizes.sm, fontWeight: fontWeights.semibold, color: colors.textSecondary, marginBottom: spacing.xs },
-  typeGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  typeOption: {
+  inputCard: { padding: spacing.lg },
+  summaryRow: {
+    minHeight: 62,
     flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    gap: spacing.xs,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.borderLight,
   },
-  typeOptionActive: {
+  summaryRowLast: { borderBottomWidth: 0 },
+  summaryIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
     backgroundColor: colors.primaryUltraSoft,
-    borderColor: colors.primary,
   },
-  typeOptionText: {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
-  },
-  typeOptionTextActive: {
-    color: colors.primary,
+  summaryCopy: { flex: 1, minWidth: 0 },
+  summaryLabel: {
+    fontSize: fontSizes.xs,
     fontWeight: fontWeights.semibold,
+    color: colors.textTertiary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  dateButton: {
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+  summaryValue: {
+    marginTop: 2,
+    fontSize: fontSizes.md,
+    fontWeight: fontWeights.medium,
+    color: colors.text,
   },
-  dateButtonDisabled: {
-    opacity: 0.5,
-  },
-  dateText: { fontSize: fontSizes.md, color: colors.text },
   placeholderText: { color: colors.muted },
-  datePickerActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: spacing.md,
+  descriptionField: {
+    paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
-    borderTopWidth: 1,
+    paddingBottom: spacing.xs,
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+    backgroundColor: colors.surface,
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.borderLight,
   },
-  datePickerButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.xl,
-    borderRadius: radii.md,
-    minWidth: 80,
+  actionButton: { flex: 1 },
+  sheetBackdrop: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  sheet: {
+    maxHeight: '86%',
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radii.lg,
+    borderTopRightRadius: radii.lg,
+    paddingBottom: spacing.xl,
+    overflow: 'hidden',
+  },
+  sheetHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.border,
+    alignSelf: 'center',
+    marginTop: spacing.sm,
+  },
+  sheetHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    ...(shadows.xs as object),
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.borderLight,
   },
-  datePickerButtonText: {
-    color: colors.surface,
+  sheetTitle: {
+    fontSize: fontSizes.xl,
+    fontWeight: fontWeights.bold,
+    color: colors.text,
+  },
+  closeButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.background,
+  },
+  typeList: { paddingHorizontal: spacing.xl, paddingVertical: spacing.sm },
+  typeRow: {
+    minHeight: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.borderLight,
+  },
+  typeRowActive: { backgroundColor: colors.primaryUltraSoft },
+  typeIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+    backgroundColor: colors.background,
+  },
+  typeIconActive: { backgroundColor: colors.surface },
+  typeText: { flex: 1, fontSize: fontSizes.md, color: colors.text },
+  typeTextActive: { color: colors.primary, fontWeight: fontWeights.semibold },
+  pickerBody: { paddingHorizontal: spacing.xl, paddingTop: spacing.md },
+  segment: {
+    flexDirection: 'row',
+    padding: 4,
+    borderRadius: radii.lg,
+    backgroundColor: colors.background,
+    marginBottom: spacing.sm,
+  },
+  segmentOption: {
+    flex: 1,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radii.md,
+  },
+  segmentOptionActive: {
+    backgroundColor: colors.surface,
+    ...(shadows.sm as object),
+  },
+  segmentText: {
     fontSize: fontSizes.md,
-    fontWeight: fontWeights.semibold,
-    letterSpacing: 0.2,
+    fontWeight: fontWeights.medium,
+    color: colors.textSecondary,
   },
-  actions: { flexDirection: 'row', marginTop: spacing.md },
-  spacer: { width: spacing.sm },
+  segmentTextActive: { color: colors.primary, fontWeight: fontWeights.semibold },
+  clearEndButton: { alignItems: 'center', paddingVertical: spacing.md },
+  clearEndText: { color: colors.danger, fontSize: fontSizes.sm, fontWeight: fontWeights.semibold },
 });
 
 
