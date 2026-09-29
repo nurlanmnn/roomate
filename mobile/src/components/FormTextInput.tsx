@@ -18,6 +18,7 @@ interface FormTextInputProps {
   helperText?: string;
   onFocus?: () => void;
   onBlur?: () => void;
+  autoFocus?: boolean;
   /** Merged with the outer container (e.g. marginBottom: 0 for last field in a group). */
   containerStyle?: ViewStyle;
 }
@@ -36,6 +37,7 @@ export const FormTextInput: React.FC<FormTextInputProps> = ({
   helperText,
   onFocus,
   onBlur,
+  autoFocus,
   containerStyle,
 }) => {
   const { theme } = useTheme();
@@ -102,6 +104,7 @@ export const FormTextInput: React.FC<FormTextInputProps> = ({
         textAlignVertical={multiline ? 'top' : 'center'}
         onFocus={onFocus}
         onBlur={onBlur}
+        autoFocus={autoFocus}
       />
       {!error && !!helperText && <AppText style={styles.helperText}>{helperText}</AppText>}
       {error && <AppText style={styles.errorText}>{error}</AppText>}

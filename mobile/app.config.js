@@ -56,6 +56,7 @@ module.exports = () => {
       },
       plugins: [
         'expo-secure-store',
+        'expo-font',
         'expo-web-browser',
         [
           'expo-notifications',

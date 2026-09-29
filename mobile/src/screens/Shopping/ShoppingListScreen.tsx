@@ -321,14 +321,16 @@ export const ShoppingListScreen: React.FC = () => {
     }
 
     // Optimistic update - update UI immediately
-    const updatedItem = {
+    const updatedItem: ShoppingItem = {
       ...editingItem,
       name: editItemName.trim(),
       quantity: editItemQuantity ? parseInt(editItemQuantity, 10) : undefined,
       weight: editItemWeight ? parseInt(editItemWeight, 10) : undefined,
       weightUnit: editItemWeightUnit || undefined,
       isShared: editItemIsShared,
-      ownerId: editItemIsShared ? undefined : editItemOwnerId,
+      ownerId: editItemIsShared
+        ? undefined
+        : selectedHousehold?.members.find((member) => member._id === editItemOwnerId),
     };
 
     // Update local state immediately

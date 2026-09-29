@@ -40,9 +40,7 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
   }, []);
 
   // Memoize the translation function bound to current locale
-  const t = useCallback((scope: string, options?: object) => {
-    return i18n.t(scope, options);
-  }, [language]);
+  const t = useCallback(i18n.t.bind(i18n), [language]) as typeof i18n.t;
 
   const value: LanguageContextType = {
     language,

@@ -17,7 +17,7 @@ import {
   getLocalizedCurrencyName,
   CurrencyOption,
 } from '../constants/currencies';
-import { useLanguage } from '../context/LanguageContext';
+import { useLanguage, type LanguageCode } from '../context/LanguageContext';
 import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows } from '../theme';
 
 interface CurrencyPickerProps {
@@ -176,7 +176,7 @@ const CurrencyRow = React.memo(function CurrencyRow({
 }: {
   item: CurrencyOption;
   isSelected: boolean;
-  language: string;
+  language: LanguageCode;
   colorsPrimary: string;
   styles: ReturnType<typeof createStyles>;
   onSelect: (code: string) => void;
