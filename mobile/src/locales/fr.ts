@@ -189,6 +189,11 @@ export default {
 
   // Household Settings
   householdSettingsScreen: {
+    sectionNotifications: 'Notifications',
+    muteHouseholdTitle: 'Mettre ce foyer en sourdine',
+    muteHouseholdSubtitle: 'Vous recevrez toujours les notifications de vos autres foyers.',
+    muteHouseholdHint: 'Coupe les notifications de ce foyer pour vous uniquement.',
+    muteHouseholdError: 'Impossible de modifier la sourdine. Réessayez.',
     title: 'Paramètres du Foyer',
     sectionHousehold: 'Foyer',
     sectionInvite: 'Invitation',
@@ -234,6 +239,7 @@ export default {
 
   // Home Screen
   home: {
+    owesYou: 'Vous doit',
     owesYouLine: '%{name} vous doit %{amount}',
     youOweLine: 'Vous devez %{amount} à %{name}',
     yourTurn: 'À votre tour',
@@ -557,6 +563,10 @@ export default {
 
   // Shopping
   shopping: {
+    quickAdd: 'Ajout rapide',
+    quickAddEmpty: 'Saisissez votre liste de courses',
+    quickAddParseError: 'Aucun article n’a pu être lu dans votre saisie',
+    quickAddHelp: 'Saisissez votre liste de courses, séparée par des virgules. Vous pouvez indiquer des quantités. Exemple : lait, 2 kg de poulet, 3 œufs, 1 litre d’eau.',
     title: 'Liste de Courses',
     sectionSearch: 'Recherche',
     sectionCurrentList: 'Liste actuelle',

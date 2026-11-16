@@ -189,6 +189,11 @@ export default {
 
   // Household Settings
   householdSettingsScreen: {
+    sectionNotifications: 'Benachrichtigungen',
+    muteHouseholdTitle: 'Diesen Haushalt stummschalten',
+    muteHouseholdSubtitle: 'Du erhältst weiterhin Benachrichtigungen von deinen anderen Haushalten.',
+    muteHouseholdHint: 'Schaltet Push-Benachrichtigungen dieses Haushalts nur für dich stumm.',
+    muteHouseholdError: 'Stummschaltung konnte nicht geändert werden. Versuch es noch einmal.',
     title: 'Haushaltseinstellungen',
     sectionHousehold: 'Haushalt',
     sectionInvite: 'Einladung',
@@ -234,6 +239,7 @@ export default {
 
   // Home Screen
   home: {
+    owesYou: 'Schuldet dir',
     owesYouLine: '%{name} schuldet dir %{amount}',
     youOweLine: 'Du schuldest %{name} %{amount}',
     yourTurn: 'Du bist dran',
@@ -557,6 +563,10 @@ export default {
 
   // Shopping
   shopping: {
+    quickAdd: 'Schnell hinzufügen',
+    quickAddEmpty: 'Bitte gib deine Einkaufsliste ein',
+    quickAddParseError: 'Aus deiner Eingabe konnten keine Artikel gelesen werden',
+    quickAddHelp: 'Gib deine Einkaufsliste ein, durch Kommas getrennt. Mengen sind möglich. Beispiel: Milch, 2 kg Hähnchen, 3 Eier, 1 Liter Wasser.',
     title: 'Einkaufsliste',
     sectionSearch: 'Suche',
     sectionCurrentList: 'Aktuelle Liste',

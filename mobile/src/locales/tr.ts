@@ -189,6 +189,11 @@ export default {
 
   // Household Settings
   householdSettingsScreen: {
+    sectionNotifications: 'Bildirimler',
+    muteHouseholdTitle: 'Bu evi sessize al',
+    muteHouseholdSubtitle: 'Diğer evlerinden bildirim almaya devam edersin.',
+    muteHouseholdHint: 'Bu evin bildirimlerini yalnızca senin için kapatır.',
+    muteHouseholdError: 'Sessize alma durumu güncellenemedi. Tekrar dene.',
     title: 'Ev Ayarları',
     sectionHousehold: 'Ev',
     sectionInvite: 'Davet',
@@ -234,6 +239,7 @@ export default {
 
   // Home Screen
   home: {
+    owesYou: 'Sana borçlu',
     owesYouLine: '%{name} sana %{amount} borçlu',
     youOweLine: '%{name} kişisine %{amount} borçlusun',
     yourTurn: 'Sıra sende',
@@ -557,6 +563,10 @@ export default {
 
   // Shopping
   shopping: {
+    quickAdd: 'Hızlı ekle',
+    quickAddEmpty: 'Lütfen alışveriş listeni yaz',
+    quickAddParseError: 'Yazdıklarından hiçbir ürün okunamadı',
+    quickAddHelp: 'Alışveriş listeni virgülle ayırarak yaz. Miktar da ekleyebilirsin. Örnek: süt, 2 kg tavuk, 3 yumurta, 1 litre su.',
     title: 'Alışveriş Listesi',
     sectionSearch: 'Ara',
     sectionCurrentList: 'Geçerli liste',

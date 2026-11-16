@@ -553,7 +553,7 @@ export const HomeScreen: React.FC = () => {
                       key={`balance-${b.otherId}`}
                       leading={<Avatar name={b.name} uri={b.avatar} size={36} />}
                       title={b.name}
-                      subtitle={b.owedToMe ? t('expenses.owesYou') : t('home.youOwe')}
+                      subtitle={b.owedToMe ? t('home.owesYou') : t('home.youOwe')}
                       trailing={<Amount value={b.amount} currency={currency} size={22} direction={b.owedToMe ? 'owed' : 'owe'} />}
                       onPress={openBalances}
                       accessibilityLabel={

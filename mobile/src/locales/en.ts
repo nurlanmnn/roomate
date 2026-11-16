@@ -235,6 +235,7 @@ export default {
 
   // Home Screen
   home: {
+    owesYou: 'Owes you',
     owesYouLine: '%{name} owes you %{amount}',
     youOweLine: 'You owe %{name} %{amount}',
     yourTurn: 'Your turn',
@@ -562,6 +563,10 @@ export default {
 
   // Shopping
   shopping: {
+    quickAdd: 'Quick add',
+    quickAddEmpty: 'Please enter your shopping list',
+    quickAddParseError: 'Could not read any items from what you typed',
+    quickAddHelp: 'Type your shopping list, separated by commas. You can include amounts. Example: milk, 2kg chicken, 3 eggs, 1 litre of water.',
     title: 'Shopping List',
     sectionSearch: 'Search',
     sectionCurrentList: 'Current list',

@@ -189,6 +189,11 @@ export default {
 
   // Household Settings
   householdSettingsScreen: {
+    sectionNotifications: 'Notificaciones',
+    muteHouseholdTitle: 'Silenciar este hogar',
+    muteHouseholdSubtitle: 'Seguirás recibiendo notificaciones de tus otros hogares.',
+    muteHouseholdHint: 'Silencia las notificaciones de este hogar solo para ti.',
+    muteHouseholdError: 'No se pudo cambiar el silencio. Inténtalo de nuevo.',
     title: 'Configuración del Hogar',
     sectionHousehold: 'Hogar',
     sectionInvite: 'Invitar',
@@ -234,6 +239,7 @@ export default {
 
   // Home Screen
   home: {
+    owesYou: 'Te debe',
     owesYouLine: '%{name} te debe %{amount}',
     youOweLine: 'Le debes %{amount} a %{name}',
     yourTurn: 'Te toca',
@@ -557,6 +563,10 @@ export default {
 
   // Shopping
   shopping: {
+    quickAdd: 'Añadir rápido',
+    quickAddEmpty: 'Escribe tu lista de la compra',
+    quickAddParseError: 'No se pudo leer ningún artículo de lo que escribiste',
+    quickAddHelp: 'Escribe tu lista de la compra, separada por comas. Puedes incluir cantidades. Ejemplo: leche, 2 kg de pollo, 3 huevos, 1 litro de agua.',
     title: 'Lista de Compras',
     sectionSearch: 'Buscar',
     sectionCurrentList: 'Lista actual',
