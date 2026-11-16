@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import {
+  Pressable,
   Alert,
   ScrollView,
   StyleSheet,
@@ -19,8 +20,9 @@ import { ChoreRotationRow } from '../../components/ChoreRotationRow';
 import { useChoreCompletion } from '../../hooks/useChoreCompletion';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { EmptyState } from '../../components/ui/EmptyState';
-import { Group, GroupRow, SectionHeading } from '../../components/ui/Group';
-import { useThemeColors, fontSizes, spacing } from '../../theme';
+import { Group, SectionHeading } from '../../components/ui/Group';
+import { Ionicons } from '@expo/vector-icons';
+import { useThemeColors, fontSizes, fontWeights, spacing } from '../../theme';
 import { format, startOfWeek } from 'date-fns';
 import { getDateFnsLocale } from '../../utils/dateLocales';
 import { getChorePeriodStart, getUpcomingAssignees } from '../../utils/choreSchedule';
@@ -220,19 +222,26 @@ export const ChoreRotationScreen: React.FC<{ navigation: any }> = ({ navigation 
                         {t('chores.upcoming', { list: upcoming.map((u) => u.label).join(', ') })}
                       </AppText>
                     )}
-                    <GroupRow
-                      title={t('common.edit')}
-                      icon="pencil-outline"
-                      onPress={() => navigation.navigate('CreateChore', { editingChore: chore })}
-                      chevron
-                    />
-                    <GroupRow
-                      title={t('common.delete')}
-                      icon="trash-outline"
-                      iconTone="danger"
-                      destructive
-                      onPress={() => handleDeleteChore(chore)}
-                    />
+                    <View style={styles.choreActions}>
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={`${t('common.edit')}: ${chore.name}`}
+                        onPress={() => navigation.navigate('CreateChore', { editingChore: chore })}
+                        style={({ pressed }) => [styles.choreAction, pressed && { opacity: 0.6 }]}
+                      >
+                        <Ionicons name="pencil-outline" size={18} color={colors.primary} />
+                        <AppText style={[styles.choreActionText, { color: colors.primary }]}>{t('common.edit')}</AppText>
+                      </Pressable>
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={`${t('common.delete')}: ${chore.name}`}
+                        onPress={() => handleDeleteChore(chore)}
+                        style={({ pressed }) => [styles.choreAction, pressed && { opacity: 0.6 }]}
+                      >
+                        <Ionicons name="trash-outline" size={18} color={colors.danger} />
+                        <AppText style={[styles.choreActionText, { color: colors.danger }]}>{t('common.delete')}</AppText>
+                      </Pressable>
+                    </View>
                   </Group>
                 );
               })}
@@ -253,6 +262,21 @@ export const ChoreRotationScreen: React.FC<{ navigation: any }> = ({ navigation 
 
 const createStyles = (colors: ReturnType<typeof useThemeColors>) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
+  choreActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+    paddingHorizontal: spacing.md,
+  },
+  choreAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xxs,
+    minHeight: 44,
+    paddingHorizontal: spacing.xs,
+  },
+  choreActionText: { fontSize: fontSizes.md - 1, fontWeight: fontWeights.semibold },
   scrollView: { flex: 1 },
   emptyContainer: {
     flex: 1,
@@ -267,7 +291,7 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) => StyleSheet.c
     fontSize: fontSizes.sm,
     color: colors.textSecondary,
     paddingHorizontal: spacing.md,
-    paddingBottom: spacing.md
+    paddingTop: spacing.sm,
   },
   addButtonWrap: { paddingHorizontal: spacing.md, paddingTop: spacing.md },
 });

@@ -591,7 +591,7 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) => StyleSheet.c
   container: { flex: 1, backgroundColor: colors.background },
   scrollView: { flex: 1 },
   scrollContent: { paddingBottom: spacing.xxl },
-  calendarGroup: { marginTop: 0 },
+  calendarGroup: { marginTop: spacing.md },
   emptyContainer: { padding: spacing.xxl, alignItems: 'center' },
   emptyText: {
     fontSize: fontSizes.md,

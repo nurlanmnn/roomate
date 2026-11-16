@@ -117,12 +117,18 @@ light and dark (`xcrun simctl ui booted appearance dark|light`).
 - [x] Core components (PrimaryButton, Card, FormTextInput, ScreenHeader, shell, EnamelHeader, Sheet, Group, Amount, Avatar, EmptyState)
 - [x] Navigation: 4 tabs, standard tab bar, Settings via Home avatar, plain stack headers
 - [x] Home
-- [ ] Money: ExpensesScreen, CreateExpense, SettleUp, SettlementHistory, BalanceHistory + their components
-- [ ] Shopping: ShoppingListScreen + components/Shopping/*
-- [ ] Calendar: CalendarScreen, CreateEvent, ChoreRotation, CreateChore + components
-- [ ] Settings: Settings, Account, Household, Notifications + components/Settings/*
-- [ ] Auth screens + HouseholdSelect + HouseholdCard
+- [x] Money: ExpensesScreen, CreateExpense, SettleUp, SettlementHistory, BalanceHistory + their components
+- [x] Shopping: ShoppingListScreen + components/Shopping/*
+- [x] Calendar: CalendarScreen, CreateEvent, ChoreRotation, CreateChore + components
+- [x] Settings: Settings, Account, Household, Notifications + components/Settings/*
+- [x] Auth screens + HouseholdSelect + HouseholdCard
 - [ ] Leftover sweep: no LinearGradient/BlurView/hard-coded colours/emoji; delete unused old components
 - [ ] `tsc` clean; simulator check light + dark; DESIGN.md written; pushed
 
-Note (2026-11-15 night): six Codex runs were started for Money (list + forms), Shopping, Calendar, Settings and Auth/HouseholdSelect. Their edits may be sitting uncommitted in the working tree: review each area's diff against this spec, fix, typecheck, then commit per area. New strings they needed are listed in docs/redesign/new-strings.md and must be added to all five locale files.
+Note (2026-11-16): all areas are restyled, type-checked and committed. Checked in the iOS simulator
+(light and dark) against a local test database: sign-in, household select, Home, Money, Shopping,
+Calendar, Settings, Add expense, Settle up. Demo data comes from `backend/scripts/seed-redesign-test.ts`
+(git-ignored, refuses any non-local MongoDB). Tab screens whose header scrolls use
+`<EnamelHeader scrolls overlap={0} />` + `<SheetCap />` inside the scroll view and a pinned
+`<StatusBarStrip />`. Not yet looked at on screen: Create event/chore, Chore rotation, Account,
+Household and Notification settings, Balance/Settlement history, Signup/Forgot/Reset/Verify.
