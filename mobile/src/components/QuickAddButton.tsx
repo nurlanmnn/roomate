@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { TouchableOpacity, StyleSheet, Modal, View, TextInput, Alert, Platform, KeyboardAvoidingView } from 'react-native';
+import { Alert, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { useLanguage } from '../context/LanguageContext';
+import { radii, spacing, useThemeColors } from '../theme';
 import { AppText } from './AppText';
-import { useThemeColors, fontSizes, spacing } from '../theme';
+import { PrimaryButton } from './PrimaryButton';
 
 interface QuickAddButtonProps {
   onAddItems: (items: string[]) => void;
@@ -17,7 +19,7 @@ interface ParsedItem {
 // Parse natural language shopping list input
 const parseShoppingList = (input: string): ParsedItem[] => {
   const items: ParsedItem[] = [];
-  
+
   // Normalize input: replace "and" with commas, handle various separators
   let normalized = input
     .toLowerCase()
@@ -25,23 +27,23 @@ const parseShoppingList = (input: string): ParsedItem[] => {
     .replace(/\s*,\s*/g, ',')
     .replace(/\s*;\s*/g, ',')
     .replace(/\s*\.\s*/g, ',');
-  
+
   // Split by commas
   const parts = normalized.split(',').map(p => p.trim()).filter(p => p.length > 0);
-  
+
   // Weight units to recognize
   const weightUnits = ['kg', 'kilogram', 'kilograms', 'g', 'gram', 'grams', 'lbs', 'pound', 'pounds', 'oz', 'ounce', 'ounces', 'liter', 'liters', 'l', 'ml', 'milliliter', 'milliliters', 'fl oz', 'fluid ounce', 'cup', 'cups', 'pint', 'pints', 'quart', 'quarts', 'gallon', 'gallons'];
-  
+
   // Quantity keywords
   const quantityKeywords = ['x', 'times', 'of', 'pack', 'packs', 'bottle', 'bottles', 'box', 'boxes', 'bag', 'bags'];
-  
+
   for (const part of parts) {
     const item: ParsedItem = { name: '' };
-    
+
     // Extract weight (e.g., "2kg chicken", "1.5 lbs flour")
     const weightRegex = /(\d+(?:\.\d+)?)\s*(kg|kilogram|kilograms|g|gram|grams|lbs|pound|pounds|oz|ounce|ounces|liter|liters|l|ml|milliliter|milliliters|fl oz|fluid ounce|cup|cups|pint|pints|quart|quarts|gallon|gallons)\s+(.+)/i;
     const weightMatch = part.match(weightRegex);
-    
+
     if (weightMatch) {
       item.weight = parseFloat(weightMatch[1]);
       item.weightUnit = normalizeWeightUnit(weightMatch[2]);
@@ -50,7 +52,7 @@ const parseShoppingList = (input: string): ParsedItem[] => {
       // Extract quantity (e.g., "2 milk", "3x eggs", "5 bottles of water")
       const quantityRegex = /(\d+)\s*(x|times|of|pack|packs|bottle|bottles|box|boxes|bag|bags)?\s*(.+)/i;
       const quantityMatch = part.match(quantityRegex);
-      
+
       if ((quantityMatch && quantityKeywords.some(kw => part.includes(kw))) || /^\d+\s+\w+/.test(part)) {
         if (quantityMatch) {
           item.quantity = parseInt(quantityMatch[1], 10);
@@ -64,24 +66,24 @@ const parseShoppingList = (input: string): ParsedItem[] => {
         item.name = part;
       }
     }
-    
+
     // Clean up item name
     item.name = item.name
       .replace(/^(a|an|the)\s+/i, '')
       .trim();
-    
+
     if (item.name.length > 0) {
       items.push(item);
     }
   }
-  
+
   return items;
 };
 
 // Normalize weight units to standard format
 const normalizeWeightUnit = (unit: string): string => {
   const normalized = unit.toLowerCase().trim();
-  const unitMap: { [key: string]: string } = {
+  const unitMap: { [key: string]: string; } = {
     'kg': 'kg', 'kilogram': 'kg', 'kilograms': 'kg',
     'g': 'g', 'gram': 'g', 'grams': 'g',
     'lbs': 'lbs', 'pound': 'lbs', 'pounds': 'lbs',
@@ -99,103 +101,68 @@ const normalizeWeightUnit = (unit: string): string => {
 
 export const QuickAddButton: React.FC<QuickAddButtonProps> = ({ onAddItems }) => {
   const colors = useThemeColors();
+  const { t } = useLanguage();
   const [showTextModal, setShowTextModal] = useState(false);
   const [textInput, setTextInput] = useState('');
 
   const styles = React.useMemo(() => StyleSheet.create({
-    button: {
-      backgroundColor: colors.primary,
-      padding: 12,
-      borderRadius: 8,
-      alignItems: 'center',
-      justifyContent: 'center',
-      minHeight: 44,
-      minWidth: 120,
-    },
-    buttonText: {
-      color: colors.surface,
-      fontSize: fontSizes.md,
-      fontWeight: '600',
-    },
     modalOverlay: {
       flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      backgroundColor: colors.shadowStrong,
       justifyContent: 'center',
       alignItems: 'center',
-      padding: 20,
+      padding: spacing.lg,
     },
     modalContent: {
       backgroundColor: colors.surface,
-      borderRadius: 16,
-      padding: 24,
+      borderRadius: radii.lg,
+      padding: spacing.xl,
       width: '100%',
       maxWidth: 400,
+      maxHeight: '95%',
     },
     modalTitle: {
       fontSize: 24,
       fontWeight: '700',
-      marginBottom: 8,
+      marginBottom: spacing.xs,
       color: colors.text,
     },
     modalSubtitle: {
       fontSize: 14,
       color: colors.textSecondary,
-      marginBottom: 16,
+      marginBottom: spacing.md,
       lineHeight: 20,
     },
     textInput: {
       borderWidth: 1,
       borderColor: colors.border,
-      borderRadius: 8,
-      padding: 12,
+      borderRadius: radii.md,
+      padding: spacing.sm,
       fontSize: 16,
       minHeight: 120,
       textAlignVertical: 'top',
-      marginBottom: 16,
+      marginBottom: spacing.md,
       color: colors.text,
       backgroundColor: colors.background,
     },
     modalActions: {
-      flexDirection: 'row',
-      gap: 12,
-    },
-    modalButton: {
-      flex: 1,
-      padding: 12,
-      borderRadius: 8,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    cancelButton: {
-      backgroundColor: colors.surfaceAlt,
-    },
-    cancelButtonText: {
-      color: colors.textSecondary,
-      fontSize: 16,
-      fontWeight: '600',
-    },
-    submitButton: {
-      backgroundColor: colors.primary,
-    },
-    submitButtonText: {
-      color: colors.surface,
-      fontSize: 16,
-      fontWeight: '600',
+      flexDirection: 'column',
+      gap: spacing.sm,
     },
   }), [colors]);
 
   const handleTextSubmit = () => {
     if (!textInput.trim()) {
-      Alert.alert('Error', 'Please enter your shopping list');
+      Alert.alert(t('common.error'), t('shopping.quickAddEmpty'));
       return;
     }
 
     try {
       // Parse the input
       const parsedItems = parseShoppingList(textInput);
-      
+
       if (parsedItems.length === 0) {
-        Alert.alert('Error', 'Could not parse any items from your input');
+        Alert.alert(t('common.error'), t('shopping.quickAddParseError'));
         return;
       }
 
@@ -216,22 +183,22 @@ export const QuickAddButton: React.FC<QuickAddButtonProps> = ({ onAddItems }) =>
       setShowTextModal(false);
     } catch (error) {
       if (__DEV__) console.error('Failed to process input', error);
-      Alert.alert('Error', 'Failed to process your input');
+      Alert.alert(t('common.error'), t('shoppingList.failedToAddItems'));
     }
   };
 
   return (
     <>
-      <TouchableOpacity
-        style={styles.button}
+      <PrimaryButton
+        title={t('shopping.quickAdd')}
+        icon="add-outline"
+        variant="secondary"
         onPress={() => setShowTextModal(true)}
-      >
-        <AppText style={styles.buttonText}>📝 Quick Add</AppText>
-      </TouchableOpacity>
+      />
 
       <Modal
         visible={showTextModal}
-        animationType="slide"
+        animationType="none"
         transparent
         onRequestClose={() => {
           setShowTextModal(false);
@@ -244,42 +211,37 @@ export const QuickAddButton: React.FC<QuickAddButtonProps> = ({ onAddItems }) =>
           keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
           <View style={styles.modalContent}>
-            <AppText style={styles.modalTitle}>Quick Add Items</AppText>
-            <AppText style={styles.modalSubtitle}>
-              Type your shopping list. You can include quantities and weights.
-              {'\n\n'}Example: "milk, 2kg chicken, 3 eggs, 1 liter of water"
-            </AppText>
-            <TextInput
-              style={styles.textInput}
-              value={textInput}
-              onChangeText={setTextInput}
-              placeholder="milk, eggs, 2kg chicken, trash bags..."
-              placeholderTextColor={colors.textSecondary}
-              multiline
-              numberOfLines={6}
-              autoFocus
-            />
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => {
-                  setShowTextModal(false);
-                  setTextInput('');
-                }}
-              >
-                <AppText style={styles.cancelButtonText}>Cancel</AppText>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.submitButton]}
-                onPress={handleTextSubmit}
-              >
-                <AppText style={styles.submitButtonText}>Add Items</AppText>
-              </TouchableOpacity>
-            </View>
+            <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+              <AppText accessibilityRole="header" style={styles.modalTitle}>{t('shopping.quickAdd')}</AppText>
+              <AppText style={styles.modalSubtitle}>
+                {t('shopping.quickAddHelp')}
+              </AppText>
+              <TextInput
+                style={styles.textInput}
+                value={textInput}
+                onChangeText={setTextInput}
+                placeholder={t('shopping.itemNamePlaceholder')}
+                accessibilityLabel={t('shopping.title')}
+                placeholderTextColor={colors.textSecondary}
+                multiline
+                numberOfLines={6}
+                autoFocus
+              />
+              <View style={styles.modalActions}>
+                <PrimaryButton
+                  title={t('common.cancel')}
+                  variant="secondary"
+                  onPress={() => {
+                    setShowTextModal(false);
+                    setTextInput('');
+                  }}
+                />
+                <PrimaryButton title={t('common.add')} onPress={handleTextSubmit} />
+              </View>
+            </ScrollView>
           </View>
         </KeyboardAvoidingView>
       </Modal>
     </>
   );
 };
-

@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Modal, ScrollView, Pressable } from 'react-native';
+import { AccessibilityInfo, View, StyleSheet, TouchableOpacity, Modal, ScrollView, Pressable } from 'react-native';
 import { AppText } from './AppText';
+import { Group } from './ui/Group';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { EXPENSE_CATEGORIES, getExpenseCategoryLabel } from '../constants/expenseCategories';
-import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows } from '../theme';
+import { useThemeColors, fontSizes, fontWeights, spacing, radii } from '../theme';
 import { useLanguage } from '../context/LanguageContext';
 
 interface CategoryPickerProps {
@@ -18,6 +20,13 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
   onClear,
 }) => {
   const colors = useThemeColors();
+  const insets = useSafeAreaInsets();
+  const [reduceMotion, setReduceMotion] = useState(false);
+  React.useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => subscription.remove();
+  }, []);
   const { t } = useLanguage();
   const [modalVisible, setModalVisible] = useState(false);
   const selectedCat = selectedCategory ? EXPENSE_CATEGORIES.find(c => c.id === selectedCategory) : null;
@@ -32,7 +41,6 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
       paddingHorizontal: spacing.md,
       minHeight: 44,
       justifyContent: 'center',
-      ...(shadows.sm as object),
     },
     selectedContainer: {
       flexDirection: 'row',
@@ -45,6 +53,7 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
       justifyContent: 'space-between',
     },
     placeholderText: {
+      flex: 1,
       fontSize: fontSizes.md,
       color: colors.textSecondary,
     },
@@ -63,7 +72,7 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
     },
     modalOverlay: {
       flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      backgroundColor: colors.shadowStrong,
     },
     modalOverlayInner: {
       flex: 1,
@@ -71,14 +80,15 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
       pointerEvents: 'box-none',
     },
     modalContent: {
-      backgroundColor: colors.surface,
-      borderTopLeftRadius: radii.lg,
-      borderTopRightRadius: radii.lg,
+      backgroundColor: colors.background,
+      borderTopLeftRadius: radii.xl,
+      borderTopRightRadius: radii.xl,
+      paddingBottom: Math.max(insets.bottom, spacing.md),
       maxHeight: '80%',
       paddingTop: spacing.lg,
-      ...(shadows.lg as object),
     },
     modalHeader: {
+      gap: spacing.sm,
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
@@ -87,24 +97,28 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
       borderBottomWidth: 1,
       borderBottomColor: colors.borderLight,
     },
+    closeButton: {
+      minWidth: 44,
+      minHeight: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
     modalTitle: {
-      fontSize: fontSizes.xl,
+      flex: 1,
+      fontSize: 20,
       fontWeight: fontWeights.bold,
       color: colors.text,
     },
     categoriesList: {
-      paddingHorizontal: spacing.md,
       paddingVertical: spacing.md,
     },
     categoryItem: {
       flexDirection: 'row',
       alignItems: 'center',
       paddingVertical: spacing.md,
-      paddingHorizontal: spacing.sm,
-      borderRadius: radii.md,
-      marginBottom: spacing.xs,
+      paddingHorizontal: spacing.md,
       gap: spacing.sm,
-      minHeight: 44,
+      minHeight: 60,
     },
     categoryItemSelected: {
       backgroundColor: colors.primaryUltraSoft,
@@ -114,7 +128,7 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
       color: colors.text,
       flex: 1,
     },
-  }), [colors]);
+  }), [colors, insets.bottom]);
 
   const handleSelect = (categoryId: string) => {
     onSelectCategory(categoryId);
@@ -133,14 +147,17 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
   return (
     <>
       <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel={`${t('expenses.categoryOptional')}: ${selectedCat ? getExpenseCategoryLabel(t, selectedCat.id) : t('expenses.categoryPickerPlaceholder')}`}
+        accessibilityState={{ expanded: modalVisible }}
         style={styles.pickerButton}
         onPress={() => setModalVisible(true)}
         activeOpacity={0.7}
       >
         {selectedCat ? (
           <View style={styles.selectedContainer}>
-            <View style={[styles.iconContainer, { backgroundColor: selectedCat.color + '20' }]}>
-              <Ionicons name={selectedCat.icon} size={20} color={selectedCat.color} />
+            <View style={[styles.iconContainer, { backgroundColor: colors.primaryUltraSoft }]}>
+              <Ionicons name={selectedCat.icon} size={20} color={colors.primary} />
             </View>
             <AppText style={styles.selectedText}>
               {getExpenseCategoryLabel(t, selectedCat.id)}
@@ -158,7 +175,7 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
       <Modal
         visible={modalVisible}
         transparent
-        animationType="slide"
+        animationType={reduceMotion ? 'none' : 'slide'}
         onRequestClose={closeModal}
       >
         <View style={styles.modalOverlay}>
@@ -169,17 +186,19 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
             onPress={closeModal}
           />
           <View style={styles.modalOverlayInner}>
-            <View style={styles.modalContent}>
+            <View style={styles.modalContent} accessibilityViewIsModal>
               <View style={styles.modalHeader}>
-                <AppText style={styles.modalTitle}>{t('expenses.selectCategory')}</AppText>
-                <TouchableOpacity onPress={closeModal}>
+                <AppText accessibilityRole="header" style={styles.modalTitle}>{t('expenses.selectCategory')}</AppText>
+                <TouchableOpacity accessibilityRole="button" accessibilityLabel={t('common.close')} style={styles.closeButton} onPress={closeModal}>
                   <Ionicons name="close-outline" size={24} color={colors.text} />
                 </TouchableOpacity>
               </View>
 
-              <ScrollView style={styles.categoriesList} showsVerticalScrollIndicator={false}>
+              <ScrollView contentContainerStyle={styles.categoriesList} showsVerticalScrollIndicator={false}>
+              <Group>
               {onClear && selectedCategory && (
                 <TouchableOpacity
+                  accessibilityRole="button"
                   style={styles.categoryItem}
                   onPress={handleClear}
                 >
@@ -192,6 +211,8 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
               
               {EXPENSE_CATEGORIES.map((category) => (
                 <TouchableOpacity
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: selectedCategory === category.id, checked: selectedCategory === category.id }}
                   key={category.id}
                   style={[
                     styles.categoryItem,
@@ -199,15 +220,16 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
                   ]}
                   onPress={() => handleSelect(category.id)}
                 >
-                  <View style={[styles.iconContainer, { backgroundColor: category.color + '20' }]}>
-                    <Ionicons name={category.icon} size={20} color={category.color} />
+                  <View style={[styles.iconContainer, { backgroundColor: colors.primaryUltraSoft }]}>
+                    <Ionicons name={category.icon} size={20} color={colors.primary} />
                   </View>
                   <AppText style={styles.categoryText}>{getExpenseCategoryLabel(t, category.id)}</AppText>
                   {selectedCategory === category.id && (
-                    <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
+                    <Ionicons name="checkmark-circle-outline" size={24} color={colors.primary} />
                   )}
                 </TouchableOpacity>
               ))}
+              </Group>
               </ScrollView>
             </View>
           </View>

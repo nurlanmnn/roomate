@@ -1,16 +1,17 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import { AppText } from './AppText';
+import { Alert, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Expense } from '../api/expensesApi';
-import { formatCurrency } from '../utils/formatCurrency';
-import { useHouseholdCurrency } from '../utils/useHouseholdCurrency';
+import { getCategoryById, getCategoryByName, getExpenseCategoryLabel } from '../constants/expenseCategories';
+import { useLanguage } from '../context/LanguageContext';
+import { fontSizes, fontWeights, radii, spacing, useThemeColors } from '../theme';
 import { formatDate, formatDateShort } from '../utils/dateHelpers';
 import { getDateFnsLocale } from '../utils/dateLocales';
-import { getExpenseCategoryLabel } from '../constants/expenseCategories';
-import { useThemeColors, fontSizes, fontWeights, radii, spacing, shadows } from '../theme';
-import { Avatar } from './ui/Avatar';
+import { useHouseholdCurrency } from '../utils/useHouseholdCurrency';
+import { AppText } from './AppText';
 import { SwipeableRow } from './SwipeableRow';
-import { useLanguage } from '../context/LanguageContext';
+import { Amount } from './ui/Amount';
+import { Avatar } from './ui/Avatar';
+import { GroupRow } from './ui/Group';
 
 interface ExpenseCardProps {
   expense: Expense;
@@ -41,55 +42,40 @@ const ExpenseCardInner: React.FC<ExpenseCardProps> = ({
     [t]
   );
   const currency = useHouseholdCurrency();
-  const paidByName = expense.paidBy?.name || 'Unknown';
+  const paidByName = expense.paidBy?.name || t('common.someone');
   const shareBreakdown = React.useMemo(() => {
-    if (!expense.shares?.length) return '';
+    if (!expense.shares?.length) return [];
     const memberNameById = new Map(
       (expense.participants || []).map((participant) => [participant._id, participant.name] as const)
     );
     return expense.shares
       .map((share) => {
         const name = memberNameById.get(share.userId) || '—';
-        return `${name}: ${formatCurrency(share.amount, currency)}`;
-      })
-      .join(' • ');
+        return { name, amount: share.amount, userId: share.userId };
+      });
   }, [expense.shares, expense.participants, currency, t]);
 
   const styles = React.useMemo(() => StyleSheet.create({
     card: {
       backgroundColor: colors.surface,
-      padding: spacing.lg,
-      borderRadius: radii.lg,
-      marginBottom: spacing.md,
-      borderWidth: 1,
+      paddingVertical: spacing.xs,
+      borderRadius: 0,
+
+      borderWidth: 0,
       borderColor: colors.border,
-      ...(shadows.sm as object),
-    },
-    header: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'flex-start',
-      marginBottom: spacing.sm,
-    },
-    description: {
-      flex: 1,
-      fontSize: fontSizes.lg,
-      fontWeight: fontWeights.bold,
-      color: colors.text,
-      marginRight: spacing.md,
-    },
-    amount: {
-      fontSize: fontSizes.xl,
-      fontWeight: fontWeights.extrabold,
-      color: colors.primary,
+
     },
     metaRow: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.xs,
+      paddingHorizontal: spacing.md,
       justifyContent: 'space-between',
       alignItems: 'flex-start',
       marginBottom: spacing.xs,
     },
     paidByRow: {
+      flexBasis: 120,
       flexDirection: 'row',
       alignItems: 'center',
       flex: 1,
@@ -98,22 +84,22 @@ const ExpenseCardInner: React.FC<ExpenseCardProps> = ({
     paidByContainer: {
       flex: 1,
     },
-    paidBy: {
-      fontSize: fontSizes.sm,
-      color: colors.textSecondary,
-    },
     sinceDate: {
       fontSize: fontSizes.xs,
       color: colors.textTertiary,
       marginTop: spacing.xxs,
     },
     deleteButton: {
+      minHeight: 44,
+      justifyContent: 'center',
       paddingHorizontal: spacing.sm,
       paddingVertical: spacing.xs,
       borderRadius: radii.sm,
       backgroundColor: colors.dangerSoft,
     },
     editButton: {
+      minHeight: 44,
+      justifyContent: 'center',
       paddingHorizontal: spacing.sm,
       paddingVertical: spacing.xs,
       borderRadius: radii.sm,
@@ -131,15 +117,18 @@ const ExpenseCardInner: React.FC<ExpenseCardProps> = ({
       fontWeight: fontWeights.semibold,
     },
     category: {
+      paddingHorizontal: spacing.md,
       fontSize: fontSizes.sm,
       color: colors.textSecondary,
       marginBottom: spacing.xs,
     },
     participants: {
+      paddingHorizontal: spacing.md,
       fontSize: fontSizes.sm,
       color: colors.textTertiary,
     },
     breakdownWrap: {
+      marginHorizontal: spacing.md,
       marginTop: spacing.xs,
       paddingTop: spacing.sm,
       borderTopWidth: StyleSheet.hairlineWidth,
@@ -148,20 +137,7 @@ const ExpenseCardInner: React.FC<ExpenseCardProps> = ({
     breakdownLabel: {
       fontSize: fontSizes.xs,
       color: colors.textTertiary,
-      textTransform: 'uppercase',
-      letterSpacing: 0.4,
       marginBottom: spacing.xxs,
-    },
-    shareBreakdown: {
-      fontSize: fontSizes.xs,
-      color: colors.text,
-      lineHeight: 20,
-      backgroundColor: colors.surfaceAlt,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      borderRadius: radii.sm,
-      paddingHorizontal: spacing.sm,
-      paddingVertical: spacing.xs,
     },
   }), [colors]);
 
@@ -180,6 +156,8 @@ const ExpenseCardInner: React.FC<ExpenseCardProps> = ({
     );
   };
 
+  const category = getCategoryById(expense.category ?? '') ?? getCategoryByName(expense.category ?? '');
+
   return (
     <SwipeableRow
       onSwipeLeft={canDelete && onDelete ? handleDelete : undefined}
@@ -190,51 +168,61 @@ const ExpenseCardInner: React.FC<ExpenseCardProps> = ({
       rightActionIcon="cash-outline"
     >
       <View style={styles.card}>
-      <View style={styles.header}>
-        <AppText style={styles.description} numberOfLines={2} ellipsizeMode="tail">{expense.description}</AppText>
-        <AppText style={styles.amount}>{formatCurrency(expense.totalAmount, currency)}</AppText>
-      </View>
-      <View style={styles.metaRow}>
-        <View style={styles.paidByRow}>
-          <Avatar name={paidByName} uri={expense.paidBy?.avatarUrl} size={20} />
-          <View style={styles.paidByContainer}>
-            <AppText style={styles.paidBy}>
-              {t('expenses.paidBy')} {paidByName} • {formatDate(expense.date, dateLocale, relativeDayLabels)}
-            </AppText>
-            {expense.createdAt && (
-              <AppText style={styles.sinceDate}>
-                {t('time.addedSince')} {formatDateShort(expense.createdAt, dateLocale)}
-              </AppText>
-            )}
+        <GroupRow
+          title={expense.description}
+          titleLines={0}
+          subtitle={`${t('expenses.paidBy')} ${paidByName} · ${formatDate(expense.date, dateLocale, relativeDayLabels)}`}
+          icon={category?.icon ?? 'receipt-outline'}
+          trailing={<Amount value={expense.totalAmount} currency={currency} size={22} fit />}
+        />
+        <View style={styles.metaRow}>
+          <View style={styles.paidByRow}>
+            <Avatar name={paidByName} uri={expense.paidBy?.avatarUrl} size={20} />
+            <View style={styles.paidByContainer}>
+              {expense.createdAt && (
+                <AppText style={styles.sinceDate}>
+                  {t('time.addedSince')} {formatDateShort(expense.createdAt, dateLocale)}
+                </AppText>
+              )}
+            </View>
           </View>
+          {(canEdit || canDelete || onQuickSettle) && (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.xxs, flexShrink: 1 }}>
+              {onQuickSettle && (
+                <TouchableOpacity accessibilityRole="button" onPress={onQuickSettle} style={styles.editButton}>
+                  <AppText style={[styles.editText, { color: colors.primary }]}>{t('expenses.settleUp')}</AppText>
+                </TouchableOpacity>
+              )}
+              {canEdit && onEdit && (
+                <TouchableOpacity accessibilityRole="button" onPress={() => onEdit(expense)} style={styles.editButton}>
+                  <AppText style={styles.editText}>{t('common.edit')}</AppText>
+                </TouchableOpacity>
+              )}
+              {canDelete && onDelete && (
+                <TouchableOpacity accessibilityRole="button" onPress={handleDelete} style={styles.deleteButton}>
+                  <AppText style={styles.deleteText}>{t('common.delete')}</AppText>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
         </View>
-        {(canEdit || canDelete) && (
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            {canEdit && onEdit && (
-              <TouchableOpacity onPress={() => onEdit(expense)} style={styles.editButton}>
-                <AppText style={styles.editText}>{t('common.edit')}</AppText>
-              </TouchableOpacity>
-            )}
-            {canDelete && onDelete && (
-              <TouchableOpacity onPress={handleDelete} style={styles.deleteButton}>
-                <AppText style={styles.deleteText}>{t('common.delete')}</AppText>
-              </TouchableOpacity>
-            )}
-          </View>
+        {expense.category && (
+          <AppText style={styles.category}>{getExpenseCategoryLabel(t, expense.category)}</AppText>
         )}
-      </View>
-      {expense.category && (
-        <AppText style={styles.category}>{getExpenseCategoryLabel(t, expense.category)}</AppText>
-      )}
-      <AppText style={styles.participants}>
-        {t('expenses.splitAmong', { count: expense.participants.length })}
-      </AppText>
-      {shareBreakdown ? (
-        <View style={styles.breakdownWrap}>
-          <AppText style={styles.breakdownLabel}>{t('expenses.shareBreakdown')}</AppText>
-          <AppText style={styles.shareBreakdown}>{shareBreakdown}</AppText>
-        </View>
-      ) : null}
+        <AppText style={styles.participants}>
+          {t('expenses.splitAmong', { count: expense.participants.length })}
+        </AppText>
+        {shareBreakdown.length > 0 ? (
+          <View style={styles.breakdownWrap}>
+            <AppText style={styles.breakdownLabel}>{t('expenses.shareBreakdown')}</AppText>
+            {shareBreakdown.map((share, index) => (
+              <View key={`${share.userId}-${index}`} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xxs }}>
+                <AppText style={{ flex: 1, color: colors.textSecondary, fontSize: fontSizes.sm }}>{share.name}</AppText>
+                <Amount value={share.amount} currency={currency} size={18} fit style={{ maxWidth: '50%' }} />
+              </View>
+            ))}
+          </View>
+        ) : null}
       </View>
     </SwipeableRow>
   );

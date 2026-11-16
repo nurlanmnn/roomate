@@ -1,14 +1,13 @@
+import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { View, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
-import { AppText } from './AppText';
-import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows } from '../theme';
-import { formatCompactCurrency, formatCurrency } from '../utils/formatCurrency';
-import { useHouseholdCurrency } from '../utils/useHouseholdCurrency';
-import { MonthlyTrendChart } from './MonthlyTrendChart';
-import { DonutChart } from './DonutChart';
+import { StyleSheet, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { useLanguage } from '../context/LanguageContext';
-
-const screenWidth = Dimensions.get('window').width;
+import { fontSizes, fontWeights, radii, spacing, useThemeColors } from '../theme';
+import { useHouseholdCurrency } from '../utils/useHouseholdCurrency';
+import { AppText } from './AppText';
+import { DonutChart } from './DonutChart';
+import { MonthlyTrendChart } from './MonthlyTrendChart';
+import { Amount } from './ui/Amount';
 
 interface CategorySpending {
   category: string;
@@ -35,23 +34,6 @@ interface SpendingChartProps {
   hidePrediction?: boolean;
 }
 
-// Modern, softer color palette for categories
-const categoryColors = [
-  '#3B82F6', // Soft Blue
-  '#22C55E', // Soft Green
-  '#F59E0B', // Warm Amber
-  '#8B5CF6', // Soft Purple
-  '#EC4899', // Soft Pink
-  '#14B8A6', // Teal
-  '#F97316', // Warm Orange
-  '#6366F1', // Indigo
-  '#64748B', // Slate Gray
-];
-
-const getCategoryColor = (index: number): string => {
-  return categoryColors[index % categoryColors.length];
-};
-
 export const SpendingChart: React.FC<SpendingChartProps> = ({
   byCategory,
   monthlyTrend,
@@ -61,15 +43,18 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
   hidePrediction = false,
 }) => {
   const colors = useThemeColors();
+  const { width: screenWidth } = useWindowDimensions();
   const { t } = useLanguage();
+  const categoryColors = [colors.primary, colors.accent, colors.marigold, colors.teal, colors.success, colors.warning, colors.danger];
+  const getCategoryColor = (index: number) => categoryColors[index % categoryColors.length];
   const currency = useHouseholdCurrency();
-  const cardInnerWidth = screenWidth - spacing.xl * 2 - spacing.md * 2 - spacing.lg * 2;
-  const pieSize = Math.min(240, cardInnerWidth - spacing.lg);
-  const rangeOptions: { key: 'week' | 'month' | 'year' | 'all'; label: string }[] = [
-    { key: 'week', label: '1W' },
-    { key: 'month', label: '1M' },
-    { key: 'year', label: '1Y' },
-    { key: 'all', label: 'All' },
+  const cardInnerWidth = screenWidth - spacing.md * 4;
+  const pieSize = Math.min(240, Math.max(120, cardInnerWidth - spacing.lg));
+  const rangeOptions: { key: 'week' | 'month' | 'year' | 'all'; label: string; }[] = [
+    { key: 'week', label: t('time.week') },
+    { key: 'month', label: t('time.month') },
+    { key: 'year', label: t('time.year') },
+    { key: 'all', label: t('time.all') },
   ];
   // Prepare pie chart data (top 5 categories)
   const topCategories = byCategory.slice(0, 5);
@@ -85,7 +70,7 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
           label: displayName,
         };
       }),
-    [topCategories, t]
+    [topCategories, t, colors]
   );
 
   const styles = React.useMemo(() => StyleSheet.create({
@@ -107,20 +92,27 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
       padding: spacing.lg,
       paddingTop: spacing.lg,
       paddingBottom: spacing.lg,
-      borderWidth: 1,
+      borderWidth: 0,
       borderColor: colors.borderLight,
-      ...(shadows.sm as object),
+
     },
     rangeRow: {
+      flexWrap: 'wrap',
       flexDirection: 'row',
       gap: spacing.xs,
       marginBottom: spacing.sm,
     },
     rangeChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xxs,
+      minHeight: 44,
+      minWidth: 44,
+      justifyContent: 'center',
       paddingHorizontal: spacing.sm,
       paddingVertical: spacing.xs,
-      borderRadius: radii.pill,
-      borderWidth: 1,
+      borderRadius: radii.sm,
+      borderWidth: 0,
       borderColor: colors.borderLight,
       backgroundColor: colors.surface,
     },
@@ -134,11 +126,11 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
       fontWeight: fontWeights.medium,
     },
     rangeChipTextActive: {
-      color: colors.primaryDark,
+      color: colors.primary,
       fontWeight: fontWeights.semibold,
     },
     sectionTitle: {
-      fontSize: fontSizes.lg,
+      fontSize: 20,
       fontWeight: fontWeights.bold,
       color: colors.text,
       marginBottom: spacing.md,
@@ -147,23 +139,11 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
       alignItems: 'center',
       marginBottom: spacing.md,
     },
-    barChartWrapper: {
-      paddingTop: spacing.xl,
-      paddingBottom: spacing.md,
-      marginTop: spacing.sm,
-      marginBottom: spacing.xs,
-    },
-    barChartContainer: {
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    barChart: {
-      marginVertical: 0,
-    },
     categoryList: {
       marginTop: spacing.sm,
     },
     categoryItem: {
+      minHeight: 44,
       flexDirection: 'row',
       alignItems: 'center',
       marginBottom: spacing.xs,
@@ -172,7 +152,7 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
     colorDot: {
       width: 12,
       height: 12,
-      borderRadius: 6,
+      borderRadius: radii.pill,
     },
     categoryName: {
       flex: 1,
@@ -183,16 +163,11 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
       fontWeight: fontWeights.medium,
     },
     categoryRight: {
-      flexDirection: 'row',
+      maxWidth: '48%',
+      flexDirection: 'column',
       alignItems: 'baseline',
       gap: spacing.xs,
       flexShrink: 0,
-    },
-    categoryAmount: {
-      fontSize: fontSizes.sm,
-      color: colors.text,
-      fontWeight: fontWeights.semibold,
-      textAlign: 'right',
     },
     categoryPercentage: {
       fontSize: fontSizes.xs,
@@ -203,19 +178,13 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
       borderRadius: radii.lg,
       padding: spacing.lg,
       alignItems: 'center',
-      borderWidth: 1,
+      borderWidth: 0,
       borderColor: colors.tealSoft,
-      ...(shadows.xs as object),
+
     },
     predictionTitle: {
       fontSize: fontSizes.sm,
       color: colors.textSecondary,
-      marginBottom: spacing.xs,
-    },
-    predictionAmount: {
-      fontSize: fontSizes.xxl,
-      fontWeight: fontWeights.bold,
-      color: colors.text,
       marginBottom: spacing.xs,
     },
     predictionTrend: {
@@ -245,6 +214,8 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
             const active = selectedRange === opt.key;
             return (
               <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
                 key={opt.key}
                 style={[
                   styles.rangeChip,
@@ -261,6 +232,7 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
                 >
                   {opt.label}
                 </AppText>
+                {active && <Ionicons name="checkmark-outline" size={16} color={colors.primary} />}
               </TouchableOpacity>
             );
           })}
@@ -277,15 +249,7 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
                     <AppText style={{ fontSize: fontSizes.sm, color: colors.textSecondary }}>
                       {t('spendingChart.total')}
                     </AppText>
-                    <AppText
-                      style={{
-                        fontSize: fontSizes.xl,
-                        fontWeight: fontWeights.extrabold,
-                        color: colors.text,
-                      }}
-                    >
-                      {formatCurrency(topCategories.reduce((sum, c) => sum + c.amount, 0), currency)}
-                    </AppText>
+                    <Amount value={topCategories.reduce((sum, c) => sum + c.amount, 0)} currency={currency} size={28} fit />
                   </View>
                 }
               />
@@ -298,11 +262,11 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
                 return (
                   <View key={cat.category} style={styles.categoryItem}>
                     <View style={[styles.colorDot, { backgroundColor: getCategoryColor(index) }]} />
-                    <AppText style={styles.categoryName} numberOfLines={1} ellipsizeMode="tail">
+                    <AppText style={styles.categoryName}>
                       {displayName}
                     </AppText>
                     <View style={styles.categoryRight}>
-                      <AppText style={styles.categoryAmount}>{formatCompactCurrency(cat.amount, currency)}</AppText>
+                      <Amount value={cat.amount} currency={currency} size={20} fit />
                       <AppText style={styles.categoryPercentage}>({cat.percentage.toFixed(1)}%)</AppText>
                     </View>
                   </View>
@@ -333,15 +297,14 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
       {predictions && !hidePrediction && (
         <View style={styles.predictionContainer}>
           <AppText style={styles.predictionTitle}>{t('spendingChart.nextMonthPrediction')}</AppText>
-          <AppText style={styles.predictionAmount}>{formatCurrency(predictions.nextMonth, currency)}</AppText>
+          <Amount value={predictions.nextMonth} currency={currency} size={32} fit />
           <AppText style={styles.predictionTrend}>
-            {t('spendingChart.trend')}: {predictions.trend === 'increasing' ? `📈 ${t('spendingChart.increasing')}` : 
-                   predictions.trend === 'decreasing' ? `📉 ${t('spendingChart.decreasing')}` : 
-                   `➡️ ${t('spendingChart.stable')}`}
+            {t('spendingChart.trend')}: {predictions.trend === 'increasing' ? t('spendingChart.increasing') :
+              predictions.trend === 'decreasing' ? t('spendingChart.decreasing') :
+                t('spendingChart.stable')}
           </AppText>
         </View>
       )}
     </View>
   );
 };
-

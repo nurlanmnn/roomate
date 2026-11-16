@@ -1,5 +1,7 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import {
+  AccessibilityInfo,
+  TextInput,
   View,
   StyleSheet,
   ScrollView,
@@ -13,6 +15,9 @@ import {
   Dimensions,
   Pressable,
 } from 'react-native';
+import { useHeaderHeight } from '@react-navigation/elements';
+import { Group, GroupRow, SectionHeading } from '../../components/ui/Group';
+import { Amount } from '../../components/ui/Amount';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreenShell';
@@ -25,9 +30,8 @@ import { PrimaryButton } from '../../components/PrimaryButton';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { useHouseholdCurrency } from '../../utils/useHouseholdCurrency';
 import { getCurrencyOption } from '../../constants/currencies';
-import { ScreenHeader } from '../../components/ui/ScreenHeader';
 import { Avatar } from '../../components/ui/Avatar';
-import { useThemeColors, useTheme, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
+import { useThemeColors, useTheme, fontSizes, fontWeights, radii, spacing, fonts } from '../../theme';
 import { EXPENSE_CATEGORIES, getCategoryById, getExpenseCategoryLabel } from '../../constants/expenseCategories';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '../../components/AppText';
@@ -42,8 +46,6 @@ type ExpensesSnapshot = {
   balances: PairwiseBalance[];
   mode: boolean;
 };
-import { SettingsSection } from '../../components/Settings/SettingsSection';
-import { SettingsGroupCard } from '../../components/Settings/SettingsGroupCard';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const EDGE_SWIPE_WIDTH = 24; // iOS-like left edge swipe region
@@ -57,6 +59,28 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
   const { t, language } = useLanguage();
   const intlLocale = useMemo(() => toBcp47Locale(language), [language]);
   const insets = useSafeAreaInsets();
+  const headerHeight = useHeaderHeight();
+  const [reduceMotion, setReduceMotion] = useState(false);
+  const reduceMotionRef = useRef(false);
+  useEffect(() => {
+    const update = (enabled: boolean) => {
+      reduceMotionRef.current = enabled;
+      setReduceMotion(enabled);
+    };
+    AccessibilityInfo.isReduceMotionEnabled().then(update);
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', update);
+    return () => subscription.remove();
+  }, []);
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity accessibilityRole="button" onPress={() => navigation.goBack()}
+          style={{ minHeight: 44, minWidth: 44, justifyContent: 'center', paddingHorizontal: spacing.xs }}>
+          <AppText style={{ color: colors.primary, fontSize: fontSizes.md }}>{t('common.cancel')}</AppText>
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, colors, t]);
   const currency = useHouseholdCurrency();
   const currencySymbol = getCurrencyOption(currency).symbol;
   const editingExpense: Expense | undefined = route?.params?.expense;
@@ -137,7 +161,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
   const dismissTemplatesModal = () => {
     Animated.timing(templateModalTranslateX, {
       toValue: SCREEN_WIDTH,
-      duration: 200,
+      duration: reduceMotionRef.current ? 0 : 200,
       useNativeDriver: true,
     }).start(() => {
       templateModalTranslateX.setValue(0);
@@ -177,11 +201,10 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
         if (shouldDismiss) {
           dismissTemplatesModal();
         } else {
-          Animated.spring(templateModalTranslateX, {
+          Animated.timing(templateModalTranslateX, {
             toValue: 0,
             useNativeDriver: true,
-            tension: 120,
-            friction: 10,
+            duration: reduceMotionRef.current ? 0 : 180,
           }).start(() => {
             templateModalCurrentX.current = 0;
           });
@@ -189,11 +212,10 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
       },
       onPanResponderTerminate: () => {
         templateModalTranslateX.flattenOffset();
-        Animated.spring(templateModalTranslateX, {
+        Animated.timing(templateModalTranslateX, {
           toValue: 0,
           useNativeDriver: true,
-          tension: 120,
-          friction: 10,
+          duration: reduceMotionRef.current ? 0 : 180,
         }).start(() => {
           templateModalCurrentX.current = 0;
         });
@@ -204,7 +226,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
   const styles = useMemo(() => StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: 'transparent',
+      backgroundColor: colors.background,
     },
     keyboardAvoid: {
       flex: 1,
@@ -218,77 +240,24 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
       alignItems: 'center',
     },
     scrollContent: {
+      paddingTop: spacing.sm,
       paddingBottom: spacing.xxl,
     },
-    templateActionsInCard: {
-      flexDirection: 'row',
-      gap: spacing.sm,
-      padding: spacing.md,
+    textClose: { minHeight: 44, minWidth: 44, maxWidth: '40%', justifyContent: 'center' },
+    textCloseLabel: { fontSize: fontSizes.md, color: colors.primary },
+    templateFormSheet: {
+      height: '80%', backgroundColor: colors.background,
+      borderTopLeftRadius: radii.xl, borderTopRightRadius: radii.xl, overflow: 'hidden',
     },
-    templateButtonInCard: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: spacing.xs,
-      paddingVertical: spacing.md,
-      paddingHorizontal: spacing.sm,
-      backgroundColor: colors.primaryUltraSoft,
-      borderRadius: radii.md,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
+    templateFormContent: { paddingVertical: spacing.lg },
+    manualAmountInput: {
+      minHeight: 50, fontFamily: fonts.displaySemibold, fontSize: 26, fontVariant: ['tabular-nums'],
+      color: colors.text, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+      borderRadius: radii.md, padding: spacing.sm,
     },
-    templateButtonText: {
-      fontSize: fontSizes.sm,
-      fontWeight: fontWeights.semibold,
-      color: colors.text,
-      flex: 1,
-      textAlign: 'center',
-    },
+    remainingLabel: { fontSize: fontSizes.sm, color: colors.textSecondary, flexShrink: 1 },
     cardPad: {
       padding: spacing.lg,
-    },
-    cardSectionDivider: {
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: colors.borderLight,
-    },
-    summaryRow: {
-      minHeight: 58,
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: spacing.md,
-      paddingVertical: spacing.sm,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: colors.borderLight,
-    },
-    summaryRowLast: {
-      borderBottomWidth: 0,
-    },
-    summaryIcon: {
-      width: 34,
-      height: 34,
-      borderRadius: radii.md,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: colors.primaryUltraSoft,
-      marginRight: spacing.md,
-    },
-    summaryCopy: {
-      flex: 1,
-      minWidth: 0,
-    },
-    summaryLabel: {
-      fontSize: fontSizes.xs,
-      fontWeight: fontWeights.semibold,
-      color: colors.textTertiary,
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
-    },
-    summaryValue: {
-      marginTop: 2,
-      fontSize: fontSizes.md,
-      fontWeight: fontWeights.medium,
-      color: colors.text,
     },
     fieldLabel: {
       fontSize: fontSizes.sm,
@@ -296,28 +265,13 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
       marginBottom: spacing.xs,
       color: colors.textSecondary,
     },
-    dateField: {
-      paddingVertical: spacing.md,
-      paddingHorizontal: spacing.md,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: radii.md,
-      backgroundColor: colors.surface,
-    },
-    dateText: {
-      fontSize: fontSizes.md,
-      color: colors.text,
-    },
     selectableRow: {
+      minHeight: 60,
       flexDirection: 'row',
       alignItems: 'center',
       gap: spacing.sm,
       paddingVertical: spacing.md,
       paddingHorizontal: spacing.md,
-    },
-    selectableRowBorder: {
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: colors.borderLight,
     },
     paidByRowSelected: {
       backgroundColor: colors.primaryUltraSoft,
@@ -340,43 +294,18 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
       fontWeight: fontWeights.semibold,
       fontSize: fontSizes.sm,
     },
-    customSection: {
-      marginTop: spacing.xl,
-      paddingHorizontal: spacing.xl,
-    },
     participantsHeaderRow: {
+      gap: spacing.sm,
+      flexWrap: 'wrap',
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
       marginBottom: spacing.sm,
     },
-    sectionUpperLabel: {
-      fontSize: fontSizes.xs,
-      fontWeight: fontWeights.semibold,
-      color: colors.textTertiary,
-      letterSpacing: 0.6,
-      textTransform: 'uppercase',
-    },
-    splitRow: {
-      paddingVertical: spacing.md,
-      paddingHorizontal: spacing.md,
-    },
-    splitRowBorder: {
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: colors.borderLight,
-    },
-    splitRowActive: {
-      backgroundColor: colors.primaryUltraSoft,
-    },
-    splitRowText: {
-      fontSize: fontSizes.md,
-      fontWeight: fontWeights.medium,
-      color: colors.text,
-      textAlign: 'center',
-    },
-    splitRowTextActive: {
-      color: colors.primary,
+    participantHeading: {
+      fontSize: 20,
       fontWeight: fontWeights.bold,
+      color: colors.text,
     },
     sharesTitle: {
       fontSize: fontSizes.md,
@@ -384,75 +313,25 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
       marginBottom: spacing.sm,
       color: colors.text,
     },
-    shareItem: {
-      fontSize: fontSizes.sm,
-      marginBottom: spacing.xxs,
-      color: colors.textSecondary,
-    },
     manualShareRow: {
+      padding: spacing.md,
       flexDirection: 'row',
       alignItems: 'center',
-      marginBottom: spacing.sm,
       gap: spacing.sm,
-    },
-    manualShareLabel: {
-      width: 96,
-      fontSize: fontSizes.sm,
-      color: colors.textSecondary,
     },
     manualShareInputWrap: {
       flex: 1,
+      minWidth: 0,
     },
     remaining: {
-      marginTop: spacing.sm,
-      fontSize: fontSizes.sm,
-      fontWeight: fontWeights.semibold,
-      color: colors.success,
-    },
-    remainingError: {
-      color: colors.danger,
-    },
-    datePickerActions: {
-      flexDirection: 'row',
-      justifyContent: 'flex-end',
-      marginTop: spacing.md,
-      paddingTop: spacing.md,
-      borderTopWidth: 1,
-      borderTopColor: colors.borderLight,
-    },
-    datePickerButton: {
-      backgroundColor: colors.primary,
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.xl,
-      borderRadius: radii.md,
-      minWidth: 80,
-      alignItems: 'center',
-      ...(shadows.xs as object),
-    },
-    datePickerButtonText: {
-      color: colors.surface,
-      fontSize: fontSizes.md,
-      fontWeight: fontWeights.semibold,
-      letterSpacing: 0.2,
+      marginTop: spacing.sm, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.xs,
     },
     footerActions: {
-      paddingHorizontal: spacing.xl,
+      paddingHorizontal: spacing.md,
       paddingTop: spacing.md,
       backgroundColor: colors.surface,
       borderTopWidth: StyleSheet.hairlineWidth,
       borderTopColor: colors.borderLight,
-    },
-    footerButtonsRow: {
-      flexDirection: 'row',
-      gap: spacing.sm,
-    },
-    cancelButton: {
-      flex: 1,
-      borderRadius: radii.lg,
-    },
-    saveButton: {
-      flex: 1,
-      borderRadius: radii.lg,
     },
     modalContent: {
       flex: 1,
@@ -478,26 +357,24 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
       paddingHorizontal: spacing.lg,
     },
     templateCard: {
-      backgroundColor: colors.surface,
-      borderRadius: radii.lg,
-      padding: spacing.lg,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      ...(shadows.sm as object),
+      minHeight: 60,
+      padding: spacing.md,
     },
     templateCardHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      gap: spacing.sm,
+      alignItems: 'flex-start',
       justifyContent: 'space-between',
       marginBottom: spacing.xs,
     },
     templateCardName: {
+      width: '100%',
       fontSize: fontSizes.lg,
       fontWeight: fontWeights.bold,
       color: colors.text,
       flex: 1,
     },
     templateCategoryBadge: {
+      maxWidth: '100%',
       backgroundColor: colors.primaryUltraSoft,
       paddingHorizontal: spacing.sm,
       paddingVertical: spacing.xs,
@@ -521,9 +398,12 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
       color: colors.textTertiary,
     },
     templateCardContainer: {
+      marginHorizontal: 0,
       marginBottom: spacing.md,
     },
     templateCardActions: {
+      flexWrap: 'wrap',
+      paddingHorizontal: spacing.sm,
       flexDirection: 'row',
       justifyContent: 'flex-end',
       gap: spacing.md,
@@ -531,6 +411,8 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
       paddingTop: spacing.xs,
     },
     templateActionButton: {
+      flexShrink: 1,
+      minHeight: 44,
       flexDirection: 'row',
       alignItems: 'center',
       gap: spacing.xxs,
@@ -538,64 +420,40 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
       paddingHorizontal: spacing.sm,
     },
     templateActionText: {
+      flexShrink: 1,
       fontSize: fontSizes.sm,
       fontWeight: fontWeights.medium,
       color: colors.primary,
     },
     saveTemplateModalOverlay: {
       flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    },
-    saveTemplateModalAlign: {
-      ...StyleSheet.absoluteFillObject,
-      justifyContent: 'center',
-      alignItems: 'center',
-      pointerEvents: 'box-none',
-    },
-    saveTemplateModalContent: {
-      backgroundColor: colors.surface,
-      borderRadius: radii.lg,
-      padding: spacing.xl,
-      width: '90%',
-      maxWidth: 400,
-      ...(shadows.lg as object),
-    },
-    saveTemplateModalTitle: {
-      fontSize: fontSizes.xl,
-      fontWeight: fontWeights.bold,
-      color: colors.text,
-      marginBottom: spacing.sm,
+      justifyContent: 'flex-end',
+      backgroundColor: colors.shadowStrong,
     },
     saveTemplateModalDescription: {
+      paddingHorizontal: spacing.lg,
       fontSize: fontSizes.md,
       color: colors.textSecondary,
       marginBottom: spacing.lg,
       lineHeight: 20,
     },
-    saveTemplateModalActions: {
-      flexDirection: 'row',
-      marginTop: spacing.lg,
-    },
-    spacer: {
-      width: spacing.sm,
-    },
     pickerBackdrop: {
       flex: 1,
       justifyContent: 'flex-end',
-      backgroundColor: 'rgba(0, 0, 0, 0.45)',
+      backgroundColor: colors.shadowStrong,
     },
     pickerSheet: {
       maxHeight: '86%',
-      backgroundColor: colors.surface,
-      borderTopLeftRadius: radii.lg,
-      borderTopRightRadius: radii.lg,
+      backgroundColor: colors.background,
+      borderTopLeftRadius: radii.xl,
+      borderTopRightRadius: radii.xl,
       paddingBottom: Math.max(insets.bottom, spacing.md),
       overflow: 'hidden',
     },
     pickerHandle: {
       width: 36,
       height: 4,
-      borderRadius: 2,
+      borderRadius: radii.pill,
       backgroundColor: colors.border,
       alignSelf: 'center',
       marginTop: spacing.sm,
@@ -604,40 +462,44 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingHorizontal: spacing.xl,
+      paddingHorizontal: spacing.md,
       paddingVertical: spacing.md,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.borderLight,
     },
     pickerTitle: {
-      fontSize: fontSizes.xl,
+      flex: 1,
+      fontSize: 20,
       fontWeight: fontWeights.bold,
       color: colors.text,
     },
     pickerClose: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
+      width: 44,
+      height: 44,
+      borderRadius: radii.pill,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: colors.background,
     },
     pickerBody: {
-      paddingHorizontal: spacing.xl,
+      paddingHorizontal: spacing.md,
       paddingVertical: spacing.md,
     },
     pickerDone: {
-      paddingHorizontal: spacing.xl,
+      paddingHorizontal: spacing.md,
       paddingTop: spacing.sm,
     },
     segment: {
       flexDirection: 'row',
-      padding: 4,
+      padding: spacing.xxs,
       borderRadius: radii.lg,
-      backgroundColor: colors.background,
+      backgroundColor: colors.borderLight,
       marginBottom: spacing.lg,
     },
     segmentOption: {
+      flexDirection: 'row',
+      gap: spacing.xs,
+      padding: spacing.xs,
       flex: 1,
       minHeight: 44,
       alignItems: 'center',
@@ -646,9 +508,10 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
     },
     segmentOptionActive: {
       backgroundColor: colors.surface,
-      ...(shadows.sm as object),
     },
     segmentText: {
+      flexShrink: 1,
+      textAlign: 'center',
       fontSize: fontSizes.sm,
       fontWeight: fontWeights.medium,
       color: colors.textSecondary,
@@ -658,12 +521,12 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
       fontWeight: fontWeights.semibold,
     },
     categoryRow: {
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
       flexDirection: 'row',
       alignItems: 'center',
-      minHeight: 52,
+      minHeight: 60,
       gap: spacing.md,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: colors.borderLight,
     },
     categoryIcon: {
       width: 34,
@@ -671,6 +534,24 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
       borderRadius: radii.md,
       alignItems: 'center',
       justifyContent: 'center',
+    },
+    amountInput: {
+      minHeight: 72,
+      fontFamily: fonts.displayBold,
+      fontSize: 48,
+      fontVariant: ['tabular-nums'],
+      color: colors.text,
+      paddingVertical: spacing.xs,
+    },
+    amountCurrency: {
+      color: colors.textSecondary,
+      fontSize: fontSizes.md,
+    },
+    householdName: {
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.sm,
+      color: colors.textSecondary,
+      fontSize: fontSizes.sm,
     },
     categoryLabel: {
       flex: 1,
@@ -982,7 +863,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
 
   if (!selectedHousehold) {
     return (
-      <SanctuaryScreenShell edges={['top', 'bottom']} innerStyle={styles.container}>
+      <SanctuaryScreenShell edges={['bottom']} innerStyle={styles.container}>
         <View style={styles.emptyContainer}>
           <AppText>{t('alerts.selectHousehold')}</AppText>
         </View>
@@ -1000,12 +881,11 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
   const splitSummary = `${splitMethod === 'even' ? t('expenses.splitEvenly') : t('expenses.splitManually')} • ${participantCount} ${participantLabel}`;
 
   return (
-    <SanctuaryScreenShell edges={['top']} innerStyle={styles.container}>
+    <SanctuaryScreenShell edges={[]} innerStyle={styles.container}>
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
-        enabled={Platform.OS === 'android'}
-        behavior={Platform.OS === 'android' ? 'padding' : undefined}
-        keyboardVerticalOffset={0}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={headerHeight}
       >
         <ScrollView
           style={styles.scrollView}
@@ -1014,175 +894,101 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
           showsVerticalScrollIndicator={false}
-          automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
         >
-          <ScreenHeader
-            title={isEditing ? t('expenses.editExpense') : t('expenses.addExpense')}
-            subtitle={selectedHousehold.name}
-            showTitle={false}
-            rightText={t('common.close')}
-            onRightPress={() => navigation.goBack()}
-          />
+          <AppText style={styles.householdName}>{selectedHousehold.name}</AppText>
+          <SectionHeading title={t('expenses.sectionExpenseDetails')} />
+          <Group>
+            <View style={styles.cardPad}>
+              <AppText style={styles.fieldLabel}>{t('expenses.totalAmount')}</AppText>
+              <AppText style={styles.amountCurrency}>{currency} · {currencySymbol}</AppText>
+              <TextInput
+                accessibilityLabel={`${t('expenses.totalAmount')} (${currency})`}
+                value={totalAmount}
+                onChangeText={setTotalAmount}
+                placeholder="0.00"
+                placeholderTextColor={colors.textTertiary}
+                keyboardType="numeric"
+                style={styles.amountInput}
+              />
+            </View>
+            <View style={styles.cardPad}>
+              <FormTextInput
+                label={t('expenses.description')}
+                value={description}
+                onChangeText={setDescription}
+                placeholder={t('expenses.descriptionPlaceholder')}
+                containerStyle={{ marginBottom: 0 }}
+              />
+            </View>
+          </Group>
 
-          <SettingsSection title={t('expenses.sectionExpenseDetails')}>
-            <SettingsGroupCard>
-              <View style={styles.cardPad}>
-                <FormTextInput
-                  label={t('expenses.description')}
-                  value={description}
-                  onChangeText={setDescription}
-                  placeholder={t('expenses.descriptionPlaceholder')}
-                  containerStyle={{ marginBottom: spacing.md }}
-                />
-                <FormTextInput
-                  label={`${t('expenses.totalAmount')} (${currencySymbol})`}
-                  value={totalAmount}
-                  onChangeText={setTotalAmount}
-                  placeholder="0.00"
-                  keyboardType="numeric"
-                  containerStyle={{ marginBottom: 0 }}
-                />
-              </View>
-            </SettingsGroupCard>
-          </SettingsSection>
-
-          <SettingsSection title={t('expenses.sectionPaidBy')}>
-            <SettingsGroupCard>
-              <TouchableOpacity style={[styles.summaryRow, styles.summaryRowLast]} onPress={() => setActivePicker('paidBy')}>
-                <View style={styles.summaryIcon}>
-                  <Ionicons name="person-outline" size={19} color={colors.primary} />
-                </View>
-                <View style={styles.summaryCopy}>
-                  <AppText style={styles.summaryLabel}>{t('expenses.sectionPaidBy')}</AppText>
-                  <AppText style={styles.summaryValue} numberOfLines={1}>{paidByMember?.name || t('expenses.sectionPaidBy')}</AppText>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
-              </TouchableOpacity>
-            </SettingsGroupCard>
-          </SettingsSection>
-
-          <SettingsSection title={t('expenses.splitMethod')}>
-            <SettingsGroupCard>
-              <TouchableOpacity style={[styles.summaryRow, styles.summaryRowLast]} onPress={() => setActivePicker('split')}>
-                <View style={styles.summaryIcon}>
-                  <Ionicons name="people-outline" size={19} color={colors.primary} />
-                </View>
-                <View style={styles.summaryCopy}>
-                  <AppText style={styles.summaryLabel}>{t('expenses.splitMethod')}</AppText>
-                  <AppText style={styles.summaryValue} numberOfLines={1}>{splitSummary}</AppText>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
-              </TouchableOpacity>
-            </SettingsGroupCard>
-          </SettingsSection>
-
-          <SettingsSection title={t('expenses.sectionDateAndCategory')}>
-            <SettingsGroupCard>
-              <TouchableOpacity style={styles.summaryRow} onPress={() => setActivePicker('date')}>
-                <View style={styles.summaryIcon}>
-                  <Ionicons name="calendar-outline" size={19} color={colors.primary} />
-                </View>
-                <View style={styles.summaryCopy}>
-                  <AppText style={styles.summaryLabel}>{t('expenses.date')}</AppText>
-                  <AppText style={styles.summaryValue}>
-                    {date.toLocaleDateString(intlLocale, { year: 'numeric', month: 'long', day: 'numeric' })}
-                  </AppText>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.summaryRow, styles.summaryRowLast]} onPress={() => setActivePicker('category')}>
-                <View style={styles.summaryIcon}>
-                  <Ionicons
-                    name={(selectedCategory?.icon || 'pricetag-outline') as any}
-                    size={19}
-                    color={selectedCategory?.color || colors.primary}
-                  />
-                </View>
-                <View style={styles.summaryCopy}>
-                  <AppText style={styles.summaryLabel}>{t('expenses.categoryOptional')}</AppText>
-                  <AppText style={styles.summaryValue} numberOfLines={1}>
-                    {selectedCategory
-                      ? getExpenseCategoryLabel(t, selectedCategory.id)
-                      : t('expenses.categoryPickerPlaceholder')}
-                  </AppText>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
-              </TouchableOpacity>
-            </SettingsGroupCard>
-          </SettingsSection>
+          <SectionHeading title={t('expenses.sectionPaidBy')} />
+          <Group>
+            <GroupRow title={paidByMember?.name || t('expenses.sectionPaidBy')} icon="person-outline"
+              chevron titleLines={0} onPress={() => setActivePicker('paidBy')} />
+          </Group>
+          <SectionHeading title={t('expenses.splitMethod')} />
+          <Group>
+            <GroupRow title={splitSummary} icon="people-outline" chevron titleLines={0}
+              onPress={() => setActivePicker('split')} />
+          </Group>
+          <SectionHeading title={t('expenses.sectionDateAndCategory')} />
+          <Group>
+            <GroupRow title={t('expenses.date')}
+              subtitle={date.toLocaleDateString(intlLocale, { year: 'numeric', month: 'long', day: 'numeric' })}
+              icon="calendar-outline" chevron titleLines={0} onPress={() => setActivePicker('date')} />
+            <GroupRow title={t('expenses.categoryOptional')}
+              subtitle={selectedCategory ? getExpenseCategoryLabel(t, selectedCategory.id) : t('expenses.categoryPickerPlaceholder')}
+              icon={selectedCategory?.icon || 'pricetag-outline'} chevron titleLines={0}
+              onPress={() => setActivePicker('category')} />
+          </Group>
 
           {splitMethod === 'even' && selectedParticipants.length > 0 && totalAmount ? (
-            <SettingsSection title={t('expenses.sectionSplitPreview')}>
-              <SettingsGroupCard>
+            <>
+              <SectionHeading title={t('expenses.sectionSplitPreview')} />
+              <Group>
                 <View style={styles.cardPad}>
-                  <AppText style={styles.sharesTitle}>
-                    {t('expenses.shares')} ({t('expenses.evenSplit')})
-                  </AppText>
-                  {calculateEvenShares().map((share, index) => {
-                    const member = selectedHousehold.members.find((m) => m._id === share.userId);
-                    return (
-                      <AppText key={index} style={styles.shareItem}>
-                        {member?.name}: {formatCurrency(share.amount, currency)}
-                      </AppText>
-                    );
-                  })}
+                  <AppText style={styles.sharesTitle}>{t('expenses.shares')} ({t('expenses.evenSplit')})</AppText>
                 </View>
-              </SettingsGroupCard>
-            </SettingsSection>
+                {calculateEvenShares().map((share, index) => {
+                  const member = selectedHousehold.members.find((m) => m._id === share.userId);
+                  return <GroupRow key={index} title={member?.name || ''} titleLines={0}
+                    trailing={<Amount value={share.amount} currency={currency} size={20} fit />} />;
+                })}
+              </Group>
+            </>
           ) : null}
 
-          <SettingsSection title={t('expenses.sectionTemplates')}>
-            <SettingsGroupCard>
-              <View style={styles.templateActionsInCard}>
-                <TouchableOpacity
-                  style={styles.templateButtonInCard}
-                  onPress={() => setShowTemplatesModal(true)}
-                  disabled={loadingTemplates}
-                  activeOpacity={0.75}
-                >
-                  <Ionicons name="document-text-outline" size={20} color={colors.primary} />
-                  <AppText style={styles.templateButtonText} numberOfLines={1}>
-                    {templates.length > 0 ? `${t('expenses.loadTemplate')} (${templates.length})` : t('expenses.loadTemplate')}
-                  </AppText>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.templateButtonInCard}
-                  onPress={() => setShowSaveTemplateModal(true)}
-                  activeOpacity={0.75}
-                >
-                  <Ionicons name="bookmark-outline" size={20} color={colors.accent} />
-                  <AppText style={styles.templateButtonText} numberOfLines={1}>{t('expenses.saveAsTemplate')}</AppText>
-                </TouchableOpacity>
-              </View>
-            </SettingsGroupCard>
-          </SettingsSection>
+          <SectionHeading title={t('expenses.sectionTemplates')} />
+          <Group>
+            <View accessibilityState={{ disabled: loadingTemplates }}>
+              <GroupRow title={templates.length > 0 ? `${t('expenses.loadTemplate')} (${templates.length})` : t('expenses.loadTemplate')}
+                icon="document-text-outline" chevron titleLines={0}
+                onPress={loadingTemplates ? undefined : () => setShowTemplatesModal(true)} />
+            </View>
+            <GroupRow title={t('expenses.saveAsTemplate')} icon="bookmark-outline" chevron titleLines={0}
+              onPress={() => setShowSaveTemplateModal(true)} />
+          </Group>
         </ScrollView>
         <View style={[styles.footerActions, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
-          <View style={styles.footerButtonsRow}>
-            <PrimaryButton
-              title={t('common.cancel')}
-              onPress={() => navigation.goBack()}
-              variant="secondary"
-              style={styles.cancelButton}
-            />
-            <PrimaryButton
-              title={isEditing ? t('expenses.updateExpense') : t('expenses.saveExpense')}
-              onPress={handleSubmit}
-              loading={loading}
-              disabled={!canSubmit}
-              style={styles.saveButton}
-            />
-          </View>
+          <PrimaryButton
+            title={isEditing ? t('expenses.updateExpense') : t('expenses.saveExpense')}
+            onPress={handleSubmit}
+            loading={loading}
+            disabled={!canSubmit}
+          />
         </View>
       </KeyboardAvoidingView>
 
-    <Modal visible={activePicker !== null} transparent animationType="slide" onRequestClose={() => setActivePicker(null)}>
+    <Modal visible={activePicker !== null} transparent animationType={reduceMotion ? 'none' : 'slide'} onRequestClose={() => setActivePicker(null)}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <Pressable style={styles.pickerBackdrop} onPress={() => setActivePicker(null)}>
-          <Pressable style={styles.pickerSheet} onPress={(event) => event.stopPropagation()}>
+        <View style={styles.pickerBackdrop}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('common.close')}
+            style={StyleSheet.absoluteFillObject} onPress={() => setActivePicker(null)} />
+          <View style={styles.pickerSheet} accessibilityViewIsModal>
           <View style={styles.pickerHandle} />
           <View style={styles.pickerHeader}>
-            <AppText style={styles.pickerTitle}>
+            <AppText accessibilityRole="header" style={styles.pickerTitle}>
               {activePicker === 'paidBy'
                 ? t('expenses.sectionPaidBy')
                 : activePicker === 'split'
@@ -1191,21 +997,23 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
                     ? t('expenses.date')
                     : t('expenses.selectCategory')}
             </AppText>
-            <TouchableOpacity style={styles.pickerClose} onPress={() => setActivePicker(null)}>
-              <Ionicons name="close" size={20} color={colors.textSecondary} />
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel={t('common.close')} style={styles.pickerClose} onPress={() => setActivePicker(null)}>
+              <Ionicons name="close-outline" size={20} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
           {activePicker === 'paidBy' ? (
-            <ScrollView>
-              {selectedHousehold.members.map((member, index) => {
+            <ScrollView contentContainerStyle={styles.pickerBody}>
+              <Group style={{ marginHorizontal: 0 }}>
+              {selectedHousehold.members.map((member) => {
                 const selected = paidBy === member._id;
                 return (
                   <TouchableOpacity
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected, checked: selected }}
                     key={member._id}
                     style={[
                       styles.selectableRow,
-                      index < selectedHousehold.members.length - 1 && styles.selectableRowBorder,
                       selected && styles.paidByRowSelected,
                     ]}
                     onPress={() => {
@@ -1215,10 +1023,11 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
                   >
                     <Avatar name={member.name} uri={member.avatarUrl} size={32} />
                     <AppText style={[styles.rowName, selected && styles.rowNameSelected]}>{member.name}</AppText>
-                    {selected ? <Ionicons name="checkmark-circle" size={22} color={colors.primary} /> : null}
+                    {selected ? <Ionicons name="checkmark-circle-outline" size={22} color={colors.primary} /> : null}
                   </TouchableOpacity>
                 );
               })}
+              </Group>
             </ScrollView>
           ) : null}
 
@@ -1228,72 +1037,84 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
                 <View style={styles.segment}>
                   <TouchableOpacity
                     style={[styles.segmentOption, splitMethod === 'even' && styles.segmentOptionActive]}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: splitMethod === 'even', checked: splitMethod === 'even' }}
                     onPress={() => setSplitMethod('even')}
                   >
+                    <Ionicons name={splitMethod === 'even' ? 'checkmark-circle-outline' : 'ellipse-outline'} size={22} color={colors.primary} />
                     <AppText style={[styles.segmentText, splitMethod === 'even' && styles.segmentTextActive]}>
                       {t('expenses.splitEvenly')}
                     </AppText>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.segmentOption, splitMethod === 'manual' && styles.segmentOptionActive]}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: splitMethod === 'manual', checked: splitMethod === 'manual' }}
                     onPress={() => setSplitMethod('manual')}
                   >
+                    <Ionicons name={splitMethod === 'manual' ? 'checkmark-circle-outline' : 'ellipse-outline'} size={22} color={colors.primary} />
                     <AppText style={[styles.segmentText, splitMethod === 'manual' && styles.segmentTextActive]}>
                       {t('expenses.splitManually')}
                     </AppText>
                   </TouchableOpacity>
                 </View>
                 <View style={styles.participantsHeaderRow}>
-                  <AppText style={styles.sectionUpperLabel}>{t('expenses.participants')}</AppText>
-                  <TouchableOpacity onPress={toggleSelectAll}>
+                  <AppText style={styles.participantHeading}>{t('expenses.participants')}</AppText>
+                  <TouchableOpacity accessibilityRole="checkbox" accessibilityState={{ checked: allSelected }}
+                    style={{ minHeight: 44, justifyContent: 'center' }} onPress={toggleSelectAll}>
                     <AppText style={styles.selectAllText}>
                       {allSelected ? t('common.deselectAll') : t('common.selectAll')}
                     </AppText>
                   </TouchableOpacity>
                 </View>
-                <SettingsGroupCard>
-                  {selectedHousehold.members.map((member, index) => {
+                <Group style={{ marginHorizontal: 0 }}>
+                  {selectedHousehold.members.map((member) => {
                     const selected = selectedParticipants.includes(member._id);
                     return (
                       <TouchableOpacity
+                        accessibilityRole="checkbox"
+                        accessibilityState={{ checked: selected }}
                         key={member._id}
                         style={[
                           styles.selectableRow,
-                          index < selectedHousehold.members.length - 1 && styles.selectableRowBorder,
                           selected && styles.participantRowSelected,
                         ]}
                         onPress={() => toggleParticipant(member._id)}
                       >
                         <Avatar name={member.name} uri={member.avatarUrl} size={32} />
                         <AppText style={[styles.rowName, selected && styles.rowNameSelected]}>{member.name}</AppText>
-                        {selected ? <Ionicons name="checkmark-circle" size={22} color={colors.primary} /> : null}
+                        <Ionicons name={selected ? 'checkmark-circle-outline' : 'ellipse-outline'} size={22} color={colors.primary} />
                       </TouchableOpacity>
                     );
                   })}
-                </SettingsGroupCard>
+                </Group>
                 {splitMethod === 'manual' ? (
                   <View style={{ marginTop: spacing.lg }}>
                     <AppText style={styles.sharesTitle}>{t('expenses.manualShares')}</AppText>
+                    <Group style={{ marginHorizontal: 0 }}>
                     {selectedParticipants.map((userId) => {
                       const member = selectedHousehold.members.find((item) => item._id === userId);
                       return (
                         <View key={userId} style={styles.manualShareRow}>
-                          <AppText style={styles.manualShareLabel}>{member?.name}</AppText>
                           <View style={styles.manualShareInputWrap}>
-                            <FormTextInput
+                            <AppText style={styles.fieldLabel}>{member?.name}</AppText>
+                            <TextInput accessibilityLabel={`${member?.name}: ${t('expenses.amount')} (${currency})`}
                               value={manualShares[userId] || ''}
                               onChangeText={(text) => setManualShares({ ...manualShares, [userId]: text })}
-                              placeholder="0.00"
-                              keyboardType="numeric"
-                              containerStyle={{ marginBottom: 0 }}
-                            />
+                              placeholder="0.00" placeholderTextColor={colors.textTertiary}
+                              keyboardType="numeric" style={styles.manualAmountInput} />
                           </View>
                         </View>
                       );
                     })}
-                    <AppText style={[styles.remaining, remaining !== 0 && styles.remainingError]}>
-                      {t('expenses.remainingToAssign')}: {formatCurrency(remaining, currency)}
-                    </AppText>
+                    </Group>
+                    <View style={styles.remaining} accessibilityLiveRegion="polite">
+                      <Ionicons name={remaining !== 0 ? 'alert-circle-outline' : 'checkmark-circle-outline'} size={22}
+                        color={remaining !== 0 ? colors.danger : colors.textSecondary} />
+                      <AppText style={styles.remainingLabel}>{t('expenses.remainingToAssign')}:</AppText>
+                      <Amount value={remaining} currency={currency} size={22} fit
+                        color={remaining !== 0 ? colors.danger : colors.text} />
+                    </View>
                   </View>
                 ) : null}
               </ScrollView>
@@ -1324,8 +1145,10 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
 
           {activePicker === 'category' ? (
             <ScrollView contentContainerStyle={styles.pickerBody}>
+              <Group style={{ marginHorizontal: 0 }}>
               {category ? (
                 <TouchableOpacity
+                  accessibilityRole="button"
                   style={styles.categoryRow}
                   onPress={() => {
                     setCategory('');
@@ -1340,6 +1163,8 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
               ) : null}
               {EXPENSE_CATEGORIES.map((item) => (
                 <TouchableOpacity
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: category === item.id, checked: category === item.id }}
                   key={item.id}
                   style={styles.categoryRow}
                   onPress={() => {
@@ -1347,24 +1172,25 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
                     setActivePicker(null);
                   }}
                 >
-                  <View style={[styles.categoryIcon, { backgroundColor: `${item.color}20` }]}>
-                    <Ionicons name={item.icon as any} size={20} color={item.color} />
+                  <View style={[styles.categoryIcon, { backgroundColor: colors.primaryUltraSoft }]}>
+                    <Ionicons name={item.icon as any} size={20} color={colors.primary} />
                   </View>
                   <AppText style={styles.categoryLabel}>{getExpenseCategoryLabel(t, item.id)}</AppText>
-                  {category === item.id ? <Ionicons name="checkmark-circle" size={22} color={colors.primary} /> : null}
+                  {category === item.id ? <Ionicons name="checkmark-circle-outline" size={22} color={colors.primary} /> : null}
                 </TouchableOpacity>
               ))}
+              </Group>
             </ScrollView>
           ) : null}
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </KeyboardAvoidingView>
     </Modal>
 
     {/* Templates Modal */}
     <Modal
       visible={showTemplatesModal}
-      animationType="slide"
+      animationType={reduceMotion ? 'none' : 'slide'}
       transparent={false}
       onRequestClose={() => setShowTemplatesModal(false)}
     >
@@ -1373,12 +1199,12 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
           style={{ flex: 1, transform: [{ translateX: templateModalTranslateX }] }}
           {...templatesModalPanResponder.panHandlers}
         >
-          <ScreenHeader
-            title={t('expenses.loadTemplate')}
-            onBackPress={dismissTemplatesModal}
-            showBackButton
-            variant="stack"
-          />
+          <View style={styles.pickerHeader}>
+            <AppText accessibilityRole="header" style={styles.pickerTitle}>{t('expenses.loadTemplate')}</AppText>
+            <TouchableOpacity accessibilityRole="button" style={styles.textClose} onPress={dismissTemplatesModal}>
+              <AppText style={styles.textCloseLabel}>{t('common.close')}</AppText>
+            </TouchableOpacity>
+          </View>
           <ScrollView style={styles.modalContent}>
           {templates.length === 0 ? (
             <View style={styles.emptyTemplates}>
@@ -1392,8 +1218,9 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
             templates.map((template) => {
               const isCreator = user && template.userId === user._id;
               return (
-                <View key={template._id} style={styles.templateCardContainer}>
+                <Group key={template._id} style={styles.templateCardContainer}>
                   <TouchableOpacity
+                    accessibilityRole="button"
                     style={styles.templateCard}
                     onPress={() => handleLoadTemplate(template)}
                   >
@@ -1401,7 +1228,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
                       <AppText style={styles.templateCardName}>{template.name}</AppText>
                       {template.category && (
                         <View style={styles.templateCategoryBadge}>
-                          <AppText style={styles.templateCategoryText}>{template.category}</AppText>
+                          <AppText style={styles.templateCategoryText}>{getExpenseCategoryLabel(t, template.category)}</AppText>
                         </View>
                       )}
                     </View>
@@ -1417,6 +1244,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
                   {isCreator && (
                     <View style={styles.templateCardActions}>
                       <TouchableOpacity
+                        accessibilityRole="button"
                         style={styles.templateActionButton}
                         onPress={() => handleEditTemplate(template)}
                       >
@@ -1424,8 +1252,10 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
                         <AppText style={styles.templateActionText}>{t('common.edit')}</AppText>
                       </TouchableOpacity>
                       <TouchableOpacity
+                        accessibilityRole="button"
                         style={styles.templateActionButton}
                         onPress={() => handleDeleteTemplate(template)}
+                        accessibilityState={{ disabled: deletingTemplateId === template._id, busy: deletingTemplateId === template._id }}
                         disabled={deletingTemplateId === template._id}
                       >
                         <Ionicons name="trash-outline" size={18} color={colors.danger} />
@@ -1435,7 +1265,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
                       </TouchableOpacity>
                     </View>
                   )}
-                </View>
+                </Group>
               );
             })
           )}
@@ -1445,75 +1275,57 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
     </Modal>
 
     {/* Save Template Modal */}
-    <Modal
-      visible={showSaveTemplateModal}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={closeSaveTemplateModal}
-    >
-      <View style={styles.saveTemplateModalOverlay}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t('common.close')}
-          style={StyleSheet.absoluteFillObject}
-          onPress={closeSaveTemplateModal}
-        />
-        <View style={styles.saveTemplateModalAlign}>
-          <View style={styles.saveTemplateModalContent}>
-            <AppText style={styles.saveTemplateModalTitle}>{t('expenses.saveAsTemplate')}</AppText>
-            <AppText style={styles.saveTemplateModalDescription}>
-              {t('expenses.saveTemplateDescription')}
-            </AppText>
-            <FormTextInput
-              label={t('expenses.templateName')}
-              value={templateName}
-              onChangeText={setTemplateName}
-              placeholder={t('expenses.templateNamePlaceholder')}
-            />
-            <View style={styles.saveTemplateModalActions}>
-              <PrimaryButton title={t('common.cancel')} onPress={closeSaveTemplateModal} variant="secondary" />
-              <View style={styles.spacer} />
-              <PrimaryButton title={t('expenses.saveAsTemplate')} onPress={handleSaveTemplate} />
-            </View>
+    <Modal visible={showSaveTemplateModal} animationType={reduceMotion ? 'none' : 'slide'} transparent
+      onRequestClose={closeSaveTemplateModal}>
+      <KeyboardAvoidingView style={styles.saveTemplateModalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('common.close')}
+          style={StyleSheet.absoluteFillObject} onPress={closeSaveTemplateModal} />
+        <View style={styles.templateFormSheet} accessibilityViewIsModal>
+          <View style={styles.pickerHeader}>
+            <AppText accessibilityRole="header" style={styles.pickerTitle}>{t('expenses.saveAsTemplate')}</AppText>
+            <TouchableOpacity accessibilityRole="button" style={styles.textClose} onPress={closeSaveTemplateModal}>
+              <AppText style={styles.textCloseLabel}>{t('common.cancel')}</AppText>
+            </TouchableOpacity>
+          </View>
+          <ScrollView contentContainerStyle={styles.templateFormContent} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive">
+            <AppText style={styles.saveTemplateModalDescription}>{t('expenses.saveTemplateDescription')}</AppText>
+            <Group><View style={styles.cardPad}>
+              <FormTextInput label={t('expenses.templateName')} value={templateName} onChangeText={setTemplateName}
+                placeholder={t('expenses.templateNamePlaceholder')} containerStyle={{ marginBottom: 0 }} />
+            </View></Group>
+          </ScrollView>
+          <View style={[styles.footerActions, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
+            <PrimaryButton title={t('expenses.saveAsTemplate')} onPress={handleSaveTemplate} />
           </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
 
     {/* Edit Template Modal */}
-    <Modal
-      visible={showEditTemplateModal}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={closeEditTemplateModal}
-    >
-      <View style={styles.saveTemplateModalOverlay}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t('common.close')}
-          style={StyleSheet.absoluteFillObject}
-          onPress={closeEditTemplateModal}
-        />
-        <View style={styles.saveTemplateModalAlign}>
-          <View style={styles.saveTemplateModalContent}>
-            <AppText style={styles.saveTemplateModalTitle}>{t('expenses.editTemplate')}</AppText>
-            <AppText style={styles.saveTemplateModalDescription}>
-              {t('expenses.updateTemplateDescription')}
-            </AppText>
-            <FormTextInput
-              label={t('expenses.templateName')}
-              value={templateName}
-              onChangeText={setTemplateName}
-              placeholder={t('expenses.templateNamePlaceholder')}
-            />
-            <View style={styles.saveTemplateModalActions}>
-              <PrimaryButton title={t('common.cancel')} onPress={closeEditTemplateModal} variant="secondary" />
-              <View style={styles.spacer} />
-              <PrimaryButton title={t('common.update')} onPress={handleUpdateTemplate} />
-            </View>
+    <Modal visible={showEditTemplateModal} animationType={reduceMotion ? 'none' : 'slide'} transparent
+      onRequestClose={closeEditTemplateModal}>
+      <KeyboardAvoidingView style={styles.saveTemplateModalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('common.close')}
+          style={StyleSheet.absoluteFillObject} onPress={closeEditTemplateModal} />
+        <View style={styles.templateFormSheet} accessibilityViewIsModal>
+          <View style={styles.pickerHeader}>
+            <AppText accessibilityRole="header" style={styles.pickerTitle}>{t('expenses.editTemplate')}</AppText>
+            <TouchableOpacity accessibilityRole="button" style={styles.textClose} onPress={closeEditTemplateModal}>
+              <AppText style={styles.textCloseLabel}>{t('common.cancel')}</AppText>
+            </TouchableOpacity>
+          </View>
+          <ScrollView contentContainerStyle={styles.templateFormContent} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive">
+            <AppText style={styles.saveTemplateModalDescription}>{t('expenses.updateTemplateDescription')}</AppText>
+            <Group><View style={styles.cardPad}>
+              <FormTextInput label={t('expenses.templateName')} value={templateName} onChangeText={setTemplateName}
+                placeholder={t('expenses.templateNamePlaceholder')} containerStyle={{ marginBottom: 0 }} />
+            </View></Group>
+          </ScrollView>
+          <View style={[styles.footerActions, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
+            <PrimaryButton title={t('common.update')} onPress={handleUpdateTemplate} />
           </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
     </SanctuaryScreenShell>
   );

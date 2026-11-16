@@ -1,8 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet } from 'react-native';
+import { fontSizes, fontWeights, radii, spacing, useThemeColors } from '../theme';
 import { AppText } from './AppText';
-import { useTheme } from '../context/ThemeContext';
-import { useThemeColors, fontSizes, fontWeights, radii, spacing } from '../theme';
 
 interface QuickActionButtonProps {
   icon: React.ReactNode;
@@ -11,29 +10,22 @@ interface QuickActionButtonProps {
 }
 
 export const QuickActionButton: React.FC<QuickActionButtonProps> = ({ icon, label, onPress }) => {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
   const colors = useThemeColors();
   const styles = React.useMemo(() => StyleSheet.create({
     button: {
       flex: 1,
-      backgroundColor: isDark ? 'rgba(30, 38, 52, 0.88)' : 'rgba(255, 255, 255, 0.72)',
+      backgroundColor: colors.surface,
       padding: spacing.lg,
-      borderRadius: radii.lg + 4,
+      borderRadius: radii.md,
       alignItems: 'center',
       justifyContent: 'center',
-      minHeight: 110,
+      minHeight: 50,
       borderWidth: 1.5,
-      borderColor: isDark ? 'rgba(74, 222, 128, 0.28)' : 'rgba(34, 197, 94, 0.2)',
+      borderColor: colors.border,
       gap: spacing.sm,
-      shadowColor: colors.primary,
-      shadowOpacity: isDark ? 0.22 : 0.12,
-      shadowRadius: 18,
-      shadowOffset: { width: 0, height: 10 },
-      elevation: 4,
+
     },
     pressed: {
-      transform: [{ scale: 0.98 }],
       opacity: 0.9,
     },
     label: {
@@ -43,10 +35,12 @@ export const QuickActionButton: React.FC<QuickActionButtonProps> = ({ icon, labe
       textAlign: 'center',
       marginTop: spacing.xs,
     },
-  }), [colors, isDark]);
+  }), [colors]);
 
   return (
     <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
       onPress={onPress}
       style={({ pressed }) => [styles.button, pressed && styles.pressed]}
     >
@@ -55,5 +49,3 @@ export const QuickActionButton: React.FC<QuickActionButtonProps> = ({ icon, labe
     </Pressable>
   );
 };
-
-

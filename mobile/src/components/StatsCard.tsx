@@ -1,7 +1,10 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { fonts, fontSizes, fontWeights, radii, spacing, useThemeColors } from '../theme';
 import { AppText } from './AppText';
-import { useThemeColors, fontSizes, fontWeights, radii, spacing, shadows } from '../theme';
+import { Amount } from './ui/Amount';
+import { formatCurrency } from '../utils/formatCurrency';
+import { useHouseholdCurrency } from '../utils/useHouseholdCurrency';
 
 interface StatsCardProps {
   icon: React.ReactNode;
@@ -12,20 +15,30 @@ interface StatsCardProps {
   onPress?: () => void;
 }
 
-export const StatsCard: React.FC<StatsCardProps> = ({ 
-  icon, 
-  label, 
+export const StatsCard: React.FC<StatsCardProps> = ({
+  icon,
+  label,
   value,
   iconColor,
   iconBgColor,
   onPress,
 }) => {
   const colors = useThemeColors();
-  const finalIconColor = iconColor || colors.primary;
-  const finalIconBgColor = iconBgColor || colors.primaryUltraSoft;
+  const finalIconColor = Object.values(colors).some(token => token === iconColor) ? iconColor : colors.primary;
   const valueText = typeof value === 'number' ? String(value) : value;
   const isLongValue = valueText.length >= 9;
-  
+  const currency = useHouseholdCurrency();
+  // The public value prop also accepts already formatted amounts. Only decode an
+  // exact currency-format round trip; arbitrary labels and counts stay untouched.
+  const moneyValue = React.useMemo(() => {
+    if (typeof value !== 'string') return null;
+    const parts = new Intl.NumberFormat().formatToParts(1234.5);
+    const group = parts.find(part => part.type === 'group')?.value ?? ',';
+    const decimal = parts.find(part => part.type === 'decimal')?.value ?? '.';
+    const parsed = Number(value.split(group).join('').replace(decimal, '.').replace(/[^0-9.+-]/g, ''));
+    return Number.isFinite(parsed) && formatCurrency(parsed, currency) === value ? parsed : null;
+  }, [value, currency]);
+
   const styles = React.useMemo(() => StyleSheet.create({
     card: {
       flex: 1,
@@ -34,27 +47,27 @@ export const StatsCard: React.FC<StatsCardProps> = ({
       borderRadius: radii.lg,
       alignItems: 'center',
       marginHorizontal: spacing.xxs,
-      borderWidth: 1,
+      borderWidth: 0,
       borderColor: colors.borderLight,
-      ...(shadows.sm as object),
+
     },
     pressable: {
       flex: 1,
     },
     iconContainer: {
-      width: 56,
-      height: 56,
-      borderRadius: 28,
+      width: 28,
+      height: 28,
+      borderRadius: radii.sm,
       alignItems: 'center',
       justifyContent: 'center',
-      marginBottom: spacing.md,
+      marginBottom: spacing.xs,
     },
     icon: {
       // Icon wrapper for proper centering
     },
     value: {
       fontSize: isLongValue ? fontSizes.lg : fontSizes.xl,
-      fontWeight: fontWeights.extrabold,
+      ...(typeof value === 'number' ? { fontFamily: fonts.displayBold } : { fontWeight: fontWeights.bold }),
       color: colors.text,
       marginBottom: spacing.xxs,
       fontVariant: ['tabular-nums'],
@@ -68,22 +81,21 @@ export const StatsCard: React.FC<StatsCardProps> = ({
       fontWeight: fontWeights.medium,
       flexShrink: 1,
     },
-  }), [colors, isLongValue]);
+  }), [colors, isLongValue, value]);
 
   const Content = (
     <View style={styles.card}>
-      <View style={[styles.iconContainer, { backgroundColor: finalIconBgColor }]}>
-        <View style={styles.icon}>{icon}</View>
+      <View style={[styles.iconContainer, { backgroundColor: colors.surface }]}>
+        <View style={styles.icon}>{React.isValidElement<{ color?: string; }>(icon) ? React.cloneElement(icon, { color: finalIconColor }) : icon}</View>
       </View>
-      <AppText
+      {moneyValue !== null ? <Amount value={moneyValue} currency={currency} size={28} fit /> : <AppText
         style={styles.value}
-        numberOfLines={1}
         adjustsFontSizeToFit
         minimumFontScale={0.7}
       >
         {valueText}
-      </AppText>
-      <AppText style={styles.label} numberOfLines={2} ellipsizeMode="tail">
+      </AppText>}
+      <AppText style={styles.label}>
         {label}
       </AppText>
     </View>
@@ -92,10 +104,11 @@ export const StatsCard: React.FC<StatsCardProps> = ({
   if (onPress) {
     return (
       <TouchableOpacity
-        style={styles.pressable}
+        style={[styles.pressable, { minHeight: 44 }]}
         onPress={onPress}
         activeOpacity={0.8}
         accessibilityRole="button"
+        accessibilityLabel={`${label}: ${valueText}`}
       >
         {Content}
       </TouchableOpacity>

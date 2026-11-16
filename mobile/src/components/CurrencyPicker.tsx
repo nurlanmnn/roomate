@@ -1,5 +1,8 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
+  AccessibilityInfo,
+  KeyboardAvoidingView,
+  Platform,
   View,
   StyleSheet,
   TouchableOpacity,
@@ -11,6 +14,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Group } from './ui/Group';
 import {
   SUPPORTED_CURRENCIES,
   getCurrencyOption,
@@ -18,7 +23,7 @@ import {
   CurrencyOption,
 } from '../constants/currencies';
 import { useLanguage, type LanguageCode } from '../context/LanguageContext';
-import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows } from '../theme';
+import { useThemeColors, fontSizes, fontWeights, spacing, radii } from '../theme';
 
 interface CurrencyPickerProps {
   value: string;
@@ -35,6 +40,13 @@ export const CurrencyPicker: React.FC<CurrencyPickerProps> = ({
   lockedHint,
 }) => {
   const colors = useThemeColors();
+  const insets = useSafeAreaInsets();
+  const [reduceMotion, setReduceMotion] = useState(false);
+  React.useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => subscription.remove();
+  }, []);
   const { t, language } = useLanguage();
   const [modalVisible, setModalVisible] = useState(false);
   const [search, setSearch] = useState('');
@@ -65,11 +77,11 @@ export const CurrencyPicker: React.FC<CurrencyPickerProps> = ({
 
   const handleSelect = useCallback(
     (code: string) => {
-    Keyboard.dismiss();
-    setModalVisible(false);
-    if (code !== value) {
-      onChange(code);
-    }
+      Keyboard.dismiss();
+      setModalVisible(false);
+      if (code !== value) {
+        onChange(code);
+      }
     },
     [onChange, value]
   );
@@ -96,6 +108,10 @@ export const CurrencyPicker: React.FC<CurrencyPickerProps> = ({
   return (
     <>
       <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel={`${t('currency.label')}: ${selectedDisplayName}, ${selected.code}`}
+        accessibilityState={{ disabled: Boolean(disabled), expanded: modalVisible }}
+        disabled={disabled}
         style={[styles.pickerButton, disabled && styles.pickerDisabled]}
         onPress={open}
         activeOpacity={disabled ? 1 : 0.7}
@@ -120,26 +136,27 @@ export const CurrencyPicker: React.FC<CurrencyPickerProps> = ({
       <Modal
         visible={modalVisible}
         transparent
-        animationType="slide"
+        animationType={reduceMotion ? 'none' : 'slide'}
         onRequestClose={closeModal}
       >
-        <View style={styles.modalOverlay}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={closeModal} />
-          <Pressable style={styles.modalContent} onPress={Keyboard.dismiss}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('common.close')} style={StyleSheet.absoluteFill} onPress={closeModal} />
+          <Pressable accessibilityViewIsModal accessible={false} accessibilityRole="button" accessibilityLabel={t('common.dismissKeyboard')} style={[styles.modalContent, { paddingBottom: Math.max(insets.bottom, spacing.md) }]} onPress={Keyboard.dismiss}>
             <View style={styles.modalHeader}>
-              <AppText style={styles.modalTitle}>{t('currency.pickerTitle')}</AppText>
-              <TouchableOpacity onPress={closeModal} hitSlop={10}>
+              <AppText accessibilityRole="header" style={styles.modalTitle}>{t('currency.pickerTitle')}</AppText>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel={t('common.close')} style={styles.closeButton} onPress={closeModal}>
                 <Ionicons name="close-outline" size={26} color={colors.text} />
               </TouchableOpacity>
             </View>
-            <Pressable
+            <View
               style={styles.searchWrap}
-              onPress={(event) => {
+              onTouchEnd={(event) => {
                 event.stopPropagation();
               }}
             >
               <Ionicons name="search-outline" size={18} color={colors.textSecondary} />
               <TextInput
+                accessibilityLabel={t('currency.searchPlaceholder')}
                 value={search}
                 onChangeText={setSearch}
                 placeholder={t('currency.searchPlaceholder')}
@@ -148,7 +165,8 @@ export const CurrencyPicker: React.FC<CurrencyPickerProps> = ({
                 autoCorrect={false}
                 autoCapitalize="characters"
               />
-            </Pressable>
+            </View>
+            <Group style={styles.listGroup}>
             <FlatList
               data={filtered}
               keyExtractor={(item) => item.code}
@@ -159,8 +177,9 @@ export const CurrencyPicker: React.FC<CurrencyPickerProps> = ({
               showsVerticalScrollIndicator={false}
               initialNumToRender={15}
             />
+            </Group>
           </Pressable>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </>
   );
@@ -184,6 +203,8 @@ const CurrencyRow = React.memo(function CurrencyRow({
   const displayName = getLocalizedCurrencyName(item.code, language);
   return (
     <TouchableOpacity
+      accessibilityRole="radio"
+      accessibilityState={{ selected: isSelected, checked: isSelected }}
       style={[styles.row, isSelected && styles.rowSelected]}
       onPress={() => onSelect(item.code)}
       activeOpacity={0.7}
@@ -195,7 +216,7 @@ const CurrencyRow = React.memo(function CurrencyRow({
         <AppText style={styles.rowName}>{displayName}</AppText>
         <AppText style={styles.rowCode}>{item.code}</AppText>
       </View>
-      {isSelected && <Ionicons name="checkmark-circle" size={22} color={colorsPrimary} />}
+      {isSelected && <Ionicons name="checkmark-circle-outline" size={22} color={colorsPrimary} />}
     </TouchableOpacity>
   );
 });
@@ -211,7 +232,6 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
       paddingHorizontal: spacing.md,
       minHeight: 48,
       justifyContent: 'center',
-      ...(shadows.sm as object),
     },
     pickerDisabled: {
       backgroundColor: colors.surfaceAlt,
@@ -238,6 +258,7 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
     },
     rowText: {
       flex: 1,
+      minWidth: 0,
     },
     rowName: {
       fontSize: fontSizes.md,
@@ -258,17 +279,18 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
     },
     modalOverlay: {
       flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.5)',
+      backgroundColor: colors.shadowStrong,
       justifyContent: 'flex-end',
     },
     modalContent: {
-      backgroundColor: colors.surface,
-      borderTopLeftRadius: radii.lg,
-      borderTopRightRadius: radii.lg,
+      backgroundColor: colors.background,
+      borderTopLeftRadius: radii.xl,
+      borderTopRightRadius: radii.xl,
       height: '82%',
       paddingTop: spacing.lg,
     },
     modalHeader: {
+      gap: spacing.sm,
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
@@ -277,8 +299,15 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.borderLight,
     },
+    closeButton: {
+      minWidth: 44,
+      minHeight: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
     modalTitle: {
-      fontSize: fontSizes.xl,
+      flex: 1,
+      fontSize: 20,
       fontWeight: fontWeights.bold,
       color: colors.text,
     },
@@ -297,23 +326,27 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
     },
     searchInput: {
       flex: 1,
+      minHeight: 44,
       fontSize: fontSizes.md,
       color: colors.text,
       paddingVertical: spacing.xs,
     },
+    listGroup: {
+      flex: 1,
+      marginTop: spacing.md,
+    },
     listContent: {
-      paddingHorizontal: spacing.md,
-      paddingVertical: spacing.md,
-      paddingBottom: spacing.xl,
+      paddingBottom: spacing.md,
     },
     row: {
       flexDirection: 'row',
       alignItems: 'center',
       paddingVertical: spacing.sm,
       paddingHorizontal: spacing.sm,
-      borderRadius: radii.md,
-      gap: spacing.md,
-      minHeight: 52,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.borderLight,
+      gap: spacing.sm,
+      minHeight: 60,
     },
     rowSelected: {
       backgroundColor: colors.primaryUltraSoft,
