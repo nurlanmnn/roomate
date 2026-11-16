@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import {
+  AccessibilityInfo,
   Alert,
   Platform,
   ScrollView,
@@ -17,15 +18,15 @@ import { useLanguage } from '../../context/LanguageContext';
 import { eventsApi, Event } from '../../api/eventsApi';
 import { choresApi, ChoreRotation } from '../../api/choresApi';
 import { EventCard } from '../../components/EventCard';
-import { ScreenHeader } from '../../components/ui/ScreenHeader';
+import { EnamelHeader, HeaderIconButton } from '../../components/ui/EnamelHeader';
+import { Sheet } from '../../components/ui/Sheet';
+import { Group, GroupRow, SectionHeading } from '../../components/ui/Group';
 import { CalendarView } from '../../components/CalendarView';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { AppText } from '../../components/AppText';
-import { SettingsSection } from '../../components/Settings/SettingsSection';
-import { SettingsGroupCard } from '../../components/Settings/SettingsGroupCard';
 import { formatCalendarListDateHeader } from '../../utils/dateHelpers';
 import { getDateFnsLocale } from '../../utils/dateLocales';
-import { useThemeColors, fontSizes, fontWeights, spacing, radii, TAB_BAR_HEIGHT } from '../../theme';
+import { useThemeColors, fontSizes, fontWeights, spacing, radii } from '../../theme';
 import { Ionicons } from '@expo/vector-icons';
 import {
   addDays,
@@ -73,6 +74,17 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   const { t, language } = useLanguage();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const [reduceMotion, setReduceMotion] = useState(true);
+  const reduceMotionRef = useRef(true);
+  reduceMotionRef.current = reduceMotion;
+  useEffect(() => {
+    let active = true;
+    AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
+      if (active) setReduceMotion(enabled);
+    });
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => { active = false; subscription.remove(); };
+  }, []);
   const dateFnsLocale = useMemo(() => getDateFnsLocale(language), [language]);
   const listRelativeDayLabels = useMemo(
     () => ({
@@ -100,7 +112,7 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
 
   useFocusEffect(
     useCallback(() => {
-      scrollRef.current?.scrollTo({ y: 0, animated: true });
+      scrollRef.current?.scrollTo({ y: 0, animated: !reduceMotionRef.current });
       loadEventsRef.current?.({ allowStale: true });
     }, [])
   );
@@ -379,596 +391,311 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     return t('time.all');
   };
 
-  if (!selectedHousehold) {
-    return (
-      <SanctuaryScreenShell edges={['top', 'bottom']} innerStyle={styles.container}>
-        <View style={styles.emptyContainer}>
-          <AppText style={styles.emptyText}>{t('alerts.selectHousehold')}</AppText>
+  const renderEvent = (event: Event) => (
+    <View key={event._id}>
+      <EventCard event={event} />
+      {isCreator(event) ? (
+        <View style={styles.eventActions}>
+          <TouchableOpacity style={styles.action} onPress={() => handleEditEvent(event)} accessibilityRole="button">
+            <Ionicons name="pencil-outline" size={22} color={colors.primary} />
+            <AppText style={styles.actionText}>{t('common.edit')}</AppText>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.action} onPress={() => handleDeleteEvent(event)} accessibilityRole="button">
+            <Ionicons name="trash-outline" size={22} color={colors.danger} />
+            <AppText style={[styles.actionText, { color: colors.danger }]}>{t('common.delete')}</AppText>
+          </TouchableOpacity>
         </View>
-      </SanctuaryScreenShell>
-    );
-  }
+      ) : null}
+    </View>
+  );
 
   return (
-    <SanctuaryScreenShell edges={['top']} innerStyle={styles.container}>
-      <ScrollView
-        ref={scrollRef}
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={loadEvents} />}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
-        automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
-        showsVerticalScrollIndicator={false}
-      >
-        <ScreenHeader
-          title={t('calendar.title')}
-          subtitle={selectedHousehold.name}
-          rightText={t('calendar.addEvent')}
-          onRightPress={() => navigation.navigate('CreateEvent')}
-        />
-
-        <SettingsSection title={t('calendar.sectionCalendar')}>
-          <SettingsGroupCard>
-            <CalendarView
-              embedded
-              selectedDate={selectedDate}
-              onSelectDate={setSelectedDate}
-              eventDates={eventDates}
-              choreDates={userChoreDates}
-              onAddEvent={handleAddEventOnDate}
-            />
-            <View style={styles.calendarLegend}>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: colors.primary }]} />
-                <AppText style={styles.legendText}>{t('home.events')}</AppText>
-              </View>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: colors.accent }]} />
-                <AppText style={styles.legendText}>{t('chores.yourTurn')}</AppText>
-              </View>
-            </View>
-            <View style={styles.calendarHint}>
-              <Ionicons name="information-circle-outline" size={16} color={colors.textTertiary} />
-              <AppText style={styles.calendarHintText}>{t('calendar.longPressToAdd')}</AppText>
-            </View>
-          </SettingsGroupCard>
-        </SettingsSection>
-
-        <SettingsSection title={t('chores.choreRotation')}>
-          <SettingsGroupCard>
-            <TouchableOpacity
-              onPress={() => navigation.getParent()?.navigate('ChoreRotation')}
-              activeOpacity={0.7}
-              style={styles.choreHeader}
-            >
-              <View style={styles.choreHeaderTitleRow}>
-                <View style={styles.choreHeaderIcon}>
-                  <Ionicons name="repeat" size={18} color={colors.primary} />
-                </View>
-                <View style={styles.choreHeaderText}>
-                  <AppText style={styles.choreHeaderTitle}>
-                    {chores.length > 0
-                      ? t('chores.currentPeriod')
-                      : t('chores.setUpDescription')}
-                  </AppText>
-                  {chores.length > 0 ? (
-                    <AppText style={styles.choreHeaderSubtitle}>
-                      {format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'MMM d', {
-                        locale: dateFnsLocale,
-                      })}
-                      {' – '}
-                      {format(
-                        addDays(startOfWeek(new Date(), { weekStartsOn: 1 }), 6),
-                        'MMM d',
-                        { locale: dateFnsLocale }
-                      )}
-                    </AppText>
-                  ) : null}
-                </View>
-              </View>
-              <View style={styles.choreManageButton} pointerEvents="none">
-                <AppText style={styles.choreManageLabel}>
-                  {chores.length > 0 ? t('chores.manage') : t('chores.setUp')}
-                </AppText>
-                <Ionicons name="chevron-forward" size={16} color={colors.primary} />
-              </View>
-            </TouchableOpacity>
-
-            {chores.length > 0 ? (
-              <View style={styles.choreList}>
-                {chores.map((chore, index) => (
-                  <ChoreRotationRow
-                    key={chore._id}
-                    chore={chore}
-                    user={user}
-                    referenceDate={new Date()}
-                    onToggleComplete={handleToggleChoreComplete}
-                    onGiveTo={handleGiveToChore}
-                    dateFnsLocale={dateFnsLocale}
-                    t={t}
-                    colors={colors}
-                    showPeriodRange
-                    isLast={index === chores.length - 1}
-                  />
-                ))}
-              </View>
-            ) : null}
-          </SettingsGroupCard>
-        </SettingsSection>
-
-        <SettingsSection title={t('calendar.sectionSelectedDay')}>
-          <SettingsGroupCard>
-            <View style={styles.selectedDayHeader}>
-              <AppText style={styles.selectedDateTitle}>
-                {format(selectedDate, 'EEEE, MMM d', { locale: dateFnsLocale })}
-              </AppText>
-              <TouchableOpacity
-                style={styles.addOnDateButton}
-                onPress={() => handleAddEventOnDate(selectedDate)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Ionicons name="add-circle" size={28} color={colors.primary} />
-              </TouchableOpacity>
-            </View>
-
-            {selectedDateChores.length > 0 ? (
-              <View style={styles.selectedDayChores}>
-                {selectedDateChores.map(({ chore }) => (
-                  <ChoreRotationRow
-                    key={`sel-${chore._id}`}
-                    chore={chore}
-                    user={user}
-                    referenceDate={selectedDate}
-                    onToggleComplete={handleToggleChoreComplete}
-                    onGiveTo={handleGiveToChore}
-                    dateFnsLocale={dateFnsLocale}
-                    t={t}
-                    colors={colors}
-                    showDoneBy
-                  />
-                ))}
-              </View>
-            ) : null}
-
-            {selectedDateEvents.length > 0 ? (
-              selectedDateEvents.map((event) => (
-                <View key={event._id} style={styles.eventBlock}>
-                  <EventCard event={event} />
-                  {isCreator(event) ? (
-                    <View style={styles.listEventActions}>
-                      <TouchableOpacity
-                        style={[styles.listActionChip, styles.listActionChipEdit]}
-                        onPress={() => handleEditEvent(event)}
-                        activeOpacity={0.8}
-                      >
-                        <Ionicons name="pencil-outline" size={14} color={colors.primary} />
-                        <AppText style={styles.listEditText}>{t('common.edit')}</AppText>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.listActionChip, styles.listActionChipDelete]}
-                        onPress={() => handleDeleteEvent(event)}
-                        activeOpacity={0.8}
-                      >
-                        <Ionicons name="trash-outline" size={14} color={colors.danger} />
-                        <AppText style={styles.listDeleteText}>{t('common.delete')}</AppText>
-                      </TouchableOpacity>
-                    </View>
-                  ) : null}
-                </View>
-              ))
-            ) : selectedDateChores.length === 0 ? (
-              <View style={styles.emptyDayInner}>
-                <Ionicons name="calendar-outline" size={36} color={colors.textTertiary} />
-                <AppText style={styles.emptyDateText}>{t('chores.noChoresOnDay')}</AppText>
-                <TouchableOpacity
-                  style={styles.addEventHintButton}
-                  onPress={() => handleAddEventOnDate(selectedDate)}
-                  activeOpacity={0.85}
-                >
-                  <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
-                  <AppText style={styles.addEventHintText}>{t('calendar.addEvent')}</AppText>
-                </TouchableOpacity>
-              </View>
-            ) : null}
-          </SettingsGroupCard>
-        </SettingsSection>
-
-        <SettingsSection title={t('calendar.sectionShow')}>
-          <SettingsGroupCard>
-            <View style={styles.filterBlock}>
-              <View style={styles.filterRow}>
-                {VIEW_MODES.map((mode) => (
-                  <TouchableOpacity
-                    key={mode}
-                    style={[styles.filterChip, viewMode === mode && styles.filterChipActive]}
-                    onPress={() => setViewMode(mode)}
-                    activeOpacity={0.85}
-                  >
-                    <AppText
-                      style={[styles.filterChipText, viewMode === mode && styles.filterChipTextActive]}
-                      numberOfLines={1}
-                    >
-                      {filterLabel(mode)}
-                    </AppText>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <AppText style={styles.eventCountLine}>
-                {filteredEvents.length} {t('home.events')}
-              </AppText>
-            </View>
-          </SettingsGroupCard>
-        </SettingsSection>
-
-        <SettingsSection title={listSectionTitle}>
-          {loading && events.length === 0 ? (
-            <View style={{ paddingVertical: spacing.xxl, alignItems: 'center' }}>
-              <ActivityIndicator size="large" color={colors.primary} />
-            </View>
-          ) : Object.keys(eventsByDate).length === 0 ? (
-            <SettingsGroupCard>
-              <View style={styles.emptyListPad}>
-                <EmptyState
-                  icon="calendar-outline"
-                  title={t('calendar.noEvents')}
-                  message={t('calendar.longPressToAdd')}
-                  variant="minimal"
+    <SanctuaryScreenShell edges={[]} innerStyle={styles.container}>
+      <EnamelHeader
+        title={t('tabs.calendar')}
+        subtitle={selectedHousehold ? `${selectedHousehold.name} · ${format(new Date(), 'MMMM yyyy', { locale: dateFnsLocale })}` : undefined}
+        right={selectedHousehold ? <>
+          <HeaderIconButton
+            icon="today-outline"
+            accessibilityLabel={t('calendar.today')}
+            onPress={() => setSelectedDate(new Date())}
+          />
+          <HeaderIconButton
+            icon="add-outline"
+            accessibilityLabel={t('calendar.addEvent')}
+            onPress={() => navigation.navigate('CreateEvent')}
+          />
+        </> : undefined}
+      />
+      <Sheet>
+        {!selectedHousehold ? (
+          <View style={styles.emptyContainer}><AppText style={styles.emptyText}>{t('alerts.selectHousehold')}</AppText></View>
+        ) : (
+          <ScrollView
+            ref={scrollRef}
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            refreshControl={<RefreshControl refreshing={loading} onRefresh={loadEvents} tintColor={colors.primary} />}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+            showsVerticalScrollIndicator={false}
+          >
+            <Group style={styles.calendarGroup}>
+              <View>
+                <CalendarView
+                  embedded
+                  selectedDate={selectedDate}
+                  onSelectDate={setSelectedDate}
+                  eventDates={eventDates}
+                  choreDates={userChoreDates}
+                  onAddEvent={handleAddEventOnDate}
                 />
-              </View>
-            </SettingsGroupCard>
-          ) : (
-            Object.entries(eventsByDate).map(([dateKey, dateEvents]) => (
-              <SettingsGroupCard key={dateKey} style={styles.listDateGroupCard}>
-                <View style={styles.listDateHeaderRow}>
-                  <Ionicons name="calendar-clear-outline" size={15} color={colors.textSecondary} />
-                  <AppText style={styles.listDateHeader}>
-                    {formatCalendarListDateHeader(dateKey, dateFnsLocale, listRelativeDayLabels)}
-                  </AppText>
-                </View>
-                {dateEvents.map((event) => (
-                  <View key={event._id} style={styles.listEventBlock}>
-                    <EventCard event={event} />
-                    {isCreator(event) ? (
-                      <View style={styles.listEventActions}>
-                        <TouchableOpacity
-                          style={[styles.listActionChip, styles.listActionChipEdit]}
-                          onPress={() => handleEditEvent(event)}
-                          activeOpacity={0.8}
-                        >
-                          <Ionicons name="pencil-outline" size={14} color={colors.primary} />
-                          <AppText style={styles.listEditText}>{t('common.edit')}</AppText>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[styles.listActionChip, styles.listActionChipDelete]}
-                          onPress={() => handleDeleteEvent(event)}
-                          activeOpacity={0.8}
-                        >
-                          <Ionicons name="trash-outline" size={14} color={colors.danger} />
-                          <AppText style={styles.listDeleteText}>{t('common.delete')}</AppText>
-                        </TouchableOpacity>
-                      </View>
-                    ) : null}
+                <View style={styles.legend}>
+                  <View style={styles.legendItem}>
+                    <View style={[styles.eventDot, { backgroundColor: colors.primary }]} />
+                    <AppText style={styles.legendText}>{t('home.events')}</AppText>
                   </View>
-                ))}
-              </SettingsGroupCard>
-            ))
-          )}
-          {hasMoreCalendarEvents ? (
-            <TouchableOpacity
-              style={styles.calendarLoadMore}
-              onPress={() => setCalendarListVisibleCount((n) => n + CALENDAR_LIST_PAGE_SIZE)}
-              activeOpacity={0.75}
-            >
-              <AppText style={styles.calendarLoadMoreText}>
-                {t('common.loadMore')} ({pagedListEvents.length}/{filteredEvents.length})
-              </AppText>
-            </TouchableOpacity>
-          ) : null}
-        </SettingsSection>
-      </ScrollView>
+                  <View style={styles.legendItem}>
+                    <View style={[styles.choreDot, { backgroundColor: colors.marigold }]} />
+                    <AppText style={styles.legendText}>{t('chores.yourTurn')}</AppText>
+                  </View>
+                </View>
+                <AppText style={styles.hint}>{t('calendar.longPressToAdd')}</AppText>
+              </View>
+            </Group>
+
+            <SectionHeading title={t('calendar.sectionSelectedDay')} />
+            <Group>
+              <GroupRow
+                title={format(selectedDate, 'EEEE, MMM d', { locale: dateFnsLocale })}
+                trailing={
+                  <TouchableOpacity
+                    style={styles.iconButton}
+                    onPress={() => handleAddEventOnDate(selectedDate)}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('calendar.addEvent')}
+                  >
+                    <Ionicons name="add-circle-outline" size={26} color={colors.primary} />
+                  </TouchableOpacity>
+                }
+              />
+              {selectedDateChores.map(({ chore }, index) => (
+                <ChoreRotationRow
+                  key={`sel-${chore._id}`}
+                  chore={chore}
+                  user={user}
+                  referenceDate={selectedDate}
+                  onToggleComplete={handleToggleChoreComplete}
+                  onGiveTo={handleGiveToChore}
+                  dateFnsLocale={dateFnsLocale}
+                  t={t}
+                  colors={colors}
+                  showDoneBy
+                  isLast={index === selectedDateChores.length - 1}
+                />
+              ))}
+              {selectedDateEvents.map(renderEvent)}
+              {selectedDateEvents.length === 0 && selectedDateChores.length === 0 ? (
+                <GroupRow
+                  title={t('chores.noChoresOnDay')}
+                  subtitle={t('calendar.addEvent')}
+                  icon="add-circle-outline"
+                  onPress={() => handleAddEventOnDate(selectedDate)}
+                  chevron
+                />
+              ) : null}
+            </Group>
+
+            <SectionHeading
+              title={t('chores.choreRotation')}
+              actionLabel={chores.length > 0 ? t('chores.manage') : t('chores.setUp')}
+              onAction={() => navigation.getParent()?.navigate('ChoreRotation')}
+            />
+            <Group>
+              <GroupRow
+                title={chores.length > 0 ? t('chores.currentPeriod') : t('chores.setUpDescription')}
+                subtitle={chores.length > 0 ? `${format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'MMM d', { locale: dateFnsLocale })} – ${format(addDays(startOfWeek(new Date(), { weekStartsOn: 1 }), 6), 'MMM d', { locale: dateFnsLocale })}` : undefined}
+                icon="repeat-outline"
+                chevron
+                onPress={() => navigation.getParent()?.navigate('ChoreRotation')}
+              />
+              {chores.map((chore, index) => (
+                <ChoreRotationRow
+                  key={chore._id}
+                  chore={chore}
+                  user={user}
+                  referenceDate={new Date()}
+                  onToggleComplete={handleToggleChoreComplete}
+                  onGiveTo={handleGiveToChore}
+                  dateFnsLocale={dateFnsLocale}
+                  t={t}
+                  colors={colors}
+                  showPeriodRange
+                  isLast={index === chores.length - 1}
+                />
+              ))}
+            </Group>
+
+            <SectionHeading title={t('calendar.sectionShow')} />
+            <View style={styles.filterRow} accessibilityRole="tablist">
+              {VIEW_MODES.map((mode) => (
+                <TouchableOpacity
+                  key={mode}
+                  style={[styles.filterChip, viewMode === mode && styles.filterChipActive]}
+                  onPress={() => setViewMode(mode)}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: viewMode === mode }}
+                >
+                  <AppText style={[styles.filterText, viewMode === mode && styles.filterTextActive]}>{filterLabel(mode)}</AppText>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <AppText style={styles.eventCount}>{filteredEvents.length} {t('home.events')}</AppText>
+            <SectionHeading title={listSectionTitle} />
+            {loading && events.length === 0 ? (
+              <View style={styles.emptyContainer}><ActivityIndicator size="large" color={colors.primary} /></View>
+            ) : Object.keys(eventsByDate).length === 0 ? (
+              <Group><EmptyState
+                icon="calendar-outline"
+                title={t('calendar.noEvents')}
+                message={t('calendar.longPressToAdd')}
+                variant="minimal"
+              /></Group>
+            ) : Object.entries(eventsByDate).map(([dateKey, dateEvents]) => (
+              <Group key={dateKey} style={styles.dateGroup}>
+                <GroupRow
+                  title={formatCalendarListDateHeader(dateKey, dateFnsLocale, listRelativeDayLabels)}
+                  icon="calendar-clear-outline"
+                />
+                {dateEvents.map(renderEvent)}
+              </Group>
+            ))}
+            {hasMoreCalendarEvents ? (
+              <TouchableOpacity
+                style={styles.loadMore}
+                onPress={() => setCalendarListVisibleCount((n) => n + CALENDAR_LIST_PAGE_SIZE)}
+                accessibilityRole="button"
+              >
+                <AppText style={styles.actionText}>{t('common.loadMore')} ({pagedListEvents.length}/{filteredEvents.length})</AppText>
+              </TouchableOpacity>
+            ) : null}
+          </ScrollView>
+        )}
+      </Sheet>
     </SanctuaryScreenShell>
   );
 };
 
-const createStyles = (colors: any) =>
-  StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: 'transparent',
-    },
-    scrollView: {
-      flex: 1,
-    },
-    scrollContent: {
-      paddingBottom: TAB_BAR_HEIGHT + spacing.xl,
-    },
-    emptyContainer: {
-      padding: spacing.xxl,
-      alignItems: 'center',
-    },
-    emptyText: {
-      fontSize: fontSizes.md,
-      color: colors.muted,
-      textAlign: 'center',
-    },
-    filterBlock: {
-      padding: spacing.md,
-      gap: spacing.sm,
-    },
-    filterRow: {
-      flexDirection: 'row',
-      padding: spacing.xxs,
-      gap: spacing.xxs,
-      backgroundColor: colors.primaryUltraSoft,
-      borderRadius: radii.md,
-    },
-    filterChip: {
-      flex: 1,
-      paddingVertical: spacing.xs,
-      paddingHorizontal: spacing.sm,
-      borderRadius: radii.sm,
-      alignItems: 'center',
-      justifyContent: 'center',
-      minWidth: 0,
-    },
-    filterChipActive: {
-      backgroundColor: colors.primary,
-    },
-    filterChipText: {
-      fontSize: fontSizes.xs,
-      fontWeight: fontWeights.medium,
-      color: colors.textSecondary,
-    },
-    filterChipTextActive: {
-      color: colors.surface,
-      fontWeight: fontWeights.semibold,
-    },
-    eventCountLine: {
-      fontSize: fontSizes.sm,
-      color: colors.textSecondary,
-      fontWeight: fontWeights.medium,
-      textAlign: 'center',
-    },
-    calendarHint: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      gap: spacing.sm,
-      paddingHorizontal: spacing.md,
-      paddingBottom: spacing.md,
-      paddingTop: 0,
-    },
-    calendarHintText: {
-      flex: 1,
-      fontSize: fontSizes.xs,
-      color: colors.textTertiary,
-      lineHeight: 18,
-    },
-    calendarLegend: {
-      flexDirection: 'row',
-      gap: spacing.md,
-      paddingHorizontal: spacing.md,
-      paddingTop: spacing.xs,
-      paddingBottom: spacing.xs,
-    },
-    legendItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.xs,
-    },
-    legendDot: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
-    },
-    legendText: {
-      fontSize: fontSizes.xs,
-      color: colors.textSecondary,
-      fontWeight: fontWeights.medium,
-    },
-    choreHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      padding: spacing.md,
-      gap: spacing.md,
-    },
-    choreHeaderTitleRow: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.sm,
-      minWidth: 0,
-    },
-    choreHeaderIcon: {
-      width: 36,
-      height: 36,
-      borderRadius: radii.md,
-      backgroundColor: colors.primaryUltraSoft,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    choreHeaderText: {
-      flex: 1,
-      minWidth: 0,
-    },
-    choreHeaderTitle: {
-      fontSize: fontSizes.md,
-      color: colors.text,
-      fontWeight: fontWeights.semibold,
-    },
-    choreHeaderSubtitle: {
-      fontSize: fontSizes.xs,
-      color: colors.textSecondary,
-      marginTop: 2,
-    },
-    choreManageButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.xxs,
-      paddingVertical: spacing.xs,
-      paddingHorizontal: spacing.sm,
-      backgroundColor: colors.primaryUltraSoft,
-      borderRadius: radii.pill,
-    },
-    choreManageLabel: {
-      fontSize: fontSizes.sm,
-      color: colors.primary,
-      fontWeight: fontWeights.semibold,
-    },
-    choreList: {
-      paddingHorizontal: spacing.md,
-      paddingBottom: spacing.md,
-      gap: spacing.xs,
-    },
-    selectedDayChores: {
-      gap: spacing.xs,
-      paddingHorizontal: spacing.md,
-      paddingBottom: spacing.sm,
-    },
-    selectedDayChoreRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.xs,
-      paddingVertical: spacing.xs,
-      paddingHorizontal: spacing.sm,
-      borderRadius: radii.md,
-      backgroundColor: colors.primaryUltraSoft,
-    },
-    selectedDayChoreRowMine: {
-      backgroundColor: colors.accentUltraSoft,
-    },
-    selectedDayChoreText: {
-      flex: 1,
-      fontSize: fontSizes.sm,
-      color: colors.text,
-      fontWeight: fontWeights.medium,
-    },
-    selectedDayChoreTextMine: {
-      color: colors.text,
-      fontWeight: fontWeights.bold,
-    },
-    selectedDayHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingHorizontal: spacing.md,
-      paddingTop: spacing.md,
-      paddingBottom: spacing.sm,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: colors.borderLight,
-    },
-    selectedDateTitle: {
-      fontSize: fontSizes.md,
-      fontWeight: fontWeights.bold,
-      color: colors.text,
-      flex: 1,
-    },
-    addOnDateButton: {
-      padding: spacing.xs,
-    },
-    emptyDayInner: {
-      alignItems: 'center',
-      paddingVertical: spacing.xl,
-      paddingHorizontal: spacing.md,
-    },
-    emptyDateText: {
-      fontSize: fontSizes.sm,
-      color: colors.textSecondary,
-      marginTop: spacing.sm,
-      textAlign: 'center',
-    },
-    addEventHintButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.xs,
-      marginTop: spacing.md,
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.md,
-      backgroundColor: colors.primaryUltraSoft,
-      borderRadius: radii.lg,
-    },
-    addEventHintText: {
-      fontSize: fontSizes.sm,
-      color: colors.primary,
-      fontWeight: fontWeights.semibold,
-    },
-    eventBlock: {
-      marginBottom: spacing.sm,
-      paddingHorizontal: spacing.sm,
-    },
-    emptyListPad: {
-      paddingHorizontal: spacing.sm,
-      paddingBottom: spacing.md,
-      paddingTop: spacing.xs,
-    },
-    listDateGroupCard: {
-      marginBottom: spacing.md,
-      overflow: 'hidden',
-    },
-    listDateHeaderRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.xs,
-      paddingHorizontal: spacing.md,
-      paddingTop: spacing.md,
-      paddingBottom: spacing.sm,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: colors.borderLight,
-    },
-    listDateHeader: {
-      fontSize: fontSizes.sm,
-      fontWeight: fontWeights.semibold,
-      color: colors.textSecondary,
-      textTransform: 'uppercase',
-      letterSpacing: 0.4,
-    },
-    listEventBlock: {
-      marginBottom: spacing.sm,
-      paddingHorizontal: spacing.md,
-      paddingTop: spacing.sm,
-    },
-    listEventActions: {
-      flexDirection: 'row',
-      justifyContent: 'flex-end',
-      gap: spacing.xs,
-      marginTop: spacing.xs,
-    },
-    listActionChip: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.xxs,
-      paddingHorizontal: spacing.sm,
-      paddingVertical: spacing.xs,
-      borderRadius: radii.pill,
-      borderWidth: 1,
-    },
-    listActionChipEdit: {
-      backgroundColor: colors.primaryUltraSoft,
-      borderColor: colors.primarySoft,
-    },
-    listActionChipDelete: {
-      backgroundColor: colors.dangerSoft,
-      borderColor: colors.dangerSoft,
-    },
-    listEditText: {
-      color: colors.primary,
-      fontSize: fontSizes.xs,
-      fontWeight: fontWeights.medium,
-    },
-    listDeleteText: {
-      color: colors.danger,
-      fontSize: fontSizes.xs,
-      fontWeight: fontWeights.medium,
-    },
-    calendarLoadMore: {
-      alignItems: 'center',
-      paddingVertical: spacing.md,
-      paddingHorizontal: spacing.md,
-    },
-    calendarLoadMoreText: {
-      fontSize: fontSizes.sm,
-      fontWeight: fontWeights.semibold,
-      color: colors.primary,
-    },
-  });
+const createStyles = (colors: ReturnType<typeof useThemeColors>) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
+  scrollView: { flex: 1 },
+  scrollContent: { paddingBottom: spacing.xxl },
+  calendarGroup: { marginTop: spacing.md },
+  emptyContainer: { padding: spacing.xxl, alignItems: 'center' },
+  emptyText: {
+    fontSize: fontSizes.md,
+    color: colors.textSecondary,
+    textAlign: 'center'
+  },
+  legend: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    maxWidth: '100%'
+  },
+  eventDot: {
+    width: 6,
+    height: 6,
+    borderRadius: radii.pill
+  },
+  choreDot: {
+    width: 6,
+    height: 6,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.textSecondary
+  },
+  legendText: {
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
+    flexShrink: 1
+  },
+  hint: {
+    fontSize: fontSizes.sm,
+    color: colors.textTertiary,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.md
+  },
+  iconButton: {
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  eventActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.xs,
+    gap: spacing.sm
+  },
+  action: {
+    minHeight: 44,
+    minWidth: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xs,
+    gap: spacing.xs,
+    maxWidth: '100%'
+  },
+  actionText: {
+    fontSize: fontSizes.sm,
+    fontWeight: fontWeights.semibold,
+    color: colors.primary,
+    flexShrink: 1
+  },
+  filterRow: {
+    marginHorizontal: spacing.md,
+    padding: spacing.xxs,
+    flexDirection: 'row',
+    gap: spacing.xxs,
+    backgroundColor: colors.surface,
+    borderRadius: radii.md
+  },
+  filterChip: {
+    flex: 1,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.xs,
+    borderRadius: radii.sm
+  },
+  filterChipActive: { backgroundColor: colors.primary },
+  filterText: {
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
+    textAlign: 'center'
+  },
+  filterTextActive: { color: colors.onPrimary, fontWeight: fontWeights.semibold },
+  eventCount: {
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: spacing.xs
+  },
+  dateGroup: { marginBottom: spacing.md },
+  loadMore: {
+    minHeight: 44,
+    padding: spacing.md,
+    alignItems: 'center'
+  },
+});

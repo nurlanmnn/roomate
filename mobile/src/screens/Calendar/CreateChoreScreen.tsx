@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  AccessibilityInfo,
   Alert,
   Dimensions,
   Keyboard,
@@ -7,7 +8,6 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  Text,
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
@@ -18,8 +18,10 @@ import { useLanguage } from '../../context/LanguageContext';
 import { choresApi, ChoreRotation, ChoreFrequency } from '../../api/choresApi';
 import { HouseholdMember } from '../../api/householdsApi';
 import { FormTextInput } from '../../components/FormTextInput';
+import { AppText } from '../../components/AppText';
+import { Group } from '../../components/ui/Group';
 import { PrimaryButton } from '../../components/PrimaryButton';
-import { useThemeColors, useTheme, fontSizes, fontWeights, spacing, radii, shadows } from '../../theme';
+import { useThemeColors, useTheme, fontSizes, fontWeights, spacing, radii } from '../../theme';
 import { Ionicons } from '@expo/vector-icons';
 import { startOfWeek, format } from 'date-fns';
 import { getDateFnsLocale } from '../../utils/dateLocales';
@@ -38,6 +40,15 @@ export const CreateChoreScreen: React.FC<{ navigation: any; route: any }> = ({ n
   const colors = useThemeColors();
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const [reduceMotion, setReduceMotion] = useState(true);
+  useEffect(() => {
+    let active = true;
+    AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
+      if (active) setReduceMotion(enabled);
+    });
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => { active = false; subscription.remove(); };
+  }, []);
 
   const [name, setName] = useState('');
   const [frequency, setFrequency] = useState<ChoreFrequency>('weekly');
@@ -64,12 +75,12 @@ export const CreateChoreScreen: React.FC<{ navigation: any; route: any }> = ({ n
         if (delta > 6) {
           scrollRef.current?.scrollTo({
             y: Math.max(0, scrollYRef.current + delta),
-            animated: true,
+            animated: !reduceMotion,
           });
         }
       });
     },
-    [insets.bottom]
+    [insets.bottom, reduceMotion]
   );
 
   useEffect(() => {
@@ -166,182 +177,149 @@ export const CreateChoreScreen: React.FC<{ navigation: any; route: any }> = ({ n
         keyboardVerticalOffset={0}
       >
         <ScrollView
-          ref={scrollRef}
-          style={styles.scrollView}
+          ref={scrollRef} style={styles.scrollView}
           contentContainerStyle={[styles.scrollContent, { paddingBottom: scrollBottomPad }]}
-          contentInsetAdjustmentBehavior="automatic"
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
+          contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag"
           automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
-          onScroll={(e) => {
-            scrollYRef.current = e.nativeEvent.contentOffset.y;
-          }}
-          scrollEventThrottle={16}
+          onScroll={(e) => { scrollYRef.current = e.nativeEvent.contentOffset.y; }} scrollEventThrottle={16}
         >
-          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <View>
-        <FormTextInput
-          label={t('chores.choreName')}
-          value={name}
-          onChangeText={setName}
-          placeholder={t('chores.choreNamePlaceholder')}
-          autoCapitalize="words"
-        />
-
-        <View style={styles.field}>
-          <Text style={styles.label}>{t('chores.frequency')}</Text>
-          <View style={styles.frequencyRow}>
-            <TouchableOpacity
-              style={[styles.freqButton, frequency === 'weekly' && styles.freqButtonActive]}
-              onPress={() => setFrequency('weekly')}
-            >
-              <Text style={[styles.freqText, frequency === 'weekly' && styles.freqTextActive]}>
-                {t('chores.weekly')}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.freqButton, frequency === 'biweekly' && styles.freqButtonActive]}
-              onPress={() => setFrequency('biweekly')}
-            >
-              <Text style={[styles.freqText, frequency === 'biweekly' && styles.freqTextActive]}>
-                {t('chores.biweekly')}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <View style={styles.field}>
-          <Text style={styles.label}>{t('chores.rotationOrder')}</Text>
-          <Text style={styles.hint}>{t('chores.rotationMembersHint')}</Text>
-          <Text style={styles.hint}>{t('chores.rotationOrderHint')}</Text>
-          {members.length === 0 ? (
-            <Text style={styles.mutedText}>{t('chores.addMembersFirst')}</Text>
-          ) : (
-            members.map((member) => {
-              const orderIndex = rotationOrder.findIndex((m) => m._id === member._id);
-              const isIncluded = orderIndex >= 0;
-              return (
-                <View
-                  key={member._id}
-                  style={[styles.orderRow, !isIncluded && styles.orderRowExcluded]}
-                >
-                  <TouchableOpacity
-                    onPress={() => toggleMemberInRotation(member)}
-                    style={styles.checkboxBtn}
-                    accessibilityRole="checkbox"
-                    accessibilityState={{ checked: isIncluded }}
-                  >
-                    <Ionicons
-                      name={isIncluded ? 'checkbox' : 'checkbox-outline'}
-                      size={22}
-                      color={isIncluded ? colors.primary : colors.muted}
-                    />
-                  </TouchableOpacity>
-                  {isIncluded ? (
-                    <>
-                      <Text style={styles.orderNumber}>{orderIndex + 1}.</Text>
-                      <Text style={styles.orderName}>{member.name}</Text>
-                      <View style={styles.orderActions}>
-                        <TouchableOpacity
-                          onPress={() => moveMember(orderIndex, 'up')}
-                          disabled={orderIndex === 0}
-                          style={[styles.orderBtn, orderIndex === 0 && styles.orderBtnDisabled]}
-                        >
-                          <Ionicons
-                            name="chevron-up"
-                            size={20}
-                            color={orderIndex === 0 ? colors.muted : colors.text}
-                          />
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          onPress={() => moveMember(orderIndex, 'down')}
-                          disabled={orderIndex === rotationOrder.length - 1}
-                          style={[
-                            styles.orderBtn,
-                            orderIndex === rotationOrder.length - 1 && styles.orderBtnDisabled,
-                          ]}
-                        >
-                          <Ionicons
-                            name="chevron-down"
-                            size={20}
-                            color={
-                              orderIndex === rotationOrder.length - 1 ? colors.muted : colors.text
-                            }
-                          />
-                        </TouchableOpacity>
-                      </View>
-                    </>
-                  ) : (
-                    <>
-                      <View style={styles.orderNumber} />
-                      <Text style={[styles.orderName, styles.orderNameMuted]}>{member.name}</Text>
-                    </>
-                  )}
-                </View>
-              );
-            })
-          )}
-        </View>
-
-        <View
-          ref={(r) => {
-            fieldRefs.current.startDate = r;
-          }}
-          style={styles.field}
-        >
-          <Text style={styles.label}>{t('chores.startDate')}</Text>
-          <Text style={styles.hint}>{t('chores.startDateHint')}</Text>
-          <TouchableOpacity
-            style={styles.dateButton}
-            onPress={() => setShowDatePicker((prev) => !prev)}
+          <TouchableWithoutFeedback
+            onPress={Keyboard.dismiss}
+            accessible={false}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.dismissKeyboard')}
           >
-            <Ionicons name="calendar-outline" size={20} color={colors.primary} />
-            <Text style={styles.dateButtonText}>
-              {format(startDate, 'EEEE, MMM d, yyyy', { locale: dateFnsLocale })}
-            </Text>
-          </TouchableOpacity>
-          {showDatePicker && (
-            <DateTimePicker
-              value={startDate}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              themeVariant={theme}
-              onChange={(_, date) => {
-                setShowDatePicker(Platform.OS === 'ios');
-                if (date) setStartDate(date);
-              }}
-            />
-          )}
-          {Platform.OS === 'ios' && showDatePicker && (
-            <View style={styles.datePickerActions}>
-              <TouchableOpacity
-                style={styles.datePickerButton}
-                onPress={() => setShowDatePicker(false)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.datePickerButtonText}>{t('common.done')}</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
+            <View>
+              <Group><View style={styles.inputPadding}>
+                <FormTextInput
+                  label={t('chores.choreName')}
+                  value={name}
+                  onChangeText={setName}
+                  placeholder={t('chores.choreNamePlaceholder')}
+                  autoCapitalize="words"
+                  containerStyle={{ marginBottom: 0 }}
+                />
+              </View></Group>
 
-        <View style={styles.footerButtonsRow}>
-          <PrimaryButton
-            title={t('common.cancel')}
-            onPress={() => navigation.goBack()}
-            variant="secondary"
-            style={styles.cancelButton}
-          />
-          <PrimaryButton
-            title={isEditing ? t('common.save') : t('chores.addChore')}
-            onPress={() => {
-              Keyboard.dismiss();
-              handleSave();
-            }}
-            disabled={!canSubmit || saving}
-            style={styles.saveButton}
-          />
-        </View>
+              <AppText style={styles.label} accessibilityRole="header">{t('chores.frequency')}</AppText>
+              <View style={styles.frequencyRow} accessibilityRole="tablist">
+                {(['weekly', 'biweekly'] as const).map((value) => (
+                  <TouchableOpacity
+                    key={value}
+                    style={[styles.freqButton, frequency === value && styles.freqButtonActive]}
+                    onPress={() => setFrequency(value)}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: frequency === value }}
+                  >
+                    <AppText style={[styles.freqText, frequency === value && styles.freqTextActive]}>{t(`chores.${value}`)}</AppText>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <AppText style={styles.label} accessibilityRole="header">{t('chores.rotationOrder')}</AppText>
+              <AppText style={styles.hint}>{t('chores.rotationMembersHint')}</AppText>
+              <AppText style={styles.hint}>{t('chores.rotationOrderHint')}</AppText>
+              <Group>
+                {members.length === 0 ? <AppText style={styles.mutedText}>{t('chores.addMembersFirst')}</AppText> : members.map((member) => {
+                  const orderIndex = rotationOrder.findIndex((m) => m._id === member._id);
+                  const isIncluded = orderIndex >= 0;
+                  return (
+                    <View key={member._id} style={styles.orderRow}>
+                      <TouchableOpacity
+                        onPress={() => toggleMemberInRotation(member)}
+                        style={styles.checkboxBtn}
+                        accessibilityLabel={member.name}
+                        accessibilityRole="checkbox"
+                        accessibilityState={{ checked: isIncluded }}
+                      >
+                        <Ionicons
+                          name={isIncluded ? 'checkbox-outline' : 'square-outline'}
+                          size={26}
+                          color={isIncluded ? colors.primary : colors.textTertiary}
+                        />
+                      </TouchableOpacity>
+                      {isIncluded ? <AppText style={styles.orderNumber}>{orderIndex + 1}.</AppText> : null}
+                      <AppText style={[styles.orderName, !isIncluded && styles.orderNameMuted]}>{member.name}</AppText>
+                      {isIncluded ? (
+                        <View style={styles.orderActions}>
+                          <TouchableOpacity
+                            onPress={() => moveMember(orderIndex, 'up')}
+                            disabled={orderIndex === 0}
+                            style={styles.orderBtn}
+                            accessibilityRole="button"
+                            accessibilityLabel={`${t('chores.rotationOrder')}: ${member.name}, ${orderIndex + 1} → ${orderIndex}`}
+                            accessibilityState={{ disabled: orderIndex === 0 }}
+                          >
+                            <Ionicons name="chevron-up-outline" size={22} color={orderIndex === 0 ? colors.textTertiary : colors.primary} />
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => moveMember(orderIndex, 'down')}
+                            disabled={orderIndex === rotationOrder.length - 1}
+                            style={styles.orderBtn}
+                            accessibilityRole="button"
+                            accessibilityLabel={`${t('chores.rotationOrder')}: ${member.name}, ${orderIndex + 1} → ${orderIndex + 2}`}
+                            accessibilityState={{ disabled: orderIndex === rotationOrder.length - 1 }}
+                          >
+                            <Ionicons
+                              name="chevron-down-outline"
+                              size={22}
+                              color={orderIndex === rotationOrder.length - 1 ? colors.textTertiary : colors.primary}
+                            />
+                          </TouchableOpacity>
+                        </View>
+                      ) : null}
+                    </View>
+                  );
+                })}
+              </Group>
+
+              <View ref={(r) => { fieldRefs.current.startDate = r; }}>
+                <AppText style={styles.label} accessibilityRole="header">{t('chores.startDate')}</AppText>
+                <AppText style={styles.hint}>{t('chores.startDateHint')}</AppText>
+                <Group>
+                  <TouchableOpacity
+                    style={styles.dateButton}
+                    onPress={() => setShowDatePicker((prev) => !prev)}
+                    accessibilityRole="button"
+                    accessibilityState={{ expanded: showDatePicker }}
+                    accessibilityLabel={`${t('chores.startDate')}, ${format(startDate, 'EEEE, MMM d, yyyy', { locale: dateFnsLocale })}`}
+                  >
+                    <Ionicons name="calendar-outline" size={22} color={colors.primary} />
+                    <AppText style={styles.dateButtonText}>{format(startDate, 'EEEE, MMM d, yyyy', { locale: dateFnsLocale })}</AppText>
+                    <Ionicons name={showDatePicker ? 'chevron-up-outline' : 'chevron-down-outline'} size={18} color={colors.textTertiary} />
+                  </TouchableOpacity>
+                  {showDatePicker ? (
+                    <DateTimePicker
+                      value={startDate}
+                      mode="date"
+                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                      themeVariant={theme}
+                      onChange={(_, date) => { setShowDatePicker(Platform.OS === 'ios'); if (date) setStartDate(date); }}
+                    />
+                  ) : null}
+                  {Platform.OS === 'ios' && showDatePicker ? (
+                    <TouchableOpacity style={styles.datePickerButton} onPress={() => setShowDatePicker(false)} accessibilityRole="button">
+                      <AppText style={styles.datePickerButtonText}>{t('common.done')}</AppText>
+                    </TouchableOpacity>
+                  ) : null}
+                </Group>
+              </View>
+
+              <View style={styles.footerButtonsRow}>
+                <PrimaryButton
+                  title={t('common.cancel')}
+                  onPress={() => navigation.goBack()}
+                  variant="secondary"
+                  style={styles.footerButton}
+                />
+                <PrimaryButton
+                  title={isEditing ? t('common.save') : t('chores.addChore')}
+                  onPress={() => { Keyboard.dismiss(); handleSave(); }}
+                  disabled={!canSubmit || saving}
+                  loading={saving}
+                  style={styles.footerButton}
+                />
+              </View>
             </View>
           </TouchableWithoutFeedback>
         </ScrollView>
@@ -350,148 +328,115 @@ export const CreateChoreScreen: React.FC<{ navigation: any; route: any }> = ({ n
   );
 };
 
-const createStyles = (colors: any) =>
-  StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: 'transparent',
-    },
-    scrollView: {
-      flex: 1,
-    },
-    scrollContent: {
-      padding: spacing.xl,
-      paddingBottom: spacing.xxl,
-    },
-    field: {
-      marginBottom: spacing.xl,
-    },
-    label: {
-      fontSize: fontSizes.sm,
-      fontWeight: fontWeights.semibold,
-      color: colors.textSecondary,
-      marginBottom: spacing.sm,
-    },
-    hint: {
-      fontSize: fontSizes.xs,
-      color: colors.muted,
-      marginBottom: spacing.sm,
-    },
-    frequencyRow: {
-      flexDirection: 'row',
-      gap: spacing.md,
-    },
-    freqButton: {
-      flex: 1,
-      paddingVertical: spacing.md,
-      borderRadius: radii.md,
-      borderWidth: 1,
-      borderColor: colors.border,
-      alignItems: 'center',
-    },
-    freqButtonActive: {
-      borderColor: colors.primary,
-      backgroundColor: colors.primaryUltraSoft,
-    },
-    freqText: {
-      fontSize: fontSizes.md,
-      color: colors.textSecondary,
-    },
-    freqTextActive: {
-      color: colors.primary,
-      fontWeight: fontWeights.semibold,
-    },
-    orderRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.md,
-      backgroundColor: colors.surface,
-      borderRadius: radii.md,
-      marginBottom: spacing.xs,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-    },
-    orderRowExcluded: {
-      opacity: 0.65,
-    },
-    checkboxBtn: {
-      padding: spacing.xs,
-      marginRight: spacing.xs,
-    },
-    orderNumber: {
-      fontSize: fontSizes.sm,
-      color: colors.muted,
-      width: 24,
-    },
-    orderName: {
-      flex: 1,
-      fontSize: fontSizes.md,
-      color: colors.text,
-    },
-    orderNameMuted: {
-      color: colors.muted,
-    },
-    orderActions: {
-      flexDirection: 'row',
-    },
-    orderBtn: {
-      padding: spacing.xs,
-    },
-    orderBtnDisabled: {
-      opacity: 0.5,
-    },
-    dateButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.sm,
-      paddingVertical: spacing.md,
-      paddingHorizontal: spacing.md,
-      backgroundColor: colors.surface,
-      borderRadius: radii.lg,
-      borderWidth: 1,
-      borderColor: colors.border,
-      ...(shadows.sm as object),
-    },
-    dateButtonText: {
-      fontSize: fontSizes.md,
-      color: colors.text,
-    },
-    datePickerActions: {
-      flexDirection: 'row',
-      justifyContent: 'flex-end',
-      marginTop: spacing.md,
-      paddingTop: spacing.md,
-      borderTopWidth: 1,
-      borderTopColor: colors.borderLight,
-    },
-    datePickerButton: {
-      backgroundColor: colors.primary,
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.xl,
-      borderRadius: radii.md,
-      minWidth: 80,
-      alignItems: 'center',
-      ...(shadows.xs as object),
-    },
-    datePickerButtonText: {
-      color: colors.surface,
-      fontSize: fontSizes.md,
-      fontWeight: fontWeights.semibold,
-      letterSpacing: 0.2,
-    },
-    mutedText: {
-      fontSize: fontSizes.sm,
-      color: colors.muted,
-    },
-    footerButtonsRow: {
-      flexDirection: 'row',
-      gap: spacing.sm,
-    },
-    cancelButton: {
-      flex: 1,
-    },
-    saveButton: {
-      flex: 1,
-    },
-  });
+const createStyles = (colors: ReturnType<typeof useThemeColors>) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
+  scrollView: { flex: 1 },
+  scrollContent: { paddingTop: spacing.md, paddingBottom: spacing.xxl },
+  inputPadding: { padding: spacing.md },
+  label: {
+    fontSize: 20,
+    fontWeight: fontWeights.bold,
+    color: colors.text,
+    marginTop: spacing.xl,
+    marginBottom: spacing.sm,
+    marginHorizontal: spacing.lg
+  },
+  hint: {
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
+    marginHorizontal: spacing.lg
+  },
+  frequencyRow: {
+    flexDirection: 'row',
+    gap: spacing.xxs,
+    padding: spacing.xxs,
+    marginHorizontal: spacing.md,
+    borderRadius: radii.md,
+    backgroundColor: colors.surface
+  },
+  freqButton: {
+    flex: 1,
+    minHeight: 44,
+    padding: spacing.sm,
+    borderRadius: radii.sm,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  freqButtonActive: { backgroundColor: colors.primary },
+  freqText: {
+    fontSize: fontSizes.md,
+    color: colors.textSecondary,
+    textAlign: 'center'
+  },
+  freqTextActive: { color: colors.onPrimary, fontWeight: fontWeights.semibold },
+  orderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 60,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.xs
+  },
+  checkboxBtn: {
+    width: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  orderNumber: {
+    fontSize: fontSizes.md,
+    color: colors.textSecondary,
+    marginRight: spacing.xs
+  },
+  orderName: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: fontSizes.md,
+    color: colors.text
+  },
+  orderNameMuted: { color: colors.textSecondary },
+  orderActions: { flexDirection: 'row', flexShrink: 0 },
+  orderBtn: {
+    width: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  dateButton: {
+    minHeight: 60,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    padding: spacing.md
+  },
+  dateButtonText: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: fontSizes.md,
+    color: colors.text
+  },
+  datePickerButton: {
+    minHeight: 44,
+    padding: spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  datePickerButtonText: {
+    color: colors.primary,
+    fontSize: fontSizes.md,
+    fontWeight: fontWeights.semibold
+  },
+  mutedText: {
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
+    padding: spacing.md
+  },
+  footerButtonsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.xl
+  },
+  footerButton: { flex: 1, minWidth: 120 },
+});
