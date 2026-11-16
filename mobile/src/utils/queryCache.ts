@@ -54,10 +54,16 @@ export const setCached = <T,>(key: string, data: T): void => {
  * never been cached (we don't want to synthesise a snapshot from nothing — if
  * we did, a subscriber could paint partial data that was never produced by a
  * real fetch). Return `undefined` from the updater to drop the entry.
+ *
+ * Pass `opts.markStale` when the patch can't recompute everything in the
+ * snapshot (e.g. server-derived balances): subscribers still see the patch
+ * immediately, but the entry no longer counts as fresh, so the next
+ * `dedupedFetch` with a `staleTime` goes to the network instead of serving it.
  */
 export const updateCached = <T,>(
   key: string,
-  updater: (prev: T) => T | undefined
+  updater: (prev: T) => T | undefined,
+  opts?: { markStale?: boolean }
 ): void => {
   if (!cache.has(key)) return;
   const prev = cache.get(key) as T;
@@ -67,7 +73,11 @@ export const updateCached = <T,>(
     cachedAt.delete(key);
   } else {
     cache.set(key, next);
-    cachedAt.set(key, Date.now());
+    if (opts?.markStale) {
+      cachedAt.delete(key);
+    } else {
+      cachedAt.set(key, Date.now());
+    }
   }
   listeners.get(key)?.forEach((fn) => {
     try {
