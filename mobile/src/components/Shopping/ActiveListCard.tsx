@@ -1,8 +1,10 @@
 import React from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
-import { AppText } from '../AppText';
 import { Ionicons } from '@expo/vector-icons';
-import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows } from '../../theme';
+import { AppText } from '../AppText';
+import { Group, GroupRow } from '../ui/Group';
+import { useLanguage } from '../../context/LanguageContext';
+import { useThemeColors, spacing, radii, fontSizes } from '../../theme';
 
 interface ActiveListCardProps {
   listName: string;
@@ -12,126 +14,54 @@ interface ActiveListCardProps {
   itemsLabel: string;
   onEdit: () => void;
   onDelete: () => void;
-  /** Strip outer card chrome when nested in SettingsGroupCard. */
   embedded?: boolean;
 }
 
 export const ActiveListCard: React.FC<ActiveListCardProps> = ({
-  listName,
-  toBuyCount,
-  completedCount,
-  itemLabel,
-  itemsLabel,
-  onEdit,
-  onDelete,
-  embedded = false,
+  listName, toBuyCount, completedCount, itemLabel, itemsLabel, onEdit, onDelete, embedded = false,
 }) => {
   const colors = useThemeColors();
+  const { t } = useLanguage();
   const total = toBuyCount + completedCount;
-  const progress = total > 0 ? completedCount / total : 0;
-
-  const styles = React.useMemo(() => StyleSheet.create({
-    card: embedded
-      ? {
-          marginBottom: 0,
-          backgroundColor: 'transparent',
-          borderRadius: 0,
-          padding: spacing.md,
-          borderWidth: 0,
-          shadowOpacity: 0,
-          elevation: 0,
-        }
-      : {
-          marginBottom: spacing.lg,
-          backgroundColor: colors.surface,
-          borderRadius: radii.lg,
-          padding: spacing.lg,
-          borderWidth: 1,
-          borderColor: colors.borderLight,
-          ...(shadows.sm as object),
-        },
-    top: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      justifyContent: 'space-between',
-    },
-    left: {
-      flex: 1,
-      minWidth: 0,
-    },
-    iconWrap: {
-      width: 40,
-      height: 40,
-      borderRadius: radii.md,
-      backgroundColor: colors.primaryUltraSoft,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginBottom: spacing.sm,
-    },
-    listName: {
-      fontSize: fontSizes.lg,
-      fontWeight: fontWeights.bold,
-      color: colors.text,
-      marginBottom: 2,
-    },
-    meta: {
-      fontSize: fontSizes.sm,
-      color: colors.textSecondary,
-    },
-    actions: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.xxs,
-    },
-    actionBtn: {
-      width: 36,
-      height: 36,
-      borderRadius: radii.md,
-      backgroundColor: colors.background,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    progressWrap: {
-      marginTop: spacing.md,
-      height: 4,
-      borderRadius: 2,
-      backgroundColor: colors.borderLight,
-      overflow: 'hidden',
-    },
-    progressBar: {
-      height: '100%',
-      borderRadius: 2,
-      backgroundColor: colors.primary,
-    },
-  }), [colors, embedded]);
-
-  return (
-    <View style={styles.card}>
-      <View style={styles.top}>
-        <View style={styles.left}>
-          <View style={styles.iconWrap}>
-            <Ionicons name="cart-outline" size={20} color={colors.primary} />
+  const content = (
+    <>
+      <GroupRow
+        title={listName}
+        titleLines={0}
+        trailing={
+          <View style={styles.actions}>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel={`${t('shopping.editList')}: ${listName}`} style={styles.action} onPress={onEdit}>
+              <Ionicons name="pencil-outline" size={22} color={colors.textSecondary} />
+            </TouchableOpacity>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel={`${t('common.delete')}: ${listName}`} style={styles.action} onPress={onDelete}>
+              <Ionicons name="trash-outline" size={22} color={colors.danger} />
+            </TouchableOpacity>
           </View>
-          <AppText style={styles.listName} numberOfLines={1}>{listName}</AppText>
-          <AppText style={styles.meta}>
-            {toBuyCount} {toBuyCount === 1 ? itemLabel : itemsLabel}
-            {completedCount > 0 && ` · ${completedCount} done`}
-          </AppText>
+        }
+      />
+      <AppText style={[styles.meta, { color: colors.textSecondary }]}>
+        {t('shoppingList.toBuy')}: {toBuyCount} {toBuyCount === 1 ? itemLabel : itemsLabel} · {t('shopping.completed')}: {completedCount}
+      </AppText>
+      {total > 0 ? (
+        <View
+          accessible
+          accessibilityRole="progressbar"
+          accessibilityLabel={t('shopping.completed')}
+          accessibilityValue={{ min: 0, max: total, now: completedCount }}
+          style={[styles.track, { backgroundColor: colors.borderLight }]}
+        >
+          <View style={[styles.progress, { width: `${completedCount / total * 100}%`, backgroundColor: colors.primary }]} />
         </View>
-        <View style={styles.actions}>
-          <TouchableOpacity style={styles.actionBtn} onPress={onEdit} activeOpacity={0.7}>
-            <Ionicons name="pencil-outline" size={18} color={colors.textSecondary} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionBtn} onPress={onDelete} activeOpacity={0.7}>
-            <Ionicons name="trash-outline" size={18} color={colors.danger} />
-          </TouchableOpacity>
-        </View>
-      </View>
-      {total > 0 && (
-        <View style={styles.progressWrap}>
-          <View style={[styles.progressBar, { width: `${progress * 100}%` }]} />
-        </View>
-      )}
-    </View>
+      ) : null}
+    </>
   );
+  return embedded ? <View>{content}</View> : <Group>{content}</Group>;
 };
+
+const styles = StyleSheet.create({
+  meta: { fontSize: fontSizes.sm, paddingHorizontal: spacing.md, paddingBottom: spacing.sm },
+  actions: { flexDirection: 'row' },
+  action: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  track: { height: spacing.xxs, borderRadius: radii.pill, marginHorizontal: spacing.md, marginBottom: spacing.md, overflow: 'hidden' },
+  progress: { height: '100%', borderRadius: radii.pill },
+});

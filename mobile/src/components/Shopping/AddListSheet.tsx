@@ -3,13 +3,15 @@ import {
   Modal,
   View,
   TouchableOpacity,
-  TouchableWithoutFeedback,
+  Pressable,
   StyleSheet,
+  ScrollView,
   KeyboardAvoidingView,
   Platform,
   Keyboard,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useShoppingMotion } from './useShoppingMotion';
 import { AppText } from '../AppText';
 import { FormTextInput } from '../FormTextInput';
 import { PrimaryButton } from '../PrimaryButton';
@@ -41,29 +43,29 @@ export const AddListSheet: React.FC<AddListSheetProps> = ({
   onSubmit,
   onCancel,
   onClose,
-  isEditing = false,
 }) => {
   const colors = useThemeColors();
+  const reduceMotion = useShoppingMotion();
   const insets = useSafeAreaInsets();
   const styles = React.useMemo(() => StyleSheet.create({
     overlay: {
       flex: 1,
       justifyContent: 'flex-end',
-      backgroundColor: 'rgba(0,0,0,0.4)',
+      backgroundColor: colors.shadowStrong,
     },
     sheet: {
-      backgroundColor: colors.surface,
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
+      backgroundColor: colors.background,
+      borderTopLeftRadius: radii.xl,
+      borderTopRightRadius: radii.xl,
       paddingTop: spacing.md,
       paddingBottom: insets.bottom + spacing.lg,
-      paddingHorizontal: spacing.xl,
-      minHeight: 260,
+      paddingHorizontal: spacing.md,
+      maxHeight: '90%',
     },
     handle: {
       width: 36,
-      height: 4,
-      borderRadius: 2,
+      height: spacing.xxs,
+      borderRadius: radii.pill,
       backgroundColor: colors.border,
       alignSelf: 'center',
       marginBottom: spacing.lg,
@@ -75,14 +77,15 @@ export const AddListSheet: React.FC<AddListSheetProps> = ({
       marginBottom: spacing.xl,
     },
     sheetTitle: {
-      fontSize: fontSizes.xl,
+      flex: 1,
+      fontSize: 20,
       fontWeight: fontWeights.bold,
       color: colors.text,
     },
     closeBtn: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
+      width: 44,
+      height: 44,
+      borderRadius: radii.pill,
       backgroundColor: colors.background,
       alignItems: 'center',
       justifyContent: 'center',
@@ -91,19 +94,18 @@ export const AddListSheet: React.FC<AddListSheetProps> = ({
       marginBottom: spacing.xl,
     },
     row: {
-      flexDirection: 'row',
-      gap: spacing.md,
+      gap: spacing.sm,
       marginTop: spacing.lg,
     },
     rowButton: {
-      flex: 1,
+      alignSelf: 'stretch',
     },
   }), [colors, insets.bottom]);
 
   return (
     <Modal
       visible={visible}
-      animationType="slide"
+      animationType={reduceMotion ? 'none' : 'slide'}
       transparent
       onRequestClose={() => {
         Keyboard.dismiss();
@@ -115,20 +117,21 @@ export const AddListSheet: React.FC<AddListSheetProps> = ({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={0}
       >
-        <TouchableOpacity
-          style={styles.overlay}
-          activeOpacity={1}
-          onPress={() => {
-            Keyboard.dismiss();
-            onClose();
-          }}
-        >
-          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <View style={styles.sheet}>
+        <View style={styles.overlay}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            accessibilityRole="button"
+            accessibilityLabel={cancelLabel}
+            onPress={() => { Keyboard.dismiss(); onClose(); }}
+          />
+          <View style={styles.sheet} accessibilityViewIsModal>
+            <ScrollView style={{ flexGrow: 0 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               <View style={styles.handle} />
               <View style={styles.header}>
-                <AppText style={styles.sheetTitle}>{title}</AppText>
+                <AppText accessibilityRole="header" style={styles.sheetTitle}>{title}</AppText>
                 <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel={cancelLabel}
                   style={styles.closeBtn}
                   onPress={() => {
                     Keyboard.dismiss();
@@ -136,13 +139,14 @@ export const AddListSheet: React.FC<AddListSheetProps> = ({
                   }}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="close" size={20} color={colors.textSecondary} />
+                  <Ionicons name="close-outline" size={20} color={colors.textSecondary} />
                 </TouchableOpacity>
               </View>
               <View style={styles.inputWrap}>
                 <FormTextInput
                   value={name}
                   onChangeText={onNameChange}
+                  label={placeholder}
                   placeholder={placeholder}
                   autoCapitalize="words"
                 />
@@ -169,9 +173,9 @@ export const AddListSheet: React.FC<AddListSheetProps> = ({
                   />
                 </View>
               </View>
-            </View>
-          </TouchableWithoutFeedback>
-        </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
       </KeyboardAvoidingView>
     </Modal>
   );

@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import { AppText } from '../AppText';
+import { View } from 'react-native';
+import { EnamelHeader } from '../ui/EnamelHeader';
+import { useLanguage } from '../../context/LanguageContext';
 import { SearchBar } from '../ui/SearchBar';
-import { useThemeColors, fontSizes, fontWeights, spacing } from '../../theme';
+import { useThemeColors, spacing } from '../../theme';
 
 interface ShoppingHeaderProps {
   title: string;
@@ -17,46 +18,18 @@ export const ShoppingHeader: React.FC<ShoppingHeaderProps> = ({
   subtitle,
   searchValue,
   onSearchChange,
-  searchPlaceholder = 'Search',
+  searchPlaceholder,
 }) => {
   const colors = useThemeColors();
-  const styles = React.useMemo(() => StyleSheet.create({
-    container: {
-      paddingHorizontal: spacing.xl,
-      paddingTop: spacing.lg,
-      paddingBottom: spacing.md,
-      backgroundColor: colors.background,
-    },
-    titleRow: {
-      marginBottom: spacing.xs,
-    },
-    title: {
-      fontSize: fontSizes.xxl,
-      fontWeight: fontWeights.extrabold,
-      color: colors.text,
-      letterSpacing: -0.5,
-    },
-    subtitle: {
-      fontSize: fontSizes.sm,
-      color: colors.textSecondary,
-      marginTop: 2,
-    },
-    searchWrap: {
-      marginTop: spacing.md,
-    },
-  }), [colors]);
-
+  const { t } = useLanguage();
   return (
-    <View style={styles.container}>
-      <View style={styles.titleRow}>
-        <AppText style={styles.title}>{title}</AppText>
-        <AppText style={styles.subtitle}>{subtitle}</AppText>
-      </View>
-      <View style={styles.searchWrap}>
+    <View>
+      <EnamelHeader title={title} subtitle={subtitle} />
+      <View style={{ padding: spacing.md, backgroundColor: colors.background }}>
         <SearchBar
           value={searchValue}
           onChangeText={onSearchChange}
-          placeholder={searchPlaceholder}
+          placeholder={searchPlaceholder ?? t('common.search')}
         />
       </View>
     </View>

@@ -3,7 +3,7 @@ import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { AppText } from '../AppText';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../../context/LanguageContext';
-import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows } from '../../theme';
+import { useThemeColors, fontSizes, fontWeights, spacing, radii } from '../../theme';
 import { ShoppingList } from '../../api/shoppingApi';
 
 interface ListTabsProps {
@@ -48,103 +48,61 @@ export const ListTabs: React.FC<ListTabsProps> = ({
 
   const styles = React.useMemo(() => StyleSheet.create({
     container: {
-      paddingVertical: embedded ? spacing.xs : spacing.sm,
-      paddingHorizontal: embedded ? spacing.sm : spacing.xl,
-      backgroundColor: embedded ? 'transparent' : colors.background,
+      marginHorizontal: embedded ? 0 : spacing.md,
+      padding: spacing.xxs,
+      borderRadius: radii.md,
+      backgroundColor: colors.borderLight,
     },
-    wrap: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      alignItems: 'center',
-      gap: spacing.sm,
-    },
+    wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xxs },
     chip: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.md,
-      borderRadius: radii.lg,
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      minHeight: 40,
-      maxWidth: '100%',
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+      gap: spacing.xxs, paddingVertical: spacing.sm, paddingHorizontal: spacing.sm,
+      borderRadius: radii.sm, minHeight: 44, minWidth: 44, maxWidth: '100%',
     },
-    chipSelected: {
-      backgroundColor: colors.primary,
-      borderColor: colors.primary,
-      ...(shadows.sm as object),
-    },
-    chipText: {
-      fontSize: fontSizes.sm,
-      fontWeight: fontWeights.medium,
-      color: colors.text,
-    },
-    chipTextSelected: {
-      color: colors.surface,
-      fontWeight: fontWeights.semibold,
-    },
+    chipSelected: { backgroundColor: colors.surface },
+    chipText: { fontSize: fontSizes.sm, color: colors.textSecondary, flexShrink: 1 },
+    chipTextSelected: { color: colors.text, fontWeight: fontWeights.semibold },
     addChip: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.xs,
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.md,
-      borderRadius: radii.lg,
-      backgroundColor: colors.primaryUltraSoft,
-      borderWidth: 1,
-      borderColor: colors.primarySoft,
-      minHeight: 40,
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+      gap: spacing.xxs, minHeight: 44, minWidth: 44, maxWidth: '100%',
+      paddingHorizontal: spacing.sm, paddingVertical: spacing.sm, borderRadius: radii.sm,
     },
-    addChipText: {
-      fontSize: fontSizes.sm,
-      fontWeight: fontWeights.semibold,
-      color: colors.primary,
-    },
+    addChipText: { fontSize: fontSizes.sm, color: colors.primary, flexShrink: 1, fontWeight: fontWeights.semibold },
     moreChip: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.xs,
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.md,
-      borderRadius: radii.lg,
-      backgroundColor: 'transparent',
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      borderStyle: 'dashed',
-      minHeight: 40,
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+      gap: spacing.xxs, minHeight: 44, maxWidth: '100%',
+      paddingHorizontal: spacing.sm, paddingVertical: spacing.sm,
     },
-    moreChipText: {
-      fontSize: fontSizes.sm,
-      fontWeight: fontWeights.semibold,
-      color: colors.textSecondary,
-    },
+    moreChipText: { fontSize: fontSizes.sm, color: colors.textSecondary, flexShrink: 1 },
   }), [colors, embedded]);
 
   return (
     <View style={styles.container}>
       <View style={styles.wrap}>
         <TouchableOpacity
+          accessibilityRole="button"
           style={styles.addChip}
           onPress={onAddList}
           activeOpacity={0.7}
         >
-          <Ionicons name="add" size={18} color={colors.primary} />
+          <Ionicons name="add-outline" size={18} color={colors.primary} />
           <AppText style={styles.addChipText}>{newListLabel}</AppText>
         </TouchableOpacity>
         {visibleLists.map((list) => {
           const isSelected = selectedListId === list._id;
           return (
             <TouchableOpacity
+              accessibilityRole="tab"
+              accessibilityState={{ selected: isSelected }}
               key={list._id}
               style={[styles.chip, isSelected && styles.chipSelected]}
               onPress={() => onSelectList(list)}
               onLongPress={() => onLongPressList(list)}
               activeOpacity={0.7}
             >
+              {isSelected ? <Ionicons name="checkmark-outline" size={22} color={colors.text} /> : null}
               <AppText
                 style={[styles.chipText, isSelected && styles.chipTextSelected]}
-                numberOfLines={1}
               >
                 {list.name}
               </AppText>
@@ -153,12 +111,14 @@ export const ListTabs: React.FC<ListTabsProps> = ({
         })}
         {shouldCollapse ? (
           <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityState={{ expanded: showExpanded }}
             style={styles.moreChip}
             onPress={() => setExpanded((prev) => !prev)}
             activeOpacity={0.7}
           >
             <Ionicons
-              name={showExpanded ? 'chevron-up' : 'chevron-down'}
+              name={showExpanded ? 'chevron-up-outline' : 'chevron-down-outline'}
               size={16}
               color={colors.textSecondary}
             />
