@@ -41,7 +41,6 @@ import {
   DEFAULT_STALE_TIME_MS,
   getCached,
   invalidateCache,
-  isFresh,
   subscribe as subscribeCache,
 } from '../../utils/queryCache';
 import { useHouseholdCurrency } from '../../utils/useHouseholdCurrency';
@@ -262,10 +261,11 @@ export const ExpensesScreen: React.FC<{ navigation: any; }> = ({ navigation }) =
       }
     }
 
+    // Focus revalidations with a snapshot already on screen run silently —
+    // including when the snapshot is stale (e.g. CreateExpense patched it and
+    // marked it stale so balances refetch), so the list doesn't flinch.
     const skipSpinner =
-      Boolean(getCached<ExpensesSnapshot>(key)) &&
-      Boolean(opts?.allowStale) &&
-      isFresh(key, DEFAULT_STALE_TIME_MS);
+      Boolean(getCached<ExpensesSnapshot>(key)) && Boolean(opts?.allowStale);
     if (!skipSpinner) {
       setLoading(true);
     }
