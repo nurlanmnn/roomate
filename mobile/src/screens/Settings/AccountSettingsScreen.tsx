@@ -10,7 +10,6 @@ import {
   Keyboard,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useHeaderHeight } from '@react-navigation/elements';
 import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreenShell';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -24,9 +23,9 @@ import { authApi } from '../../api/authApi';
 import { Avatar } from '../../components/ui/Avatar';
 import { SettingsSection } from '../../components/Settings/SettingsSection';
 import { SettingsGroupCard } from '../../components/Settings/SettingsGroupCard';
-import { DangerZoneCard } from '../../components/Settings/DangerZoneCard';
+import { GroupRow } from '../../components/ui/Group';
 import { DeleteAccountModal } from '../../components/Settings/DeleteAccountModal';
-import { useThemeColors, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
+import { useThemeColors, fontSizes, fontWeights, radii, spacing } from '../../theme';
 import {
   alertOpenSettingsForPhotoLibrary,
   ensureMediaLibraryPermission,
@@ -58,14 +57,13 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
   const { t } = useLanguage();
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
-  const headerHeight = useHeaderHeight();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const scrollInset = useMemo(
     () => ({
-      paddingTop: headerHeight + spacing.md,
+      paddingTop: spacing.xs,
       paddingBottom: insets.bottom + spacing.lg,
     }),
-    [headerHeight, insets.bottom]
+    [insets.bottom]
   );
 
   const [name, setName] = useState(user?.name || '');
@@ -309,28 +307,36 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
             <AppText style={styles.sectionHint}>{t('accountSettingsScreen.profileHint')}</AppText>
             <SettingsGroupCard>
               <View style={styles.avatarBlock}>
-                <TouchableOpacity onPress={handlePickImage} activeOpacity={0.85} style={styles.avatarTouch}>
+                <TouchableOpacity
+                  onPress={handlePickImage}
+                  activeOpacity={0.85}
+                  style={styles.avatarTouch}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('accountSettingsScreen.changeAvatar')}
+                >
                   <View style={styles.avatarWrap}>
                     {displayAvatar && displayAvatar.startsWith('data:') ? (
                       <Image source={{ uri: displayAvatar }} style={styles.avatarImg} />
                     ) : (
-                      <Avatar name={name || user?.name} uri={displayAvatar || undefined} size={88} />
+                      <Avatar name={name || user?.name} uri={displayAvatar || undefined} size={64} />
                     )}
                     <View style={styles.avatarFab}>
-                      <Ionicons name="camera" size={18} color="#fff" />
+                      <Ionicons name="camera-outline" size={18} color={colors.onPrimary} />
                     </View>
                   </View>
                 </TouchableOpacity>
                 <View style={styles.avatarLabels}>
-                  <AppText style={styles.inlineName} numberOfLines={1}>
+                  <AppText style={styles.inlineName}>
                     {name || user?.name || '—'}
                   </AppText>
-                  <AppText style={styles.inlineEmail} numberOfLines={1}>
+                  <AppText style={styles.inlineEmail}>
                     {email || user?.email || ''}
                   </AppText>
                   <TouchableOpacity
                     onPress={handleDeleteProfilePhoto}
                     disabled={!avatarUri}
+                    accessibilityRole="button"
+                    accessibilityState={{ disabled: !avatarUri }}
                     activeOpacity={avatarUri ? 0.75 : 1}
                     style={styles.removePhotoButton}
                   >
@@ -340,8 +346,6 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
                   </TouchableOpacity>
                 </View>
               </View>
-
-              <View style={styles.fieldDivider} />
 
               <View style={styles.paddedFields}>
                 <FormTextInput
@@ -390,11 +394,14 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
                           onPress={handleConfirmEmailChange}
                           disabled={!canConfirmEmail}
                           loading={confirmingEmail}
+                          variant="secondary"
                           style={styles.emailCodeButton}
                         />
                         <TouchableOpacity
                           onPress={handleRequestEmailCode}
                           disabled={sendingEmailCode}
+                          accessibilityRole="button"
+                          accessibilityState={{ disabled: sendingEmailCode, busy: sendingEmailCode }}
                           activeOpacity={0.7}
                           style={styles.resendWrap}
                         >
@@ -456,15 +463,17 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
           </SettingsSection>
 
           <SettingsSection title={t('accountSettingsScreen.dangerZone')}>
-            <DangerZoneCard description={t('accountSettingsScreen.deleteAccountHint')}>
-              <TouchableOpacity
-                style={styles.deleteTextButton}
+            <AppText style={styles.sectionHint}>{t('accountSettingsScreen.deleteAccountHint')}</AppText>
+            <SettingsGroupCard>
+              <GroupRow
+                title={t('accountSettingsScreen.deleteAccount')}
+                icon="trash-outline"
+                iconTone="danger"
+                titleLines={0}
+                destructive
                 onPress={() => setDeleteModalVisible(true)}
-                activeOpacity={0.75}
-              >
-                <AppText style={styles.deleteTextButtonLabel}>{t('accountSettingsScreen.deleteAccount')}</AppText>
-              </TouchableOpacity>
-            </DangerZoneCard>
+              />
+            </SettingsGroupCard>
           </SettingsSection>
       </ScrollView>
 
@@ -489,7 +498,7 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: 'transparent',
+      backgroundColor: colors.background,
     },
     flex: { flex: 1 },
     sectionHint: {
@@ -497,36 +506,38 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
       color: colors.textSecondary,
       lineHeight: 20,
       marginBottom: spacing.sm,
-      paddingHorizontal: 2,
+      paddingHorizontal: spacing.lg,
     },
     avatarBlock: {
       flexDirection: 'row',
       alignItems: 'center',
-      padding: spacing.lg,
-      gap: spacing.lg,
+      padding: spacing.md,
+      gap: spacing.md,
     },
-    avatarTouch: {},
+    avatarTouch: {
+      minWidth: 44,
+      minHeight: 44,
+    },
     avatarWrap: {
       position: 'relative',
     },
     avatarImg: {
-      width: 88,
-      height: 88,
-      borderRadius: 44,
+      width: 64,
+      height: 64,
+      borderRadius: radii.pill,
     },
     avatarFab: {
       position: 'absolute',
-      right: -2,
-      bottom: -2,
+      right: 0,
+      bottom: 0,
       width: 32,
       height: 32,
-      borderRadius: 16,
+      borderRadius: radii.pill,
       backgroundColor: colors.primary,
       alignItems: 'center',
       justifyContent: 'center',
       borderWidth: 3,
       borderColor: colors.surface,
-      ...(shadows.sm as object),
     },
     avatarLabels: {
       flex: 1,
@@ -540,10 +551,13 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
     inlineEmail: {
       fontSize: fontSizes.sm,
       color: colors.textSecondary,
-      marginTop: 4,
+      marginTop: spacing.xxs,
     },
     removePhotoButton: {
       alignSelf: 'flex-start',
+      minWidth: 44,
+      minHeight: 44,
+      justifyContent: 'center',
       marginTop: spacing.sm,
       paddingVertical: spacing.xs,
       paddingHorizontal: spacing.sm,
@@ -553,23 +567,19 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
       backgroundColor: colors.surface,
     },
     removePhotoLabel: {
-      fontSize: fontSizes.xs,
+      fontSize: fontSizes.sm,
       fontWeight: fontWeights.semibold,
       color: colors.danger,
     },
     removePhotoLabelDisabled: {
       color: colors.textTertiary,
     },
-    fieldDivider: {
-      height: StyleSheet.hairlineWidth,
-      backgroundColor: colors.borderLight,
-    },
     paddedFields: {
       padding: spacing.md,
       paddingTop: spacing.lg,
     },
     fieldError: {
-      fontSize: fontSizes.xs,
+      fontSize: fontSizes.sm,
       color: colors.danger,
       marginTop: -spacing.sm,
       marginBottom: spacing.sm,
@@ -596,8 +606,11 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
     },
     resendWrap: {
       alignSelf: 'flex-start',
-      marginTop: spacing.md,
+      marginTop: spacing.sm,
       paddingVertical: spacing.xs,
+      minHeight: 44,
+      minWidth: 44,
+      justifyContent: 'center',
     },
     resendLink: {
       fontSize: fontSizes.sm,
@@ -606,19 +619,6 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
     },
     sectionButton: {
       marginTop: spacing.md,
-    },
-    deleteTextButton: {
-      alignSelf: 'flex-start',
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.md,
-      borderRadius: radii.md,
-      borderWidth: 1,
-      borderColor: colors.danger,
-      backgroundColor: colors.surface,
-    },
-    deleteTextButtonLabel: {
-      fontSize: fontSizes.md,
-      fontWeight: fontWeights.semibold,
-      color: colors.danger,
+      marginHorizontal: spacing.md,
     },
   });

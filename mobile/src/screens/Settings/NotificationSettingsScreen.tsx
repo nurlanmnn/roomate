@@ -5,11 +5,10 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
+import { Group, GroupRow } from '../../components/ui/Group';
 import { AppText } from '../../components/AppText';
 import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreenShell';
 import { SettingsSection } from '../../components/Settings/SettingsSection';
@@ -23,7 +22,7 @@ import {
   registerPushTokenWithBackend,
   requestPermission,
 } from '../../utils/notifications';
-import { fontSizes, fontWeights, radii, spacing, useThemeColors } from '../../theme';
+import { fontSizes, spacing, useThemeColors } from '../../theme';
 
 type PermissionState = 'granted' | 'denied' | 'undetermined' | 'unavailable';
 
@@ -120,72 +119,20 @@ export const NotificationSettingsScreen: React.FC<{ navigation: any }> = () => {
   };
 
   const styles = React.useMemo(
-    () =>
-      StyleSheet.create({
-        container: { flex: 1 },
-        scrollView: { flex: 1 },
-        scrollContent: {
-          paddingBottom: spacing.xxl,
-        },
-        headerSubtitle: {
-          fontSize: fontSizes.sm,
-          color: colors.textSecondary,
-          paddingHorizontal: spacing.xl,
-          marginTop: spacing.sm,
-          lineHeight: 20,
-        },
-        sectionHint: {
-          fontSize: fontSizes.xs,
-          color: colors.textTertiary,
-          marginTop: -spacing.xs,
-          marginBottom: spacing.sm,
-          marginHorizontal: spacing.xs,
-          lineHeight: 16,
-        },
-        banner: {
-          marginHorizontal: spacing.xl,
-          marginTop: spacing.lg,
-          padding: spacing.md,
-          borderRadius: radii.md,
-          backgroundColor: colors.warningSoft ?? colors.dangerSoft,
-          flexDirection: 'row',
-          alignItems: 'flex-start',
-        },
-        bannerInfo: {
-          backgroundColor: colors.primaryUltraSoft,
-        },
-        bannerIcon: {
-          marginRight: spacing.sm,
-          marginTop: 2,
-        },
-        bannerText: {
-          flex: 1,
-        },
-        bannerTitle: {
-          fontSize: fontSizes.sm,
-          fontWeight: fontWeights.semibold,
-          color: colors.text,
-          marginBottom: 2,
-        },
-        bannerBody: {
-          fontSize: fontSizes.sm,
-          color: colors.textSecondary,
-          lineHeight: 18,
-        },
-        bannerAction: {
-          marginTop: spacing.sm,
-          paddingVertical: spacing.xs,
-          paddingHorizontal: spacing.md,
-          borderRadius: radii.sm,
-          alignSelf: 'flex-start',
-          backgroundColor: colors.primary,
-        },
-        bannerActionText: {
-          color: '#FFFFFF',
-          fontSize: fontSizes.sm,
-          fontWeight: fontWeights.semibold,
-        },
-      }),
+    () => StyleSheet.create({
+      container: { flex: 1 },
+      scrollView: { flex: 1 },
+      scrollContent: { paddingTop: spacing.md, paddingBottom: spacing.xl },
+      headerSubtitle: {
+        fontSize: fontSizes.sm, color: colors.textSecondary,
+        paddingHorizontal: spacing.lg, marginBottom: spacing.md,
+      },
+      sectionHint: {
+        fontSize: fontSizes.sm, color: colors.textSecondary,
+        marginBottom: spacing.sm, marginHorizontal: spacing.lg,
+      },
+      groupSpacing: { marginTop: spacing.md },
+    }),
     [colors]
   );
 
@@ -198,61 +145,39 @@ export const NotificationSettingsScreen: React.FC<{ navigation: any }> = () => {
 
     if (permission === 'denied') {
       return (
-        <View style={styles.banner}>
-          <Ionicons
-            name="alert-circle"
-            size={20}
-            color={colors.warning ?? colors.danger}
-            style={styles.bannerIcon}
+        <Group>
+          <GroupRow
+            title={t('notificationsScreen.iosDeniedTitle')}
+            subtitle={t('notificationsScreen.iosDeniedBody')}
+            titleLines={0}
+            icon="alert-circle-outline"
           />
-          <View style={styles.bannerText}>
-            <AppText style={styles.bannerTitle}>
-              {t('notificationsScreen.iosDeniedTitle')}
-            </AppText>
-            <AppText style={styles.bannerBody}>
-              {t('notificationsScreen.iosDeniedBody')}
-            </AppText>
-            <TouchableOpacity
-              style={styles.bannerAction}
-              onPress={handleOpenIosSettings}
-              activeOpacity={0.8}
-            >
-              <AppText style={styles.bannerActionText}>
-                {t('notificationsScreen.iosDeniedAction')}
-              </AppText>
-            </TouchableOpacity>
-          </View>
-        </View>
+          <GroupRow
+            title={t('notificationsScreen.iosDeniedAction')}
+            titleLines={0}
+            onPress={handleOpenIosSettings}
+            chevron
+          />
+        </Group>
       );
     }
 
     if (permission === 'undetermined') {
       return (
-        <View style={[styles.banner, styles.bannerInfo]}>
-          <Ionicons
-            name="notifications-outline"
-            size={20}
-            color={colors.primary}
-            style={styles.bannerIcon}
+        <Group>
+          <GroupRow
+            title={t('notificationsScreen.iosUndeterminedTitle')}
+            subtitle={t('notificationsScreen.iosUndeterminedBody')}
+            titleLines={0}
+            icon="notifications-outline"
           />
-          <View style={styles.bannerText}>
-            <AppText style={styles.bannerTitle}>
-              {t('notificationsScreen.iosUndeterminedTitle')}
-            </AppText>
-            <AppText style={styles.bannerBody}>
-              {t('notificationsScreen.iosUndeterminedBody')}
-            </AppText>
-            <TouchableOpacity
-              style={styles.bannerAction}
-              onPress={handleRequestPermission}
-              activeOpacity={0.8}
-            >
-              <AppText style={styles.bannerActionText}>
-                {t('notificationsScreen.iosUndeterminedAction')}
-              </AppText>
-            </TouchableOpacity>
-          </View>
-        </View>
+          <GroupRow
+            title={t('notificationsScreen.iosUndeterminedAction')}
+            titleLines={0}
+            onPress={handleRequestPermission}
+            chevron
+          />
+        </Group>
       );
     }
 
@@ -260,11 +185,11 @@ export const NotificationSettingsScreen: React.FC<{ navigation: any }> = () => {
   };
 
   return (
-    <SanctuaryScreenShell edges={['top']} innerStyle={styles.container}>
+    <SanctuaryScreenShell edges={['bottom']} innerStyle={styles.container}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
-        contentInsetAdjustmentBehavior="automatic"
+        contentInsetAdjustmentBehavior="never"
         showsVerticalScrollIndicator={false}
       >
         <AppText style={styles.headerSubtitle}>
@@ -273,7 +198,7 @@ export const NotificationSettingsScreen: React.FC<{ navigation: any }> = () => {
 
         {renderPermissionBanner()}
 
-        <SettingsSection title=" ">
+        <View style={styles.groupSpacing}>
           <SettingsGroupCard>
             <ToggleRow
               icon="notifications-outline"
@@ -286,15 +211,15 @@ export const NotificationSettingsScreen: React.FC<{ navigation: any }> = () => {
               isLast
             />
           </SettingsGroupCard>
-        </SettingsSection>
+        </View>
 
         <SettingsSection title={t('notificationsScreen.categoriesSection')}>
           <AppText style={styles.sectionHint}>{t('notificationsScreen.categoriesHint')}</AppText>
           <SettingsGroupCard>
             <ToggleRow
               icon="cash-outline"
-              iconBackgroundColor={colors.successSoft ?? colors.primaryUltraSoft}
-              iconColor={colors.success ?? colors.primary}
+              iconBackgroundColor={colors.primaryUltraSoft}
+              iconColor={colors.primary}
               title={t('notificationsScreen.expensesTitle')}
               subtitle={t('notificationsScreen.expensesSubtitle')}
               value={masterOn && prefs.expenses !== false}
@@ -302,8 +227,8 @@ export const NotificationSettingsScreen: React.FC<{ navigation: any }> = () => {
             />
             <ToggleRow
               icon="calendar-outline"
-              iconBackgroundColor={colors.accentUltraSoft}
-              iconColor={colors.accent}
+              iconBackgroundColor={colors.primaryUltraSoft}
+              iconColor={colors.primary}
               title={t('notificationsScreen.calendarTitle')}
               subtitle={t('notificationsScreen.calendarSubtitle')}
               value={masterOn && prefs.calendar !== false}
@@ -311,8 +236,8 @@ export const NotificationSettingsScreen: React.FC<{ navigation: any }> = () => {
             />
             <ToggleRow
               icon="alarm-outline"
-              iconBackgroundColor={colors.warningSoft ?? colors.dangerSoft}
-              iconColor={colors.warning ?? colors.danger}
+              iconBackgroundColor={colors.primaryUltraSoft}
+              iconColor={colors.primary}
               title={t('notificationsScreen.debtsTitle')}
               subtitle={t('notificationsScreen.debtsSubtitle')}
               value={masterOn && prefs.debts !== false}

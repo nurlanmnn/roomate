@@ -12,29 +12,25 @@ interface RoleBadgeProps {
 
 export const RoleBadge: React.FC<RoleBadgeProps> = ({ variant, label }) => {
   const colors = useThemeColors();
-  const styles = React.useMemo(() => {
-    const owner = variant === 'owner';
-    return StyleSheet.create({
-      wrap: {
-        paddingHorizontal: spacing.sm,
-        paddingVertical: 4,
-        borderRadius: radii.sm,
-        backgroundColor: owner ? colors.primaryUltraSoft : colors.background,
-        borderWidth: 1,
-        borderColor: owner ? colors.primarySoft : colors.borderLight,
-      },
-      text: {
-        fontSize: fontSizes.xs,
-        fontWeight: fontWeights.semibold,
-        color: owner ? colors.primary : colors.textSecondary,
-        letterSpacing: 0.3,
-      },
-    });
-  }, [colors, variant]);
+  const owner = variant === 'owner';
 
   return (
-    <View style={styles.wrap}>
-      <AppText style={styles.text}>{label}</AppText>
+    <View style={[styles.wrap, { backgroundColor: owner ? colors.primaryUltraSoft : colors.background }]}>
+      <AppText style={[styles.text, { color: owner ? colors.primary : colors.textSecondary }]}>{label}</AppText>
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  wrap: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xxs,
+    borderRadius: radii.sm,
+  },
+  text: {
+    fontSize: fontSizes.xs,
+    fontWeight: fontWeights.semibold,
+    flexShrink: 1,
+  },
+});

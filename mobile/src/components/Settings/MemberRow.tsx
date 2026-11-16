@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '../AppText';
 import { Avatar } from '../ui/Avatar';
 import { RoleBadge, RoleBadgeVariant } from './RoleBadge';
+import { useLanguage } from '../../context/LanguageContext';
 import { useThemeColors, fontSizes, fontWeights, spacing } from '../../theme';
 
 interface MemberRowProps {
@@ -27,72 +28,66 @@ export const MemberRow: React.FC<MemberRowProps> = ({
   showRemove,
   removing,
   onRemove,
-  isLast = false,
 }) => {
   const colors = useThemeColors();
-  const styles = React.useMemo(
-    () =>
-      StyleSheet.create({
-        row: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          paddingVertical: spacing.md,
-          paddingHorizontal: spacing.sm,
-          borderBottomWidth: isLast ? 0 : StyleSheet.hairlineWidth,
-          borderBottomColor: colors.borderLight,
-          gap: spacing.md,
-        },
-        meta: {
-          flex: 1,
-          minWidth: 0,
-        },
-        name: {
-          fontSize: fontSizes.md,
-          fontWeight: fontWeights.semibold,
-          color: colors.text,
-        },
-        email: {
-          fontSize: fontSizes.sm,
-          color: colors.textSecondary,
-          marginTop: 2,
-        },
-        right: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: spacing.sm,
-        },
-      }),
-    [colors, isLast]
-  );
+  const { t } = useLanguage();
 
   return (
     <View style={styles.row}>
       <Avatar name={name} uri={avatarUrl} size={44} />
       <View style={styles.meta}>
-        <AppText style={styles.name} numberOfLines={1}>
-          {name}
-        </AppText>
-        <AppText style={styles.email} numberOfLines={1}>
-          {email}
-        </AppText>
-      </View>
-      <View style={styles.right}>
+        <AppText style={[styles.name, { color: colors.text }]}>{name}</AppText>
+        <AppText style={[styles.email, { color: colors.textSecondary }]}>{email}</AppText>
         <RoleBadge variant={role} label={roleLabel} />
-        {showRemove && onRemove ? (
-          <TouchableOpacity
-            onPress={onRemove}
-            disabled={removing}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            activeOpacity={0.7}
-          >
-            {removing ? (
-              <ActivityIndicator size="small" color={colors.danger} />
-            ) : (
-              <Ionicons name="person-remove-outline" size={22} color={colors.danger} />
-            )}
-          </TouchableOpacity>
-        ) : null}
       </View>
+      {showRemove && onRemove ? (
+        <Pressable
+          onPress={onRemove}
+          disabled={removing}
+          accessibilityRole="button"
+          accessibilityLabel={`${t('householdSettingsScreen.removeMember')}: ${name}`}
+          accessibilityState={{ disabled: Boolean(removing), busy: Boolean(removing) }}
+          style={({ pressed }) => [styles.remove, pressed && styles.pressed]}
+        >
+          {removing ? (
+            <ActivityIndicator size="small" color={colors.danger} />
+          ) : (
+            <Ionicons name="person-remove-outline" size={22} color={colors.danger} />
+          )}
+        </Pressable>
+      ) : null}
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 60,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    gap: spacing.sm,
+  },
+  meta: {
+    flex: 1,
+    minWidth: 0,
+    gap: spacing.xxs,
+  },
+  name: {
+    fontSize: fontSizes.md,
+    fontWeight: fontWeights.semibold,
+  },
+  email: {
+    fontSize: fontSizes.sm,
+  },
+  remove: {
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pressed: {
+    opacity: 0.6,
+  },
+});
