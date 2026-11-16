@@ -206,25 +206,37 @@ type FieldRowProps = Omit<TextInputProps, 'style'> & {
  */
 export const FieldRow: React.FC<FieldRowProps> = ({ label, trailing, editable = true, value, ...input }) => {
   const colors = useThemeColors();
+  const inputRef = React.useRef<TextInput>(null);
+
+  if (!editable) {
+    return (
+      <View style={styles.fieldRow}>
+        <AppText style={[styles.fieldLabel, { color: colors.text }]} numberOfLines={2}>
+          {label}
+        </AppText>
+        <AppText style={[styles.fieldValue, { color: colors.textSecondary }]}>{value || '—'}</AppText>
+        {trailing}
+      </View>
+    );
+  }
+
+  // The whole row is the target: tapping the label puts the cursor in the field.
   return (
-    <View style={styles.fieldRow}>
+    <Pressable style={styles.fieldRow} onPress={() => inputRef.current?.focus()} accessible={false}>
       <AppText style={[styles.fieldLabel, { color: colors.text }]} numberOfLines={2}>
         {label}
       </AppText>
-      {editable ? (
-        <TextInput
-          value={value}
-          accessibilityLabel={label}
-          placeholderTextColor={colors.textTertiary}
-          selectionColor={colors.primary}
-          style={[styles.fieldInput, { color: colors.text }]}
-          {...input}
-        />
-      ) : (
-        <AppText style={[styles.fieldValue, { color: colors.textSecondary }]}>{value || '—'}</AppText>
-      )}
+      <TextInput
+        ref={inputRef}
+        value={value}
+        accessibilityLabel={label}
+        placeholderTextColor={colors.textTertiary}
+        selectionColor={colors.primary}
+        style={[styles.fieldInput, { color: colors.text }]}
+        {...input}
+      />
       {trailing}
-    </View>
+    </Pressable>
   );
 };
 

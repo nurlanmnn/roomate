@@ -371,11 +371,16 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
     (editName.trim() !== selectedHousehold.name ||
       editAddress.trim() !== (selectedHousehold.address || ''));
 
+  // The header item is only rebuilt when its state changes; rebuilding it on every
+  // render (each keystroke) makes the native header lose the item's size.
+  const saveRef = React.useRef(handleSaveChanges);
+  saveRef.current = handleSaveChanges;
+  const hasHousehold = !!selectedHousehold;
   useLayoutEffect(() => {
     navigation.setOptions({
-      headerRight: isOwner && selectedHousehold ? () => (
+      headerRight: isOwner && hasHousehold ? () => (
         <Pressable
-          onPress={handleSaveChanges}
+          onPress={() => saveRef.current()}
           disabled={!householdDirty || isSaving}
           hitSlop={12}
           accessibilityRole="button"
@@ -393,7 +398,7 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
         </Pressable>
       ) : undefined,
     });
-  }, [navigation, t, colors.primary, colors.textTertiary, styles, isOwner, selectedHousehold, householdDirty, isSaving, handleSaveChanges]);
+  }, [navigation, t, colors.primary, colors.textTertiary, styles, isOwner, hasHousehold, householdDirty, isSaving]);
 
   if (!selectedHousehold) {
     return (

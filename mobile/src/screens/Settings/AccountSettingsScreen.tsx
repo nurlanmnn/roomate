@@ -286,11 +286,15 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
     }
   };
 
+  // The header item is only rebuilt when its state changes; rebuilding it on every
+  // render (each keystroke) makes the native header lose the item's size.
+  const saveRef = React.useRef(handleSaveProfile);
+  saveRef.current = handleSaveProfile;
   useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
         <Pressable
-          onPress={handleSaveProfile}
+          onPress={() => saveRef.current()}
           disabled={!canSaveProfile}
           hitSlop={12}
           accessibilityRole="button"
@@ -308,7 +312,7 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
         </Pressable>
       ),
     });
-  }, [navigation, t, colors.primary, colors.textTertiary, styles, canSaveProfile, savingProfile, handleSaveProfile]);
+  }, [navigation, t, colors.primary, colors.textTertiary, styles, canSaveProfile, savingProfile]);
 
   const displayAvatar = avatarUri;
   const invalidEmail = email.trim().length > 0 && !emailLooksValid;
@@ -444,6 +448,7 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
             value={currentPassword}
             onChangeText={setCurrentPassword}
             secureTextEntry
+            placeholder="••••••••"
             autoCapitalize="none"
             textContentType="password"
           />
@@ -452,6 +457,7 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
             value={newPassword}
             onChangeText={setNewPassword}
             secureTextEntry
+            placeholder="••••••••"
             autoCapitalize="none"
             textContentType="newPassword"
           />
@@ -460,6 +466,7 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             secureTextEntry
+            placeholder="••••••••"
             autoCapitalize="none"
             textContentType="newPassword"
           />
