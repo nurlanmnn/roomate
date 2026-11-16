@@ -30,7 +30,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, rout
   const { user, logout } = useAuth();
   const { selectedHousehold } = useHousehold();
   const colors = useThemeColors();
-  const { theme, toggleTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const { language, changeLanguage, t } = useLanguage();
 
   const [showLanguageModal, setShowLanguageModal] = useState(false);
@@ -188,7 +188,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, rout
               title={t('settings.darkMode')}
               subtitle=""
               value={theme === 'dark'}
-              onValueChange={() => toggleTheme()}
+              onValueChange={(isDark) => setTheme(isDark ? 'dark' : 'light')}
             />
             <GroupRow
               icon="language-outline"

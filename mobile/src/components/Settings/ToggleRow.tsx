@@ -42,7 +42,9 @@ export const ToggleRow: React.FC<ToggleRowProps> = ({
         </View>
       }
       trailing={
-        <View style={styles.switchTarget}>
+        // Claim the touch here so a tap on the switch isn't also delivered to the
+        // row's onPress, which would toggle twice and snap the value back.
+        <View style={styles.switchTarget} onStartShouldSetResponder={() => true}>
           <Switch
             value={value}
             onValueChange={onValueChange}
