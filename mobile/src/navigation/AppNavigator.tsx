@@ -2,18 +2,12 @@ import React, { useEffect } from 'react';
 import { NavigationContainer, useNavigation } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, StyleSheet, Platform } from 'react-native';
+import { Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useHousehold } from '../context/HouseholdContext';
 import { useLanguage } from '../context/LanguageContext';
-import { useTheme } from '../context/ThemeContext';
-import { spacing, useThemeColors } from '../theme';
-import { fontSizes, fontWeights, radii } from '../theme';
-import { MainTabBar } from './MainTabBar';
-import {
-  SanctuaryStackHeaderBackground,
-  SanctuaryStackGlassBack,
-} from '../components/sanctuary/SanctuaryStackHeaderBackground';
+import { useThemeColors, fontSizes, fontWeights } from '../theme';
 
 // Auth Screens
 import { LandingScreen } from '../screens/Auth/LandingScreen';
@@ -66,52 +60,45 @@ const AuthNavigator = () => {
   );
 };
 
+type TabIconName = React.ComponentProps<typeof Ionicons>['name'];
+
+const TAB_ICONS: Record<string, { on: TabIconName; off: TabIconName }> = {
+  Home: { on: 'home', off: 'home-outline' },
+  Expenses: { on: 'wallet', off: 'wallet-outline' },
+  Shopping: { on: 'cart', off: 'cart-outline' },
+  Calendar: { on: 'calendar', off: 'calendar-outline' },
+};
+
+/** Four top-level sections on the standard docked tab bar. Settings lives behind the Home avatar. */
 const MainTabs = () => {
   const { t } = useLanguage();
+  const colors = useThemeColors();
 
   return (
     <Tab.Navigator
-      tabBar={(props) => <MainTabBar {...props} />}
-      screenOptions={{
+      screenOptions={({ route }) => ({
         headerShown: false,
         lazy: true,
-      }}
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textTertiary,
+        tabBarStyle: {
+          backgroundColor: colors.surface,
+          borderTopColor: colors.borderLight,
+        },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: fontWeights.semibold,
+        },
+        tabBarIcon: ({ focused, color }) => {
+          const set = TAB_ICONS[route.name] ?? TAB_ICONS.Home;
+          return <Ionicons name={focused ? set.on : set.off} size={25} color={color} />;
+        },
+      })}
     >
-      <Tab.Screen
-        name="Home"
-        component={HomeScreen}
-        options={{
-          tabBarLabel: t('tabs.home'),
-        }}
-      />
-      <Tab.Screen
-        name="Expenses"
-        component={ExpensesScreen}
-        options={{
-          tabBarLabel: t('tabs.expenses'),
-        }}
-      />
-      <Tab.Screen
-        name="Shopping"
-        component={ShoppingListScreen}
-        options={{
-          tabBarLabel: t('tabs.shopping'),
-        }}
-      />
-      <Tab.Screen
-        name="Calendar"
-        component={CalendarScreen}
-        options={{
-          tabBarLabel: t('tabs.calendar'),
-        }}
-      />
-      <Tab.Screen
-        name="Settings"
-        component={SettingsScreen}
-        options={{
-          tabBarLabel: t('settings.title'),
-        }}
-      />
+      <Tab.Screen name="Home" component={HomeScreen} options={{ tabBarLabel: t('tabs.home') }} />
+      <Tab.Screen name="Expenses" component={ExpensesScreen} options={{ tabBarLabel: t('tabs.money') }} />
+      <Tab.Screen name="Shopping" component={ShoppingListScreen} options={{ tabBarLabel: t('tabs.shopping') }} />
+      <Tab.Screen name="Calendar" component={CalendarScreen} options={{ tabBarLabel: t('tabs.calendar') }} />
     </Tab.Navigator>
   );
 };
@@ -143,61 +130,26 @@ const MainTabsWithGuard = () => {
   return <MainTabs />;
 };
 
-const MAIN_STACK_FULL_BLEED_SCREENS = new Set(['HouseholdSelect', 'Main']);
-/** Native headers that use the brighter “sanctuary” glass + custom back pill. */
-const MAIN_STACK_IMMERSIVE_HEADER_SCREENS = new Set([
-  'AccountSettings',
-  'HouseholdSettings',
-  'NotificationSettings',
-]);
-
 const MainNavigator = () => {
   const { selectedHousehold } = useHousehold();
   const colors = useThemeColors();
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
   const { t } = useLanguage();
 
   return (
     <MainStack.Navigator
       initialRouteName={selectedHousehold ? 'Main' : 'HouseholdSelect'}
-      screenOptions={({ route }) => {
-        const fullBleed = MAIN_STACK_FULL_BLEED_SCREENS.has(route.name);
-        const immersiveHeader = MAIN_STACK_IMMERSIVE_HEADER_SCREENS.has(route.name);
-        return {
-          contentStyle: { backgroundColor: 'transparent' },
-          headerShadowVisible: false,
-          headerTitleStyle: {
-            fontWeight: fontWeights.extrabold,
-            fontSize: fontSizes.lg,
-            color: colors.text,
-          },
-          headerTintColor: colors.text,
-          ...(fullBleed
-            ? {
-                headerTransparent: false,
-              }
-            : Platform.select({
-                ios: {
-                  headerTransparent: true,
-                  headerBackground: () => (
-                    <SanctuaryStackHeaderBackground variant={immersiveHeader ? 'immersive' : 'default'} />
-                  ),
-                },
-                default: {
-                  headerTransparent: false,
-                  headerStyle: {
-                    backgroundColor: immersiveHeader
-                      ? isDark
-                        ? 'rgba(22, 40, 32, 0.88)'
-                        : 'rgba(248, 252, 249, 0.92)'
-                      : isDark
-                        ? 'rgba(18, 26, 24, 0.96)'
-                        : 'rgba(247, 252, 249, 0.96)',
-                  },
-                },
-              })),
-        };
+      screenOptions={{
+        // Plain native header on the porcelain ground: ink title, enamel-tinted controls.
+        contentStyle: { backgroundColor: colors.background },
+        headerShadowVisible: false,
+        headerStyle: { backgroundColor: colors.background },
+        headerTitleStyle: {
+          fontWeight: fontWeights.semibold,
+          fontSize: fontSizes.md + 1,
+          color: colors.text,
+        },
+        headerTintColor: colors.primary,
+        headerBackTitleVisible: false,
       }}
     >
       <MainStack.Screen
@@ -281,7 +233,6 @@ const MainNavigator = () => {
         options={{
           title: t('accountSettingsScreen.title'),
           headerBackTitleVisible: false,
-          headerLeft: (props) => <SanctuaryStackGlassBack {...props} />,
         }}
       />
       <MainStack.Screen
@@ -290,7 +241,6 @@ const MainNavigator = () => {
         options={{
           title: t('householdSettingsScreen.title'),
           headerBackTitleVisible: false,
-          headerLeft: (props) => <SanctuaryStackGlassBack {...props} />,
         }}
       />
       <MainStack.Screen
@@ -299,7 +249,6 @@ const MainNavigator = () => {
         options={{
           title: t('notificationsScreen.title'),
           headerBackTitleVisible: false,
-          headerLeft: (props) => <SanctuaryStackGlassBack {...props} />,
         }}
       />
       <MainStack.Screen

@@ -31,14 +31,12 @@ export const Avatar: React.FC<AvatarProps> = ({ name, uri, size = 44 }) => {
     },
     fallback: {
       backgroundColor: colors.primarySoft,
-      borderWidth: 1,
-      borderColor: colors.primary,
       alignItems: 'center',
       justifyContent: 'center',
     },
     initials: {
-      color: colors.primaryDark,
-      fontWeight: fontWeights.extrabold,
+      color: colors.primary,
+      fontWeight: fontWeights.bold,
     },
   }), [colors]);
 
@@ -58,7 +56,7 @@ export const Avatar: React.FC<AvatarProps> = ({ name, uri, size = 44 }) => {
 
   return (
     <View style={[styles.fallback, dim]}>
-      <AppText style={[styles.initials, { fontSize: Math.max(14, size * 0.38) }]}>{initials}</AppText>
+      <AppText style={[styles.initials, { fontSize: Math.max(11, size * 0.38) }]}>{initials}</AppText>
     </View>
   );
 };

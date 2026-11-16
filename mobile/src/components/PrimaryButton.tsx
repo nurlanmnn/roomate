@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, ActivityIndicator, Pressable, ViewStyle, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
 import { useThemeColors, fontSizes, fontWeights, radii, spacing } from '../theme';
 
@@ -9,8 +9,17 @@ interface PrimaryButtonProps {
   onPress: () => void;
   disabled?: boolean;
   loading?: boolean;
-  variant?: 'primary' | 'secondary' | 'danger' | 'outline';
+  /**
+   * primary: enamel fill, the default action.
+   * ink: strongest fill, at most one per screen (Home hero).
+   * secondary / outline: surface with a border.
+   * danger: destructive confirmation.
+   */
+  variant?: 'primary' | 'ink' | 'secondary' | 'danger' | 'outline';
+  icon?: keyof typeof Ionicons.glyphMap;
   style?: ViewStyle;
+  accessibilityLabel?: string;
+  accessibilityHint?: string;
 }
 
 export const PrimaryButton: React.FC<PrimaryButtonProps> = ({
@@ -19,139 +28,84 @@ export const PrimaryButton: React.FC<PrimaryButtonProps> = ({
   disabled,
   loading,
   variant = 'primary',
+  icon,
   style,
+  accessibilityLabel,
+  accessibilityHint,
 }) => {
   const colors = useThemeColors();
-  const styles = React.useMemo(
-    () =>
-      StyleSheet.create({
-        buttonBase: {
-          paddingVertical: spacing.md,
-          paddingHorizontal: spacing.lg,
-          borderRadius: radii.lg,
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: 48,
-          overflow: 'hidden',
-        },
-        jewelWrap: {
-          borderRadius: radii.lg,
-          shadowColor: colors.primary,
-          shadowOpacity: 0.28,
-          shadowRadius: 16,
-          shadowOffset: { width: 0, height: 8 },
-          elevation: 6,
-        },
-        buttonSecondary: {
-          backgroundColor: colors.accent,
-          shadowColor: colors.accentDark,
-          shadowOpacity: 0.2,
-          shadowRadius: 10,
-          shadowOffset: { width: 0, height: 6 },
-          elevation: 4,
-        },
-        buttonDanger: {
-          backgroundColor: colors.danger,
-          shadowColor: colors.danger,
-          shadowOpacity: 0.22,
-          shadowRadius: 10,
-          shadowOffset: { width: 0, height: 6 },
-          elevation: 4,
-        },
-        buttonOutline: {
-          backgroundColor: 'rgba(255,255,255,0.55)',
-          borderWidth: 2,
-          borderColor: colors.primary,
-          shadowColor: colors.primary,
-          shadowOpacity: 0.12,
-          shadowRadius: 10,
-          shadowOffset: { width: 0, height: 4 },
-          elevation: 2,
-        },
-        buttonDisabled: {
-          opacity: 0.5,
-        },
-        buttonPressed: {
-          transform: [{ scale: 0.98 }],
-          opacity: 0.92,
-        },
-        buttonText: {
-          color: colors.surface,
-          fontSize: fontSizes.md,
-          fontWeight: fontWeights.semibold,
-          letterSpacing: 0.2,
-        },
-        buttonTextOnJewel: {
-          color: '#FFFFFF',
-          fontSize: fontSizes.md,
-          fontWeight: fontWeights.semibold,
-          letterSpacing: 0.2,
-        },
-        buttonTextOutline: {
-          color: colors.primary,
-          fontSize: fontSizes.md,
-          fontWeight: fontWeights.semibold,
-          letterSpacing: 0.2,
-        },
-      }),
-    [colors]
-  );
+  const inactive = Boolean(disabled || loading);
 
-  if (variant === 'primary') {
-    return (
-      <View style={[styles.jewelWrap, style]}>
-        <Pressable
-          onPress={onPress}
-          disabled={disabled || loading}
-          style={({ pressed }) => [
-            styles.buttonBase,
-            (disabled || loading) && styles.buttonDisabled,
-            pressed && !(disabled || loading) && styles.buttonPressed,
-          ]}
-        >
-          <LinearGradient
-            pointerEvents="none"
-            colors={[colors.primaryLight, colors.primary, colors.primaryDark]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFillObject}
-          />
-          {loading ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <AppText style={styles.buttonTextOnJewel}>{title}</AppText>
-          )}
-        </Pressable>
-      </View>
-    );
-  }
-
-  const variantStyle =
-    variant === 'secondary'
-      ? styles.buttonSecondary
-      : variant === 'danger'
-        ? styles.buttonDanger
-        : styles.buttonOutline;
-
-  const textStyle = variant === 'outline' ? styles.buttonTextOutline : styles.buttonText;
+  const palette = React.useMemo(() => {
+    switch (variant) {
+      case 'ink':
+        return { bg: colors.ink, fg: colors.onInk, border: colors.ink };
+      case 'danger':
+        return { bg: colors.danger, fg: colors.surface, border: colors.danger };
+      case 'secondary':
+      case 'outline':
+        return { bg: colors.surface, fg: colors.primary, border: colors.border };
+      default:
+        return { bg: colors.primary, fg: colors.onPrimary, border: colors.primary };
+    }
+  }, [variant, colors]);
 
   return (
     <Pressable
+      onPress={onPress}
+      disabled={inactive}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? title}
+      accessibilityHint={accessibilityHint}
+      accessibilityState={{ disabled: inactive, busy: Boolean(loading) }}
       style={({ pressed }) => [
-        styles.buttonBase,
-        variantStyle,
-        (disabled || loading) && styles.buttonDisabled,
-        pressed && !(disabled || loading) && styles.buttonPressed,
+        styles.base,
+        { backgroundColor: palette.bg, borderColor: palette.border },
+        inactive && styles.inactive,
+        pressed && !inactive && styles.pressed,
         style,
       ]}
-      onPress={onPress}
-      disabled={disabled || loading}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'outline' ? colors.primary : colors.surface} />
+        <ActivityIndicator color={palette.fg} />
       ) : (
-        <AppText style={textStyle}>{title}</AppText>
+        <View style={styles.content}>
+          {icon ? <Ionicons name={icon} size={20} color={palette.fg} /> : null}
+          <AppText style={[styles.label, { color: palette.fg }]} numberOfLines={2}>
+            {title}
+          </AppText>
+        </View>
       )}
     </Pressable>
   );
 };
+
+const styles = StyleSheet.create({
+  base: {
+    minHeight: 50,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.md,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  content: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+  },
+  label: {
+    fontSize: fontSizes.md,
+    fontWeight: fontWeights.semibold,
+    textAlign: 'center',
+    flexShrink: 1,
+  },
+  inactive: {
+    opacity: 0.45,
+  },
+  pressed: {
+    opacity: 0.82,
+  },
+});

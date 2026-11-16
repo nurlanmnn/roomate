@@ -66,6 +66,7 @@ export default {
 
   // Navigation & Tabs
   tabs: {
+    money: 'Para',
     home: 'Ana Sayfa',
     expenses: 'Harcamalar',
     calendar: 'Takvim',

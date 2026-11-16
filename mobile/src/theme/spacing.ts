@@ -27,7 +27,9 @@ export const spacing = {
 const baseRadii = {
   sm: 10,
   md: 14,
-  lg: 18,
+  lg: 16,
+  /** Sheet tops and the Home hero; the only large radius in the system. */
+  xl: 28,
   pill: 999,
 };
 
@@ -35,6 +37,7 @@ export const radii = {
   sm: scale(baseRadii.sm),
   md: scale(baseRadii.md),
   lg: scale(baseRadii.lg),
+  xl: scale(baseRadii.xl),
   pill: baseRadii.pill, // Keep pill as-is since it's meant to be very large
 };
 

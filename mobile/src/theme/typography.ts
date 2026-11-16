@@ -54,3 +54,16 @@ export const lineHeights = {
 
 
 
+/**
+ * Display face: signage numerals and top-level titles only. Everything else stays on the
+ * system face so body text follows platform conventions and Dynamic Type.
+ * Custom faces carry their own weight, so never combine these with `fontWeight`.
+ */
+export const fonts = {
+  displaySemibold: 'SofiaSansSemiCondensed_600SemiBold',
+  displayBold: 'SofiaSansSemiCondensed_700Bold',
+  displayExtrabold: 'SofiaSansSemiCondensed_800ExtraBold',
+} as const;
+
+/** Cap on Dynamic Type growth for already-large display numerals so they never clip. */
+export const DISPLAY_MAX_FONT_SCALE = 1.3;

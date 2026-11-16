@@ -66,6 +66,7 @@ export default {
 
   // Navigation & Tabs
   tabs: {
+    money: 'Money',
     home: 'Home',
     expenses: 'Expenses',
     calendar: 'Calendar',
