@@ -945,8 +945,10 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
       // Patch any cached ExpensesScreen snapshots so the list reflects the
       // change the moment we pop back — subscribers on that screen update
       // state synchronously instead of waiting for the focus-refetch.
-      // Balances are intentionally left as-is here (the server recomputes
-      // them from all expenses); the focus-refetch reconciles.
+      // Balances can't be recomputed here (the server derives them from all
+      // expenses), so the patched snapshots are marked stale: the focus
+      // refetch on ExpensesScreen then hits the network and brings fresh
+      // balances instead of serving the patched snapshot for up to 30s.
       const patchSnapshot = (prev: ExpensesSnapshot): ExpensesSnapshot => {
         if (isEditing && editingExpense) {
           return {
@@ -964,8 +966,8 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
           total: prev.total + 1,
         };
       };
-      updateCached<ExpensesSnapshot>(`expenses:${selectedHousehold._id}:page0`, patchSnapshot);
-      updateCached<ExpensesSnapshot>(`expenses:${selectedHousehold._id}:full`, patchSnapshot);
+      updateCached<ExpensesSnapshot>(`expenses:${selectedHousehold._id}:page0`, patchSnapshot, { markStale: true });
+      updateCached<ExpensesSnapshot>(`expenses:${selectedHousehold._id}:full`, patchSnapshot, { markStale: true });
 
       // Home dashboard aggregates (spending totals, insights) need the server
       // to recompute — drop so the next focus refetches fresh numbers.
