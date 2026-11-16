@@ -114,9 +114,9 @@ light and dark (`xcrun simctl ui booted appearance dark|light`).
 ## Status (update this list as work lands; commit after each item)
 
 - [x] Tokens, fonts
-- [ ] Core components (PrimaryButton, Card, FormTextInput, ScreenHeader, shell, EnamelHeader, Sheet, Group, Amount, Avatar, EmptyState)
-- [ ] Navigation: 4 tabs, standard tab bar, Settings via Home avatar, plain stack headers
-- [ ] Home
+- [x] Core components (PrimaryButton, Card, FormTextInput, ScreenHeader, shell, EnamelHeader, Sheet, Group, Amount, Avatar, EmptyState)
+- [x] Navigation: 4 tabs, standard tab bar, Settings via Home avatar, plain stack headers
+- [x] Home
 - [ ] Money: ExpensesScreen, CreateExpense, SettleUp, SettlementHistory, BalanceHistory + their components
 - [ ] Shopping: ShoppingListScreen + components/Shopping/*
 - [ ] Calendar: CalendarScreen, CreateEvent, ChoreRotation, CreateChore + components
@@ -124,3 +124,5 @@ light and dark (`xcrun simctl ui booted appearance dark|light`).
 - [ ] Auth screens + HouseholdSelect + HouseholdCard
 - [ ] Leftover sweep: no LinearGradient/BlurView/hard-coded colours/emoji; delete unused old components
 - [ ] `tsc` clean; simulator check light + dark; DESIGN.md written; pushed
+
+Note (2026-11-15 night): six Codex runs were started for Money (list + forms), Shopping, Calendar, Settings and Auth/HouseholdSelect. Their edits may be sitting uncommitted in the working tree: review each area's diff against this spec, fix, typecheck, then commit per area. New strings they needed are listed in docs/redesign/new-strings.md and must be added to all five locale files.
