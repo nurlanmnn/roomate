@@ -26,7 +26,7 @@ import { PrimaryButton } from '../../components/PrimaryButton';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { EnamelHeader, HeaderIconButton, SheetCap, StatusBarStrip } from '../../components/ui/EnamelHeader';
 import { Sheet } from '../../components/ui/Sheet';
-import { Group, SectionHeading } from '../../components/ui/Group';
+import { Group } from '../../components/ui/Group';
 import { useShoppingMotion } from '../../components/Shopping/useShoppingMotion';
 import { SearchBar } from '../../components/ui/SearchBar';
 import { ListTabs } from '../../components/Shopping/ListTabs';
@@ -657,7 +657,7 @@ export const ShoppingListScreen: React.FC = () => {
               scrolls
               overlap={0}
               title={t('tabs.shopping')}
-              subtitle={selectedList?.name ?? selectedHousehold.name}
+              subtitle={selectedHousehold.name}
               right={
                 <>
                   <HeaderIconButton
@@ -728,8 +728,7 @@ export const ShoppingListScreen: React.FC = () => {
                 ) : (
                   <>
                     {filteredItems.length > 0 ? (
-                      <View>
-                        <SectionHeading title={t('shoppingList.toBuy')} />
+                      <View style={styles.activeSection}>
                         <Group>
                           {filteredItems.map((item, index) => (
                             <ShoppingItemRow
@@ -868,7 +867,7 @@ export const ShoppingListScreen: React.FC = () => {
                   disabled={!name.trim() || addingItem}
                   onPress={handleAddItem}
                 >
-                  {addingItem ? <ActivityIndicator color={colors.onPrimary} /> : <Ionicons name="add-outline" size={24} color={colors.onPrimary} />}
+                  {addingItem ? <ActivityIndicator color={colors.textTertiary} /> : <Ionicons name="add-outline" size={24} color={!name.trim() ? colors.textTertiary : colors.onPrimary} />}
                 </TouchableOpacity>
               </View>
             </View>
@@ -1167,7 +1166,8 @@ const createStyles = (colors: ThemeColors, bottomInset: number) => StyleSheet.cr
   remainingCount: { fontFamily: fonts.displayExtrabold, fontSize: 56, color: colors.onEnamel, fontVariant: ['tabular-nums'] },
   remainingLabel: { fontSize: fontSizes.md, color: colors.onEnamelSecondary, flexShrink: 1 },
   scrollView: { flex: 1 },
-  scrollContent: { paddingTop: spacing.md, paddingBottom: TAB_BAR_HEIGHT },
+  scrollContent: { paddingTop: 0, paddingBottom: TAB_BAR_HEIGHT },
+  activeSection: { marginTop: spacing.sm },
   searchPad: { marginHorizontal: spacing.md, marginBottom: spacing.sm },
   currentList: { marginTop: spacing.md },
   completedSection: { marginTop: spacing.sm },
@@ -1184,7 +1184,7 @@ const createStyles = (colors: ThemeColors, bottomInset: number) => StyleSheet.cr
   quickInput: { flex: 1, minWidth: 0, minHeight: 44, fontSize: fontSizes.md, color: colors.text, backgroundColor: colors.background, borderRadius: radii.md, paddingHorizontal: spacing.sm, paddingVertical: spacing.sm },
   addOptions: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   quickAdd: { width: 44, height: 44, borderRadius: radii.md, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
-  inactive: { opacity: 0.45 },
+  inactive: { backgroundColor: colors.borderLight },
   modalOverlay: { flex: 1, justifyContent: 'flex-end' },
   modalBackdrop: { flex: 1, backgroundColor: colors.shadowStrong, justifyContent: 'flex-end' },
   modalContent: { backgroundColor: colors.background, borderTopLeftRadius: radii.xl, borderTopRightRadius: radii.xl, maxHeight: '90%', flex: 1 },

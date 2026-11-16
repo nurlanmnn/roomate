@@ -92,9 +92,9 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     mutedLine: { fontSize: fontSizes.sm, color: colors.textSecondary },
     cardPad: { padding: spacing.md },
     balanceGroup: { marginBottom: spacing.sm },
+    historyGroup: { marginTop: spacing.sm },
     actions: {
-      flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end',
-      gap: spacing.xs, paddingHorizontal: spacing.md, paddingBottom: spacing.sm,
+      gap: spacing.xs, paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
     },
     actionButton: {
       minHeight: 44, paddingVertical: spacing.xs, paddingHorizontal: spacing.sm,
@@ -491,12 +491,6 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={loadBalances} tintColor={colors.primary} />}
       >
-        <SectionHeading title={t('settleUp.sectionQuickLinks')} />
-        <Group>
-          <GroupRow icon="receipt-outline" title={t('expenses.viewSettlementHistory')}
-            subtitle={t('expenses.settlementHistory')} titleLines={0} chevron
-            onPress={() => navigation.navigate('SettlementHistory')} />
-        </Group>
         {showInitialLoading ? (
           <View style={styles.loadingPad} accessibilityLiveRegion="polite">
             <AppText style={styles.loadingText}>{t('settlementHistory.loading')}</AppText>
@@ -512,7 +506,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
               const hasMutualDebt = mutualDebts.some(b => b.toUserId === balance.toUserId);
               return (
                 <Group key={`${balance.fromUserId}-${balance.toUserId}`} style={styles.balanceGroup}>
-                  <GroupRow title={`${t('home.youOwe')} ${toUserName}`} titleLines={0}
+                  <GroupRow title={toUserName} titleLines={0}
                     leading={<Avatar name={toUserName} uri={getUserAvatar(balance.toUserId)} size={44} />}
                     trailing={<Amount value={balance.amount} currency={currency} direction="owe" size={22} fit
                       accessibilityLabel={`${t('home.youOwe')} ${toUserName}: −${formatCurrency(balance.amount, currency)}`} />} />
@@ -530,11 +524,8 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                         <AppText style={styles.actionText}>{t('settleUp.netBalance')}</AppText>
                       </TouchableOpacity>
                     ) : null}
-                    <TouchableOpacity accessibilityRole="button" style={styles.actionButton}
-                      onPress={() => handleMarkAsPaid(balance)} activeOpacity={0.8}>
-                      <Ionicons name="checkmark-circle-outline" size={22} color={colors.primary} />
-                      <AppText style={styles.actionText}>{t('settleUp.markAsPaid')}</AppText>
-                    </TouchableOpacity>
+                    <PrimaryButton title={t('settleUp.markAsPaid')} variant="primary"
+                      icon="checkmark-circle-outline" onPress={() => handleMarkAsPaid(balance)} />
                   </View>
                 </Group>
               );
@@ -543,21 +534,18 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
             )}
             {userOwedToBalances.length > 0 ? (
               <>
-                <SectionHeading title={t('settleUp.moneyOwedToYou')} />
+                <SectionHeading title={t('home.youAreOwed')} />
                 {userOwedToBalances.map((balance) => {
                   const fromUserName = getUserName(balance.fromUserId);
                   return (
                     <Group key={`${balance.fromUserId}-${balance.toUserId}`} style={styles.balanceGroup}>
-                      <GroupRow title={`${fromUserName} ${t('settleUp.owesYou').toLowerCase()}`} titleLines={0}
+                      <GroupRow title={fromUserName} titleLines={0}
                         leading={<Avatar name={fromUserName} uri={getUserAvatar(balance.fromUserId)} size={44} />}
                         trailing={<Amount value={balance.amount} currency={currency} direction="owed" size={22} fit
                           accessibilityLabel={`${fromUserName} ${t('settleUp.owesYou')}: +${formatCurrency(balance.amount, currency)}`} />} />
                       <View style={styles.actions}>
-                        <TouchableOpacity accessibilityRole="button" style={styles.actionButton}
-                          onPress={() => handleForgiveDebt(balance)} activeOpacity={0.8}>
-                          <Ionicons name="heart-outline" size={22} color={colors.primary} />
-                          <AppText style={styles.actionText}>{t('settleUp.forgiveDebt')}</AppText>
-                        </TouchableOpacity>
+                        <PrimaryButton title={t('settleUp.forgiveDebt')} variant="secondary"
+                          icon="close-circle-outline" onPress={() => handleForgiveDebt(balance)} />
                       </View>
                     </Group>
                   );
@@ -600,6 +588,10 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
             ) : null}
           </>
         )}
+        <Group style={styles.historyGroup}>
+          <GroupRow icon="receipt-outline" title={t('expenses.viewSettlementHistory')}
+            titleLines={0} chevron onPress={() => navigation.navigate('SettlementHistory')} />
+        </Group>
       </ScrollView>
 
       <Modal visible={settleModalVisible} animationType={reduceMotion ? 'none' : 'slide'} transparent

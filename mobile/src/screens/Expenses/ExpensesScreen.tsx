@@ -107,24 +107,6 @@ export const ExpensesScreen: React.FC<{ navigation: any; }> = ({ navigation }) =
           color: colors.textSecondary,
           lineHeight: 20,
         },
-        filteredCount: {
-          fontSize: fontSizes.sm,
-          color: colors.textSecondary,
-          fontWeight: fontWeights.medium,
-        },
-        listHeaderRow: {
-          flexDirection: 'row',
-          alignItems: 'baseline',
-          justifyContent: 'space-between',
-          paddingHorizontal: spacing.md,
-          marginBottom: spacing.sm,
-          marginTop: spacing.xs,
-        },
-        listTitle: {
-          fontSize: 20,
-          fontWeight: fontWeights.bold,
-          color: colors.text,
-        },
         groupTitle: {
           fontSize: fontSizes.sm,
           fontWeight: fontWeights.bold,
@@ -702,20 +684,6 @@ export const ExpensesScreen: React.FC<{ navigation: any; }> = ({ navigation }) =
   const showCategoryHint = expenses.length > 0 && expenses.some((e) => !e.category);
   const hasMoreFilteredMatches =
     needsFullExpenseList && filteredAndSortedExpenses.length > displayedFilteredExpenses.length;
-  /**
-   * Header count — when the user isn't filtering, we show the
-   * "loaded / total" server-pagination hint; when they are filtering, we show
-   * "visible / total matches" so they can tell whether Load more will reveal
-   * additional results.
-   */
-  const paginationHint = needsFullExpenseList
-    ? filteredAndSortedExpenses.length > 0
-      ? `${displayedFilteredExpenses.length} / ${filteredAndSortedExpenses.length}`
-      : null
-    : totalCount > 0 && expenses.length < totalCount
-      ? String(t('expenses.listPaginationHint', { loaded: expenses.length, total: totalCount }))
-      : null;
-
   const listHeader = (
     <>
       <EnamelHeader
@@ -726,12 +694,12 @@ export const ExpensesScreen: React.FC<{ navigation: any; }> = ({ navigation }) =
         right={<HeaderIconButton icon="add-outline" accessibilityLabel={t('expenses.addExpense')} onPress={() => navigation.navigate('CreateExpense')} />}
       >
         <AppText style={{ color: colors.onEnamelSecondary, fontSize: fontSizes.sm, marginTop: spacing.md, marginBottom: spacing.xs }}>{t('time.thisMonth')}</AppText>
-        {moneySummary ? <Amount value={moneySummary.calendarMonthTotal} currency={currency} color={colors.onEnamel} size={56} fit /> : <AppText style={{ color: colors.onEnamel, fontSize: 40 }}>—</AppText>}
+        {moneySummary ? <Amount value={moneySummary.calendarMonthTotal} currency={currency} color={colors.onEnamel} size={56} weight="extrabold" fit /> : <AppText style={{ color: colors.onEnamel, fontSize: 40 }}>—</AppText>}
       </EnamelHeader>
       <SheetCap />
       {user && (
         <>
-          <SectionHeading title={t('expenses.sectionBalances')} />
+          <SectionHeading title={t('expenses.sectionBalances')} style={{ paddingTop: 0 }} />
           <Group>
             <BalanceSummary balances={balances} currentUserId={user._id} getUserName={getUserName} getUserAvatar={getUserAvatar} hideTitle variant="plain" />
             <GroupRow
@@ -759,21 +727,16 @@ export const ExpensesScreen: React.FC<{ navigation: any; }> = ({ navigation }) =
         </View>
       )}
 
-      <View style={[styles.listHeaderRow, { marginTop: spacing.xl, gap: spacing.sm, flexWrap: 'wrap' }]}>
-        <AppText style={styles.listTitle}>{t('expenses.sectionList')}</AppText>
-        {paginationHint ? (
-          <AppText style={styles.filteredCount}>{paginationHint}</AppText>
-        ) : null}
-      </View>
+      <SectionHeading title={t('expenses.sectionList')} />
 
-      <Group style={{ marginBottom: spacing.md }}>
+      <View style={{ marginHorizontal: spacing.md, marginBottom: spacing.sm }}>
         <ExpenseFilters
           filters={filters}
           onFiltersChange={setFilters}
           memberNames={memberNames}
           embedded
         />
-      </Group>
+      </View>
     </>
   );
 

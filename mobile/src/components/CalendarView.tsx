@@ -107,7 +107,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         },
         dayCell: {
           width: '14.285714%',
-          minHeight: 52,
+          minHeight: 44,
           alignItems: 'center',
           justifyContent: 'center',
           marginBottom: spacing.xxs,

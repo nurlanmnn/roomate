@@ -122,7 +122,7 @@ light and dark (`xcrun simctl ui booted appearance dark|light`).
 - [x] Calendar: CalendarScreen, CreateEvent, ChoreRotation, CreateChore + components
 - [x] Settings: Settings, Account, Household, Notifications + components/Settings/*
 - [x] Auth screens + HouseholdSelect + HouseholdCard
-- [ ] Leftover sweep: no LinearGradient/BlurView/hard-coded colours/emoji; delete unused old components
+- [x] Leftover sweep: no LinearGradient/BlurView/hard-coded colours/emoji; delete unused old components
 - [ ] `tsc` clean; simulator check light + dark; DESIGN.md written; pushed
 
 Note (2026-11-16): all areas are restyled, type-checked and committed. Checked in the iOS simulator

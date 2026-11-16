@@ -23,11 +23,17 @@ type AmountProps = {
   accessibilityLabel?: string;
 };
 
-/** Splits a locale-formatted currency string into the part before the decimals and the rest. */
-const splitDecimals = (formatted: string): { head: string; cents: string; tail: string } => {
-  const match = formatted.match(/^(.*\d)([.,]\d{2})(\D*)$/);
-  if (!match) return { head: formatted, cents: '', tail: '' };
-  return { head: match[1], cents: match[2], tail: match[3] };
+/** Keeps currency placement and number separators from the device's locale. */
+const splitAmount = (formatted: string) => {
+  const parts = formatted.match(/^([^\p{Nd}]*)([\s\S]*\p{Nd})([^\p{Nd}]*)$/u);
+  const number = parts?.[2] ?? formatted;
+  const decimals = number.match(/^(.*\p{Nd})([.,\u066b]\p{Nd}{2})$/u);
+  return {
+    leadingCurrency: parts?.[1].trim() ?? '',
+    head: decimals?.[1] ?? number,
+    cents: decimals?.[2] ?? '',
+    trailingCurrency: parts?.[3].trim() ?? '',
+  };
 };
 
 /**
@@ -56,7 +62,7 @@ export const Amount: React.FC<AmountProps> = ({
   const base: TextStyle = {
     fontFamily: family,
     color: tint,
-    fontVariant: ['tabular-nums'],
+    fontVariant: size < 40 ? ['tabular-nums'] : undefined,
   };
   const label = accessibilityLabel ?? `${sign}${formatted}`;
 
@@ -76,11 +82,30 @@ export const Amount: React.FC<AmountProps> = ({
     );
   }
 
-  const { head, cents, tail } = splitDecimals(formatted);
+  const { leadingCurrency, head, cents, trailingCurrency } = splitAmount(formatted);
   const small = Math.round(size * 0.45);
+  const currencySize = Math.round(size * 0.42);
+  const currencyStyle: TextStyle = {
+    ...base,
+    fontFamily: fonts.displaySemibold,
+    fontSize: currencySize,
+    lineHeight: Math.round(currencySize * 1.2),
+    marginTop: Math.round(size * 0.09),
+    opacity: 0.8,
+  };
+  const currencyGap = Math.max(2, Math.round(size * 0.04));
 
   return (
     <View style={[styles.row, style]} accessible accessibilityLabel={label}>
+      {leadingCurrency ? (
+        <AppText
+          style={[currencyStyle, { marginRight: currencyGap }]}
+          numberOfLines={1}
+          maxFontSizeMultiplier={DISPLAY_MAX_FONT_SCALE}
+        >
+          {leadingCurrency}
+        </AppText>
+      ) : null}
       <AppText
         style={[base, { fontSize: size, lineHeight: Math.round(size * 1.02) }]}
         numberOfLines={1}
@@ -91,14 +116,22 @@ export const Amount: React.FC<AmountProps> = ({
         {sign ? `${sign} ` : ''}
         {head}
       </AppText>
-      {cents || tail ? (
+      {cents ? (
         <AppText
           style={[base, { fontSize: small, lineHeight: Math.round(small * 1.2), marginTop: Math.round(size * 0.09) }]}
           numberOfLines={1}
           maxFontSizeMultiplier={DISPLAY_MAX_FONT_SCALE}
         >
           {cents}
-          {tail}
+        </AppText>
+      ) : null}
+      {trailingCurrency ? (
+        <AppText
+          style={[currencyStyle, { marginLeft: currencyGap }]}
+          numberOfLines={1}
+          maxFontSizeMultiplier={DISPLAY_MAX_FONT_SCALE}
+        >
+          {trailingCurrency}
         </AppText>
       ) : null}
     </View>

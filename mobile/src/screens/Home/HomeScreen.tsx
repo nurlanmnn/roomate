@@ -318,13 +318,11 @@ export const HomeScreen: React.FC = () => {
   const settled = Math.abs(net) < 0.005;
   const heroLabel = settled ? t('home.allSettled') : net > 0 ? t('home.youAreOwed') : t('home.youOwe');
   const heroPeople = myBalances.slice(0, 2);
-  const heroLine = heroPeople
-    .map((b) =>
-      b.owedToMe
-        ? t('home.owesYouLine', { name: firstName(b.name), amount: formatCurrency(b.amount, currency) })
-        : t('home.youOweLine', { name: firstName(b.name), amount: formatCurrency(b.amount, currency) })
-    )
-    .join('  ·  ');
+  const heroLines = heroPeople.map((b) =>
+    b.owedToMe
+      ? t('home.owesYouLine', { name: firstName(b.name), amount: formatCurrency(b.amount, currency) })
+      : t('home.youOweLine', { name: firstName(b.name), amount: formatCurrency(b.amount, currency) })
+  );
 
   const myChores = user
     ? chores.filter((c) => c.currentAssignee?._id === user._id && !c.currentPeriodCompleted)
@@ -389,7 +387,7 @@ export const HomeScreen: React.FC = () => {
             <Pressable
               onPress={openBalances}
               accessibilityRole="button"
-              accessibilityLabel={`${heroLabel}${settled ? '' : ` ${formatCurrency(Math.abs(net), currency)}`}. ${heroLine}`}
+              accessibilityLabel={`${heroLabel}${settled ? '' : ` ${formatCurrency(Math.abs(net), currency)}`}. ${heroLines.join('. ')}`}
               accessibilityHint={t('home.balanceSummary')}
               style={({ pressed }) => [styles.hero, pressed && styles.pressed]}
             >
@@ -397,7 +395,7 @@ export const HomeScreen: React.FC = () => {
               <Amount
                 value={Math.abs(net)}
                 currency={currency}
-                size={104}
+                size={124}
                 weight="extrabold"
                 color={colors.onEnamel}
                 fit
@@ -415,9 +413,19 @@ export const HomeScreen: React.FC = () => {
                       </View>
                     ))}
                   </View>
-                  <AppText style={[styles.heroLine, { color: colors.onEnamel }]} numberOfLines={2}>
-                    {heroLine}
-                  </AppText>
+                  <View style={styles.heroLines}>
+                    {heroLines.map((line, index) => (
+                      <AppText
+                        key={`${heroPeople[index].otherId}-${index}`}
+                        style={[styles.heroLine, { color: colors.onEnamel }]}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.8}
+                      >
+                        {line}
+                      </AppText>
+                    ))}
+                  </View>
                 </View>
               ) : null}
             </Pressable>
@@ -655,8 +663,11 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderRadius: 15,
   },
-  heroLine: {
+  heroLines: {
     flex: 1,
+    minWidth: 0,
+  },
+  heroLine: {
     fontSize: fontSizes.sm,
     lineHeight: 19,
   },

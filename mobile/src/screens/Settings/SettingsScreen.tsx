@@ -5,7 +5,7 @@ import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreen
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '../../components/AppText';
 import { Group, GroupRow } from '../../components/ui/Group';
-import { ProfileHeaderCard } from '../../components/Settings/ProfileHeaderCard';
+import { Avatar } from '../../components/ui/Avatar';
 import { SettingsSection } from '../../components/Settings/SettingsSection';
 import { SettingsGroupCard } from '../../components/Settings/SettingsGroupCard';
 import { SettingsRow } from '../../components/Settings/SettingsRow';
@@ -99,6 +99,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, rout
       container: { flex: 1, backgroundColor: colors.background },
       scrollView: { flex: 1 },
       scrollContent: { paddingTop: spacing.md, paddingBottom: spacing.xl },
+      profileGroup: { marginTop: spacing.md },
+      languageValue: { fontSize: fontSizes.md, color: colors.textSecondary, textAlign: 'right' },
       modalOverlay: { flex: 1, justifyContent: 'flex-end' },
       modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.shadowStrong },
       modalContent: {
@@ -135,14 +137,17 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, rout
         contentContainerStyle={styles.scrollContent}
         contentInsetAdjustmentBehavior="never"
       >
-        <ProfileHeaderCard
-          name={user?.name}
-          email={user?.email}
-          householdName={showHouseholdOptions ? selectedHousehold?.name : null}
-          avatarUri={user?.avatarUrl}
-          editHint={t('settings.tapToEditProfile')}
-          onPress={() => navigation.navigate('AccountSettings')}
-        />
+        <Group style={styles.profileGroup}>
+          <GroupRow
+            title={user?.name || '—'}
+            titleLines={0}
+            subtitle={[user?.email, showHouseholdOptions ? selectedHousehold?.name : null].filter(Boolean).join('\n')}
+            leading={<Avatar name={user?.name} uri={user?.avatarUrl} size={44} />}
+            accessibilityHint={t('settings.tapToEditProfile')}
+            onPress={() => navigation.navigate('AccountSettings')}
+            chevron
+          />
+        </Group>
 
         <SettingsSection title={t('settings.sectionAccountHousehold')}>
           <SettingsGroupCard>
@@ -151,7 +156,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, rout
               iconBackgroundColor={colors.primaryUltraSoft}
               iconColor={colors.primary}
               title={t('settings.accountSettings')}
-              subtitle={t('settings.accountDescription')}
               onPress={() => navigation.navigate('AccountSettings')}
               isLast={!showHouseholdOptions}
             />
@@ -161,7 +165,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, rout
                 iconBackgroundColor={colors.accentUltraSoft}
                 iconColor={colors.accent}
                 title={t('settings.householdSettings')}
-                subtitle={t('settings.householdDescription')}
                 onPress={() => navigation.navigate('HouseholdSettings')}
                 isLast
               />
@@ -176,7 +179,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, rout
               iconBackgroundColor={colors.primaryUltraSoft}
               iconColor={colors.primary}
               title={t('settings.notifications')}
-              subtitle={t('settings.notificationsDescription')}
               onPress={() => navigation.navigate('NotificationSettings')}
             />
             <ToggleRow
@@ -184,24 +186,19 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, rout
               iconBackgroundColor={colors.accentUltraSoft}
               iconColor={colors.accent}
               title={t('settings.darkMode')}
-              subtitle={
-                theme === 'dark' ? t('settings.darkModeEnabled') : t('settings.lightModeEnabled')
-              }
+              subtitle=""
               value={theme === 'dark'}
               onValueChange={() => toggleTheme()}
             />
-            <SettingsRow
+            <GroupRow
               icon="language-outline"
-              iconBackgroundColor={colors.primaryUltraSoft}
-              iconColor={colors.primary}
               title={t('settings.language')}
-              subtitle={
-                currentLanguage
-                  ? currentLanguage.nativeName
-                  : undefined
+              titleLines={0}
+              trailing={
+                currentLanguage ? <AppText style={styles.languageValue}>{currentLanguage.nativeName}</AppText> : undefined
               }
               onPress={() => setShowLanguageModal(true)}
-              isLast
+              chevron
             />
           </SettingsGroupCard>
         </SettingsSection>
@@ -213,7 +210,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, rout
               iconBackgroundColor={colors.primaryUltraSoft}
               iconColor={colors.primary}
               title={t('settings.privacyPolicy')}
-              subtitle={t('settings.privacyPolicyDescription')}
               onPress={openPrivacyPolicy}
               isLast
             />

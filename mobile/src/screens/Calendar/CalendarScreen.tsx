@@ -26,7 +26,7 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { AppText } from '../../components/AppText';
 import { formatCalendarListDateHeader } from '../../utils/dateHelpers';
 import { getDateFnsLocale } from '../../utils/dateLocales';
-import { useThemeColors, fontSizes, fontWeights, spacing, radii } from '../../theme';
+import { useThemeColors, fonts, fontSizes, fontWeights, spacing, radii, DISPLAY_MAX_FONT_SCALE } from '../../theme';
 import { Ionicons } from '@expo/vector-icons';
 import {
   addDays,
@@ -413,7 +413,7 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     <SanctuaryScreenShell edges={[]} innerStyle={styles.container}>
       <EnamelHeader
         title={t('tabs.calendar')}
-        subtitle={selectedHousehold ? `${selectedHousehold.name} · ${format(new Date(), 'MMMM yyyy', { locale: dateFnsLocale })}` : undefined}
+        subtitle={selectedHousehold?.name}
         right={selectedHousehold ? <>
           <HeaderIconButton
             icon="today-outline"
@@ -426,7 +426,16 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
             onPress={() => navigation.navigate('CreateEvent')}
           />
         </> : undefined}
-      />
+      >
+        <View style={styles.selectedDay}>
+          <AppText style={styles.selectedDayNumber} maxFontSizeMultiplier={DISPLAY_MAX_FONT_SCALE}>
+            {format(selectedDate, 'd', { locale: dateFnsLocale })}
+          </AppText>
+          <AppText style={styles.selectedDayLabel}>
+            {format(selectedDate, 'EEEE, MMMM', { locale: dateFnsLocale })}
+          </AppText>
+        </View>
+      </EnamelHeader>
       <Sheet>
         {!selectedHousehold ? (
           <View style={styles.emptyContainer}><AppText style={styles.emptyText}>{t('alerts.selectHousehold')}</AppText></View>
@@ -461,12 +470,10 @@ export const CalendarScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                     <AppText style={styles.legendText}>{t('chores.yourTurn')}</AppText>
                   </View>
                 </View>
-                <AppText style={styles.hint}>{t('calendar.longPressToAdd')}</AppText>
               </View>
             </Group>
 
-            <SectionHeading title={t('calendar.sectionSelectedDay')} />
-            <Group>
+            <Group style={styles.selectedDayGroup}>
               <GroupRow
                 title={format(selectedDate, 'EEEE, MMM d', { locale: dateFnsLocale })}
                 trailing={
@@ -591,6 +598,10 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) => StyleSheet.c
   container: { flex: 1, backgroundColor: colors.background },
   scrollView: { flex: 1 },
   scrollContent: { paddingBottom: spacing.xxl },
+  selectedDay: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', gap: spacing.sm, paddingTop: spacing.sm },
+  selectedDayNumber: { fontFamily: fonts.displayExtrabold, fontSize: 56, color: colors.onEnamel, fontVariant: ['tabular-nums'] },
+  selectedDayLabel: { fontSize: fontSizes.md, color: colors.onEnamelSecondary, flexShrink: 1 },
+  selectedDayGroup: { marginTop: spacing.sm },
   calendarGroup: { marginTop: spacing.md },
   emptyContainer: { padding: spacing.xxl, alignItems: 'center' },
   emptyText: {
@@ -627,12 +638,6 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) => StyleSheet.c
     fontSize: fontSizes.sm,
     color: colors.textSecondary,
     flexShrink: 1
-  },
-  hint: {
-    fontSize: fontSizes.sm,
-    color: colors.textTertiary,
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.md
   },
   iconButton: {
     minWidth: 44,

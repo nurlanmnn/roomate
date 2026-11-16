@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { format, isThisYear, parseISO } from 'date-fns';
 import { PairwiseBalance } from '../api/expensesApi';
 import { useLanguage } from '../context/LanguageContext';
 import { fontSizes, fontWeights, radii, spacing, useThemeColors } from '../theme';
-import { formatDateShort } from '../utils/dateHelpers';
 import { getDateFnsLocale } from '../utils/dateLocales';
 import { useHouseholdCurrency } from '../utils/useHouseholdCurrency';
 import { AppText } from './AppText';
@@ -101,6 +101,11 @@ export const BalanceSummary: React.FC<BalanceSummaryProps> = ({
       textAlign: 'center',
       padding: spacing.lg,
     },
+    separator: {
+      height: StyleSheet.hairlineWidth,
+      backgroundColor: colors.borderLight,
+      marginLeft: spacing.md + 36 + spacing.sm,
+    },
     loadMore: {
       alignItems: 'center',
       minHeight: 44,
@@ -127,7 +132,7 @@ export const BalanceSummary: React.FC<BalanceSummaryProps> = ({
   return (
     <View style={wrapStyle}>
       {!hideTitle && <AppText style={styles.title}>{t('home.balanceSummary')}</AppText>}
-      {(totalOwedToYou > 0 || totalYouOwe > 0) && (
+      {userBalances.length > 3 && (totalOwedToYou > 0 || totalYouOwe > 0) && (
         <View style={styles.summaryRow}>
           {totalOwedToYou > 0 && (
             <View style={styles.summaryItem}>
@@ -143,23 +148,29 @@ export const BalanceSummary: React.FC<BalanceSummaryProps> = ({
           )}
         </View>
       )}
-      {rowsToShow.map((balance) => {
+      {rowsToShow.map((balance, index) => {
         const isOwed = balance.toUserId === currentUserId;
         const otherUserId = isOwed ? balance.fromUserId : balance.toUserId;
 
         const otherUserName = getUserName(otherUserId);
         const otherUserAvatar = getUserAvatar?.(otherUserId);
         const rowKey = `${balance.fromUserId}-${balance.toUserId}`;
+        const sinceDate = balance.sinceDate ? parseISO(balance.sinceDate) : null;
+        const since = sinceDate
+          ? ` · ${t('time.since')} ${format(sinceDate, isThisYear(sinceDate) ? 'MMM d' : 'MMM d, yyyy', { locale: dateLocale })}`
+          : '';
 
         return (
-          <GroupRow
-            key={rowKey}
-            title={otherUserName}
-            subtitle={`${isOwed ? t('settleUp.owesYou') : t('home.youOwe')}${balance.sinceDate ? ` · ${t('time.since')} ${formatDateShort(balance.sinceDate, dateLocale)}` : ''}`}
-            titleLines={0}
-            leading={<Avatar name={otherUserName} uri={otherUserAvatar} size={32} />}
-            trailing={<Amount value={balance.amount} currency={currency} direction={isOwed ? 'owed' : 'owe'} size={22} fit />}
-          />
+          <React.Fragment key={rowKey}>
+            {index > 0 ? <View style={styles.separator} /> : null}
+            <GroupRow
+              title={otherUserName}
+              subtitle={`${isOwed ? t('settleUp.owesYou') : t('home.youOwe')}${since}`}
+              titleLines={0}
+              leading={<Avatar name={otherUserName} uri={otherUserAvatar} size={36} />}
+              trailing={<Amount value={balance.amount} currency={currency} direction={isOwed ? 'owed' : 'owe'} size={22} fit />}
+            />
+          </React.Fragment>
         );
       })}
       {hasMoreBalanceRows ? (
