@@ -1,101 +1,137 @@
+/**
+ * House Number palette.
+ *
+ * Light: porcelain ground, cobalt enamel, ink text, marigold for the single loudest action.
+ * Dark ("night enamel"): deep navy ground, brighter enamel, lemon marigold.
+ *
+ * `primary` is the interactive tint: safe as text/icon on `surface` and `background`,
+ * and as a fill behind `onPrimary` text. `enamel` is the plaque/header field and always
+ * carries `onEnamel` (white) content.
+ */
 const lightColors = {
-  // Base - Warm light grays instead of pure white
-  background: '#F8F9FA',
-  backgroundGradient: ['#F8F9FA', '#F5F6F8'],
+  // Ground and surfaces
+  background: '#F4F5F8',
+  backgroundGradient: ['#F4F5F8', '#F4F5F8'],
   surface: '#FFFFFF',
-  surfaceAlt: '#FBFCFD',
+  surfaceAlt: '#F8F9FB',
   surfaceElevated: '#FFFFFF',
-  border: '#E8EAED',
-  borderLight: '#F0F1F3',
-  text: '#1A1C21',
-  textSecondary: '#6B7280',
-  textTertiary: '#9CA3AF',
-  muted: '#9CA3AF',
+  border: '#D5DAE6',
+  borderLight: '#E4E7EE',
 
-  // Brand - Refined, muted premium green
-  primary: '#22C55E',
-  primaryDark: '#16A34A',
-  primaryLight: '#4ADE80',
-  primarySoft: '#D1FAE5',
-  primaryUltraSoft: '#ECFDF5',
+  // Ink
+  text: '#10151F',
+  textSecondary: '#535B6B',
+  textTertiary: '#626A7C',
+  muted: '#626A7C',
+  ink: '#10151F',
+  onInk: '#FFFFFF',
 
-  // Secondary accent - Soft blue/teal for analytics, highlights
-  accent: '#3B82F6',
-  accentDark: '#2563EB',
-  accentLight: '#60A5FA',
-  accentSoft: '#DBEAFE',
-  accentUltraSoft: '#EFF6FF',
+  // Enamel (brand / interactive)
+  primary: '#1D3BA8',
+  primaryDark: '#162E86',
+  primaryLight: '#3D5BD0',
+  primarySoft: '#DCE3F8',
+  primaryUltraSoft: '#EEF1FB',
+  onPrimary: '#FFFFFF',
+  enamel: '#1D3BA8',
+  enamelDeep: '#162E86',
+  onEnamel: '#FFFFFF',
+  onEnamelSecondary: '#D3DCFA',
+  enamelKeyline: 'rgba(255,255,255,0.28)',
 
-  // Teal variant for insights/predictions
-  teal: '#14B8A6',
-  tealSoft: '#CCFBF1',
-  tealUltraSoft: '#F0FDFA',
+  // Marigold (the one loud accent; always carries ink text)
+  marigold: '#F2B705',
+  marigoldSoft: '#FDF3CF',
+  onMarigold: '#10151F',
+
+  // Secondary hues kept for charts and category coding
+  accent: '#3D5BD0',
+  accentDark: '#1D3BA8',
+  accentLight: '#7C93E4',
+  accentSoft: '#DCE3F8',
+  accentUltraSoft: '#EEF1FB',
+  teal: '#3E4A63',
+  tealSoft: '#E1E5EE',
+  tealUltraSoft: '#F0F2F7',
 
   // States
-  danger: '#EF4444',
-  dangerSoft: '#FEE2E2',
-  warning: '#F59E0B',
-  warningSoft: '#FEF3C7',
-  warningUltraSoft: '#FFFBEB',
-  success: '#22C55E',
-  successSoft: '#D1FAE5',
+  danger: '#C42F17',
+  dangerSoft: '#FBE4DF',
+  warning: '#8F6100',
+  warningSoft: '#FDF3CF',
+  warningUltraSoft: '#FEF9E6',
+  success: '#1F7A4D',
+  successSoft: '#DDF1E6',
 
-  // Shadows - Softer, more subtle
-  shadow: 'rgba(0, 0, 0, 0.08)',
-  shadowStrong: 'rgba(0, 0, 0, 0.12)',
+  // Balance direction (always paired with a sign and a word, never colour alone)
+  owed: '#1D3BA8',
+  owe: '#C42F17',
+
+  shadow: 'rgba(16, 21, 31, 0.08)',
+  shadowStrong: 'rgba(16, 21, 31, 0.16)',
 };
 
-const darkColors = {
-  // Base - Dark grays and blacks
-  background: '#0F0F0F',
-  backgroundGradient: ['#0F0F0F', '#1A1A1A'],
-  surface: '#1A1A1A',
-  surfaceAlt: '#1F1F1F',
-  surfaceElevated: '#242424',
-  border: '#2A2A2A',
-  borderLight: '#333333',
+const darkColors: typeof lightColors = {
+  background: '#0A0F26',
+  backgroundGradient: ['#0A0F26', '#0A0F26'],
+  surface: '#131A3A',
+  surfaceAlt: '#161D40',
+  surfaceElevated: '#1A2248',
+  border: '#2C3768',
+  borderLight: '#252E57',
+
   text: '#FFFFFF',
-  textSecondary: '#A0A0A0',
-  textTertiary: '#707070',
-  muted: '#707070',
+  textSecondary: '#AAB3D3',
+  textTertiary: '#8C96BB',
+  muted: '#8C96BB',
+  ink: '#FFFFFF',
+  onInk: '#0A0F26',
 
-  // Brand - Slightly brighter green for dark mode
-  primary: '#4ADE80',
-  primaryDark: '#22C55E',
-  primaryLight: '#86EFAC',
-  primarySoft: '#166534',
-  primaryUltraSoft: '#0F3D1F',
+  primary: '#7C98FF',
+  primaryDark: '#5B7DF5',
+  primaryLight: '#A3B7FF',
+  primarySoft: '#1E2A5E',
+  primaryUltraSoft: '#161F47',
+  onPrimary: '#0A0F26',
+  enamel: '#2B50D8',
+  enamelDeep: '#2347C8',
+  onEnamel: '#FFFFFF',
+  onEnamelSecondary: '#D6DEFF',
+  enamelKeyline: 'rgba(255,255,255,0.3)',
 
-  // Secondary accent
-  accent: '#60A5FA',
-  accentDark: '#3B82F6',
-  accentLight: '#93C5FD',
-  accentSoft: '#1E3A8A',
-  accentUltraSoft: '#1E40AF',
+  marigold: '#FFD84A',
+  marigoldSoft: '#3A3212',
+  onMarigold: '#0A0F26',
 
-  // Teal variant
-  teal: '#5EEAD4',
-  tealSoft: '#134E4A',
-  tealUltraSoft: '#0F3D3A',
+  accent: '#A3B7FF',
+  accentDark: '#7C98FF',
+  accentLight: '#C4D1FF',
+  accentSoft: '#1E2A5E',
+  accentUltraSoft: '#161F47',
+  teal: '#AAB3D3',
+  tealSoft: '#252E57',
+  tealUltraSoft: '#161D40',
 
-  // States
-  danger: '#F87171',
-  dangerSoft: '#7F1D1D',
-  warning: '#FBBF24',
-  warningSoft: '#78350F',
-  warningUltraSoft: '#451A03',
-  success: '#4ADE80',
-  successSoft: '#166534',
+  danger: '#FF8A76',
+  dangerSoft: '#4A1D18',
+  warning: '#F5C451',
+  warningSoft: '#3A3212',
+  warningUltraSoft: '#2A2510',
+  success: '#5FD39A',
+  successSoft: '#143D2B',
 
-  // Shadows - Lighter shadows for dark mode
+  owed: '#A3B7FF',
+  owe: '#FF8A76',
+
   shadow: 'rgba(0, 0, 0, 0.3)',
   shadowStrong: 'rgba(0, 0, 0, 0.5)',
 };
 
-// Export a function that returns colors based on theme
-export const getColors = (isDark: boolean) => {
+export type ThemeColors = typeof lightColors;
+
+export const getColors = (isDark: boolean): ThemeColors => {
   return isDark ? darkColors : lightColors;
 };
 
-// Default export for backward compatibility (will be overridden by ThemeProvider)
+// Light palette for the few call sites that cannot use the hook.
 export const colors = lightColors;

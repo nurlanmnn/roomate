@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import {
+  AccessibilityInfo,
+  TextInput,
   View,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  TouchableWithoutFeedback,
   Pressable,
   Alert,
   Modal,
@@ -24,9 +25,8 @@ import { expensesApi, PairwiseBalance } from '../../api/expensesApi';
 import { settlementsApi, Settlement } from '../../api/settlementsApi';
 import { FormTextInput } from '../../components/FormTextInput';
 import { AppText } from '../../components/AppText';
-import { SettingsSection } from '../../components/Settings/SettingsSection';
-import { SettingsGroupCard } from '../../components/Settings/SettingsGroupCard';
-import { SettingsRow } from '../../components/Settings/SettingsRow';
+import { Group, GroupRow, SectionHeading } from '../../components/ui/Group';
+import { Amount } from '../../components/ui/Amount';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { useHouseholdCurrency } from '../../utils/useHouseholdCurrency';
@@ -38,7 +38,7 @@ import {
 import { Avatar } from '../../components/ui/Avatar';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { Ionicons } from '@expo/vector-icons';
-import { useThemeColors, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
+import { useThemeColors, fontSizes, fontWeights, radii, spacing, fonts } from '../../theme';
 import { useLanguage } from '../../context/LanguageContext';
 
 const RECEIPTS_WITH_PROOF_PAGE_SIZE = 5;
@@ -57,6 +57,12 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   const { user } = useAuth();
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
+  const [reduceMotion, setReduceMotion] = useState(false);
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => subscription.remove();
+  }, []);
   const { t } = useLanguage();
   const currency = useHouseholdCurrency();
   const [balances, setBalances] = useState<PairwiseBalance[]>([]);
@@ -77,330 +83,85 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   const [proofImage, setProofImage] = useState<string | null>(null);
 
   const styles = useMemo(() => StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: 'transparent',
-    },
-    keyboardAvoid: {
-      flex: 1,
-    },
-    scrollView: {
-      flex: 1,
-    },
-    emptyContainer: {
-      padding: spacing.xxl,
-      alignItems: 'center',
-    },
-    loadingPad: {
-      paddingHorizontal: spacing.xl,
-      paddingVertical: spacing.xxl,
-      alignItems: 'center',
-    },
-    loadingText: {
-      fontSize: fontSizes.sm,
-      color: colors.textSecondary,
-    },
-    cardPad: {
-      padding: spacing.md,
-    },
-    mutedLine: {
-      fontSize: fontSizes.sm,
-      color: colors.textSecondary,
-      lineHeight: 20,
-    },
-    balanceHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.md,
-    },
-    balanceTextContainer: {
-      flex: 1,
-      minWidth: 0,
-    },
-    balanceText: {
-      fontSize: fontSizes.md,
-      color: colors.text,
-      lineHeight: 20,
-    },
-    userName: {
-      fontWeight: fontWeights.semibold,
-    },
-    amountBlock: {
-      alignItems: 'flex-end',
-    },
-    amount: {
-      color: colors.danger,
-      fontWeight: fontWeights.extrabold,
-      fontSize: fontSizes.lg,
-    },
-    amountPositive: {
-      color: colors.success,
-    },
-    actionsDivider: {
-      height: StyleSheet.hairlineWidth,
-      backgroundColor: colors.borderLight,
-      marginTop: spacing.md,
-      marginBottom: spacing.sm,
-      marginHorizontal: -spacing.md,
-    },
+    container: { flex: 1, backgroundColor: colors.background },
+    scrollView: { flex: 1 },
+    scrollContent: { paddingTop: spacing.sm, paddingBottom: spacing.xxl },
+    emptyContainer: { padding: spacing.xxl, alignItems: 'center' },
+    loadingPad: { padding: spacing.xxl, alignItems: 'center' },
+    loadingText: { fontSize: fontSizes.sm, color: colors.textSecondary },
+    mutedLine: { fontSize: fontSizes.sm, color: colors.textSecondary },
+    cardPad: { padding: spacing.md },
+    balanceGroup: { marginBottom: spacing.sm },
+    historyGroup: { marginTop: spacing.sm },
     actions: {
-      flexDirection: 'row',
-      justifyContent: 'flex-end',
-      alignItems: 'center',
-      gap: spacing.xs,
+      gap: spacing.xs, paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
     },
     actionButton: {
-      paddingVertical: spacing.xs,
-      paddingHorizontal: spacing.md,
-      borderRadius: radii.pill,
-      alignItems: 'center',
-      justifyContent: 'center',
-      flexDirection: 'row',
-      gap: spacing.xxs,
-      minHeight: 34,
+      minHeight: 44, paddingVertical: spacing.xs, paddingHorizontal: spacing.sm,
+      borderRadius: radii.md, flexDirection: 'row', alignItems: 'center',
+      justifyContent: 'center', gap: spacing.xs, flexShrink: 1, maxWidth: '100%',
     },
-    netButton: {
-      backgroundColor: colors.warningSoft,
-      borderWidth: 1,
-      borderColor: colors.warningSoft,
-    },
-    netButtonText: {
-      color: colors.warning,
-      fontWeight: fontWeights.semibold,
-      fontSize: fontSizes.sm,
-    },
-    markButton: {
-      backgroundColor: colors.primary,
-    },
-    markButtonText: {
-      color: colors.surface,
-      fontWeight: fontWeights.semibold,
-      fontSize: fontSizes.sm,
-    },
-    forgiveButton: {
-      backgroundColor: colors.primarySoft,
-      borderWidth: 1,
-      borderColor: colors.primarySoft,
-    },
-    forgiveButtonText: {
-      color: colors.primary,
-      fontWeight: fontWeights.semibold,
-      fontSize: fontSizes.sm,
-    },
+    actionText: { fontSize: fontSizes.sm, fontWeight: fontWeights.semibold, color: colors.primary, flexShrink: 1 },
     mutualDebtNote: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.xs,
-      marginTop: spacing.sm,
-      paddingHorizontal: spacing.sm,
-      paddingVertical: spacing.xs,
-      borderRadius: radii.md,
-      backgroundColor: colors.warningUltraSoft,
+      flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+      marginHorizontal: spacing.md, marginBottom: spacing.sm,
     },
-    mutualDebtNoteText: {
-      fontSize: fontSizes.xs,
-      color: colors.warning,
-      fontWeight: fontWeights.medium,
-      flex: 1,
-    },
-    actionButtonText: {
-      color: colors.surface,
-      fontWeight: fontWeights.semibold,
-    },
-    emptyText: {
-      fontSize: fontSizes.lg,
-      color: colors.muted,
-    },
-    modalOverlay: {
-      flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
+    mutualDebtNoteText: { fontSize: fontSizes.sm, color: colors.textSecondary, flex: 1 },
+    modalOverlay: { flex: 1, backgroundColor: colors.shadowStrong, justifyContent: 'flex-end' },
     modalContent: {
-      backgroundColor: colors.surface,
-      borderRadius: radii.lg,
-      padding: spacing.xl,
-      width: '90%',
-      maxWidth: 400,
-      borderWidth: 1,
-      borderColor: colors.border,
+      height: '90%', backgroundColor: colors.background,
+      borderTopLeftRadius: radii.xl, borderTopRightRadius: radii.xl, overflow: 'hidden',
     },
-    modalTitle: {
-      fontSize: fontSizes.xl,
-      fontWeight: fontWeights.extrabold,
-      marginBottom: spacing.xs,
-      color: colors.text,
+    modalHeader: {
+      flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+      paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
+      borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderLight,
     },
-    modalSubtitle: {
-      fontSize: fontSizes.sm,
-      color: colors.textSecondary,
-      marginBottom: spacing.md,
+    modalTitle: { flex: 1, fontSize: 20, fontWeight: fontWeights.bold, color: colors.text },
+    cancelButton: { minHeight: 44, justifyContent: 'center', maxWidth: '40%' },
+    cancelText: { fontSize: fontSizes.md, color: colors.primary },
+    modalSubtitle: { fontSize: fontSizes.md, color: colors.textSecondary, padding: spacing.lg },
+    formScroll: { flex: 1 },
+    formContent: { paddingBottom: spacing.lg },
+    fieldLabel: { fontSize: fontSizes.sm, fontWeight: fontWeights.semibold, color: colors.textSecondary },
+    currencyLabel: { fontSize: fontSizes.md, color: colors.textSecondary, marginTop: spacing.xs },
+    amountInput: {
+      minHeight: 72, fontFamily: fonts.displayBold, fontSize: 48,
+      fontVariant: ['tabular-nums'], color: colors.text, paddingVertical: spacing.xs,
     },
     modalActions: {
-      flexDirection: 'row',
-      marginTop: spacing.md,
+      paddingHorizontal: spacing.md, paddingTop: spacing.sm,
+      paddingBottom: Math.max(insets.bottom, spacing.md),
+      backgroundColor: colors.background, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderLight,
     },
-    spacer: {
-      width: spacing.sm,
-    },
-    proofSection: {
-      marginBottom: spacing.md,
-    },
-    proofLabel: {
-      fontSize: fontSizes.sm,
-      fontWeight: fontWeights.semibold,
-      color: colors.text,
-      marginBottom: spacing.xs,
-    },
-    proofImageContainer: {
-      position: 'relative',
-      width: '100%',
-      height: 200,
-      borderRadius: radii.md,
-      overflow: 'hidden',
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    proofImage: {
-      width: '100%',
-      height: '100%',
-      resizeMode: 'cover',
-    },
+    proofImageContainer: { position: 'relative', height: 200, borderRadius: radii.md, overflow: 'hidden' },
+    proofImage: { width: '100%', height: '100%', resizeMode: 'cover' },
     removeProofButton: {
-      position: 'absolute',
-      top: spacing.xs,
-      right: spacing.xs,
-      backgroundColor: colors.surface,
-      borderRadius: radii.pill,
-      padding: spacing.xxs,
-    },
-    addProofButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: spacing.xs,
-      padding: spacing.md,
-      borderWidth: 2,
-      borderColor: colors.border,
-      borderStyle: 'dashed',
-      borderRadius: radii.md,
-      backgroundColor: colors.primaryUltraSoft,
-    },
-    addProofText: {
-      fontSize: fontSizes.sm,
-      color: colors.primary,
-      fontWeight: fontWeights.medium,
-    },
-    scrollContent: {
-      paddingBottom: spacing.xxl,
-    },
-    receivedSettlementHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.sm,
-      marginBottom: spacing.xs,
-    },
-    receivedSettlementInfo: {
-      flex: 1,
-    },
-    receivedSettlementText: {
-      fontSize: fontSizes.sm,
-      color: colors.text,
-    },
-    receivedSettlementMethod: {
-      fontSize: fontSizes.xs,
-      color: colors.textSecondary,
-      marginTop: spacing.xxs,
+      position: 'absolute', top: spacing.xs, right: spacing.xs, minWidth: 44, minHeight: 44,
+      alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, borderRadius: radii.pill,
     },
     viewReceiptButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.xs,
-      marginTop: spacing.xs,
-      paddingVertical: spacing.xs,
+      minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+      paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
     },
-    viewReceiptText: {
-      fontSize: fontSizes.sm,
-      color: colors.primary,
-      fontWeight: fontWeights.medium,
-    },
-    proofModalOverlay: {
-      flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.9)',
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
+    viewReceiptText: { flexShrink: 1, fontSize: fontSizes.md, color: colors.primary, fontWeight: fontWeights.medium },
+    proofModalOverlay: { flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' },
     proofModalClose: {
-      position: 'absolute',
-      right: spacing.lg,
-      zIndex: 10,
-      padding: spacing.xs,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      borderRadius: 20,
+      position: 'absolute', right: spacing.lg, zIndex: 10, minWidth: 44, minHeight: 44,
+      justifyContent: 'center', alignItems: 'center', backgroundColor: colors.surface, borderRadius: radii.pill,
     },
-    proofModalImage: {
-      width: '90%',
-      height: '80%',
-    },
-    forgiveAmountOptions: {
-      flexDirection: 'row',
-      gap: spacing.sm,
-      marginBottom: spacing.md,
-    },
+    proofModalImage: { width: '100%', height: '80%' },
     forgiveAmountOption: {
-      flex: 1,
-      padding: spacing.md,
-      borderRadius: radii.md,
-      borderWidth: 2,
-      borderColor: colors.border,
-      alignItems: 'center',
+      minHeight: 60, flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+      paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
     },
-    forgiveAmountOptionSelected: {
-      borderColor: colors.primary,
-      backgroundColor: colors.primaryUltraSoft,
-    },
-    forgiveAmountOptionText: {
-      fontSize: fontSizes.sm,
-      fontWeight: fontWeights.semibold,
-      color: colors.text,
-    },
-    forgiveAmountOptionTextSelected: {
-      color: colors.primary,
-    },
-    forgiveAmountOptionValue: {
-      fontSize: fontSizes.xs,
-      color: colors.textSecondary,
-      marginTop: spacing.xxs,
-    },
-    customAmountContainer: {
-      marginBottom: spacing.md,
-    },
-    forgiveWarning: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.sm,
-      padding: spacing.md,
-      backgroundColor: colors.warningUltraSoft,
-      borderRadius: radii.md,
-      marginBottom: spacing.md,
-    },
-    forgiveWarningText: {
-      flex: 1,
-      fontSize: fontSizes.sm,
-      color: colors.text,
-    },
-    loadMoreReceipts: {
-      alignItems: 'center',
-      paddingVertical: spacing.md,
-      paddingHorizontal: spacing.lg,
-    },
-    loadMoreReceiptsText: {
-      fontSize: fontSizes.sm,
-      fontWeight: fontWeights.semibold,
-      color: colors.primary,
-    },
-  }), [colors]);
+    forgiveAmountOptionSelected: { backgroundColor: colors.primaryUltraSoft },
+    forgiveAmountOptionText: { flex: 1, minWidth: 0, fontSize: fontSizes.md, color: colors.text },
+    forgiveWarning: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, padding: spacing.lg },
+    forgiveWarningText: { flex: 1, fontSize: fontSizes.sm, color: colors.textSecondary },
+    loadMoreReceipts: { minHeight: 44, alignItems: 'center', justifyContent: 'center', padding: spacing.md },
+    loadMoreReceiptsText: { textAlign: 'center', fontSize: fontSizes.sm, fontWeight: fontWeights.semibold, color: colors.primary },
+  }), [colors, insets.bottom]);
 
   useEffect(() => {
     if (selectedHousehold && user) {
@@ -461,9 +222,9 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   };
 
   const getUserName = (userId: string): string => {
-    if (!selectedHousehold) return 'Unknown';
+    if (!selectedHousehold) return t('common.someone');
     const member = selectedHousehold.members.find(m => m._id === userId);
-    return member?.name || 'Unknown';
+    return member?.name || t('common.someone');
   };
 
   const getUserAvatar = (userId: string): string | undefined => {
@@ -645,7 +406,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
 
   if (!selectedHousehold || !user) {
     return (
-      <SanctuaryScreenShell edges={['top', 'bottom']} innerStyle={styles.container}>
+      <SanctuaryScreenShell edges={['bottom']} innerStyle={styles.container}>
         <View style={styles.emptyContainer}>
           <AppText>{t('alerts.selectHousehold')}</AppText>
         </View>
@@ -721,458 +482,246 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   };
 
   return (
-    <SanctuaryScreenShell edges={['top']} innerStyle={styles.container}>
-      <KeyboardAvoidingView
-        style={styles.keyboardAvoid}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    <SanctuaryScreenShell edges={['bottom']} innerStyle={styles.container}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        contentInsetAdjustmentBehavior="automatic"
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={loadBalances} tintColor={colors.primary} />}
       >
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          contentInsetAdjustmentBehavior="automatic"
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={loading} onRefresh={loadBalances} />}
-        >
-          <SettingsSection title={t('settleUp.sectionQuickLinks')}>
-            <SettingsGroupCard>
-              <SettingsRow
-                icon="receipt-outline"
-                iconBackgroundColor={colors.primaryUltraSoft}
-                iconColor={colors.primary}
-                title={t('expenses.viewSettlementHistory')}
-                subtitle={t('expenses.settlementHistory')}
-                onPress={() => navigation.navigate('SettlementHistory')}
-                isLast
-              />
-            </SettingsGroupCard>
-          </SettingsSection>
-
-          {showInitialLoading ? (
-            <View style={styles.loadingPad}>
-              <AppText style={styles.loadingText}>{t('settlementHistory.loading')}</AppText>
-            </View>
-          ) : showGlobalEmpty ? (
-            <EmptyState
-              icon="checkmark-circle-outline"
-              title={`${t('home.allSettled')} 🎉`}
-              message={t('settleUp.noBalances')}
-              variant="minimal"
-            />
-          ) : (
-            <>
-              {userOwedBalances.length > 0 ? (
-                <SettingsSection title={t('settleUp.sectionYouOwe')}>
-                  {userOwedBalances.map((balance, index) => {
-                    const toUserName = getUserName(balance.toUserId);
-                    const hasMutualDebt = mutualDebts.some(b => b.toUserId === balance.toUserId);
-                    const toUserAvatar = getUserAvatar(balance.toUserId);
-                    const rowKey = `${balance.fromUserId}-${balance.toUserId}`;
-                    return (
-                      <SettingsGroupCard
-                        key={rowKey}
-                        style={{
-                          marginBottom: index < userOwedBalances.length - 1 ? spacing.md : 0,
-                        }}
-                      >
-                        <View style={styles.cardPad}>
-                          <View style={styles.balanceHeader}>
-                            <Avatar name={toUserName} uri={toUserAvatar} size={44} />
-                            <View style={styles.balanceTextContainer}>
-                              <AppText style={styles.balanceText} numberOfLines={1}>
-                                {t('home.youOwe')}{' '}
-                                <AppText style={styles.userName}>{toUserName}</AppText>
-                              </AppText>
-                            </View>
-                            <View style={styles.amountBlock}>
-                              <AppText style={styles.amount}>
-                                {formatCurrency(balance.amount, currency)}
-                              </AppText>
-                            </View>
-                          </View>
-                          {hasMutualDebt ? (
-                            <View style={styles.mutualDebtNote}>
-                              <Ionicons name="bulb-outline" size={14} color={colors.warning} />
-                              <AppText style={styles.mutualDebtNoteText}>
-                                {toUserName} {t('settleUp.alsoOwesYou')}
-                              </AppText>
-                            </View>
-                          ) : null}
-                          <View style={styles.actionsDivider} />
-                          <View style={styles.actions}>
-                            {hasMutualDebt ? (
-                              <TouchableOpacity
-                                style={[styles.actionButton, styles.netButton]}
-                                onPress={() => handleNetBalance(balance)}
-                                activeOpacity={0.8}
-                              >
-                                <Ionicons name="swap-horizontal" size={14} color={colors.warning} />
-                                <AppText style={styles.netButtonText}>{t('settleUp.netBalance')}</AppText>
-                              </TouchableOpacity>
-                            ) : null}
-                            <TouchableOpacity
-                              style={[styles.actionButton, styles.markButton]}
-                              onPress={() => handleMarkAsPaid(balance)}
-                              activeOpacity={0.8}
-                            >
-                              <Ionicons name="checkmark-circle" size={14} color={colors.surface} />
-                              <AppText style={styles.markButtonText}>{t('settleUp.markAsPaid')}</AppText>
-                            </TouchableOpacity>
-                          </View>
-                        </View>
-                      </SettingsGroupCard>
-                    );
-                  })}
-                </SettingsSection>
-              ) : (
-                <SettingsSection title={t('settleUp.sectionYouOwe')}>
-                  <SettingsGroupCard>
-                    <View style={styles.cardPad}>
-                      <AppText style={styles.mutedLine}>{t('settleUp.nothingToPayNow')}</AppText>
+        {showInitialLoading ? (
+          <View style={styles.loadingPad} accessibilityLiveRegion="polite">
+            <AppText style={styles.loadingText}>{t('settlementHistory.loading')}</AppText>
+          </View>
+        ) : showGlobalEmpty ? (
+          <EmptyState icon="checkmark-circle-outline" title={t('home.allSettled')}
+            message={t('settleUp.noBalances')} variant="minimal" />
+        ) : (
+          <>
+            <SectionHeading title={t('settleUp.sectionYouOwe')} />
+            {userOwedBalances.length > 0 ? userOwedBalances.map((balance) => {
+              const toUserName = getUserName(balance.toUserId);
+              const hasMutualDebt = mutualDebts.some(b => b.toUserId === balance.toUserId);
+              return (
+                <Group key={`${balance.fromUserId}-${balance.toUserId}`} style={styles.balanceGroup}>
+                  <GroupRow title={toUserName} titleLines={0}
+                    leading={<Avatar name={toUserName} uri={getUserAvatar(balance.toUserId)} size={44} />}
+                    trailing={<Amount value={balance.amount} currency={currency} direction="owe" size={22} fit
+                      accessibilityLabel={`${t('home.youOwe')} ${toUserName}: −${formatCurrency(balance.amount, currency)}`} />} />
+                  {hasMutualDebt ? (
+                    <View style={styles.mutualDebtNote}>
+                      <Ionicons name="swap-horizontal-outline" size={22} color={colors.textSecondary} />
+                      <AppText style={styles.mutualDebtNoteText}>{toUserName} {t('settleUp.alsoOwesYou')}</AppText>
                     </View>
-                  </SettingsGroupCard>
-                </SettingsSection>
-              )}
-
-              {userOwedToBalances.length > 0 ? (
-                <SettingsSection title={t('settleUp.moneyOwedToYou')}>
-                  {userOwedToBalances.map((balance, index) => {
-                    const fromUserName = getUserName(balance.fromUserId);
-                    const fromUserAvatar = getUserAvatar(balance.fromUserId);
-                    const rowKey = `${balance.fromUserId}-${balance.toUserId}`;
-                    return (
-                      <SettingsGroupCard
-                        key={rowKey}
-                        style={{
-                          marginBottom: index < userOwedToBalances.length - 1 ? spacing.md : 0,
-                        }}
-                      >
-                        <View style={styles.cardPad}>
-                          <View style={styles.balanceHeader}>
-                            <Avatar name={fromUserName} uri={fromUserAvatar} size={44} />
-                            <View style={styles.balanceTextContainer}>
-                              <AppText style={styles.balanceText} numberOfLines={1}>
-                                <AppText style={styles.userName}>{fromUserName}</AppText>{' '}
-                                {t('settleUp.owesYou').toLowerCase()}
-                              </AppText>
-                            </View>
-                            <View style={styles.amountBlock}>
-                              <AppText style={[styles.amount, styles.amountPositive]}>
-                                {formatCurrency(balance.amount, currency)}
-                              </AppText>
-                            </View>
-                          </View>
-                          <View style={styles.actionsDivider} />
-                          <View style={styles.actions}>
-                            <TouchableOpacity
-                              style={[styles.actionButton, styles.forgiveButton]}
-                              onPress={() => handleForgiveDebt(balance)}
-                              activeOpacity={0.8}
-                            >
-                              <Ionicons
-                                name="heart-outline"
-                                size={14}
-                                color={colors.primary}
-                              />
-                              <AppText style={styles.forgiveButtonText}>
-                                {t('settleUp.forgiveDebt')}
-                              </AppText>
-                            </TouchableOpacity>
-                          </View>
-                        </View>
-                      </SettingsGroupCard>
-                    );
-                  })}
-                </SettingsSection>
-              ) : null}
-
-              {receivedSettlementsAll.length > 0 ? (
-                <SettingsSection title={t('settleUp.receivedSettlements')}>
-                  {receivedSettlements.map((settlement, index) => {
-                    const fromUserId =
-                      typeof settlement.fromUserId === 'object' && settlement.fromUserId !== null
-                        ? settlement.fromUserId._id
-                        : settlement.fromUserId;
-                    const fromUserName = fromUserId ? getUserName(fromUserId) : 'Unknown';
-                    const fromUserAvatar = fromUserId ? getUserAvatar(fromUserId) : undefined;
-                    return (
-                      <SettingsGroupCard
-                        key={settlement._id}
-                        style={{
-                          marginBottom: index < receivedSettlements.length - 1 ? spacing.md : 0,
-                        }}
-                      >
-                        <View style={styles.cardPad}>
-                          <View style={styles.receivedSettlementHeader}>
-                            <Avatar name={fromUserName} uri={fromUserAvatar} size={32} />
-                            <View style={styles.receivedSettlementInfo}>
-                              <AppText style={styles.receivedSettlementText}>
-                                <AppText style={styles.userName}>{fromUserName}</AppText>{' '}
-                                {t('settleUp.paidYou')} {formatCurrency(settlement.amount, currency)}
-                              </AppText>
-                              {settlement.method ? (
-                                <AppText style={styles.receivedSettlementMethod}>{settlement.method}</AppText>
-                              ) : null}
-                            </View>
-                          </View>
-                          {settlement.proofImageUrl ? (
-                            <TouchableOpacity
-                              style={styles.viewReceiptButton}
-                              onPress={() => setSelectedProofImage(settlement.proofImageUrl || null)}
-                              activeOpacity={0.75}
-                            >
-                              <Ionicons name="receipt-outline" size={18} color={colors.primary} />
-                              <AppText style={styles.viewReceiptText}>{t('settleUp.viewReceipt')}</AppText>
-                            </TouchableOpacity>
-                          ) : null}
-                        </View>
-                      </SettingsGroupCard>
-                    );
-                  })}
-                  {hasMoreReceipts ? (
-                    <TouchableOpacity
-                      style={styles.loadMoreReceipts}
-                      onPress={loadMoreReceipts}
-                      disabled={loadingMoreReceipts}
-                      activeOpacity={0.75}
-                    >
-                      {loadingMoreReceipts ? (
-                        <ActivityIndicator color={colors.primary} />
-                      ) : (
-                        <AppText style={styles.loadMoreReceiptsText}>
-                          {t('common.loadMore')} ({receivedSettlements.length}/{receivedSettlementsTotal})
-                        </AppText>
-                      )}
-                    </TouchableOpacity>
                   ) : null}
-                </SettingsSection>
-              ) : null}
-            </>
-          )}
-        </ScrollView>
+                  <View style={styles.actions}>
+                    {hasMutualDebt ? (
+                      <TouchableOpacity accessibilityRole="button" style={styles.actionButton}
+                        onPress={() => handleNetBalance(balance)} activeOpacity={0.8}>
+                        <Ionicons name="swap-horizontal-outline" size={22} color={colors.primary} />
+                        <AppText style={styles.actionText}>{t('settleUp.netBalance')}</AppText>
+                      </TouchableOpacity>
+                    ) : null}
+                    <PrimaryButton title={t('settleUp.markAsPaid')} variant="primary"
+                      icon="checkmark-circle-outline" onPress={() => handleMarkAsPaid(balance)} />
+                  </View>
+                </Group>
+              );
+            }) : (
+              <Group><View style={styles.cardPad}><AppText style={styles.mutedLine}>{t('settleUp.nothingToPayNow')}</AppText></View></Group>
+            )}
+            {userOwedToBalances.length > 0 ? (
+              <>
+                <SectionHeading title={t('home.youAreOwed')} />
+                {userOwedToBalances.map((balance) => {
+                  const fromUserName = getUserName(balance.fromUserId);
+                  return (
+                    <Group key={`${balance.fromUserId}-${balance.toUserId}`} style={styles.balanceGroup}>
+                      <GroupRow title={fromUserName} titleLines={0}
+                        leading={<Avatar name={fromUserName} uri={getUserAvatar(balance.fromUserId)} size={44} />}
+                        trailing={<Amount value={balance.amount} currency={currency} direction="owed" size={22} fit
+                          accessibilityLabel={`${fromUserName} ${t('settleUp.owesYou')}: +${formatCurrency(balance.amount, currency)}`} />} />
+                      <View style={styles.actions}>
+                        <PrimaryButton title={t('settleUp.forgiveDebt')} variant="secondary"
+                          icon="close-circle-outline" onPress={() => handleForgiveDebt(balance)} />
+                      </View>
+                    </Group>
+                  );
+                })}
+              </>
+            ) : null}
+            {receivedSettlementsAll.length > 0 ? (
+              <>
+                <SectionHeading title={t('settleUp.receivedSettlements')} />
+                {receivedSettlements.map((settlement) => {
+                  const fromUserId = typeof settlement.fromUserId === 'object' && settlement.fromUserId !== null
+                    ? settlement.fromUserId._id : settlement.fromUserId;
+                  const fromUserName = fromUserId ? getUserName(fromUserId) : t('common.someone');
+                  return (
+                    <Group key={settlement._id} style={styles.balanceGroup}>
+                      <GroupRow title={`${fromUserName} ${t('settleUp.paidYou')}`} titleLines={0}
+                        subtitle={settlement.method || undefined}
+                        leading={<Avatar name={fromUserName} uri={fromUserId ? getUserAvatar(fromUserId) : undefined} size={32} />}
+                        trailing={<Amount value={settlement.amount} currency={currency} size={22} fit />} />
+                      {settlement.proofImageUrl ? (
+                        <TouchableOpacity accessibilityRole="button" style={styles.viewReceiptButton}
+                          onPress={() => setSelectedProofImage(settlement.proofImageUrl || null)} activeOpacity={0.75}>
+                          <Ionicons name="receipt-outline" size={22} color={colors.primary} />
+                          <AppText style={styles.viewReceiptText}>{t('settleUp.viewReceipt')}</AppText>
+                        </TouchableOpacity>
+                      ) : null}
+                    </Group>
+                  );
+                })}
+                {hasMoreReceipts ? (
+                  <TouchableOpacity accessibilityRole="button" accessibilityLabel={t('common.loadMore')}
+                    accessibilityState={{ disabled: loadingMoreReceipts, busy: loadingMoreReceipts }}
+                    style={styles.loadMoreReceipts} onPress={loadMoreReceipts} disabled={loadingMoreReceipts} activeOpacity={0.75}>
+                    {loadingMoreReceipts ? <ActivityIndicator color={colors.primary} /> : (
+                      <AppText style={styles.loadMoreReceiptsText}>{t('common.loadMore')} ({receivedSettlements.length}/{receivedSettlementsTotal})</AppText>
+                    )}
+                  </TouchableOpacity>
+                ) : null}
+              </>
+            ) : null}
+          </>
+        )}
+        <Group style={styles.historyGroup}>
+          <GroupRow icon="receipt-outline" title={t('expenses.viewSettlementHistory')}
+            titleLines={0} chevron onPress={() => navigation.navigate('SettlementHistory')} />
+        </Group>
+      </ScrollView>
 
-      {/* Settlement Modal */}
-      <Modal
-        visible={settleModalVisible}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setSettleModalVisible(false)}
-      >
-        <KeyboardAvoidingView
-          style={styles.modalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-        >
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t('common.close')}
-            style={StyleSheet.absoluteFillObject}
-            onPress={() => {
-              Keyboard.dismiss();
-              setSettleModalVisible(false);
-            }}
-          />
-          <View style={styles.modalContent}>
-            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-              <View>
-                <AppText style={styles.modalTitle}>{t('settleUp.markAsPaid')}</AppText>
-                {selectedBalance && (
-                  <AppText style={styles.modalSubtitle}>
-                    {t('settleUp.paying')} {getUserName(selectedBalance.toUserId)}
-                  </AppText>
-                )}
-                <FormTextInput
-                  label={t('expenses.amount')}
-                  value={amount}
-                  onChangeText={setAmount}
-                  placeholder="0.00"
-                  keyboardType="numeric"
-                />
-                <FormTextInput
-                  label={t('settleUp.method')}
-                  value={method}
-                  onChangeText={setMethod}
-                  placeholder={t('settleUp.methodPlaceholder')}
-                />
-                <FormTextInput
-                  label={t('settleUp.note')}
-                  value={note}
-                  onChangeText={setNote}
-                  placeholder={t('settleUp.notePlaceholder')}
-                  multiline
-                />
-                <View style={styles.proofSection}>
-                  <AppText style={styles.proofLabel}>{t('settleUp.proofOptional')}</AppText>
-                  {proofImage ? (
+      <Modal visible={settleModalVisible} animationType={reduceMotion ? 'none' : 'slide'} transparent
+        onRequestClose={() => setSettleModalVisible(false)}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('common.close')} style={StyleSheet.absoluteFillObject}
+            onPress={() => { Keyboard.dismiss(); setSettleModalVisible(false); }} />
+          <View style={styles.modalContent} accessibilityViewIsModal>
+            <View style={styles.modalHeader}>
+              <AppText accessibilityRole="header" style={styles.modalTitle}>{t('settleUp.markAsPaid')}</AppText>
+              <TouchableOpacity accessibilityRole="button" style={styles.cancelButton}
+                onPress={() => { Keyboard.dismiss(); setSettleModalVisible(false); }}>
+                <AppText style={styles.cancelText}>{t('common.cancel')}</AppText>
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.formScroll} contentContainerStyle={styles.formContent}
+              keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive">
+              {selectedBalance ? <AppText style={styles.modalSubtitle}>{t('settleUp.paying')} {getUserName(selectedBalance.toUserId)}</AppText> : null}
+              <Group>
+                <View style={styles.cardPad}>
+                  <AppText style={styles.fieldLabel}>{t('expenses.amount')}</AppText>
+                  <AppText style={styles.currencyLabel}>{currency}</AppText>
+                  <TextInput accessibilityLabel={`${t('expenses.amount')} (${currency})`} value={amount}
+                    onChangeText={setAmount} placeholder="0.00" placeholderTextColor={colors.textTertiary}
+                    keyboardType="numeric" style={styles.amountInput} />
+                </View>
+                <View style={styles.cardPad}>
+                  <FormTextInput label={t('settleUp.method')} value={method} onChangeText={setMethod}
+                    placeholder={t('settleUp.methodPlaceholder')} containerStyle={{ marginBottom: 0 }} />
+                </View>
+                <View style={styles.cardPad}>
+                  <FormTextInput label={t('settleUp.note')} value={note} onChangeText={setNote}
+                    placeholder={t('settleUp.notePlaceholder')} multiline containerStyle={{ marginBottom: 0 }} />
+                </View>
+              </Group>
+              <SectionHeading title={t('settleUp.proofOptional')} />
+              <Group>
+                {proofImage ? (
+                  <View style={styles.cardPad}>
                     <View style={styles.proofImageContainer}>
-                      <Image source={{ uri: proofImage }} style={styles.proofImage} />
-                      <TouchableOpacity
-                        style={styles.removeProofButton}
-                        onPress={handleRemoveProofImage}
-                      >
-                        <Ionicons name="close-circle" size={24} color={colors.danger} />
+                      <Image source={{ uri: proofImage }} style={styles.proofImage} accessibilityLabel={t('settleUp.proofOptional')} />
+                      <TouchableOpacity accessibilityRole="button" accessibilityLabel={`${t('common.delete')}: ${t('settleUp.proofOptional')}`}
+                        style={styles.removeProofButton} onPress={handleRemoveProofImage}>
+                        <Ionicons name="close-circle-outline" size={24} color={colors.danger} />
                       </TouchableOpacity>
                     </View>
-                  ) : (
-                    <TouchableOpacity
-                      style={styles.addProofButton}
-                      onPress={handlePickProofImage}
-                    >
-                      <Ionicons name="camera-outline" size={24} color={colors.primary} />
-                      <AppText style={styles.addProofText}>{t('settleUp.addProof')}</AppText>
-                    </TouchableOpacity>
-                  )}
-                </View>
-                <View style={styles.modalActions}>
-                  <PrimaryButton
-                    title={t('common.cancel')}
-                    onPress={() => {
-                      Keyboard.dismiss();
-                      setSettleModalVisible(false);
-                    }}
-                  />
-                  <View style={styles.spacer} />
-                  <PrimaryButton
-                    title={t('common.save')}
-                    onPress={handleSubmitSettlement}
-                  />
-                </View>
-              </View>
-            </TouchableWithoutFeedback>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
-
-      {/* Forgive Debt Modal */}
-      <Modal
-        visible={forgiveModalVisible}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setForgiveModalVisible(false)}
-      >
-        <KeyboardAvoidingView
-          style={styles.modalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-        >
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t('common.close')}
-            style={StyleSheet.absoluteFillObject}
-            onPress={() => {
-              Keyboard.dismiss();
-              setForgiveModalVisible(false);
-            }}
-          />
-          <View style={styles.modalContent}>
-            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-              <View>
-                <AppText style={styles.modalTitle}>{t('settleUp.forgiveDebt')}</AppText>
-                {selectedForgiveBalance && (
-                  <AppText style={styles.modalSubtitle}>
-                    {getUserName(selectedForgiveBalance.fromUserId)} {t('settleUp.owesYou').toLowerCase()}{' '}
-                    {formatCurrency(selectedForgiveBalance.amount, currency)}
-                  </AppText>
-                )}
-
-                {selectedForgiveBalance && (
-                  <View style={styles.forgiveAmountOptions}>
-                    <TouchableOpacity
-                      style={[
-                        styles.forgiveAmountOption,
-                        forgiveAmount === selectedForgiveBalance.amount.toFixed(2) && styles.forgiveAmountOptionSelected,
-                      ]}
-                      onPress={() => setForgiveAmount(selectedForgiveBalance.amount.toFixed(2))}
-                    >
-                      <AppText style={[
-                        styles.forgiveAmountOptionText,
-                        forgiveAmount === selectedForgiveBalance.amount.toFixed(2) && styles.forgiveAmountOptionTextSelected,
-                      ]}>{t('settleUp.fullAmount')}</AppText>
-                      <AppText style={styles.forgiveAmountOptionValue}>
-                        {formatCurrency(selectedForgiveBalance.amount, currency)}
-                      </AppText>
-                    </TouchableOpacity>
-
-                    {selectedForgiveBalance.amount > 1 && (
-                      <TouchableOpacity
-                        style={[
-                          styles.forgiveAmountOption,
-                          forgiveAmount === (selectedForgiveBalance.amount / 2).toFixed(2) && styles.forgiveAmountOptionSelected,
-                        ]}
-                        onPress={() => setForgiveAmount((selectedForgiveBalance.amount / 2).toFixed(2))}
-                      >
-                        <AppText style={[
-                          styles.forgiveAmountOptionText,
-                          forgiveAmount === (selectedForgiveBalance.amount / 2).toFixed(2) && styles.forgiveAmountOptionTextSelected,
-                        ]}>{t('settleUp.halfAmount')}</AppText>
-                        <AppText style={styles.forgiveAmountOptionValue}>
-                          {formatCurrency(selectedForgiveBalance.amount / 2, currency)}
-                        </AppText>
-                      </TouchableOpacity>
-                    )}
                   </View>
-                )}
-
-                <View style={styles.customAmountContainer}>
-                  <FormTextInput
-                    label={t('settleUp.customAmount')}
-                    value={forgiveAmount}
-                    onChangeText={setForgiveAmount}
-                    placeholder="0.00"
-                    keyboardType="numeric"
-                  />
-                </View>
-
-                <View style={styles.forgiveWarning}>
-                  <Ionicons name="warning-outline" size={20} color={colors.warning} />
-                  <AppText style={styles.forgiveWarningText}>
-                    {t('alerts.forgiveWarning')}
-                  </AppText>
-                </View>
-
-                <View style={styles.modalActions}>
-                  <PrimaryButton
-                    title={t('common.cancel')}
-                    onPress={() => {
-                      Keyboard.dismiss();
-                      setForgiveModalVisible(false);
-                    }}
-                  />
-                  <View style={styles.spacer} />
-                  <PrimaryButton
-                    title={t('settleUp.forgive')}
-                    onPress={handleSubmitForgive}
-                    variant="danger"
-                  />
-                </View>
-              </View>
-            </TouchableWithoutFeedback>
+                ) : <GroupRow title={t('settleUp.addProof')} titleLines={0} icon="camera-outline" chevron onPress={handlePickProofImage} />}
+              </Group>
+            </ScrollView>
+            <View style={styles.modalActions}><PrimaryButton title={t('common.save')} onPress={handleSubmitSettlement} /></View>
           </View>
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* Receipt Image Modal */}
-      <Modal
-        visible={selectedProofImage !== null}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setSelectedProofImage(null)}
-      >
-        <View style={styles.proofModalOverlay}>
-          <TouchableOpacity
-            style={[styles.proofModalClose, { top: insets.top + spacing.md }]}
-            onPress={() => setSelectedProofImage(null)}
-          >
-            <Ionicons name="close-circle" size={40} color="#FFFFFF" />
+      <Modal visible={forgiveModalVisible} animationType={reduceMotion ? 'none' : 'slide'} transparent
+        onRequestClose={() => setForgiveModalVisible(false)}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('common.close')} style={StyleSheet.absoluteFillObject}
+            onPress={() => { Keyboard.dismiss(); setForgiveModalVisible(false); }} />
+          <View style={styles.modalContent} accessibilityViewIsModal>
+            <View style={styles.modalHeader}>
+              <AppText accessibilityRole="header" style={styles.modalTitle}>{t('settleUp.forgiveDebt')}</AppText>
+              <TouchableOpacity accessibilityRole="button" style={styles.cancelButton}
+                onPress={() => { Keyboard.dismiss(); setForgiveModalVisible(false); }}>
+                <AppText style={styles.cancelText}>{t('common.cancel')}</AppText>
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.formScroll} contentContainerStyle={styles.formContent}
+              keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive">
+              {selectedForgiveBalance ? (
+                <>
+                  <AppText style={styles.modalSubtitle}>{getUserName(selectedForgiveBalance.fromUserId)} {t('settleUp.owesYou').toLowerCase()}</AppText>
+                  <Group>
+                    <GroupRow title={t('settleUp.moneyOwedToYou')} titleLines={0}
+                      trailing={<Amount value={selectedForgiveBalance.amount} currency={currency} direction="owed" size={22} fit />} />
+                  </Group>
+                  <SectionHeading title={t('expenses.amount')} />
+                  <Group>
+                    <TouchableOpacity accessibilityRole="radio"
+                      accessibilityState={{ selected: forgiveAmount === selectedForgiveBalance.amount.toFixed(2), checked: forgiveAmount === selectedForgiveBalance.amount.toFixed(2) }}
+                      style={[styles.forgiveAmountOption, forgiveAmount === selectedForgiveBalance.amount.toFixed(2) && styles.forgiveAmountOptionSelected]}
+                      onPress={() => setForgiveAmount(selectedForgiveBalance.amount.toFixed(2))}>
+                      <AppText style={styles.forgiveAmountOptionText}>{t('settleUp.fullAmount')}</AppText>
+                      <Amount value={selectedForgiveBalance.amount} currency={currency} size={20} fit style={{ maxWidth: '45%', flexShrink: 1 }} />
+                      {forgiveAmount === selectedForgiveBalance.amount.toFixed(2) ? <Ionicons name="checkmark-circle-outline" size={22} color={colors.primary} /> : null}
+                    </TouchableOpacity>
+                    {selectedForgiveBalance.amount > 1 ? (
+                      <TouchableOpacity accessibilityRole="radio"
+                        accessibilityState={{ selected: forgiveAmount === (selectedForgiveBalance.amount / 2).toFixed(2), checked: forgiveAmount === (selectedForgiveBalance.amount / 2).toFixed(2) }}
+                        style={[styles.forgiveAmountOption, forgiveAmount === (selectedForgiveBalance.amount / 2).toFixed(2) && styles.forgiveAmountOptionSelected]}
+                        onPress={() => setForgiveAmount((selectedForgiveBalance.amount / 2).toFixed(2))}>
+                        <AppText style={styles.forgiveAmountOptionText}>{t('settleUp.halfAmount')}</AppText>
+                        <Amount value={selectedForgiveBalance.amount / 2} currency={currency} size={20} fit style={{ maxWidth: '45%', flexShrink: 1 }} />
+                        {forgiveAmount === (selectedForgiveBalance.amount / 2).toFixed(2) ? <Ionicons name="checkmark-circle-outline" size={22} color={colors.primary} /> : null}
+                      </TouchableOpacity>
+                    ) : null}
+                  </Group>
+                </>
+              ) : null}
+              <SectionHeading title={t('settleUp.customAmount')} />
+              <Group>
+                <View style={styles.cardPad}>
+                  <AppText style={styles.currencyLabel}>{currency}</AppText>
+                  <TextInput accessibilityLabel={`${t('settleUp.customAmount')} (${currency})`} value={forgiveAmount}
+                    onChangeText={setForgiveAmount} placeholder="0.00" placeholderTextColor={colors.textTertiary}
+                    keyboardType="numeric" style={styles.amountInput} />
+                </View>
+              </Group>
+              <View style={styles.forgiveWarning}>
+                <Ionicons name="warning-outline" size={22} color={colors.warning} />
+                <AppText style={styles.forgiveWarningText}>{t('alerts.forgiveWarning')}</AppText>
+              </View>
+            </ScrollView>
+            <View style={styles.modalActions}><PrimaryButton title={t('settleUp.forgive')} onPress={handleSubmitForgive} variant="danger" /></View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      <Modal visible={selectedProofImage !== null} transparent animationType={reduceMotion ? 'none' : 'fade'}
+        onRequestClose={() => setSelectedProofImage(null)}>
+        <View style={styles.proofModalOverlay} accessibilityViewIsModal>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t('common.close')}
+            style={[styles.proofModalClose, { top: insets.top + spacing.md }]} onPress={() => setSelectedProofImage(null)}>
+            <Ionicons name="close-circle-outline" size={32} color={colors.text} />
           </TouchableOpacity>
-          {selectedProofImage && (
-            <Image source={{ uri: selectedProofImage }} style={styles.proofModalImage} resizeMode="contain" />
-          )}
+          {selectedProofImage ? <Image source={{ uri: selectedProofImage }} style={styles.proofModalImage}
+            resizeMode="contain" accessibilityLabel={t('settleUp.viewReceipt')} /> : null}
         </View>
       </Modal>
-    </KeyboardAvoidingView>
     </SanctuaryScreenShell>
   );
 };
-

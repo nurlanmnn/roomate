@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, TextInput, StyleSheet, Platform } from 'react-native';
 import { useThemeColors, fontSizes, fontWeights, radii, spacing } from '../../theme';
+import { useLanguage } from '../../context/LanguageContext';
 
 const LENGTH = 6;
 
@@ -14,6 +15,7 @@ export type OtpSixDigitsProps = {
  */
 export const OtpSixDigits: React.FC<OtpSixDigitsProps> = ({ value, onChange }) => {
   const colors = useThemeColors();
+  const { t } = useLanguage();
   const inputRefs = useRef<(TextInput | null)[]>([]);
   const [focusedIndex, setFocusedIndex] = useState<number | null>(0);
 
@@ -79,18 +81,21 @@ export const OtpSixDigits: React.FC<OtpSixDigitsProps> = ({ value, onChange }) =
       StyleSheet.create({
         otpContainer: {
           flexDirection: 'row',
-          justifyContent: 'space-between',
+          gap: spacing.xxs,
+          flexWrap: 'wrap',
           marginBottom: spacing.xl,
-          paddingHorizontal: spacing.xs,
         },
         otpInput: {
-          width: 50,
-          height: 56,
+          flex: 1,
+          minWidth: 44,
+          minHeight: 56,
+          paddingVertical: spacing.sm,
           borderWidth: 2,
           borderColor: colors.border,
           borderRadius: radii.md,
           textAlign: 'center',
-          fontSize: fontSizes.xxl,
+          fontSize: fontSizes.xl,
+          fontVariant: ['tabular-nums'],
           fontWeight: fontWeights.semibold,
           backgroundColor: colors.surface,
           color: colors.text,
@@ -119,6 +124,8 @@ export const OtpSixDigits: React.FC<OtpSixDigitsProps> = ({ value, onChange }) =
             focusedIndex === index && styles.otpInputFocused,
             digit ? styles.otpInputFilled : null,
           ]}
+          accessibilityLabel={`${t('auth.verificationCode')}, ${index + 1} / ${LENGTH}`}
+          selectionColor={colors.primary}
           value={digit}
           onChangeText={(text) => handleOtpChange(text, index)}
           onKeyPress={({ nativeEvent }) => handleKeyPress(nativeEvent.key, index)}

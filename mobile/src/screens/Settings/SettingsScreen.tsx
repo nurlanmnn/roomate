@@ -1,12 +1,11 @@
-import React, { useState, useRef } from 'react';
-import { Alert, Modal, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { AccessibilityInfo, Alert, Modal, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreenShell';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '../../components/AppText';
+import { Group, GroupRow } from '../../components/ui/Group';
 import { Avatar } from '../../components/ui/Avatar';
-import { ScreenHeader } from '../../components/ui/ScreenHeader';
-import { ProfileHeaderCard } from '../../components/Settings/ProfileHeaderCard';
 import { SettingsSection } from '../../components/Settings/SettingsSection';
 import { SettingsGroupCard } from '../../components/Settings/SettingsGroupCard';
 import { SettingsRow } from '../../components/Settings/SettingsRow';
@@ -16,7 +15,7 @@ import { useHousehold } from '../../context/HouseholdContext';
 import { useLanguage, LANGUAGES } from '../../context/LanguageContext';
 import type { LanguageCode } from '../../context/LanguageContext';
 import { useFocusEffect } from '@react-navigation/native';
-import { fontSizes, fontWeights, radii, spacing, useTheme, useThemeColors, TAB_BAR_HEIGHT } from '../../theme';
+import { fontSizes, fontWeights, radii, spacing, useTheme, useThemeColors } from '../../theme';
 import { getPrivacyPolicyUrl } from '../../api/apiClient';
 
 /** Canonical hosted policy (works when dev API URL is unreachable from the device, e.g. Expo Go + localhost). */
@@ -31,16 +30,23 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, rout
   const { user, logout } = useAuth();
   const { selectedHousehold } = useHousehold();
   const colors = useThemeColors();
-  const { theme, toggleTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const { language, changeLanguage, t } = useLanguage();
 
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
+  const [reduceMotion, setReduceMotion] = useState(true);
+
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => subscription.remove();
+  }, []);
 
   useFocusEffect(
     React.useCallback(() => {
-      scrollRef.current?.scrollTo({ y: 0, animated: true });
-    }, [])
+      scrollRef.current?.scrollTo({ y: 0, animated: !reduceMotion });
+    }, [reduceMotion])
   );
 
   const fromHouseholdSelect = route?.params?.fromHouseholdSelect || false;
@@ -89,132 +95,59 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, rout
   };
 
   const styles = React.useMemo(
-    () =>
-      StyleSheet.create({
-        container: {
-          flex: 1,
-          backgroundColor: 'transparent',
-        },
-        scrollView: {
-          flex: 1,
-        },
-        scrollContent: {
-          paddingBottom: TAB_BAR_HEIGHT + spacing.xl,
-        },
-        stackHeaderSpacer: {
-          height: spacing.sm,
-        },
-        profileSpacer: {
-          marginTop: spacing.xs,
-        },
-        modalOverlay: {
-          flex: 1,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          justifyContent: 'flex-end',
-        },
-        modalContent: {
-          backgroundColor: colors.surface,
-          borderTopLeftRadius: radii.lg,
-          borderTopRightRadius: radii.lg,
-          paddingTop: spacing.lg,
-          paddingBottom: spacing.xxl,
-          paddingHorizontal: spacing.xl,
-          maxHeight: '62%',
-        },
-        modalHeader: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: spacing.md,
-        },
-        modalTitle: {
-          fontSize: fontSizes.xl,
-          fontWeight: fontWeights.bold,
-          color: colors.text,
-        },
-        languageOption: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          paddingVertical: spacing.md,
-          paddingHorizontal: spacing.sm,
-          borderRadius: radii.md,
-          marginBottom: spacing.xs,
-          backgroundColor: colors.primaryUltraSoft,
-        },
-        languageOptionSelected: {
-          backgroundColor: colors.primaryUltraSoft,
-          borderWidth: 1,
-          borderColor: colors.primary,
-        },
-        languageFlag: {
-          fontSize: 26,
-          marginRight: spacing.md,
-        },
-        languageInfo: {
-          flex: 1,
-        },
-        languageName: {
-          fontSize: fontSizes.md,
-          fontWeight: fontWeights.semibold,
-          color: colors.text,
-        },
-        languageNativeName: {
-          fontSize: fontSizes.sm,
-          color: colors.textSecondary,
-          marginTop: 2,
-        },
-        checkIcon: {
-          marginLeft: spacing.sm,
-        },
-        logoutRow: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          paddingVertical: spacing.md,
-          paddingHorizontal: spacing.md,
-        },
-        logoutIconWrap: {
-          width: 36,
-          height: 36,
-          borderRadius: 10,
-          alignItems: 'center',
-          justifyContent: 'center',
-          marginRight: spacing.md,
-          backgroundColor: colors.dangerSoft,
-        },
-        logoutLabel: {
-          flex: 1,
-          fontSize: fontSizes.md,
-          fontWeight: fontWeights.semibold,
-          color: colors.danger,
-        },
-      }),
+    () => StyleSheet.create({
+      container: { flex: 1, backgroundColor: colors.background },
+      scrollView: { flex: 1 },
+      scrollContent: { paddingTop: spacing.md, paddingBottom: spacing.xl },
+      profileGroup: { marginTop: spacing.md },
+      languageValue: { fontSize: fontSizes.md, color: colors.textSecondary, textAlign: 'right' },
+      modalOverlay: { flex: 1, justifyContent: 'flex-end' },
+      modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.shadowStrong },
+      modalContent: {
+        backgroundColor: colors.background,
+        borderTopLeftRadius: radii.xl,
+        borderTopRightRadius: radii.xl,
+        paddingTop: spacing.sm,
+        paddingBottom: spacing.xxl,
+        maxHeight: '80%',
+      },
+      modalHeader: {
+        flexDirection: 'row', alignItems: 'center',
+        paddingHorizontal: spacing.lg, paddingBottom: spacing.sm, gap: spacing.sm,
+      },
+      modalTitle: { flex: 1, fontSize: 20, fontWeight: fontWeights.bold, color: colors.text },
+      closeButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+      languageOption: {
+        flexDirection: 'row', alignItems: 'center', minHeight: 60,
+        paddingVertical: spacing.sm, paddingHorizontal: spacing.md, gap: spacing.sm,
+      },
+      languageOptionSelected: { backgroundColor: colors.primaryUltraSoft },
+      languageInfo: { flex: 1, minWidth: 0 },
+      languageName: { fontSize: fontSizes.md, fontWeight: fontWeights.semibold, color: colors.text },
+      languageNativeName: { fontSize: fontSizes.sm, color: colors.textSecondary, marginTop: spacing.xxs },
+    }),
     [colors]
   );
 
   return (
-    <SanctuaryScreenShell edges={['top']} innerStyle={styles.container}>
+    <SanctuaryScreenShell edges={['bottom']} innerStyle={styles.container}>
       <ScrollView
         ref={scrollRef}
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
-        contentInsetAdjustmentBehavior={fromHouseholdSelect ? 'automatic' : 'never'}
+        contentInsetAdjustmentBehavior="never"
       >
-        {fromHouseholdSelect ? (
-          <View style={styles.stackHeaderSpacer} />
-        ) : (
-          <ScreenHeader title={t('settings.title')} />
-        )}
-
-        <View style={styles.profileSpacer}>
-          <ProfileHeaderCard
-            name={user?.name}
-            email={user?.email}
-            householdName={showHouseholdOptions ? selectedHousehold?.name : null}
-            avatarUri={user?.avatarUrl}
-            editHint={t('settings.tapToEditProfile')}
+        <Group style={styles.profileGroup}>
+          <GroupRow
+            title={user?.name || '—'}
+            titleLines={0}
+            subtitle={[user?.email, showHouseholdOptions ? selectedHousehold?.name : null].filter(Boolean).join('\n')}
+            leading={<Avatar name={user?.name} uri={user?.avatarUrl} size={44} />}
+            accessibilityHint={t('settings.tapToEditProfile')}
             onPress={() => navigation.navigate('AccountSettings')}
+            chevron
           />
-        </View>
+        </Group>
 
         <SettingsSection title={t('settings.sectionAccountHousehold')}>
           <SettingsGroupCard>
@@ -223,7 +156,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, rout
               iconBackgroundColor={colors.primaryUltraSoft}
               iconColor={colors.primary}
               title={t('settings.accountSettings')}
-              subtitle={t('settings.accountDescription')}
               onPress={() => navigation.navigate('AccountSettings')}
               isLast={!showHouseholdOptions}
             />
@@ -233,7 +165,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, rout
                 iconBackgroundColor={colors.accentUltraSoft}
                 iconColor={colors.accent}
                 title={t('settings.householdSettings')}
-                subtitle={t('settings.householdDescription')}
                 onPress={() => navigation.navigate('HouseholdSettings')}
                 isLast
               />
@@ -248,32 +179,26 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, rout
               iconBackgroundColor={colors.primaryUltraSoft}
               iconColor={colors.primary}
               title={t('settings.notifications')}
-              subtitle={t('settings.notificationsDescription')}
               onPress={() => navigation.navigate('NotificationSettings')}
             />
             <ToggleRow
-              icon={theme === 'dark' ? 'moon' : 'sunny-outline'}
+              icon={theme === 'dark' ? 'moon-outline' : 'sunny-outline'}
               iconBackgroundColor={colors.accentUltraSoft}
               iconColor={colors.accent}
               title={t('settings.darkMode')}
-              subtitle={
-                theme === 'dark' ? t('settings.darkModeEnabled') : t('settings.lightModeEnabled')
-              }
+              subtitle=""
               value={theme === 'dark'}
-              onValueChange={() => toggleTheme()}
+              onValueChange={(isDark) => setTheme(isDark ? 'dark' : 'light')}
             />
-            <SettingsRow
+            <GroupRow
               icon="language-outline"
-              iconBackgroundColor={colors.primaryUltraSoft}
-              iconColor={colors.primary}
               title={t('settings.language')}
-              subtitle={
-                currentLanguage
-                  ? `${currentLanguage.flag} ${currentLanguage.nativeName}`
-                  : undefined
+              titleLines={0}
+              trailing={
+                currentLanguage ? <AppText style={styles.languageValue}>{currentLanguage.nativeName}</AppText> : undefined
               }
               onPress={() => setShowLanguageModal(true)}
-              isLast
+              chevron
             />
           </SettingsGroupCard>
         </SettingsSection>
@@ -285,7 +210,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, rout
               iconBackgroundColor={colors.primaryUltraSoft}
               iconColor={colors.primary}
               title={t('settings.privacyPolicy')}
-              subtitle={t('settings.privacyPolicyDescription')}
               onPress={openPrivacyPolicy}
               isLast
             />
@@ -294,67 +218,69 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation, rout
 
         <SettingsSection title={t('settings.actions')}>
           <SettingsGroupCard>
-            <TouchableOpacity
-              style={styles.logoutRow}
+            <GroupRow
+              title={t('settings.logOut')}
+              titleLines={0}
+              icon="log-out-outline"
+              iconTone="danger"
+              destructive
               onPress={handleLogout}
-              activeOpacity={0.65}
-            >
-              <View style={styles.logoutIconWrap}>
-                <Ionicons name="log-out-outline" size={20} color={colors.danger} />
-              </View>
-              <AppText style={styles.logoutLabel}>{t('settings.logOut')}</AppText>
-            </TouchableOpacity>
+            />
           </SettingsGroupCard>
         </SettingsSection>
       </ScrollView>
 
       <Modal
         visible={showLanguageModal}
-        animationType="slide"
+        animationType={reduceMotion ? "none" : "slide"}
         transparent
         onRequestClose={() => setShowLanguageModal(false)}
       >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setShowLanguageModal(false)}
-        >
-          <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={styles.modalBackdrop}
+            activeOpacity={1}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.close')}
+            onPress={() => setShowLanguageModal(false)}
+          />
+          <View style={styles.modalContent} accessibilityViewIsModal>
             <View style={styles.modalHeader}>
-              <AppText style={styles.modalTitle}>{t('settings.language')}</AppText>
-              <TouchableOpacity onPress={() => setShowLanguageModal(false)} hitSlop={12}>
-                <Ionicons name="close" size={24} color={colors.textSecondary} />
+              <AppText accessibilityRole="header" style={styles.modalTitle}>{t('settings.language')}</AppText>
+              <TouchableOpacity
+                style={styles.closeButton}
+                accessibilityRole="button"
+                accessibilityLabel={t('common.close')}
+                onPress={() => setShowLanguageModal(false)}
+              >
+                <Ionicons name="close-outline" size={24} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
             <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-              {LANGUAGES.map((lang) => (
-                <TouchableOpacity
-                  key={lang.code}
-                  style={[
-                    styles.languageOption,
-                    language === lang.code && styles.languageOptionSelected,
-                  ]}
-                  onPress={() => handleLanguageSelect(lang.code)}
-                  activeOpacity={0.7}
-                >
-                  <AppText style={styles.languageFlag}>{lang.flag}</AppText>
-                  <View style={styles.languageInfo}>
-                    <AppText style={styles.languageName}>{lang.name}</AppText>
-                    <AppText style={styles.languageNativeName}>{lang.nativeName}</AppText>
-                  </View>
-                  {language === lang.code && (
-                    <Ionicons
-                      name="checkmark-circle"
-                      size={22}
-                      color={colors.primary}
-                      style={styles.checkIcon}
-                    />
-                  )}
-                </TouchableOpacity>
-              ))}
+              <Group>
+                {LANGUAGES.map((lang) => (
+                  <TouchableOpacity
+                    key={lang.code}
+                    accessibilityRole="radio"
+                    accessibilityLabel={`${lang.name}, ${lang.nativeName}`}
+                    accessibilityState={{ checked: language === lang.code, selected: language === lang.code }}
+                    style={[styles.languageOption, language === lang.code && styles.languageOptionSelected]}
+                    onPress={() => handleLanguageSelect(lang.code)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.languageInfo}>
+                      <AppText style={styles.languageName}>{lang.name}</AppText>
+                      <AppText style={styles.languageNativeName}>{lang.nativeName}</AppText>
+                    </View>
+                    {language === lang.code && (
+                      <Ionicons name="checkmark-circle-outline" size={22} color={colors.primary} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </Group>
             </ScrollView>
           </View>
-        </TouchableOpacity>
+        </View>
       </Modal>
     </SanctuaryScreenShell>
   );

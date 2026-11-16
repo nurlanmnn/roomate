@@ -66,6 +66,7 @@ export default {
 
   // Navigation & Tabs
   tabs: {
+    money: 'Geld',
     home: 'Startseite',
     expenses: 'Ausgaben',
     calendar: 'Kalender',
@@ -188,6 +189,11 @@ export default {
 
   // Household Settings
   householdSettingsScreen: {
+    sectionNotifications: 'Benachrichtigungen',
+    muteHouseholdTitle: 'Diesen Haushalt stummschalten',
+    muteHouseholdSubtitle: 'Du erhältst weiterhin Benachrichtigungen von deinen anderen Haushalten.',
+    muteHouseholdHint: 'Schaltet Push-Benachrichtigungen dieses Haushalts nur für dich stumm.',
+    muteHouseholdError: 'Stummschaltung konnte nicht geändert werden. Versuch es noch einmal.',
     title: 'Haushaltseinstellungen',
     sectionHousehold: 'Haushalt',
     sectionInvite: 'Einladung',
@@ -233,6 +239,13 @@ export default {
 
   // Home Screen
   home: {
+    owesYou: 'Schuldet dir',
+    owesYouLine: '%{name} schuldet dir %{amount}',
+    youOweLine: 'Du schuldest %{name} %{amount}',
+    yourTurn: 'Du bist dran',
+    itemsToBuy: '%{count} zu kaufen',
+    nothingToBuy: 'Nichts zu kaufen',
+    householdSpending: 'Haushaltsausgaben',
     welcome: 'Willkommen',
     welcomeTo: 'Willkommen bei',
     quickActions: 'Schnellaktionen',
@@ -248,6 +261,7 @@ export default {
     youOwe: 'Sie schulden',
     youAreOwed: 'Man schuldet Ihnen',
     allSettled: 'Alles abgerechnet!',
+    evenOverall: 'Insgesamt ausgeglichen',
     thisMonth: 'Dieser Monat',
     lastMonth: 'Letzter Monat',
     events: 'Ereignisse',
@@ -262,7 +276,7 @@ export default {
     tipStart: 'Beginnen Sie mit der Ausgabenverfolgung für personalisierte Einblicke und besseres Budgetmanagement.',
     getStarted: 'Starten Sie, indem Sie Ihre erste Ausgabe hinzufügen, eine Einkaufsliste erstellen oder einen Kalendertermin hinzufügen.',
     inviteRoommates: 'Laden Sie Ihre Mitbewohner mit dem Code ein:',
-    setupHeroTagline: 'Richten wir euren Haushalt ein 👇',
+    setupHeroTagline: 'Richten wir euren Haushalt ein',
     setupInviteTitle: 'Mitbewohner einladen',
     setupInviteDescription: 'Teilt diesen Code, damit andere beitreten können.',
     setupCopyCode: 'Kopieren',
@@ -550,6 +564,10 @@ export default {
 
   // Shopping
   shopping: {
+    quickAdd: 'Schnell hinzufügen',
+    quickAddEmpty: 'Bitte gib deine Einkaufsliste ein',
+    quickAddParseError: 'Aus deiner Eingabe konnten keine Artikel gelesen werden',
+    quickAddHelp: 'Gib deine Einkaufsliste ein, durch Kommas getrennt. Mengen sind möglich. Beispiel: Milch, 2 kg Hähnchen, 3 Eier, 1 Liter Wasser.',
     title: 'Einkaufsliste',
     sectionSearch: 'Suche',
     sectionCurrentList: 'Aktuelle Liste',

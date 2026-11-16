@@ -2,8 +2,8 @@ import { Platform } from 'react-native';
 
 // Shadow colors - using static values since shadows don't need to be theme-aware
 // These are the light theme shadow colors
-const shadowColor = 'rgba(0, 0, 0, 0.08)';
-const shadowColorStrong = 'rgba(0, 0, 0, 0.12)';
+const shadowColor = 'rgba(16, 21, 31, 0.06)';
+const shadowColorStrong = 'rgba(16, 21, 31, 0.14)';
 
 export const shadows = {
   xs: Platform.select({

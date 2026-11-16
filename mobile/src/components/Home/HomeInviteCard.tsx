@@ -4,7 +4,7 @@ import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '../AppText';
 import { useLanguage } from '../../context/LanguageContext';
-import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows } from '../../theme';
+import { useThemeColors, fontSizes, fontWeights, spacing, radii } from '../../theme';
 
 interface HomeInviteCardProps {
   joinCode: string;
@@ -24,11 +24,8 @@ export const HomeInviteCard: React.FC<HomeInviteCardProps> = ({ joinCode, househ
         card: {
           backgroundColor: colors.surface,
           borderRadius: radii.lg,
-          borderWidth: 1,
-          borderColor: colors.borderLight,
-          padding: spacing.lg,
-          marginBottom: spacing.lg,
-          ...(shadows.sm as object),
+          padding: spacing.md,
+          marginBottom: spacing.sm,
         },
         headerRow: {
           flexDirection: 'row',
@@ -55,9 +52,7 @@ export const HomeInviteCard: React.FC<HomeInviteCardProps> = ({ joinCode, househ
           backgroundColor: colors.primaryUltraSoft,
           paddingHorizontal: spacing.md,
           paddingVertical: spacing.sm,
-          borderRadius: radii.pill ?? 999,
-          borderWidth: 1,
-          borderColor: colors.primary + '40',
+          borderRadius: radii.sm,
           marginBottom: spacing.md,
         },
         codeText: {
@@ -81,13 +76,12 @@ export const HomeInviteCard: React.FC<HomeInviteCardProps> = ({ joinCode, househ
           paddingHorizontal: spacing.md,
           borderRadius: radii.md,
           borderWidth: 1.5,
-          borderColor: colors.primary,
+          borderColor: colors.border,
           backgroundColor: colors.surface,
           minHeight: 48,
         },
         actionBtnPressed: {
           opacity: 0.85,
-          transform: [{ scale: 0.98 }],
         },
         actionLabel: {
           fontSize: fontSizes.sm,

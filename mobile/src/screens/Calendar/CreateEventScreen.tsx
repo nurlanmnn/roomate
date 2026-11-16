@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  AccessibilityInfo,
   Alert,
   Keyboard,
   KeyboardAvoidingView,
@@ -19,8 +20,8 @@ import { eventsApi, Event } from '../../api/eventsApi';
 import { ChoreRotation } from '../../api/choresApi';
 import { FormTextInput } from '../../components/FormTextInput';
 import { PrimaryButton } from '../../components/PrimaryButton';
-import { ScreenHeader } from '../../components/ui/ScreenHeader';
-import { useThemeColors, useTheme, fontSizes, fontWeights, radii, spacing, shadows } from '../../theme';
+import { Group, GroupRow } from '../../components/ui/Group';
+import { useThemeColors, useTheme, fontSizes, fontWeights, radii, spacing } from '../../theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../../context/LanguageContext';
 import { invalidateCache, updateCached } from '../../utils/queryCache';
@@ -53,7 +54,7 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
   const editingEvent: Event | undefined = route.params?.editingEvent;
   const preselectedDate: string | undefined = route.params?.preselectedDate;
   const isEditing = !!editingEvent;
-  
+
   const { selectedHousehold } = useHousehold();
   const colors = useThemeColors();
   const { theme } = useTheme();
@@ -61,6 +62,15 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
   const intlLocale = useMemo(() => toBcp47Locale(language), [language]);
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const [reduceMotion, setReduceMotion] = useState(true);
+  useEffect(() => {
+    let active = true;
+    AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
+      if (active) setReduceMotion(enabled);
+    });
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => { active = false; subscription.remove(); };
+  }, []);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [type, setType] = useState<EventType>('other');
@@ -163,7 +173,7 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
 
   if (!selectedHousehold) {
     return (
-      <SanctuaryScreenShell edges={['top', 'bottom']} innerStyle={styles.container}>
+      <SanctuaryScreenShell edges={['bottom']} innerStyle={styles.container}>
         <View style={styles.emptyContainer}>
           <AppText style={styles.emptyText}>{t('alerts.selectHousehold')}</AppText>
         </View>
@@ -180,14 +190,14 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
   const endSummary =
     endDate && endTime
       ? `${endDate.toLocaleDateString(intlLocale, {
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric',
-        })} • ${endTime.toLocaleTimeString(intlLocale, { hour: 'numeric', minute: '2-digit' })}`
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      })} • ${endTime.toLocaleTimeString(intlLocale, { hour: 'numeric', minute: '2-digit' })}`
       : t('common.optional');
 
   return (
-    <SanctuaryScreenShell edges={['top']} innerStyle={styles.container}>
+    <SanctuaryScreenShell edges={[]} innerStyle={styles.container}>
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
         enabled={Platform.OS === 'android'}
@@ -203,17 +213,16 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
           automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
           showsVerticalScrollIndicator={false}
         >
-          <ScreenHeader
-            title={isEditing ? t('events.editEvent') : t('events.addEvent')}
-            subtitle={selectedHousehold.name}
-            showTitle={false}
-            rightText={t('common.close')}
-            onRightPress={() => navigation.goBack()}
-          />
+          <AppText style={styles.householdName}>{selectedHousehold.name}</AppText>
 
-          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <TouchableWithoutFeedback
+            onPress={Keyboard.dismiss}
+            accessible={false}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.dismissKeyboard')}
+          >
             <View>
-              <View style={[styles.card, styles.inputCard]}>
+              <Group style={styles.inputCard}><View style={styles.inputPadding}>
                 <FormTextInput
                   label={t('events.eventTitle')}
                   value={title}
@@ -221,76 +230,55 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
                   placeholder={t('events.titlePlaceholder')}
                   containerStyle={{ marginBottom: 0 }}
                 />
-              </View>
+              </View></Group>
 
-              <View style={styles.card}>
-                <TouchableOpacity style={styles.summaryRow} onPress={() => setActiveSheet('type')}>
-                  <View style={styles.summaryIcon}>
-                    <Ionicons name={selectedEventType.icon as any} size={20} color={colors.primary} />
-                  </View>
-                  <View style={styles.summaryCopy}>
-                    <AppText style={styles.summaryLabel}>{t('events.eventType')}</AppText>
-                    <AppText style={styles.summaryValue}>{t(selectedEventType.labelKey)}</AppText>
-                  </View>
-                  <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.summaryRow}
-                  onPress={() => {
-                    setPickerPart('date');
-                    setActiveSheet('start');
-                  }}
-                >
-                  <View style={styles.summaryIcon}>
-                    <Ionicons name="calendar-outline" size={20} color={colors.primary} />
-                  </View>
-                  <View style={styles.summaryCopy}>
-                    <AppText style={styles.summaryLabel}>{t('events.date')}</AppText>
-                    <AppText style={styles.summaryValue} numberOfLines={1}>{startSummary}</AppText>
-                  </View>
-                  <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.summaryRow, styles.summaryRowLast]}
-                  onPress={() => {
-                    setPickerPart('date');
-                    setActiveSheet('end');
-                  }}
-                >
-                  <View style={styles.summaryIcon}>
-                    <Ionicons name="flag-outline" size={20} color={colors.primary} />
-                  </View>
-                  <View style={styles.summaryCopy}>
-                    <AppText style={styles.summaryLabel}>{t('events.endDate')}</AppText>
-                    <AppText style={[styles.summaryValue, !endDate && styles.placeholderText]} numberOfLines={1}>
-                      {endSummary}
-                    </AppText>
-                  </View>
-                  <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
-                </TouchableOpacity>
-              </View>
+              <Group style={styles.group}>
+                <GroupRow
+                  title={t('events.eventType')}
+                  subtitle={t(selectedEventType.labelKey)}
+                  icon={selectedEventType.icon}
+                  chevron
+                  onPress={() => setActiveSheet('type')}
+                />
+                <GroupRow
+                  title={t('events.date')}
+                  subtitle={startSummary}
+                  icon="calendar-outline"
+                  chevron
+                  onPress={() => { setPickerPart('date'); setActiveSheet('start'); }}
+                />
+                <GroupRow
+                  title={t('events.endDate')}
+                  subtitle={endSummary}
+                  icon="flag-outline"
+                  chevron
+                  onPress={() => { setPickerPart('date'); setActiveSheet('end'); }}
+                />
+              </Group>
 
-              <View style={styles.card}>
+              <Group style={styles.group}>
                 <TouchableOpacity
-                  style={[styles.summaryRow, !showDescription && styles.summaryRowLast]}
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded: showDescription }}
                   onPress={() => setShowDescription((current) => !current)}
                 >
-                  <View style={styles.summaryIcon}>
-                    <Ionicons name="document-text-outline" size={20} color={colors.primary} />
-                  </View>
-                  <View style={styles.summaryCopy}>
-                    <AppText style={styles.summaryLabel}>{t('common.optional')}</AppText>
-                    <AppText style={styles.summaryValue}>{t('events.eventDescription')}</AppText>
-                  </View>
-                  <Ionicons
-                    name={showDescription ? 'chevron-up' : 'chevron-down'}
-                    size={18}
-                    color={colors.textTertiary}
+                  <GroupRow
+                    title={t('events.eventDescription')}
+                    subtitle={t('common.optional')}
+                    icon="document-text-outline"
+                    trailing={
+                      <Ionicons
+                        name={showDescription ? 'chevron-up-outline' : 'chevron-down-outline'}
+                        size={22}
+                        color={colors.textTertiary}
+                      />
+                    }
                   />
                 </TouchableOpacity>
                 {showDescription ? (
                   <View style={styles.descriptionField}>
                     <FormTextInput
+                      label={t('events.eventDescription')}
                       value={description}
                       onChangeText={setDescription}
                       placeholder={t('events.descriptionPlaceholder')}
@@ -299,7 +287,7 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
                     />
                   </View>
                 ) : null}
-              </View>
+              </Group>
             </View>
           </TouchableWithoutFeedback>
         </ScrollView>
@@ -329,9 +317,20 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
         </View>
       </KeyboardAvoidingView>
 
-      <Modal visible={activeSheet !== null} transparent animationType="slide" onRequestClose={() => setActiveSheet(null)}>
-        <Pressable style={styles.sheetBackdrop} onPress={() => setActiveSheet(null)}>
-          <Pressable style={styles.sheet} onPress={(event) => event.stopPropagation()}>
+      <Modal
+        visible={activeSheet !== null}
+        transparent
+        animationType={reduceMotion ? 'none' : 'fade'}
+        onRequestClose={() => setActiveSheet(null)}
+      >
+        <View style={styles.sheetBackdrop}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setActiveSheet(null)}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.close')}
+          />
+          <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, spacing.md) }]} accessibilityViewIsModal>
             <View style={styles.sheetHandle} />
             <View style={styles.sheetHeader}>
               <AppText style={styles.sheetTitle}>
@@ -341,38 +340,47 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
                     ? t('events.endDate')
                     : t('events.date')}
               </AppText>
-              <TouchableOpacity style={styles.closeButton} onPress={() => setActiveSheet(null)}>
-                <Ionicons name="close" size={20} color={colors.textSecondary} />
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel={t('common.close')}
+                style={styles.closeButton}
+                onPress={() => setActiveSheet(null)}
+              >
+                <Ionicons name="close-outline" size={20} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
 
             {activeSheet === 'type' ? (
               <ScrollView contentContainerStyle={styles.typeList}>
-                {EVENT_TYPES.map((eventType) => {
-                  const selected = type === eventType.id;
-                  return (
-                    <TouchableOpacity
-                      key={eventType.id}
-                      style={[styles.typeRow, selected && styles.typeRowActive]}
-                      onPress={() => {
-                        setType(eventType.id);
-                        setActiveSheet(null);
-                      }}
-                    >
-                      <View style={[styles.typeIcon, selected && styles.typeIconActive]}>
-                        <Ionicons
-                          name={eventType.icon as any}
-                          size={20}
-                          color={selected ? colors.primary : colors.textSecondary}
-                        />
-                      </View>
-                      <AppText style={[styles.typeText, selected && styles.typeTextActive]}>
-                        {t(eventType.labelKey)}
-                      </AppText>
-                      {selected ? <Ionicons name="checkmark-circle" size={22} color={colors.primary} /> : null}
-                    </TouchableOpacity>
-                  );
-                })}
+                <Group style={{ marginHorizontal: 0 }}>
+                  {EVENT_TYPES.map((eventType) => {
+                    const selected = type === eventType.id;
+                    return (
+                      <TouchableOpacity
+                        accessibilityRole="radio"
+                        accessibilityState={{ checked: selected }}
+                        key={eventType.id}
+                        style={[styles.typeRow, selected && styles.typeRowActive]}
+                        onPress={() => {
+                          setType(eventType.id);
+                          setActiveSheet(null);
+                        }}
+                      >
+                        <View style={[styles.typeIcon, selected && styles.typeIconActive]}>
+                          <Ionicons
+                            name={eventType.icon as any}
+                            size={20}
+                            color={selected ? colors.primary : colors.textSecondary}
+                          />
+                        </View>
+                        <AppText style={[styles.typeText, selected && styles.typeTextActive]}>
+                          {t(eventType.labelKey)}
+                        </AppText>
+                        {selected ? <Ionicons name="checkmark-circle-outline" size={22} color={colors.primary} /> : null}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </Group>
               </ScrollView>
             ) : null}
 
@@ -381,6 +389,8 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
                 <View style={styles.segment}>
                   <TouchableOpacity
                     style={[styles.segmentOption, pickerPart === 'date' && styles.segmentOptionActive]}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: pickerPart === 'date' }}
                     onPress={() => setPickerPart('date')}
                   >
                     <AppText style={[styles.segmentText, pickerPart === 'date' && styles.segmentTextActive]}>
@@ -389,6 +399,8 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.segmentOption, pickerPart === 'time' && styles.segmentOptionActive]}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: pickerPart === 'time' }}
                     onPress={() => setPickerPart('time')}
                   >
                     <AppText style={[styles.segmentText, pickerPart === 'time' && styles.segmentTextActive]}>
@@ -430,6 +442,7 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
 
                 {activeSheet === 'end' ? (
                   <TouchableOpacity
+                    accessibilityRole="button"
                     style={styles.clearEndButton}
                     onPress={() => {
                       setEndDate(null);
@@ -443,174 +456,145 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
                 <PrimaryButton title={t('common.done')} onPress={() => setActiveSheet(null)} />
               </View>
             ) : null}
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </Modal>
     </SanctuaryScreenShell>
   );
 };
 
-const createStyles = (colors: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'transparent' },
+const createStyles = (colors: ReturnType<typeof useThemeColors>) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
   keyboardAvoid: { flex: 1 },
   scrollView: { flex: 1 },
   scrollContent: { paddingBottom: spacing.xl },
-  emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl },
-  emptyText: { fontSize: fontSizes.md, color: colors.muted },
-  card: {
-    marginHorizontal: spacing.xl,
-    marginTop: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    ...(shadows.sm as object),
-    overflow: 'hidden',
+  householdName: {
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.md
   },
-  inputCard: { padding: spacing.lg },
-  summaryRow: {
-    minHeight: 62,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.borderLight,
-  },
-  summaryRowLast: { borderBottomWidth: 0 },
-  summaryIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: radii.md,
+  emptyContainer: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.md,
-    backgroundColor: colors.primaryUltraSoft,
+    padding: spacing.xxl
   },
-  summaryCopy: { flex: 1, minWidth: 0 },
-  summaryLabel: {
-    fontSize: fontSizes.xs,
-    fontWeight: fontWeights.semibold,
-    color: colors.textTertiary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  summaryValue: {
-    marginTop: 2,
-    fontSize: fontSizes.md,
-    fontWeight: fontWeights.medium,
-    color: colors.text,
-  },
-  placeholderText: { color: colors.muted },
-  descriptionField: {
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.xs,
-  },
+  emptyText: { fontSize: fontSizes.md, color: colors.textSecondary },
+  group: { marginTop: spacing.md },
+  inputCard: { marginTop: spacing.md },
+  inputPadding: { padding: spacing.md },
+  descriptionField: { padding: spacing.md },
   actions: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.sm,
-    paddingHorizontal: spacing.xl,
+    paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
-    backgroundColor: colors.surface,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderLight,
+    backgroundColor: colors.background
   },
-  actionButton: { flex: 1 },
+  actionButton: { flex: 1, minWidth: 120 },
   sheetBackdrop: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: colors.shadowStrong
   },
   sheet: {
     maxHeight: '86%',
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radii.lg,
-    borderTopRightRadius: radii.lg,
+    backgroundColor: colors.background,
+    borderTopLeftRadius: radii.xl,
+    borderTopRightRadius: radii.xl,
     paddingBottom: spacing.xl,
-    overflow: 'hidden',
+    overflow: 'hidden'
   },
   sheetHandle: {
     width: 36,
-    height: 4,
-    borderRadius: 2,
+    height: spacing.xxs,
+    borderRadius: radii.pill,
     backgroundColor: colors.border,
     alignSelf: 'center',
-    marginTop: spacing.sm,
+    marginTop: spacing.sm
   },
   sheetHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.borderLight,
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm
   },
   sheetTitle: {
-    fontSize: fontSizes.xl,
+    flex: 1,
+    fontSize: 20,
     fontWeight: fontWeights.bold,
-    color: colors.text,
+    color: colors.text
   },
   closeButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.background,
+    backgroundColor: colors.surface
   },
-  typeList: { paddingHorizontal: spacing.xl, paddingVertical: spacing.sm },
+  typeList: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   typeRow: {
-    minHeight: 52,
+    minHeight: 56,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.borderLight,
+    padding: spacing.sm,
+    backgroundColor: colors.surface
   },
   typeRowActive: { backgroundColor: colors.primaryUltraSoft },
   typeIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: radii.md,
+    width: 36,
+    height: 36,
+    borderRadius: radii.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.md,
-    backgroundColor: colors.background,
+    marginRight: spacing.sm,
+    backgroundColor: colors.background
   },
   typeIconActive: { backgroundColor: colors.surface },
-  typeText: { flex: 1, fontSize: fontSizes.md, color: colors.text },
+  typeText: {
+    flex: 1,
+    fontSize: fontSizes.md,
+    color: colors.text
+  },
   typeTextActive: { color: colors.primary, fontWeight: fontWeights.semibold },
-  pickerBody: { paddingHorizontal: spacing.xl, paddingTop: spacing.md },
+  pickerBody: { paddingHorizontal: spacing.md, paddingTop: spacing.md },
   segment: {
     flexDirection: 'row',
-    padding: 4,
-    borderRadius: radii.lg,
-    backgroundColor: colors.background,
-    marginBottom: spacing.sm,
+    padding: spacing.xxs,
+    borderRadius: radii.md,
+    backgroundColor: colors.surface,
+    marginBottom: spacing.sm
   },
   segmentOption: {
     flex: 1,
     minHeight: 44,
+    padding: spacing.xs,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radii.md,
+    borderRadius: radii.sm
   },
-  segmentOptionActive: {
-    backgroundColor: colors.surface,
-    ...(shadows.sm as object),
-  },
+  segmentOptionActive: { backgroundColor: colors.primary },
   segmentText: {
     fontSize: fontSizes.md,
     fontWeight: fontWeights.medium,
     color: colors.textSecondary,
+    textAlign: 'center'
   },
-  segmentTextActive: { color: colors.primary, fontWeight: fontWeights.semibold },
-  clearEndButton: { alignItems: 'center', paddingVertical: spacing.md },
-  clearEndText: { color: colors.danger, fontSize: fontSizes.sm, fontWeight: fontWeights.semibold },
+  segmentTextActive: { color: colors.onPrimary, fontWeight: fontWeights.semibold },
+  clearEndButton: {
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md
+  },
+  clearEndText: {
+    color: colors.danger,
+    fontSize: fontSizes.sm,
+    fontWeight: fontWeights.semibold
+  },
 });
-
-
-
-

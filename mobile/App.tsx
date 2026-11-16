@@ -11,6 +11,12 @@ import { perfToggleVisible } from './src/utils/perfDebug';
 import { Pressable, View } from 'react-native';
 import { OfflineBanner } from './src/components/OfflineBanner';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import {
+  useFonts,
+  SofiaSansSemiCondensed_600SemiBold,
+  SofiaSansSemiCondensed_700Bold,
+  SofiaSansSemiCondensed_800ExtraBold,
+} from '@expo-google-fonts/sofia-sans-semi-condensed';
 
 const AppContent = () => {
   const { theme } = useTheme();
@@ -55,6 +61,17 @@ const AppContent = () => {
 };
 
 export default function App() {
+  const [fontsLoaded, fontError] = useFonts({
+    SofiaSansSemiCondensed_600SemiBold,
+    SofiaSansSemiCondensed_700Bold,
+    SofiaSansSemiCondensed_800ExtraBold,
+  });
+
+  // Hold the first frame until the display face is ready; on a load error fall back to the system face.
+  if (!fontsLoaded && !fontError) {
+    return null;
+  }
+
   return (
     <ThemeProvider>
       <LanguageProvider>

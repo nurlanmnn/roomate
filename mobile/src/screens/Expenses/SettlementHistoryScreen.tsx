@@ -1,25 +1,24 @@
-import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Modal, RefreshControl } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { startOfMonth, startOfYear, subMonths } from 'date-fns';
 import { Image as ExpoImage } from 'expo-image';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Modal, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Settlement, settlementsApi } from '../../api/settlementsApi';
+import { AppText } from '../../components/AppText';
 import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreenShell';
-import { useHousehold } from '../../context/HouseholdContext';
-import { useAuth } from '../../context/AuthContext';
-import { settlementsApi, Settlement } from '../../api/settlementsApi';
+import { Amount } from '../../components/ui/Amount';
 import { Avatar } from '../../components/ui/Avatar';
 import { EmptyState } from '../../components/ui/EmptyState';
-import { AppText } from '../../components/AppText';
-import { SettingsSection } from '../../components/Settings/SettingsSection';
-import { SettingsGroupCard } from '../../components/Settings/SettingsGroupCard';
-import { formatCurrency } from '../../utils/formatCurrency';
-import { useHouseholdCurrency } from '../../utils/useHouseholdCurrency';
+import { Group, GroupRow, SectionHeading } from '../../components/ui/Group';
+import { useAuth } from '../../context/AuthContext';
+import { useHousehold } from '../../context/HouseholdContext';
+import { useLanguage } from '../../context/LanguageContext';
+import { fontSizes, fontWeights, radii, spacing, useThemeColors } from '../../theme';
 import { formatDate } from '../../utils/dateHelpers';
 import { getDateFnsLocale } from '../../utils/dateLocales';
-import { useThemeColors, fontSizes, fontWeights, radii, spacing } from '../../theme';
-import { Ionicons } from '@expo/vector-icons';
-import { subMonths, startOfMonth, startOfYear } from 'date-fns';
-import { useLanguage } from '../../context/LanguageContext';
 import { dedupedFetch, getCached } from '../../utils/queryCache';
+import { useHouseholdCurrency } from '../../utils/useHouseholdCurrency';
 
 type DateFilter = 'all' | 'month' | '3months' | '6months' | 'year';
 
@@ -50,7 +49,7 @@ const getDateFilterStart = (dateFilter: DateFilter): string | undefined => {
   }
 };
 
-export const SettlementHistoryScreen: React.FC<{ navigation: any }> = () => {
+export const SettlementHistoryScreen: React.FC<{ navigation: any; }> = () => {
   const { selectedHousehold } = useHousehold();
   const { user } = useAuth();
   const colors = useThemeColors();
@@ -71,7 +70,7 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = () => {
       StyleSheet.create({
         container: {
           flex: 1,
-          backgroundColor: 'transparent',
+          backgroundColor: colors.background,
         },
         scrollView: {
           flex: 1,
@@ -86,6 +85,7 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = () => {
           color: colors.text,
         },
         filterRow: {
+          flexWrap: 'wrap',
           flexDirection: 'row',
           padding: spacing.xxs,
           gap: spacing.xxs,
@@ -93,6 +93,8 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = () => {
           borderRadius: radii.md,
         },
         filterButton: {
+          minHeight: 44,
+          flexBasis: 65,
           flex: 1,
           paddingVertical: spacing.xs,
           paddingHorizontal: spacing.sm,
@@ -110,7 +112,7 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = () => {
           color: colors.textSecondary,
         },
         filterButtonTextActive: {
-          color: colors.surface,
+          color: colors.onPrimary,
           fontWeight: fontWeights.semibold,
         },
         emptyContainer: {
@@ -129,31 +131,6 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = () => {
         cardPad: {
           padding: spacing.lg,
         },
-        settlementHeader: {
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: spacing.md,
-        },
-        userInfo: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: spacing.sm,
-          flex: 1,
-        },
-        settlementText: {
-          fontSize: fontSizes.md,
-          color: colors.text,
-          flex: 1,
-        },
-        userName: {
-          fontWeight: fontWeights.semibold,
-        },
-        amount: {
-          fontSize: fontSizes.lg,
-          fontWeight: fontWeights.extrabold,
-          color: colors.primary,
-        },
         settlementDetails: {
           gap: spacing.xs,
         },
@@ -168,6 +145,7 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = () => {
           flex: 1,
         },
         proofButton: {
+          minHeight: 44,
           flexDirection: 'row',
           alignItems: 'center',
           gap: spacing.xs,
@@ -175,23 +153,28 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = () => {
           paddingVertical: spacing.xs,
         },
         proofButtonText: {
+          flexShrink: 1,
           fontSize: fontSizes.sm,
           color: colors.primary,
           fontWeight: fontWeights.medium,
         },
         proofModalOverlay: {
           flex: 1,
-          backgroundColor: 'rgba(0, 0, 0, 0.9)',
+          backgroundColor: colors.background,
           justifyContent: 'center',
           alignItems: 'center',
         },
         proofModalClose: {
+          minWidth: 44,
+          minHeight: 44,
+          alignItems: 'center',
+          justifyContent: 'center',
           position: 'absolute',
           right: spacing.lg,
           zIndex: 10,
           padding: spacing.xs,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          borderRadius: 20,
+          backgroundColor: colors.surface,
+          borderRadius: radii.pill,
         },
         proofModalImage: {
           width: '90%',
@@ -268,9 +251,9 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = () => {
   }, [selectedHousehold, dateFilter, loadSettlements]);
 
   const getUserName = (userId: string): string => {
-    if (!selectedHousehold) return 'Unknown';
+    if (!selectedHousehold) return t('common.someone');
     const member = selectedHousehold.members.find(m => m._id === userId);
-    return member?.name || 'Unknown';
+    return member?.name || t('common.someone');
   };
 
   const getUserAvatar = (userId: string): string | undefined => {
@@ -304,7 +287,7 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = () => {
 
   if (!selectedHousehold || !user) {
     return (
-      <SanctuaryScreenShell edges={['top', 'bottom']} innerStyle={styles.container}>
+      <SanctuaryScreenShell edges={['bottom']} innerStyle={styles.container}>
         <View style={styles.emptyContainer}>
           <AppText>{t('alerts.selectHousehold')}</AppText>
         </View>
@@ -313,7 +296,7 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = () => {
   }
 
   return (
-    <SanctuaryScreenShell edges={['top']} innerStyle={styles.container}>
+    <SanctuaryScreenShell edges={['bottom']} innerStyle={styles.container}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -321,19 +304,21 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = () => {
         refreshControl={<RefreshControl refreshing={loading} onRefresh={loadSettlements} />}
         showsVerticalScrollIndicator={false}
       >
-        <SettingsSection title={t('settlementHistory.sectionHousehold')}>
-          <SettingsGroupCard>
+        <View><SectionHeading title={t('settlementHistory.sectionHousehold')} />
+          <Group>
             <View style={styles.cardPad}>
               <AppText style={styles.householdLine}>{selectedHousehold.name}</AppText>
             </View>
-          </SettingsGroupCard>
-        </SettingsSection>
+          </Group>
+        </View>
 
-        <SettingsSection title={t('settlementHistory.sectionPeriod')}>
-          <SettingsGroupCard>
+        <View><SectionHeading title={t('settlementHistory.sectionPeriod')} />
+          <Group>
             <View style={styles.filterRow}>
               {(['all', 'month', '3months', '6months', 'year'] as DateFilter[]).map((filter) => (
                 <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: dateFilter === filter }}
                   key={filter}
                   style={[
                     styles.filterButton,
@@ -351,18 +336,19 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = () => {
                     {filter === 'all'
                       ? t('time.all')
                       : filter === 'month'
-                        ? '1M'
+                        ? t('time.month')
                         : filter === '3months'
-                          ? '3M'
+                          ? t('monthlyTrend.lastNMonths', { count: 3 })
                           : filter === '6months'
-                            ? '6M'
-                            : '1Y'}
+                            ? t('monthlyTrend.lastNMonths', { count: 6 })
+                            : t('time.year')}
                   </AppText>
+                  {dateFilter === filter && <Ionicons name="checkmark-outline" size={16} color={colors.onPrimary} />}
                 </TouchableOpacity>
               ))}
             </View>
-          </SettingsGroupCard>
-        </SettingsSection>
+          </Group>
+        </View>
 
         {loading ? (
           <View style={styles.emptyContainer}>
@@ -386,86 +372,79 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = () => {
             />
           </View>
         ) : (
-          <SettingsSection title={t('settlementHistory.sectionList')}>
-            {visibleSettlements.map((settlement, index) => {
-              const fromUserId =
-                typeof settlement.fromUserId === 'object' && settlement.fromUserId !== null
-                  ? settlement.fromUserId._id
-                  : (settlement.fromUserId as string);
-              const toUserId =
-                typeof settlement.toUserId === 'object' && settlement.toUserId !== null
-                  ? settlement.toUserId._id
-                  : (settlement.toUserId as string);
+          <View><SectionHeading title={t('settlementHistory.sectionList')} />
+            <Group>
+              {visibleSettlements.map((settlement) => {
+                const fromUserId =
+                  typeof settlement.fromUserId === 'object' && settlement.fromUserId !== null
+                    ? settlement.fromUserId._id
+                    : (settlement.fromUserId as string);
+                const toUserId =
+                  typeof settlement.toUserId === 'object' && settlement.toUserId !== null
+                    ? settlement.toUserId._id
+                    : (settlement.toUserId as string);
 
-              const fromUserName = fromUserId
-                ? getUserName(fromUserId)
-                : typeof settlement.fromUserId === 'object' && settlement.fromUserId !== null
-                  ? settlement.fromUserId.name || 'Unknown User'
-                  : 'Unknown User';
-              const toUserName = toUserId
-                ? getUserName(toUserId)
-                : typeof settlement.toUserId === 'object' && settlement.toUserId !== null
-                  ? settlement.toUserId.name || 'Unknown User'
-                  : 'Unknown User';
+                const fromUserName = fromUserId
+                  ? getUserName(fromUserId)
+                  : typeof settlement.fromUserId === 'object' && settlement.fromUserId !== null
+                    ? settlement.fromUserId.name || t('common.someone')
+                    : t('common.someone');
+                const toUserName = toUserId
+                  ? getUserName(toUserId)
+                  : typeof settlement.toUserId === 'object' && settlement.toUserId !== null
+                    ? settlement.toUserId.name || t('common.someone')
+                    : t('common.someone');
 
-              const fromUserAvatar = fromUserId ? getUserAvatar(fromUserId) : undefined;
+                const fromUserAvatar = fromUserId ? getUserAvatar(fromUserId) : undefined;
 
-              return (
-                <SettingsGroupCard
-                  key={settlement._id}
-                  style={{
-                    marginBottom: index < visibleSettlements.length - 1 ? spacing.md : 0,
-                  }}
-                >
-                  <View style={styles.cardPad}>
-                    <View style={styles.settlementHeader}>
-                      <View style={styles.userInfo}>
-                        <Avatar name={fromUserName} uri={fromUserAvatar} size={32} />
-                        <AppText style={styles.settlementText}>
-                          <AppText style={styles.userName}>{fromUserName}</AppText>
-                          {` ${t('settlementHistory.paid')} `}
-                          <AppText style={styles.userName}>{toUserName}</AppText>
-                        </AppText>
-                      </View>
-                      <AppText style={styles.amount}>{formatCurrency(settlement.amount, currency)}</AppText>
-                    </View>
-
-                    <View style={styles.settlementDetails}>
-                      <View style={styles.detailRow}>
-                        <Ionicons name="calendar-outline" size={16} color={colors.textSecondary} />
-                        <AppText style={styles.detailText}>
-                          {formatDate(settlement.date, dateFnsLocale, relativeDayLabels)}
-                        </AppText>
-                      </View>
-                      {settlement.method ? (
+                return (
+                  <View key={settlement._id}>
+                    <GroupRow
+                      title={`${fromUserName} ${t('settlementHistory.paid')} ${toUserName}`}
+                      titleLines={0}
+                      leading={<Avatar name={fromUserName} uri={fromUserAvatar} size={32} />}
+                      trailing={<Amount value={settlement.amount} currency={currency} size={22} fit />}
+                    />
+                    <View style={{ paddingHorizontal: spacing.md, paddingBottom: spacing.md }}>
+                      <View style={styles.settlementDetails}>
                         <View style={styles.detailRow}>
-                          <Ionicons name="card-outline" size={16} color={colors.textSecondary} />
-                          <AppText style={styles.detailText}>{settlement.method}</AppText>
+                          <Ionicons name="calendar-outline" size={16} color={colors.textSecondary} />
+                          <AppText style={styles.detailText}>
+                            {formatDate(settlement.date, dateFnsLocale, relativeDayLabels)}
+                          </AppText>
                         </View>
-                      ) : null}
-                      {settlement.note ? (
-                        <View style={styles.detailRow}>
-                          <Ionicons name="document-text-outline" size={16} color={colors.textSecondary} />
-                          <AppText style={styles.detailText}>{settlement.note}</AppText>
-                        </View>
-                      ) : null}
-                      {settlement.proofImageUrl ? (
-                        <TouchableOpacity
-                          style={styles.proofButton}
-                          onPress={() => setSelectedProofImage(settlement.proofImageUrl || null)}
-                          activeOpacity={0.75}
-                        >
-                          <Ionicons name="image-outline" size={16} color={colors.primary} />
-                          <AppText style={styles.proofButtonText}>{t('settlementHistory.viewProof')}</AppText>
-                        </TouchableOpacity>
-                      ) : null}
+                        {settlement.method ? (
+                          <View style={styles.detailRow}>
+                            <Ionicons name="card-outline" size={16} color={colors.textSecondary} />
+                            <AppText style={styles.detailText}>{settlement.method}</AppText>
+                          </View>
+                        ) : null}
+                        {settlement.note ? (
+                          <View style={styles.detailRow}>
+                            <Ionicons name="document-text-outline" size={16} color={colors.textSecondary} />
+                            <AppText style={styles.detailText}>{settlement.note}</AppText>
+                          </View>
+                        ) : null}
+                        {settlement.proofImageUrl ? (
+                          <TouchableOpacity
+                            accessibilityRole="button"
+                            style={styles.proofButton}
+                            onPress={() => setSelectedProofImage(settlement.proofImageUrl || null)}
+                            activeOpacity={0.75}
+                          >
+                            <Ionicons name="image-outline" size={16} color={colors.primary} />
+                            <AppText style={styles.proofButtonText}>{t('settlementHistory.viewProof')}</AppText>
+                          </TouchableOpacity>
+                        ) : null}
+                      </View>
                     </View>
                   </View>
-                </SettingsGroupCard>
-              );
-            })}
+                );
+              })}
+            </Group>
             {hasMoreSettlements ? (
               <TouchableOpacity
+                accessibilityRole="button"
                 style={styles.loadMoreButton}
                 onPress={loadMoreSettlements}
                 activeOpacity={0.75}
@@ -479,7 +458,7 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = () => {
                 )}
               </TouchableOpacity>
             ) : null}
-          </SettingsSection>
+          </View>
         )}
       </ScrollView>
 
@@ -487,23 +466,27 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = () => {
       <Modal
         visible={selectedProofImage !== null}
         transparent
-        animationType="fade"
+        animationType="none"
         onRequestClose={() => setSelectedProofImage(null)}
       >
         <View style={styles.proofModalOverlay}>
           <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel={t('common.close')}
             style={[styles.proofModalClose, { top: insets.top + spacing.md }]}
             onPress={() => setSelectedProofImage(null)}
           >
-            <Ionicons name="close-circle" size={40} color="#FFFFFF" />
+            <Ionicons name="close-outline" size={24} color={colors.text} />
           </TouchableOpacity>
           {selectedProofImage && (
             <ExpoImage
               source={{ uri: selectedProofImage }}
               style={styles.proofModalImage}
+              accessible
+              accessibilityLabel={t('settlementHistory.viewProof')}
               contentFit="contain"
               cachePolicy="memory-disk"
-              transition={150}
+              transition={0}
             />
           )}
         </View>
@@ -511,4 +494,3 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any }> = () => {
     </SanctuaryScreenShell>
   );
 };
-

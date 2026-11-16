@@ -32,9 +32,9 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   }, []);
 
   const setTheme = async (nextTheme: Theme) => {
+    setThemeState(nextTheme);
     try {
       await SecureStore.setItemAsync(THEME_STORAGE_KEY, nextTheme);
-      setThemeState(nextTheme);
     } catch (error) {
       if (__DEV__) console.error('Failed to save theme preference:', error);
     }

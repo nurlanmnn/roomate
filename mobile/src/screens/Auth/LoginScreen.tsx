@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Alert, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import { FormTextInput } from '../../components/FormTextInput';
-import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreenShell';
+import { AuthScreenLayout } from './AuthScreenLayout';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { AppText } from '../../components/AppText';
 import { useAuth } from '../../context/AuthContext';
@@ -34,112 +34,48 @@ export const LoginScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   };
 
   return (
-    <SanctuaryScreenShell edges={['top', 'bottom']} innerStyle={styles.shellInner}>
-      <KeyboardAvoidingView
-        style={styles.keyboardAvoid}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    <AuthScreenLayout title={t('auth.welcomeBack')} subtitle={t('auth.login')} onBack={() => navigation.navigate('Landing')}>
+      <FormTextInput
+        label={t('auth.email')}
+        value={email}
+        onChangeText={setEmail}
+        placeholder={t('auth.email')}
+        keyboardType="email-address"
+      />
+
+      <FormTextInput
+        label={t('auth.password')}
+        value={password}
+        onChangeText={setPassword}
+        placeholder={t('auth.password')}
+        secureTextEntry
+      />
+
+      <TouchableOpacity
+        style={styles.forgotRow}
+        onPress={() => navigation.navigate('ForgotPassword')}
+        accessibilityRole="button"
       >
-        <ScrollView
-          style={styles.container}
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-        >
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.navigate('Landing')} accessibilityRole="button">
-            <AppText style={[styles.backButtonText, { color: colors.primary }]}>← {t('common.back')}</AppText>
-          </TouchableOpacity>
+        <AppText style={[styles.forgotLink, { color: colors.primary }]}>{t('auth.forgotPassword')}</AppText>
+      </TouchableOpacity>
 
-          <AppText style={[styles.title, { color: colors.text }]}>{t('auth.welcomeBack')}</AppText>
-          <AppText style={[styles.subtitle, { color: colors.textSecondary }]}>{t('auth.login')}</AppText>
+      <PrimaryButton title={t('auth.login')} onPress={handleLogin} loading={loading} />
 
-          <FormTextInput
-            label={t('auth.email')}
-            value={email}
-            onChangeText={setEmail}
-            placeholder="your@email.com"
-            keyboardType="email-address"
-          />
-
-          <FormTextInput
-            label={t('auth.password')}
-            value={password}
-            onChangeText={setPassword}
-            placeholder={t('auth.password')}
-            secureTextEntry
-          />
-
-          <TouchableOpacity
-            style={styles.forgotRow}
-            onPress={() => navigation.navigate('ForgotPassword')}
-            accessibilityRole="button"
-          >
-            <AppText style={[styles.forgotLink, { color: colors.primary }]}>{t('auth.forgotPassword')}</AppText>
-          </TouchableOpacity>
-
-          <PrimaryButton title={t('auth.login')} onPress={handleLogin} loading={loading} />
-
-          <View style={styles.footer}>
-            <AppText style={[styles.footerText, { color: colors.textSecondary }]}>{t('auth.noAccount')} </AppText>
-            <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
-              <AppText style={[styles.linkText, { color: colors.primary }]}>{t('auth.signup')}</AppText>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SanctuaryScreenShell>
+      <View style={styles.footer}>
+        <AppText style={[styles.footerText, { color: colors.textSecondary }]}>{t('auth.noAccount')} </AppText>
+        <TouchableOpacity accessibilityRole="button" style={styles.footerAction} onPress={() => navigation.navigate('Signup')}>
+          <AppText style={[styles.linkText, { color: colors.primary }]}>{t('auth.signup')}</AppText>
+        </TouchableOpacity>
+      </View>
+    </AuthScreenLayout>
   );
 };
 
 const styles = StyleSheet.create({
-  shellInner: {
-    flex: 1,
-  },
-  keyboardAvoid: {
-    flex: 1,
-  },
-  container: {
-    flex: 1,
-  },
-  content: {
-    padding: spacing.xl,
-    paddingTop: spacing.lg,
-  },
-  backButton: {
-    marginBottom: spacing.lg,
-    alignSelf: 'flex-start',
-  },
-  backButtonText: {
-    fontSize: fontSizes.md,
-    fontWeight: fontWeights.semibold,
-  },
-  title: {
-    fontSize: fontSizes.xxl,
-    fontWeight: fontWeights.bold,
-    marginBottom: spacing.xs,
-  },
-  subtitle: {
-    fontSize: fontSizes.md,
-    marginBottom: spacing.xl,
-  },
-  forgotRow: {
-    alignSelf: 'flex-end',
-    marginBottom: spacing.lg,
-    marginTop: -spacing.sm,
-  },
-  forgotLink: {
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.semibold,
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: spacing.xl,
-  },
-  footerText: {
-    fontSize: fontSizes.sm,
-  },
-  linkText: {
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.semibold,
-  },
+  forgotRow: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-end', marginBottom: spacing.md, maxWidth: '100%' },
+  forgotLink: { fontSize: fontSizes.sm, fontWeight: fontWeights.semibold },
+  footer: { alignItems: 'center', marginTop: spacing.xl, gap: spacing.xxs },
+  footerText: { fontSize: fontSizes.sm, textAlign: 'center' },
+  footerAction: { minHeight: 44, minWidth: 44, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xs },
+  linkText: { fontSize: fontSizes.sm, fontWeight: fontWeights.semibold, textAlign: 'center' },
 });

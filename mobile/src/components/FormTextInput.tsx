@@ -55,12 +55,12 @@ export const FormTextInput: React.FC<FormTextInputProps> = ({
     },
     input: {
       borderWidth: 1.5,
-      borderColor: isDark ? 'rgba(74, 222, 128, 0.28)' : 'rgba(34, 197, 94, 0.22)',
-      borderRadius: radii.lg,
+      borderColor: colors.border,
+      borderRadius: radii.md,
       paddingHorizontal: spacing.md,
       paddingVertical: Platform.select({ ios: spacing.md, android: spacing.sm, default: spacing.md }),
       fontSize: fontSizes.md,
-      backgroundColor: isDark ? 'rgba(30, 38, 52, 0.85)' : 'rgba(255, 255, 255, 0.72)',
+      backgroundColor: colors.surface,
       color: colors.text,
     },
     multilineInput: {

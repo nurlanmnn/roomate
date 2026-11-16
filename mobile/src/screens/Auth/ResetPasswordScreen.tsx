@@ -1,16 +1,9 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-} from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { PrimaryButton } from '../../components/PrimaryButton';
-import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreenShell';
+import { AuthScreenLayout } from './AuthScreenLayout';
+import { AppText } from '../../components/AppText';
+import { useThemeColors, fontSizes, fontWeights, spacing } from '../../theme';
 import { FormTextInput } from '../../components/FormTextInput';
 import { OtpSixDigits } from '../../components/auth/OtpSixDigits';
 import { authApi } from '../../api/authApi';
@@ -19,6 +12,7 @@ import { useLanguage } from '../../context/LanguageContext';
 export const ResetPasswordScreen: React.FC<{ navigation: any; route: any }> = ({ navigation, route }) => {
   const { email } = route.params as { email: string };
   const { t } = useLanguage();
+  const colors = useThemeColors();
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -70,114 +64,52 @@ export const ResetPasswordScreen: React.FC<{ navigation: any; route: any }> = ({
   const canSubmit = otpComplete && newPassword.length >= 8 && confirmPassword.length >= 8;
 
   return (
-    <SanctuaryScreenShell edges={['top', 'bottom']} innerStyle={styles.shellInner}>
-      <KeyboardAvoidingView
-        style={styles.keyboardAvoid}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-      >
-        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.navigate('ForgotPassword')}>
-            <Text style={styles.backButtonText}>← {t('common.back')}</Text>
-          </TouchableOpacity>
+    <AuthScreenLayout title={t('auth.resetPasswordTitle')} onBack={() => navigation.navigate('ForgotPassword')} subtitle={<>
+      {t('auth.resetPasswordSubtitle')}{'\n'}
+      <AppText style={[styles.email, { color: colors.text }]}>{email}</AppText>
+    </>}>
+      <OtpSixDigits value={otp} onChange={setOtp} />
 
-          <Text style={styles.title}>{t('auth.resetPasswordTitle')}</Text>
-          <Text style={styles.subtitle}>
-            {t('auth.resetPasswordSubtitle')}
-            {'\n'}
-            <Text style={styles.email}>{email}</Text>
-          </Text>
+      <FormTextInput
+        label={t('auth.newPassword')}
+        value={newPassword}
+        onChangeText={setNewPassword}
+        placeholder={t('auth.newPassword')}
+        secureTextEntry
+      />
 
-          <OtpSixDigits value={otp} onChange={setOtp} />
+      <FormTextInput
+        label={t('auth.confirmPassword')}
+        value={confirmPassword}
+        onChangeText={setConfirmPassword}
+        placeholder={t('auth.confirmPassword')}
+        secureTextEntry
+      />
 
-          <FormTextInput
-            label={t('auth.newPassword')}
-            value={newPassword}
-            onChangeText={setNewPassword}
-            placeholder={t('auth.newPassword')}
-            secureTextEntry
-          />
+      <PrimaryButton
+        title={t('auth.resetPassword')}
+        onPress={handleReset}
+        loading={loading}
+        disabled={!canSubmit}
+      />
 
-          <FormTextInput
-            label={t('auth.confirmPassword')}
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            placeholder={t('auth.confirmPassword')}
-            secureTextEntry
-          />
-
-          <PrimaryButton
-            title={t('auth.resetPassword')}
-            onPress={handleReset}
-            loading={loading}
-            disabled={!canSubmit}
-          />
-
-          <View style={styles.resendContainer}>
-            <Text style={styles.resendText}>{t('auth.didntReceiveCode')} </Text>
-            <TouchableOpacity onPress={handleResend} disabled={resendLoading}>
-              <Text style={[styles.resendLink, resendLoading && styles.resendLinkDisabled]}>
-                {resendLoading ? t('common.loading') : t('auth.resendCode')}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SanctuaryScreenShell>
+      <View style={styles.resendContainer}>
+        <AppText style={[styles.resendText, { color: colors.textSecondary }]}>{t('auth.didntReceiveCode')} </AppText>
+        <TouchableOpacity onPress={handleResend} disabled={resendLoading} accessibilityRole="button" accessibilityState={{ disabled: resendLoading, busy: resendLoading }} style={styles.resendAction}>
+          <AppText style={[styles.resendLink, { color: colors.primary }, resendLoading && styles.resendLinkDisabled]}>
+            {resendLoading ? t('common.loading') : t('auth.resendCode')}
+          </AppText>
+        </TouchableOpacity>
+      </View>
+    </AuthScreenLayout>
   );
 };
 
 const styles = StyleSheet.create({
-  shellInner: {
-    flex: 1,
-  },
-  keyboardAvoid: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 24,
-    paddingTop: 20,
-    paddingBottom: 40,
-  },
-  backButton: {
-    marginBottom: 24,
-    alignSelf: 'flex-start',
-  },
-  backButtonText: {
-    fontSize: 16,
-    color: '#4CAF50',
-    fontWeight: '600',
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: '700',
-    marginBottom: 12,
-    color: '#333',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 24,
-  },
-  email: {
-    fontWeight: '600',
-    color: '#333',
-  },
-  resendContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 24,
-  },
-  resendText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  resendLink: {
-    fontSize: 14,
-    color: '#4CAF50',
-    fontWeight: '600',
-  },
-  resendLinkDisabled: {
-    color: '#999',
-  },
+  email: { fontWeight: fontWeights.semibold },
+  resendContainer: { alignItems: 'center', marginTop: spacing.xl, gap: spacing.xxs },
+  resendText: { fontSize: fontSizes.sm, textAlign: 'center' },
+  resendAction: { minHeight: 44, minWidth: 44, paddingHorizontal: spacing.xs, justifyContent: 'center', alignItems: 'center' },
+  resendLink: { fontSize: fontSizes.sm, fontWeight: fontWeights.semibold, textAlign: 'center' },
+  resendLinkDisabled: { opacity: 0.5 },
 });

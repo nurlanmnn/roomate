@@ -1,10 +1,9 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import {
+  Pressable,
   Alert,
   ScrollView,
   StyleSheet,
-  Text,
-  TouchableOpacity,
   View,
   RefreshControl,
   ActivityIndicator,
@@ -21,9 +20,9 @@ import { ChoreRotationRow } from '../../components/ChoreRotationRow';
 import { useChoreCompletion } from '../../hooks/useChoreCompletion';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { EmptyState } from '../../components/ui/EmptyState';
-import { ScreenHeader } from '../../components/ui/ScreenHeader';
-import { useThemeColors, fontSizes, spacing, radii, shadows, TAB_BAR_HEIGHT } from '../../theme';
+import { Group, SectionHeading } from '../../components/ui/Group';
 import { Ionicons } from '@expo/vector-icons';
+import { useThemeColors, fontSizes, fontWeights, spacing } from '../../theme';
 import { format, startOfWeek } from 'date-fns';
 import { getDateFnsLocale } from '../../utils/dateLocales';
 import { getChorePeriodStart, getUpcomingAssignees } from '../../utils/choreSchedule';
@@ -164,29 +163,25 @@ export const ChoreRotationScreen: React.FC<{ navigation: any }> = ({ navigation 
 
   if (!selectedHousehold) {
     return (
-      <SanctuaryScreenShell edges={['top', 'bottom']} innerStyle={styles.container}>
+      <SanctuaryScreenShell edges={['bottom']} innerStyle={styles.container}>
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>{t('alerts.selectHousehold')}</Text>
+          <AppText style={styles.emptyText}>{t('alerts.selectHousehold')}</AppText>
         </View>
       </SanctuaryScreenShell>
     );
   }
 
   return (
-    <SanctuaryScreenShell edges={['top']} innerStyle={styles.container}>
+    <SanctuaryScreenShell edges={['bottom']} innerStyle={styles.container}>
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={{ paddingBottom: TAB_BAR_HEIGHT + spacing.xl }}
+        contentContainerStyle={{ paddingBottom: spacing.xxl }}
         contentInsetAdjustmentBehavior="automatic"
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={loadChores} />}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={loadChores} tintColor={colors.primary} />}
       >
-        <ScreenHeader
-          title={t('chores.title')}
-          showTitle={false}
-          subtitle={`${t('chores.thisWeek')} · ${format(weekStart, 'MMM d', { locale: dateFnsLocale })}`}
-        />
+        <SectionHeading title={`${t('chores.thisWeek')} · ${format(weekStart, 'MMM d', { locale: dateFnsLocale })}`} />
 
         {loading && chores.length === 0 ? (
           <View style={{ paddingVertical: spacing.xxl, alignItems: 'center' }}>
@@ -207,46 +202,54 @@ export const ChoreRotationScreen: React.FC<{ navigation: any }> = ({ navigation 
               {chores.map((chore) => {
                 const upcoming = getUpcomingAssignees(chore, new Date(), 3, dateFnsLocale);
                 return (
-                <View key={chore._id} style={styles.choreCard}>
-                  <ChoreRotationRow
-                    chore={chore}
-                    user={user}
-                    referenceDate={new Date()}
-                    onToggleComplete={handleToggleChoreComplete}
-                    onGiveTo={handleGiveToChore}
-                    dateFnsLocale={dateFnsLocale}
-                    t={t}
-                    colors={colors}
-                    showPeriodRange
-                    showFrequency
-                    variant="compact"
-                  />
-                  {upcoming.length > 0 && (
-                    <AppText style={styles.upcomingText}>
-                      {t('chores.upcoming', { list: upcoming.map((u) => u.label).join(', ') })}
-                    </AppText>
-                  )}
-                  <View style={styles.choreActions}>
-                    <TouchableOpacity
-                      style={styles.editButton}
-                      onPress={() => navigation.navigate('CreateChore', { editingChore: chore })}
-                    >
-                      <Ionicons name="pencil-outline" size={20} color={colors.primary} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.deleteButton}
-                      onPress={() => handleDeleteChore(chore)}
-                    >
-                      <Ionicons name="trash-outline" size={20} color={colors.danger} />
-                    </TouchableOpacity>
-                  </View>
-                </View>
+                  <Group key={chore._id} style={styles.choreCard}>
+                    <ChoreRotationRow
+                      chore={chore}
+                      user={user}
+                      referenceDate={new Date()}
+                      onToggleComplete={handleToggleChoreComplete}
+                      onGiveTo={handleGiveToChore}
+                      dateFnsLocale={dateFnsLocale}
+                      t={t}
+                      colors={colors}
+                      showPeriodRange
+                      showFrequency
+                      variant="compact"
+                      isLast
+                    />
+                    {upcoming.length > 0 && (
+                      <AppText style={styles.upcomingText}>
+                        {t('chores.upcoming', { list: upcoming.map((u) => u.label).join(', ') })}
+                      </AppText>
+                    )}
+                    <View style={styles.choreActions}>
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={`${t('common.edit')}: ${chore.name}`}
+                        onPress={() => navigation.navigate('CreateChore', { editingChore: chore })}
+                        style={({ pressed }) => [styles.choreAction, pressed && { opacity: 0.6 }]}
+                      >
+                        <Ionicons name="pencil-outline" size={18} color={colors.primary} />
+                        <AppText style={[styles.choreActionText, { color: colors.primary }]}>{t('common.edit')}</AppText>
+                      </Pressable>
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={`${t('common.delete')}: ${chore.name}`}
+                        onPress={() => handleDeleteChore(chore)}
+                        style={({ pressed }) => [styles.choreAction, pressed && { opacity: 0.6 }]}
+                      >
+                        <Ionicons name="trash-outline" size={18} color={colors.danger} />
+                        <AppText style={[styles.choreActionText, { color: colors.danger }]}>{t('common.delete')}</AppText>
+                      </Pressable>
+                    </View>
+                  </Group>
                 );
               })}
             </View>
             <View style={styles.addButtonWrap}>
               <PrimaryButton
-                title={`+ ${t('chores.addChore')}`}
+                title={t('chores.addChore')}
+                icon="add-outline"
                 onPress={() => navigation.navigate('CreateChore')}
               />
             </View>
@@ -257,60 +260,38 @@ export const ChoreRotationScreen: React.FC<{ navigation: any }> = ({ navigation 
   );
 };
 
-const createStyles = (colors: any) =>
-  StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: 'transparent',
-    },
-    scrollView: {
-      flex: 1,
-    },
-    emptyContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: spacing.xxl,
-    },
-    emptyText: {
-      fontSize: fontSizes.md,
-      color: colors.muted,
-    },
-    choreList: {
-      paddingHorizontal: spacing.xl,
-      paddingTop: spacing.sm,
-    },
-    choreCard: {
-      backgroundColor: colors.surface,
-      borderRadius: radii.lg,
-      padding: spacing.md,
-      marginBottom: spacing.md,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      ...(shadows.sm as object),
-    },
-    upcomingText: {
-      fontSize: fontSizes.xs,
-      color: colors.textTertiary,
-      marginTop: spacing.xs,
-    },
-    choreActions: {
-      flexDirection: 'row',
-      justifyContent: 'flex-end',
-      gap: spacing.sm,
-      marginTop: spacing.sm,
-      paddingTop: spacing.sm,
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: colors.borderLight,
-    },
-    editButton: {
-      padding: spacing.sm,
-    },
-    deleteButton: {
-      padding: spacing.sm,
-    },
-    addButtonWrap: {
-      paddingHorizontal: spacing.xl,
-      paddingTop: spacing.lg,
-    },
-  });
+const createStyles = (colors: ReturnType<typeof useThemeColors>) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
+  choreActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+    paddingHorizontal: spacing.md,
+  },
+  choreAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xxs,
+    minHeight: 44,
+    paddingHorizontal: spacing.xs,
+  },
+  choreActionText: { fontSize: fontSizes.md - 1, fontWeight: fontWeights.semibold },
+  scrollView: { flex: 1 },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xxl
+  },
+  emptyText: { fontSize: fontSizes.md, color: colors.textSecondary },
+  choreList: { paddingTop: spacing.xs },
+  choreCard: { marginBottom: spacing.md },
+  upcomingText: {
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+  },
+  addButtonWrap: { paddingHorizontal: spacing.md, paddingTop: spacing.md },
+});

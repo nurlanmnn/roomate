@@ -1,55 +1,56 @@
-import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
+import { parseISO } from 'date-fns';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View,
-  StyleSheet,
-  RefreshControl,
+  ActivityIndicator,
   Alert,
   FlatList,
-  ActivityIndicator,
   ListRenderItem,
+  RefreshControl,
+  StyleSheet,
   TouchableOpacity,
+  View,
 } from 'react-native';
+import { Expense, expensesApi, HomeExpenseSummary, PairwiseBalance } from '../../api/expensesApi';
+import { AppText } from '../../components/AppText';
+import { BalanceSummary } from '../../components/BalanceSummary';
+import { ExpenseCard } from '../../components/ExpenseCard';
+import { ExpenseFilters, ExpenseFilters as ExpenseFiltersType } from '../../components/ExpenseFilters';
+import { SkeletonCard } from '../../components/LoadingSkeleton';
 import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreenShell';
-import { useHousehold } from '../../context/HouseholdContext';
+import { SpendingChart } from '../../components/SpendingChart';
+import { Amount } from '../../components/ui/Amount';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { EnamelHeader, HeaderIconButton, SheetCap, StatusBarStrip } from '../../components/ui/EnamelHeader';
+import { Group, GroupRow, SectionHeading } from '../../components/ui/Group';
+import { Sheet } from '../../components/ui/Sheet';
+import {
+  EXPENSE_CATEGORIES,
+  getCategoryByName,
+  getExpenseCategoryLabel
+} from '../../constants/expenseCategories';
 import { useAuth } from '../../context/AuthContext';
+import { useHousehold } from '../../context/HouseholdContext';
 import { useLanguage } from '../../context/LanguageContext';
-import { expensesApi, Expense, PairwiseBalance } from '../../api/expensesApi';
+import { fontSizes, fontWeights, radii, spacing, TAB_BAR_HEIGHT, useThemeColors } from '../../theme';
+import { fetchExpensesFullSnapshot, prefetchBalanceHistoryData } from '../../utils/balanceHistoryDataCache';
+import { toBcp47Locale } from '../../utils/dateLocales';
+import {
+  dedupedFetch,
+  DEFAULT_STALE_TIME_MS,
+  getCached,
+  invalidateCache,
+  subscribe as subscribeCache,
+} from '../../utils/queryCache';
+import { useHouseholdCurrency } from '../../utils/useHouseholdCurrency';
 
 /** Smaller first page = faster initial load; more “load more” as you scroll. */
 const EXPENSES_PAGE_SIZE = 5;
 
 type ExpenseListRow =
-  | { kind: 'groupHeader'; title: string }
-  | { kind: 'expense'; expense: Expense };
-import { ExpenseCard } from '../../components/ExpenseCard';
-import { BalanceSummary } from '../../components/BalanceSummary';
-import { ScreenHeader } from '../../components/ui/ScreenHeader';
-import { ExpenseFilters, ExpenseFilters as ExpenseFiltersType } from '../../components/ExpenseFilters';
-import {
-  EXPENSE_CATEGORIES,
-  getCategoryById,
-  getCategoryByName,
-  getExpenseCategoryLabel,
-} from '../../constants/expenseCategories';
-import { toBcp47Locale } from '../../utils/dateLocales';
-import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
-import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows, TAB_BAR_HEIGHT } from '../../theme';
-import { SkeletonCard } from '../../components/LoadingSkeleton';
-import { AppText } from '../../components/AppText';
-import { parseISO } from 'date-fns';
-import { SettingsSection } from '../../components/Settings/SettingsSection';
-import { SettingsGroupCard } from '../../components/Settings/SettingsGroupCard';
-import { SettingsRow } from '../../components/Settings/SettingsRow';
-import { EmptyState } from '../../components/ui/EmptyState';
-import {
-  getCached,
-  dedupedFetch,
-  invalidateCache,
-  subscribe as subscribeCache,
-  DEFAULT_STALE_TIME_MS,
-} from '../../utils/queryCache';
-import { fetchExpensesFullSnapshot, prefetchBalanceHistoryData } from '../../utils/balanceHistoryDataCache';
+  | { kind: 'groupHeader'; title: string; }
+  | { kind: 'expense'; expense: Expense; };
 
 type ExpensesSnapshot = {
   expenses: Expense[];
@@ -64,7 +65,7 @@ const expensesKey = (householdId: string, fullMode: boolean) =>
 /** All cache keys that depend on household expenses — used on mutations. */
 const expensesInvalidatePrefix = (householdId: string) => `expenses:${householdId}`;
 
-export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
+export const ExpensesScreen: React.FC<{ navigation: any; }> = ({ navigation }) => {
   const { selectedHousehold, setSelectedHousehold } = useHousehold();
   const { user } = useAuth();
   const { t, language } = useLanguage();
@@ -74,7 +75,7 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
       StyleSheet.create({
         container: {
           flex: 1,
-          backgroundColor: 'transparent',
+          backgroundColor: colors.background,
         },
         scrollView: {
           flex: 1,
@@ -105,29 +106,6 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
           color: colors.textSecondary,
           lineHeight: 20,
         },
-        filteredCount: {
-          fontSize: fontSizes.sm,
-          color: colors.textSecondary,
-          fontWeight: fontWeights.medium,
-        },
-        listHeaderRow: {
-          flexDirection: 'row',
-          alignItems: 'baseline',
-          justifyContent: 'space-between',
-          paddingHorizontal: spacing.xl,
-          marginBottom: spacing.sm,
-          marginTop: spacing.xs,
-        },
-        listTitle: {
-          fontSize: fontSizes.xs,
-          fontWeight: fontWeights.semibold,
-          color: colors.textTertiary,
-          letterSpacing: 0.6,
-          textTransform: 'uppercase',
-        },
-        groupSection: {
-          marginBottom: spacing.lg,
-        },
         groupTitle: {
           fontSize: fontSizes.sm,
           fontWeight: fontWeights.bold,
@@ -136,13 +114,15 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
           marginTop: spacing.md,
         },
         groupHeaderContainer: {
-          paddingHorizontal: spacing.xl,
+          paddingHorizontal: spacing.md,
         },
         listItemContainer: {
-          paddingHorizontal: spacing.xl,
+          marginHorizontal: spacing.md,
+          backgroundColor: colors.surface,
+          overflow: 'hidden',
         },
         expenseListPad: {
-          paddingHorizontal: spacing.xl,
+          paddingHorizontal: spacing.md,
           gap: 0,
         },
         listFooter: {
@@ -150,9 +130,10 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
           alignItems: 'center',
         },
         loadMoreButton: {
+          minHeight: 44,
           alignItems: 'center',
           paddingVertical: spacing.md,
-          paddingHorizontal: spacing.xl,
+          paddingHorizontal: spacing.md,
           marginBottom: spacing.sm,
         },
         loadMoreText: {
@@ -163,6 +144,27 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
       }),
     [colors]
   );
+  const currency = useHouseholdCurrency();
+  const [summary, setSummary] = useState<{ householdId: string; data: HomeExpenseSummary; } | null>(null);
+  const [insightRange, setInsightRange] = useState<'week' | 'month' | 'year' | 'all'>('month');
+  const summaryRequestRef = useRef(0);
+  const loadSummary = useCallback(async (allowStale = false) => {
+    if (!selectedHousehold) return;
+    const householdId = selectedHousehold._id;
+    const requestId = ++summaryRequestRef.current;
+    const key = `expenses:${householdId}:summary`;
+    const cached = getCached<HomeExpenseSummary>(key);
+    if (cached) setSummary({ householdId, data: cached });
+    try {
+      const data = await dedupedFetch(key, () => expensesApi.getHomeExpenseSummary(householdId), {
+        staleTime: allowStale ? DEFAULT_STALE_TIME_MS : 0,
+      });
+      if (requestId === summaryRequestRef.current) setSummary({ householdId, data });
+    } catch (error) {
+      if (__DEV__) console.error('Failed to load money summary:', error);
+    }
+  }, [selectedHousehold?._id]);
+  const moneySummary = summary?.householdId === selectedHousehold?._id ? summary?.data : undefined;
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [balances, setBalances] = useState<PairwiseBalance[]>([]);
@@ -187,7 +189,7 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   const totalCountRef = useRef(0);
   /** Latest `loadData` — lets the focus effect call it without adding it as a
    *  dep and re-subscribing on every render. */
-  const loadDataRef = useRef<((opts?: { allowStale?: boolean }) => void) | undefined>(undefined);
+  const loadDataRef = useRef<((opts?: { allowStale?: boolean; }) => void) | undefined>(undefined);
   /**
    * Tracks which fetch mode the currently-loaded `expenses` represents so we
    * can show a loading skeleton the moment the mode flips (instead of briefly
@@ -221,7 +223,7 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
 
   useFocusEffect(
     React.useCallback(() => {
-      listRef.current?.scrollToOffset({ offset: 0, animated: true });
+      listRef.current?.scrollToOffset({ offset: 0, animated: false });
     }, [])
   );
 
@@ -237,9 +239,10 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     }, [selectedHousehold?._id]) // eslint-disable-line react-hooks/exhaustive-deps
   );
 
-  const loadData = useCallback(async (opts?: { allowStale?: boolean }) => {
+  const loadData = useCallback(async (opts?: { allowStale?: boolean; }) => {
     if (!selectedHousehold) return;
 
+    void loadSummary(Boolean(opts?.allowStale));
     const requestId = ++loadRequestIdRef.current;
     const fetchMode = needsFullExpenseList;
     const key = expensesKey(selectedHousehold._id, fetchMode);
@@ -315,7 +318,7 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         setLoading(false);
       }
     }
-  }, [selectedHousehold, needsFullExpenseList, setSelectedHousehold]);
+  }, [selectedHousehold, needsFullExpenseList, setSelectedHousehold, loadSummary]);
 
   const loadMore = useCallback(async () => {
     if (!selectedHousehold || needsFullExpenseList || !hasMorePages || loading || loadingMore) {
@@ -390,9 +393,9 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   }, [filters]);
 
   const getUserName = (userId: string): string => {
-    if (!selectedHousehold) return 'Unknown';
+    if (!selectedHousehold) return t('common.someone');
     const member = selectedHousehold.members.find((m) => m._id === userId);
-    return member?.name || 'Unknown';
+    return member?.name || t('common.someone');
   };
 
   const getUserAvatar = (userId: string): string | undefined => {
@@ -588,7 +591,15 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
 
   const listRows: ExpenseListRow[] = useMemo(() => {
     if (filters.groupBy === 'none') {
-      return displayedFilteredExpenses.map((e) => ({ kind: 'expense' as const, expense: e }));
+      const rows: ExpenseListRow[] = [];
+      let lastDate = '';
+      displayedFilteredExpenses.forEach(expense => {
+        const title = parseISO(expense.date).toLocaleDateString(toBcp47Locale(language), { year: 'numeric', month: 'long', day: 'numeric' });
+        if (title !== lastDate) rows.push({ kind: 'groupHeader', title });
+        rows.push({ kind: 'expense', expense });
+        lastDate = title;
+      });
+      return rows;
     }
     const rows: ExpenseListRow[] = [];
     Object.entries(groupedExpenses).forEach(([title, group]) => {
@@ -596,14 +607,14 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
       group.forEach((e) => rows.push({ kind: 'expense', expense: e }));
     });
     return rows;
-  }, [displayedFilteredExpenses, groupedExpenses, filters.groupBy]);
+  }, [displayedFilteredExpenses, groupedExpenses, filters.groupBy, language]);
 
   const memberNames = selectedHousehold?.members.map((m) => ({ id: m._id, name: m.name })) || [];
 
   const currentUserId = user?._id;
 
   const renderItem: ListRenderItem<ExpenseListRow> = useCallback(
-    ({ item }) => {
+    ({ item, index }) => {
       if (item.kind === 'groupHeader') {
         return (
           <View style={styles.groupHeaderContainer}>
@@ -621,7 +632,11 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         ((creatorId && creatorId === currentUserId) ||
           (!creatorId && (expense as any).paidBy?._id === currentUserId));
       return (
-        <View style={styles.listItemContainer}>
+        <View style={[
+          styles.listItemContainer,
+          (index === 0 || listRows[index - 1]?.kind === 'groupHeader') && { borderTopLeftRadius: radii.lg, borderTopRightRadius: radii.lg },
+          (index === listRows.length - 1 || listRows[index + 1]?.kind === 'groupHeader') && { borderBottomLeftRadius: radii.lg, borderBottomRightRadius: radii.lg },
+        ]}>
           <ExpenseCard
             expense={expense}
             onDelete={handleDeleteExpense}
@@ -630,11 +645,14 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
             canEdit={canEdit}
             onEdit={handleEditExpense}
           />
+          {listRows[index + 1]?.kind === 'expense' && <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: colors.borderLight, marginLeft: spacing.md }} />}
         </View>
       );
     },
     [
       currentUserId,
+      listRows,
+      colors.borderLight,
       handleDeleteExpense,
       handleQuickSettle,
       handleEditExpense,
@@ -652,10 +670,13 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
 
   if (!selectedHousehold) {
     return (
-      <SanctuaryScreenShell edges={['top', 'bottom']} innerStyle={styles.container}>
-        <View style={styles.emptyContainer}>
-          <AppText style={styles.emptyText}>{t('home.pleaseSelectHousehold')}</AppText>
-        </View>
+      <SanctuaryScreenShell edges={[]} innerStyle={styles.container}>
+        <EnamelHeader title={t('tabs.money')} />
+        <Sheet>
+          <View style={styles.emptyContainer}>
+            <AppText style={styles.emptyText}>{t('home.pleaseSelectHousehold')}</AppText>
+          </View>
+        </Sheet>
       </SanctuaryScreenShell>
     );
   }
@@ -663,102 +684,59 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   const showCategoryHint = expenses.length > 0 && expenses.some((e) => !e.category);
   const hasMoreFilteredMatches =
     needsFullExpenseList && filteredAndSortedExpenses.length > displayedFilteredExpenses.length;
-  /**
-   * Header count — when the user isn't filtering, we show the
-   * "loaded / total" server-pagination hint; when they are filtering, we show
-   * "visible / total matches" so they can tell whether Load more will reveal
-   * additional results.
-   */
-  const paginationHint = needsFullExpenseList
-    ? filteredAndSortedExpenses.length > 0
-      ? `${displayedFilteredExpenses.length} / ${filteredAndSortedExpenses.length}`
-      : null
-    : totalCount > 0 && expenses.length < totalCount
-      ? String(t('expenses.listPaginationHint', { loaded: expenses.length, total: totalCount }))
-      : null;
-
   const listHeader = (
     <>
-      <ScreenHeader
-        title={t('expenses.title')}
+      <EnamelHeader
+        scrolls
+        overlap={0}
+        title={t('tabs.money')}
         subtitle={selectedHousehold.name}
-        rightText={t('expenses.settleUp')}
-        onRightPress={() => navigation.navigate('SettleUp')}
-      />
-
+        right={<HeaderIconButton icon="add-outline" accessibilityLabel={t('expenses.addExpense')} onPress={() => navigation.navigate('CreateExpense')} />}
+      >
+        <AppText style={{ color: colors.onEnamelSecondary, fontSize: fontSizes.sm, marginTop: spacing.md, marginBottom: spacing.xs }}>{t('time.thisMonth')}</AppText>
+        {moneySummary ? <Amount value={moneySummary.calendarMonthTotal} currency={currency} color={colors.onEnamel} size={56} weight="extrabold" fit /> : <AppText style={{ color: colors.onEnamel, fontSize: 40 }}>—</AppText>}
+      </EnamelHeader>
+      <SheetCap />
       {user && (
-        <SettingsSection title={t('expenses.sectionBalances')}>
-          <TouchableOpacity
-            activeOpacity={0.75}
-            onPress={() => {
-              prefetchBalanceHistoryData(selectedHousehold._id);
-              navigation.navigate('BalanceHistory');
-            }}
-            accessibilityRole="button"
-            accessibilityLabel={t('expenses.balanceHistory')}
-          >
-            <SettingsGroupCard>
-              <BalanceSummary
-                balances={balances}
-                currentUserId={user._id}
-                getUserName={getUserName}
-                getUserAvatar={getUserAvatar}
-                hideTitle
-                variant="plain"
-              />
-            </SettingsGroupCard>
-          </TouchableOpacity>
-        </SettingsSection>
+        <>
+          <SectionHeading title={t('expenses.sectionBalances')} style={{ paddingTop: 0 }} />
+          <Group>
+            <BalanceSummary balances={balances} currentUserId={user._id} getUserName={getUserName} getUserAvatar={getUserAvatar} hideTitle variant="plain" />
+            <GroupRow
+              title={t('expenses.balanceHistory')}
+              icon="time-outline"
+              chevron
+              onPress={() => {
+                prefetchBalanceHistoryData(selectedHousehold._id);
+                navigation.navigate('BalanceHistory');
+              }}
+            />
+            <GroupRow title={t('expenses.settleUp')} subtitle={t('expenses.settleUpSubtitle')} icon="swap-horizontal-outline" chevron onPress={() => navigation.navigate('SettleUp')} />
+          </Group>
+        </>
       )}
 
-      <SettingsSection title={t('expenses.sectionActions')}>
-        <SettingsGroupCard>
-          <SettingsRow
-            icon="add-circle-outline"
-            iconBackgroundColor={colors.primaryUltraSoft}
-            iconColor={colors.primary}
-            title={t('expenses.addExpense')}
-            subtitle={t('expenses.addExpenseSubtitle')}
-            onPress={() => navigation.navigate('CreateExpense')}
-          />
-          <SettingsRow
-            icon="swap-horizontal-outline"
-            iconBackgroundColor={colors.accentUltraSoft}
-            iconColor={colors.accent}
-            title={t('expenses.settleUp')}
-            subtitle={t('expenses.settleUpSubtitle')}
-            onPress={() => navigation.navigate('SettleUp')}
-            isLast
-          />
-        </SettingsGroupCard>
-      </SettingsSection>
-
       {showCategoryHint && (
-        <View style={{ paddingHorizontal: spacing.xl, marginTop: spacing.md }}>
-          <SettingsGroupCard>
+        <View style={{ paddingHorizontal: spacing.md, marginTop: spacing.md }}>
+          <Group style={{ marginHorizontal: 0 }}>
             <View style={styles.hintCardInner}>
               <Ionicons name="information-circle-outline" size={22} color={colors.primary} />
               <AppText style={styles.hintText}>{t('expenses.categoryHintBanner')}</AppText>
             </View>
-          </SettingsGroupCard>
+          </Group>
         </View>
       )}
 
-      <View style={styles.listHeaderRow}>
-        <AppText style={styles.listTitle}>{t('expenses.sectionList')}</AppText>
-        {paginationHint ? (
-          <AppText style={styles.filteredCount}>{paginationHint}</AppText>
-        ) : null}
-      </View>
+      <SectionHeading title={t('expenses.sectionList')} />
 
-      <SettingsGroupCard style={{ marginHorizontal: spacing.xl, marginBottom: spacing.md }}>
+      <View style={{ marginHorizontal: spacing.md, marginBottom: spacing.sm }}>
         <ExpenseFilters
           filters={filters}
           onFiltersChange={setFilters}
           memberNames={memberNames}
           embedded
         />
-      </SettingsGroupCard>
+      </View>
     </>
   );
 
@@ -773,7 +751,7 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
   const hasAnyExpenses = needsFullExpenseList ? expenses.length > 0 : totalCount > 0;
   const listEmptyNoData =
     !loading && filteredAndSortedExpenses.length === 0 ? (
-      <View style={{ paddingHorizontal: spacing.xl, paddingBottom: spacing.xl }}>
+      <View style={{ paddingHorizontal: spacing.md, paddingBottom: spacing.xl }}>
         <EmptyState
           icon="receipt-outline"
           title={hasAnyExpenses ? t('common.noResults') : t('expenses.noExpenses')}
@@ -788,65 +766,80 @@ export const ExpensesScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     ) : null;
 
   return (
-    <SanctuaryScreenShell edges={['top']} innerStyle={styles.container}>
-      <FlatList
-        ref={listRef}
-        data={listRows}
-        keyExtractor={keyExtractor}
-        renderItem={renderItem}
-        ListHeaderComponent={listHeader}
-        ListEmptyComponent={
-          <>
-            {listEmpty}
-            {listEmptyNoData}
-          </>
-        }
-        ListFooterComponent={
-          hasMorePages && !needsFullExpenseList ? (
-            loadingMore ? (
-              <View style={styles.listFooter}>
-                <ActivityIndicator color={colors.primary} />
-              </View>
-            ) : (
-              <TouchableOpacity
-                style={styles.loadMoreButton}
-                onPress={loadMore}
-                activeOpacity={0.75}
-                accessibilityRole="button"
-                accessibilityLabel={t('common.loadMore')}
-              >
-                <AppText style={styles.loadMoreText}>
-                  {t('common.loadMore')} ({expenses.length}/{totalCount})
-                </AppText>
-              </TouchableOpacity>
-            )
-          ) : hasMoreFilteredMatches ? (
-            <TouchableOpacity
-              style={styles.loadMoreButton}
-              onPress={() =>
-                setFilteredVisibleCount((c) => c + EXPENSES_PAGE_SIZE)
-              }
-              activeOpacity={0.75}
-              accessibilityRole="button"
-              accessibilityLabel={t('common.loadMore')}
-            >
-              <AppText style={styles.loadMoreText}>
-                {t('common.loadMore')} ({displayedFilteredExpenses.length}/
-                {filteredAndSortedExpenses.length})
-              </AppText>
-            </TouchableOpacity>
-          ) : null
-        }
-        contentContainerStyle={styles.scrollContent}
-        style={styles.scrollView}
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={loadData} />}
-        showsVerticalScrollIndicator={false}
-        removeClippedSubviews
-        initialNumToRender={10}
-        maxToRenderPerBatch={8}
-        windowSize={10}
-        keyboardShouldPersistTaps="handled"
-      />
+    <SanctuaryScreenShell edges={[]} innerStyle={styles.container}>
+      <StatusBarStrip />
+        <FlatList
+          ref={listRef}
+          data={listRows}
+          keyExtractor={keyExtractor}
+          renderItem={renderItem}
+          ListHeaderComponent={listHeader}
+          ListEmptyComponent={
+            <>
+              {listEmpty}
+              {listEmptyNoData}
+            </>
+          }
+          ListFooterComponent={
+            <>
+              {hasMorePages && !needsFullExpenseList ? (
+                loadingMore ? (
+                  <View style={styles.listFooter}>
+                    <ActivityIndicator color={colors.primary} />
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.loadMoreButton}
+                    onPress={loadMore}
+                    activeOpacity={0.75}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('common.loadMore')}
+                  >
+                    <AppText style={styles.loadMoreText}>
+                      {t('common.loadMore')} ({expenses.length}/{totalCount})
+                    </AppText>
+                  </TouchableOpacity>
+                )
+              ) : hasMoreFilteredMatches ? (
+                <TouchableOpacity
+                  style={styles.loadMoreButton}
+                  onPress={() =>
+                    setFilteredVisibleCount((c) => c + EXPENSES_PAGE_SIZE)
+                  }
+                  activeOpacity={0.75}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('common.loadMore')}
+                >
+                  <AppText style={styles.loadMoreText}>
+                    {t('common.loadMore')} ({displayedFilteredExpenses.length}/
+                    {filteredAndSortedExpenses.length})
+                  </AppText>
+                </TouchableOpacity>
+              ) : null}
+              <SectionHeading title={t('home.spendingInsights')} />
+              {moneySummary ? (
+                <SpendingChart
+                  byCategory={moneySummary.categoryTotals[insightRange]}
+                  monthlyTrend={moneySummary.insights.monthlyTrend}
+                  predictions={moneySummary.insights.predictions}
+                  selectedRange={insightRange}
+                  onChangeRange={setInsightRange}
+                />
+              ) : (
+                <View style={{ padding: spacing.lg }}><AppText style={{ color: colors.textSecondary }}>{t('spendingChart.noSpendingData')}</AppText></View>
+              )}
+            </>
+          }
+          contentContainerStyle={styles.scrollContent}
+          style={styles.scrollView}
+          refreshControl={<RefreshControl refreshing={loading} onRefresh={loadData} />}
+          showsVerticalScrollIndicator={false}
+          removeClippedSubviews
+          initialNumToRender={10}
+          maxToRenderPerBatch={8}
+          windowSize={10}
+          keyboardShouldPersistTaps="handled"
+        />
     </SanctuaryScreenShell>
   );
 };

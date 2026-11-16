@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { useThemeColors } from '../theme';
 
@@ -23,6 +23,7 @@ export const DonutChart: React.FC<DonutChartProps> = ({
   centerContent,
 }) => {
   const colors = useThemeColors();
+  const palette = [colors.primary, colors.accent, colors.marigold, colors.teal, colors.success, colors.warning, colors.danger];
   const total = data.reduce((sum, segment) => sum + (segment.value || 0), 0);
   const radius = size / 2 - strokeWidth / 2;
   const circumference = 2 * Math.PI * radius;
@@ -35,6 +36,9 @@ export const DonutChart: React.FC<DonutChartProps> = ({
         height={size}
         viewBox={`0 0 ${size} ${size}`}
         style={styles.svg}
+        accessible
+        accessibilityRole="image"
+        accessibilityLabel={data.map(segment => `${segment.label ?? ''}: ${total > 0 ? (segment.value / total * 100).toFixed(1) : 0}%`).join(', ')}
       >
         <Circle
           cx={size / 2}
@@ -63,11 +67,11 @@ export const DonutChart: React.FC<DonutChartProps> = ({
               cx={size / 2}
               cy={size / 2}
               r={radius}
-              stroke={segment.color}
+              stroke={Object.values(colors).some(token => token === segment.color) ? segment.color : palette[index % palette.length]}
               strokeWidth={strokeWidth}
               strokeDasharray={dashArray}
               strokeDashoffset={dashOffset}
-              strokeLinecap="round"
+              strokeLinecap="butt"
               fill="none"
             />
           );
@@ -105,5 +109,3 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 });
-
-

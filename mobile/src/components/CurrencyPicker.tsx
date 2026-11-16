@@ -1,5 +1,9 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
+  AccessibilityInfo,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
   View,
   StyleSheet,
   TouchableOpacity,
@@ -11,6 +15,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FIELD_LABEL_WIDTH, Group } from './ui/Group';
 import {
   SUPPORTED_CURRENCIES,
   getCurrencyOption,
@@ -18,7 +24,7 @@ import {
   CurrencyOption,
 } from '../constants/currencies';
 import { useLanguage, type LanguageCode } from '../context/LanguageContext';
-import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows } from '../theme';
+import { useThemeColors, fontSizes, fontWeights, spacing, radii } from '../theme';
 
 interface CurrencyPickerProps {
   value: string;
@@ -26,6 +32,10 @@ interface CurrencyPickerProps {
   disabled?: boolean;
   /** Shown inline under the picker when the currency is locked. */
   lockedHint?: string;
+  /** `row` renders the trigger as a label and value row for use inside a `Group`. */
+  variant?: 'field' | 'row';
+  /** Row variant only: shows a spinner in place of the chevron. */
+  loading?: boolean;
 }
 
 export const CurrencyPicker: React.FC<CurrencyPickerProps> = ({
@@ -33,8 +43,17 @@ export const CurrencyPicker: React.FC<CurrencyPickerProps> = ({
   onChange,
   disabled,
   lockedHint,
+  variant = 'field',
+  loading,
 }) => {
   const colors = useThemeColors();
+  const insets = useSafeAreaInsets();
+  const [reduceMotion, setReduceMotion] = useState(false);
+  React.useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => subscription.remove();
+  }, []);
   const { t, language } = useLanguage();
   const [modalVisible, setModalVisible] = useState(false);
   const [search, setSearch] = useState('');
@@ -65,11 +84,11 @@ export const CurrencyPicker: React.FC<CurrencyPickerProps> = ({
 
   const handleSelect = useCallback(
     (code: string) => {
-    Keyboard.dismiss();
-    setModalVisible(false);
-    if (code !== value) {
-      onChange(code);
-    }
+      Keyboard.dismiss();
+      setModalVisible(false);
+      if (code !== value) {
+        onChange(code);
+      }
     },
     [onChange, value]
   );
@@ -95,51 +114,81 @@ export const CurrencyPicker: React.FC<CurrencyPickerProps> = ({
 
   return (
     <>
-      <TouchableOpacity
-        style={[styles.pickerButton, disabled && styles.pickerDisabled]}
-        onPress={open}
-        activeOpacity={disabled ? 1 : 0.7}
-      >
-        <View style={styles.selectedRow}>
-          <View style={styles.symbolBadge}>
-            <AppText style={styles.symbolText}>{selected.symbol}</AppText>
-          </View>
-          <View style={styles.rowText}>
-            <AppText style={styles.rowName}>{selectedDisplayName}</AppText>
-            <AppText style={styles.rowCode}>{selected.code}</AppText>
-          </View>
-          {!disabled && (
-            <Ionicons name="chevron-down-outline" size={20} color={colors.textSecondary} />
+      {variant === 'row' ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${t('currency.label')}: ${selectedDisplayName}, ${selected.code}`}
+          accessibilityState={{ disabled: Boolean(disabled), expanded: modalVisible, busy: Boolean(loading) }}
+          disabled={disabled}
+          onPress={open}
+          style={({ pressed }) => [styles.fieldRow, pressed && styles.fieldRowPressed]}
+        >
+          <AppText style={styles.fieldLabel} numberOfLines={2}>{t('currency.label')}</AppText>
+          <AppText style={[styles.fieldValue, disabled && styles.fieldValueLocked]}>
+            {selectedDisplayName} · {selected.code}
+          </AppText>
+          {loading ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : disabled ? (
+            <Ionicons name="lock-closed-outline" size={18} color={colors.textTertiary} />
+          ) : (
+            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
           )}
-          {disabled && <Ionicons name="lock-closed-outline" size={18} color={colors.textTertiary} />}
-        </View>
-      </TouchableOpacity>
+        </Pressable>
+      ) : (
+        <>
+      <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel={`${t('currency.label')}: ${selectedDisplayName}, ${selected.code}`}
+            accessibilityState={{ disabled: Boolean(disabled), expanded: modalVisible }}
+            disabled={disabled}
+            style={[styles.pickerButton, disabled && styles.pickerDisabled]}
+            onPress={open}
+            activeOpacity={disabled ? 1 : 0.7}
+          >
+            <View style={styles.selectedRow}>
+              <View style={styles.symbolBadge}>
+                <AppText style={styles.symbolText}>{selected.symbol}</AppText>
+              </View>
+              <View style={styles.rowText}>
+                <AppText style={styles.rowName}>{selectedDisplayName}</AppText>
+                <AppText style={styles.rowCode}>{selected.code}</AppText>
+              </View>
+              {!disabled && (
+                <Ionicons name="chevron-down-outline" size={20} color={colors.textSecondary} />
+              )}
+              {disabled && <Ionicons name="lock-closed-outline" size={18} color={colors.textTertiary} />}
+            </View>
+          </TouchableOpacity>
 
-      {disabled && lockedHint ? <AppText style={styles.lockedHint}>{lockedHint}</AppText> : null}
+          {disabled && lockedHint ? <AppText style={styles.lockedHint}>{lockedHint}</AppText> : null}
+        </>
+      )}
 
       <Modal
         visible={modalVisible}
         transparent
-        animationType="slide"
+        animationType={reduceMotion ? 'none' : 'slide'}
         onRequestClose={closeModal}
       >
-        <View style={styles.modalOverlay}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={closeModal} />
-          <Pressable style={styles.modalContent} onPress={Keyboard.dismiss}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('common.close')} style={StyleSheet.absoluteFill} onPress={closeModal} />
+          <Pressable accessibilityViewIsModal accessible={false} accessibilityRole="button" accessibilityLabel={t('common.dismissKeyboard')} style={[styles.modalContent, { paddingBottom: Math.max(insets.bottom, spacing.md) }]} onPress={Keyboard.dismiss}>
             <View style={styles.modalHeader}>
-              <AppText style={styles.modalTitle}>{t('currency.pickerTitle')}</AppText>
-              <TouchableOpacity onPress={closeModal} hitSlop={10}>
+              <AppText accessibilityRole="header" style={styles.modalTitle}>{t('currency.pickerTitle')}</AppText>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel={t('common.close')} style={styles.closeButton} onPress={closeModal}>
                 <Ionicons name="close-outline" size={26} color={colors.text} />
               </TouchableOpacity>
             </View>
-            <Pressable
+            <View
               style={styles.searchWrap}
-              onPress={(event) => {
+              onTouchEnd={(event) => {
                 event.stopPropagation();
               }}
             >
               <Ionicons name="search-outline" size={18} color={colors.textSecondary} />
               <TextInput
+                accessibilityLabel={t('currency.searchPlaceholder')}
                 value={search}
                 onChangeText={setSearch}
                 placeholder={t('currency.searchPlaceholder')}
@@ -148,7 +197,8 @@ export const CurrencyPicker: React.FC<CurrencyPickerProps> = ({
                 autoCorrect={false}
                 autoCapitalize="characters"
               />
-            </Pressable>
+            </View>
+            <Group style={styles.listGroup}>
             <FlatList
               data={filtered}
               keyExtractor={(item) => item.code}
@@ -159,8 +209,9 @@ export const CurrencyPicker: React.FC<CurrencyPickerProps> = ({
               showsVerticalScrollIndicator={false}
               initialNumToRender={15}
             />
+            </Group>
           </Pressable>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </>
   );
@@ -184,6 +235,8 @@ const CurrencyRow = React.memo(function CurrencyRow({
   const displayName = getLocalizedCurrencyName(item.code, language);
   return (
     <TouchableOpacity
+      accessibilityRole="radio"
+      accessibilityState={{ selected: isSelected, checked: isSelected }}
       style={[styles.row, isSelected && styles.rowSelected]}
       onPress={() => onSelect(item.code)}
       activeOpacity={0.7}
@@ -195,13 +248,39 @@ const CurrencyRow = React.memo(function CurrencyRow({
         <AppText style={styles.rowName}>{displayName}</AppText>
         <AppText style={styles.rowCode}>{item.code}</AppText>
       </View>
-      {isSelected && <Ionicons name="checkmark-circle" size={22} color={colorsPrimary} />}
+      {isSelected && <Ionicons name="checkmark-circle-outline" size={22} color={colorsPrimary} />}
     </TouchableOpacity>
   );
 });
 
 const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
   StyleSheet.create({
+    fieldRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      minHeight: 52,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+    },
+    fieldRowPressed: {
+      backgroundColor: colors.primaryUltraSoft,
+    },
+    fieldLabel: {
+      width: FIELD_LABEL_WIDTH,
+      fontSize: fontSizes.md,
+      fontWeight: fontWeights.semibold,
+      color: colors.text,
+    },
+    fieldValue: {
+      flex: 1,
+      minWidth: 0,
+      fontSize: fontSizes.md,
+      color: colors.text,
+    },
+    fieldValueLocked: {
+      color: colors.textSecondary,
+    },
     pickerButton: {
       borderWidth: 1,
       borderColor: colors.border,
@@ -211,7 +290,6 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
       paddingHorizontal: spacing.md,
       minHeight: 48,
       justifyContent: 'center',
-      ...(shadows.sm as object),
     },
     pickerDisabled: {
       backgroundColor: colors.surfaceAlt,
@@ -238,6 +316,7 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
     },
     rowText: {
       flex: 1,
+      minWidth: 0,
     },
     rowName: {
       fontSize: fontSizes.md,
@@ -258,17 +337,18 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
     },
     modalOverlay: {
       flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.5)',
+      backgroundColor: colors.shadowStrong,
       justifyContent: 'flex-end',
     },
     modalContent: {
-      backgroundColor: colors.surface,
-      borderTopLeftRadius: radii.lg,
-      borderTopRightRadius: radii.lg,
+      backgroundColor: colors.background,
+      borderTopLeftRadius: radii.xl,
+      borderTopRightRadius: radii.xl,
       height: '82%',
       paddingTop: spacing.lg,
     },
     modalHeader: {
+      gap: spacing.sm,
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
@@ -277,8 +357,15 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.borderLight,
     },
+    closeButton: {
+      minWidth: 44,
+      minHeight: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
     modalTitle: {
-      fontSize: fontSizes.xl,
+      flex: 1,
+      fontSize: 20,
       fontWeight: fontWeights.bold,
       color: colors.text,
     },
@@ -297,23 +384,27 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
     },
     searchInput: {
       flex: 1,
+      minHeight: 44,
       fontSize: fontSizes.md,
       color: colors.text,
       paddingVertical: spacing.xs,
     },
+    listGroup: {
+      flex: 1,
+      marginTop: spacing.md,
+    },
     listContent: {
-      paddingHorizontal: spacing.md,
-      paddingVertical: spacing.md,
-      paddingBottom: spacing.xl,
+      paddingBottom: spacing.md,
     },
     row: {
       flexDirection: 'row',
       alignItems: 'center',
       paddingVertical: spacing.sm,
       paddingHorizontal: spacing.sm,
-      borderRadius: radii.md,
-      gap: spacing.md,
-      minHeight: 52,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.borderLight,
+      gap: spacing.sm,
+      minHeight: 60,
     },
     rowSelected: {
       backgroundColor: colors.primaryUltraSoft,

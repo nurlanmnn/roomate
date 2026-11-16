@@ -18,7 +18,7 @@ import {
   formatChorePeriodRange,
   isChorePeriodOverdue,
 } from '../utils/choreSchedule';
-import { fontSizes, fontWeights, spacing, radii } from '../theme';
+import { useThemeColors, fontSizes, fontWeights, spacing, radii } from '../theme';
 import type { getColors } from '../theme/colors';
 
 export type ThemeColors = ReturnType<typeof getColors>;
@@ -48,7 +48,7 @@ export const ChoreRotationRow: React.FC<ChoreRotationRowProps> = ({
   onGiveTo,
   dateFnsLocale,
   t,
-  colors,
+  colors: _colors,
   showPeriodRange = false,
   showFrequency = false,
   showDoneBy = false,
@@ -56,6 +56,7 @@ export const ChoreRotationRow: React.FC<ChoreRotationRowProps> = ({
   isLast = false,
   style,
 }) => {
+  const colors = useThemeColors();
   const styles = useMemo(() => createRowStyles(colors, variant), [colors, variant]);
 
   const assignee =
@@ -70,8 +71,8 @@ export const ChoreRotationRow: React.FC<ChoreRotationRowProps> = ({
   const periodLabel =
     bounds && showPeriodRange
       ? t('chores.periodRange', {
-          range: formatChorePeriodRange(bounds.start, bounds.end, dateFnsLocale),
-        })
+        range: formatChorePeriodRange(bounds.start, bounds.end, dateFnsLocale),
+      })
       : null;
 
   const memberData = assignee
@@ -95,103 +96,63 @@ export const ChoreRotationRow: React.FC<ChoreRotationRowProps> = ({
     chore.frequency === 'biweekly' ? t('chores.biweekly') : t('chores.weekly');
 
   return (
-    <View
-      style={[
-        styles.choreRow,
-        isMyTurn && !isCompleted && styles.choreRowMine,
-        isCompleted && styles.choreRowDone,
-        !isLast && !isCompleted && !isMyTurn && styles.choreRowBorder,
-        style,
-      ]}
-    >
-      <View
-        style={[
-          styles.choreRowIcon,
-          isMyTurn && !isCompleted && styles.choreRowIconMine,
-          isCompleted && styles.choreRowIconDone,
-        ]}
-      >
-        <Ionicons
-          name={isCompleted ? 'checkmark' : 'sparkles'}
-          size={variant === 'compact' ? 16 : 18}
-          color={
-            isCompleted ? colors.success : isMyTurn ? colors.accent : colors.primary
-          }
-        />
-      </View>
-      <View style={styles.choreRowBody}>
-        <AppText
-          style={[styles.choreRowName, isCompleted && styles.choreRowNameDone]}
-          numberOfLines={1}
-        >
-          {chore.name}
-        </AppText>
-        <View style={styles.choreRowAssigneeRow}>
-          {assignee && !isCompleted ? (
-            <Avatar name={assignee.name} uri={memberData?.avatarUrl} size={18} />
-          ) : null}
-          <AppText
-            style={[
-              styles.choreRowAssigneeName,
-              isCompleted && styles.choreRowAssigneeNameDone,
-            ]}
-            numberOfLines={2}
-          >
-            {assigneeText}
-            {periodLabel ? (
-              <>
-                {'  ·  '}
-                {periodLabel}
-              </>
+    <View style={[styles.row, !isLast && styles.separator, style]}>
+      <View style={styles.main}>
+        {assignee ? (
+          <Avatar name={assignee.name} uri={memberData?.avatarUrl} size={36} />
+        ) : (
+          <View style={styles.iconWell}>
+            <Ionicons name="repeat-outline" size={22} color={colors.primary} />
+          </View>
+        )}
+        <View style={styles.body}>
+          <AppText style={[styles.name, isCompleted && styles.nameDone]}>{chore.name}</AppText>
+          <AppText style={styles.secondary}>{assigneeText}</AppText>
+          {periodLabel ? <AppText style={styles.secondary}>{periodLabel}</AppText> : null}
+          {showFrequency ? <AppText style={styles.secondary}>{frequencyText}</AppText> : null}
+          <View style={styles.badges}>
+            {isMyTurn && !isCompleted ? (
+              <View style={styles.turnBadge}>
+                <AppText style={styles.turnText}>{t('chores.yourTurn')}</AppText>
+              </View>
             ) : null}
-          </AppText>
-          {isOverdue ? (
-            <View style={styles.choreOverdueBadge}>
-              <AppText style={styles.choreOverdueBadgeText}>{t('chores.overdue')}</AppText>
-            </View>
-          ) : null}
+            {isOverdue ? (
+              <View style={styles.overdueBadge}>
+                <AppText style={styles.overdueText}>{t('chores.overdue')}</AppText>
+              </View>
+            ) : null}
+            {isCompleted ? (
+              <View style={styles.doneBadge}>
+                <Ionicons name="checkmark-circle-outline" size={18} color={colors.success} />
+                <AppText style={styles.doneText}>{t('chores.done')}</AppText>
+              </View>
+            ) : null}
+          </View>
         </View>
-        {showFrequency ? (
-          <AppText style={styles.choreRowFrequency}>{frequencyText}</AppText>
-        ) : null}
-        {isMyTurn && !isCompleted && onGiveTo && (variant === 'full' || variant === 'compact') ? (
-          <TouchableOpacity
-            onPress={() => onGiveTo(chore, referenceDate)}
-            activeOpacity={0.7}
-            hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
-          >
-            <AppText style={styles.choreGiveToButton}>{t('chores.giveTo')}</AppText>
-          </TouchableOpacity>
-        ) : null}
       </View>
       {isMyTurn ? (
-        <TouchableOpacity
-          onPress={() => onToggleComplete(chore, referenceDate)}
-          activeOpacity={0.8}
-          style={[
-            styles.choreDoneButton,
-            isCompleted && styles.choreDoneButtonCompleted,
-          ]}
-          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-        >
-          <Ionicons
-            name={isCompleted ? 'arrow-undo' : 'checkmark-circle'}
-            size={16}
-            color={isCompleted ? colors.textSecondary : colors.surface}
-          />
-          <AppText
-            style={[
-              styles.choreDoneButtonText,
-              isCompleted && styles.choreDoneButtonTextCompleted,
-            ]}
+        <View style={styles.actions}>
+          {!isCompleted && onGiveTo ? (
+            <TouchableOpacity
+              onPress={() => onGiveTo(chore, referenceDate)}
+              accessibilityRole="button"
+              activeOpacity={0.7}
+              style={styles.action}
+            >
+              <AppText style={styles.actionText}>{t('chores.giveTo')}</AppText>
+            </TouchableOpacity>
+          ) : null}
+          <TouchableOpacity
+            onPress={() => onToggleComplete(chore, referenceDate)}
+            accessibilityRole="checkbox"
+            accessibilityLabel={`${chore.name}, ${isCompleted ? t('chores.undo') : t('chores.markDone')}`}
+            accessibilityState={{ checked: isCompleted }}
+            activeOpacity={0.7}
+            style={styles.action}
           >
-            {isCompleted ? t('chores.undo') : t('chores.markDone')}
-          </AppText>
-        </TouchableOpacity>
-      ) : isCompleted ? (
-        <View style={styles.choreDoneBadge}>
-          <Ionicons name="checkmark-circle" size={14} color={colors.success} />
-          <AppText style={styles.choreDoneBadgeText}>{t('chores.done')}</AppText>
+            <Ionicons name={isCompleted ? 'arrow-undo-outline' : 'checkmark-circle-outline'} size={22} color={colors.primary} />
+            <AppText style={styles.actionText}>{isCompleted ? t('chores.undo') : t('chores.markDone')}</AppText>
+          </TouchableOpacity>
         </View>
       ) : null}
     </View>
@@ -200,133 +161,22 @@ export const ChoreRotationRow: React.FC<ChoreRotationRowProps> = ({
 
 const createRowStyles = (colors: ThemeColors, variant: 'full' | 'compact') =>
   StyleSheet.create({
-    choreRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.sm,
-      paddingVertical: variant === 'compact' ? spacing.xs : spacing.sm,
-      paddingHorizontal: spacing.sm,
-      borderRadius: radii.md,
-      backgroundColor: 'transparent',
-    },
-    choreRowBorder: {
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: colors.borderLight,
-      borderRadius: 0,
-    },
-    choreRowMine: {
-      backgroundColor: colors.accentUltraSoft,
-      borderBottomWidth: 0,
-      borderRadius: radii.md,
-    },
-    choreRowIcon: {
-      width: variant === 'compact' ? 32 : 36,
-      height: variant === 'compact' ? 32 : 36,
-      borderRadius: variant === 'compact' ? 16 : 18,
-      backgroundColor: colors.primaryUltraSoft,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    choreRowIconMine: {
-      backgroundColor: colors.surface,
-    },
-    choreRowBody: {
-      flex: 1,
-      minWidth: 0,
-    },
-    choreRowName: {
-      fontSize: variant === 'compact' ? fontSizes.sm : fontSizes.md,
-      color: colors.text,
-      fontWeight: fontWeights.semibold,
-    },
-    choreRowAssigneeRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.xs,
-      marginTop: 2,
-    },
-    choreRowAssigneeName: {
-      fontSize: fontSizes.sm,
-      color: colors.textSecondary,
-      flexShrink: 1,
-    },
-    choreRowAssigneeNameDone: {
-      color: colors.success,
-      fontWeight: fontWeights.semibold,
-    },
-    choreRowFrequency: {
-      fontSize: fontSizes.xs,
-      color: colors.textTertiary,
-      marginTop: 2,
-    },
-    choreGiveToButton: {
-      fontSize: fontSizes.xs,
-      color: colors.primary,
-      fontWeight: fontWeights.semibold,
-      marginTop: 4,
-    },
-    choreRowDone: {
-      backgroundColor: colors.successSoft,
-      borderRadius: radii.md,
-    },
-    choreRowIconDone: {
-      backgroundColor: colors.surface,
-    },
-    choreRowNameDone: {
-      color: colors.textSecondary,
-      textDecorationLine: 'line-through',
-    },
-    choreDoneButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.xxs,
-      paddingVertical: 6,
-      paddingHorizontal: spacing.sm,
-      backgroundColor: colors.success,
-      borderRadius: radii.pill,
-    },
-    choreDoneButtonCompleted: {
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    choreDoneButtonText: {
-      fontSize: fontSizes.xs,
-      fontWeight: fontWeights.bold,
-      color: colors.surface,
-    },
-    choreDoneButtonTextCompleted: {
-      color: colors.textSecondary,
-    },
-    choreDoneBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.xxs,
-      paddingVertical: 4,
-      paddingHorizontal: spacing.sm,
-      backgroundColor: colors.surface,
-      borderRadius: radii.pill,
-      borderWidth: 1,
-      borderColor: colors.successSoft,
-    },
-    choreDoneBadgeText: {
-      fontSize: fontSizes.xs,
-      fontWeight: fontWeights.semibold,
-      color: colors.success,
-    },
-    choreOverdueBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingVertical: 2,
-      paddingHorizontal: spacing.xs,
-      backgroundColor: colors.dangerSoft,
-      borderRadius: radii.pill,
-      borderWidth: 1,
-      borderColor: colors.dangerSoft,
-    },
-    choreOverdueBadgeText: {
-      fontSize: fontSizes.xs,
-      fontWeight: fontWeights.semibold,
-      color: colors.danger,
-    },
+    row: { minHeight: 60, paddingVertical: variant === 'compact' ? spacing.sm : spacing.md, paddingHorizontal: spacing.md },
+    separator: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderLight },
+    main: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+    body: { flex: 1, minWidth: 0 },
+    iconWell: { width: 36, height: 36, borderRadius: radii.sm, backgroundColor: colors.primaryUltraSoft, alignItems: 'center', justifyContent: 'center' },
+    name: { fontSize: fontSizes.md, fontWeight: fontWeights.semibold, color: colors.text },
+    nameDone: { textDecorationLine: 'line-through', color: colors.textSecondary },
+    secondary: { fontSize: fontSizes.sm, color: colors.textSecondary, marginTop: spacing.xxs },
+    badges: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.xs },
+    turnBadge: { borderRadius: radii.sm, paddingHorizontal: spacing.xs, paddingVertical: spacing.xxs, backgroundColor: colors.marigold },
+    turnText: { fontSize: fontSizes.sm, fontWeight: fontWeights.semibold, color: colors.onMarigold },
+    overdueBadge: { borderRadius: radii.sm, paddingHorizontal: spacing.xs, paddingVertical: spacing.xxs, backgroundColor: colors.dangerSoft },
+    overdueText: { fontSize: fontSizes.sm, fontWeight: fontWeights.semibold, color: colors.danger },
+    doneBadge: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
+    doneText: { fontSize: fontSizes.sm, color: colors.success },
+    actions: { flexDirection: 'row', justifyContent: 'flex-end', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.xs },
+    action: { minHeight: 44, minWidth: 44, paddingHorizontal: spacing.xs, paddingVertical: spacing.xs, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, maxWidth: '100%' },
+    actionText: { fontSize: fontSizes.sm, fontWeight: fontWeights.semibold, color: colors.primary, flexShrink: 1 },
   });

@@ -1,8 +1,8 @@
 import React from 'react';
-import { TouchableOpacity, View, StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { AppText } from '../AppText';
-import { useThemeColors, fontSizes, fontWeights, spacing } from '../../theme';
+import { GroupRow } from '../ui/Group';
+import { useThemeColors, radii } from '../../theme';
 
 interface SettingsRowProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -11,74 +11,41 @@ interface SettingsRowProps {
   title: string;
   subtitle?: string;
   onPress: () => void;
-  /** Hide bottom separator (last row in group) */
+  /** Retained for compatibility; the enclosing Group owns separators. */
   isLast?: boolean;
 }
 
 export const SettingsRow: React.FC<SettingsRowProps> = ({
   icon,
-  iconBackgroundColor,
-  iconColor,
   title,
   subtitle,
   onPress,
-  isLast = false,
 }) => {
   const colors = useThemeColors();
-  const styles = React.useMemo(
-    () =>
-      StyleSheet.create({
-        row: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          paddingVertical: spacing.md,
-          paddingHorizontal: spacing.md,
-          borderBottomWidth: isLast ? 0 : StyleSheet.hairlineWidth,
-          borderBottomColor: colors.borderLight,
-        },
-        iconWrap: {
-          width: 36,
-          height: 36,
-          borderRadius: 10,
-          alignItems: 'center',
-          justifyContent: 'center',
-          marginRight: spacing.md,
-        },
-        textBlock: {
-          flex: 1,
-          minWidth: 0,
-        },
-        title: {
-          fontSize: fontSizes.md,
-          fontWeight: fontWeights.semibold,
-          color: colors.text,
-        },
-        subtitle: {
-          fontSize: fontSizes.sm,
-          color: colors.textSecondary,
-          marginTop: 2,
-          lineHeight: 18,
-        },
-      }),
-    [colors, isLast]
-  );
+  const outlineIcon = `${icon.replace(/-outline$/, '')}-outline` as keyof typeof Ionicons.glyphMap;
 
   return (
-    <TouchableOpacity style={styles.row} onPress={onPress} activeOpacity={0.65}>
-      <View style={[styles.iconWrap, { backgroundColor: iconBackgroundColor }]}>
-        <Ionicons name={icon} size={20} color={iconColor} />
-      </View>
-      <View style={styles.textBlock}>
-        <AppText style={styles.title} numberOfLines={1}>
-          {title}
-        </AppText>
-        {subtitle ? (
-          <AppText style={styles.subtitle} numberOfLines={2}>
-            {subtitle}
-          </AppText>
-        ) : null}
-      </View>
-      <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
-    </TouchableOpacity>
+    <GroupRow
+      title={title}
+      titleLines={0}
+      subtitle={subtitle}
+      leading={
+        <View style={[styles.iconWell, { backgroundColor: colors.primaryUltraSoft }]}>
+          <Ionicons name={outlineIcon} size={22} color={colors.primary} />
+        </View>
+      }
+      onPress={onPress}
+      chevron
+    />
   );
 };
+
+const styles = StyleSheet.create({
+  iconWell: {
+    width: 36,
+    height: 36,
+    borderRadius: radii.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});

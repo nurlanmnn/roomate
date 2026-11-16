@@ -1,32 +1,27 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useLayoutEffect } from 'react';
 import {
   View,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   Alert,
-  TextInput,
+  Pressable,
   ActivityIndicator,
   Share,
-  Platform,
 } from 'react-native';
-import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreenShell';
 import { Ionicons } from '@expo/vector-icons';
+import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreenShell';
 import { AppText } from '../../components/AppText';
-import { PrimaryButton } from '../../components/PrimaryButton';
 import { CurrencyPicker } from '../../components/CurrencyPicker';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { householdsApi, getOwnerIdString, HouseholdMember } from '../../api/householdsApi';
 import { dedupedFetch, getCached, invalidateCache } from '../../utils/queryCache';
-import { ScreenHeader } from '../../components/ui/ScreenHeader';
-import { SettingsSection } from '../../components/Settings/SettingsSection';
-import { SettingsGroupCard } from '../../components/Settings/SettingsGroupCard';
+import { Group, GroupRow, FieldRow, GroupFooter, SectionHeading } from '../../components/ui/Group';
 import { ToggleRow } from '../../components/Settings/ToggleRow';
 import { MemberRow } from '../../components/Settings/MemberRow';
 import * as Clipboard from 'expo-clipboard';
-import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows } from '../../theme';
+import { useThemeColors, fontSizes, fontWeights, spacing } from '../../theme';
 
 export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { selectedHousehold, setSelectedHousehold } = useHousehold();
@@ -36,7 +31,6 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
   const [isOwner, setIsOwner] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState('');
   const [editAddress, setEditAddress] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -195,7 +189,6 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
       invalidateCache('households:list');
       if (txCountKey) invalidateCache(txCountKey);
       setSelectedHousehold(updated);
-      setIsEditing(false);
       Alert.alert(t('common.success'), t('accountSettingsScreen.profileUpdated'));
     } catch (error: unknown) {
       const err = error as { response?: { data?: { error?: string } } };
@@ -371,9 +364,45 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
     return m._id === ownerIdStr ? 'owner' : 'member';
   };
 
+  const householdDirty =
+    isOwner &&
+    editName.trim().length > 0 &&
+    !!selectedHousehold &&
+    (editName.trim() !== selectedHousehold.name ||
+      editAddress.trim() !== (selectedHousehold.address || ''));
+
+  // The header item is only rebuilt when its state changes; rebuilding it on every
+  // render (each keystroke) makes the native header lose the item's size.
+  const saveRef = React.useRef(handleSaveChanges);
+  saveRef.current = handleSaveChanges;
+  const hasHousehold = !!selectedHousehold;
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: isOwner && hasHousehold ? () => (
+        <Pressable
+          onPress={() => saveRef.current()}
+          disabled={!householdDirty || isSaving}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.save')}
+          accessibilityState={{ disabled: !householdDirty || isSaving, busy: isSaving }}
+          style={({ pressed }) => [styles.headerButton, pressed && styles.pressed]}
+        >
+          {isSaving ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : (
+            <AppText style={[styles.headerButtonText, { color: householdDirty ? colors.primary : colors.textTertiary }]}>
+              {t('common.save')}
+            </AppText>
+          )}
+        </Pressable>
+      ) : undefined,
+    });
+  }, [navigation, t, colors.primary, colors.textTertiary, styles, isOwner, hasHousehold, householdDirty, isSaving]);
+
   if (!selectedHousehold) {
     return (
-      <SanctuaryScreenShell edges={['top', 'bottom']} innerStyle={styles.container}>
+      <SanctuaryScreenShell edges={['bottom']} innerStyle={styles.container}>
         <View style={styles.emptyContainer}>
           <AppText style={styles.emptyText}>{t('home.pleaseSelectHousehold')}</AppText>
         </View>
@@ -381,14 +410,8 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
     );
   }
 
-  const householdDirty =
-    isEditing &&
-    isOwner &&
-    (editName.trim() !== selectedHousehold.name ||
-      (editAddress.trim() || '') !== (selectedHousehold.address || ''));
-
   return (
-    <SanctuaryScreenShell edges={['top']} innerStyle={styles.container}>
+    <SanctuaryScreenShell edges={['bottom']} innerStyle={styles.container}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -396,238 +419,149 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <ScreenHeader
-          title={t('householdSettingsScreen.title')}
-          subtitle={selectedHousehold.name}
-          showTitle={false}
-        />
-
-        <SettingsSection title={t('householdSettingsScreen.sectionHousehold')}>
-          <SettingsGroupCard>
-            {isOwner && isEditing ? (
-              <View style={styles.padded}>
-                <AppText style={styles.inputLabel}>{t('householdSettingsScreen.householdName')}</AppText>
-                <TextInput
-                  style={styles.textInput}
-                  value={editName}
-                  onChangeText={setEditName}
-                  placeholder={t('household.householdName')}
-                  placeholderTextColor={colors.textTertiary}
-                />
-                <AppText style={[styles.inputLabel, styles.inputLabelSpaced]}>
-                  {t('householdSettingsScreen.householdLocation')}
-                </AppText>
-                <TextInput
-                  style={styles.textInput}
-                  value={editAddress}
-                  onChangeText={setEditAddress}
-                  placeholder={t('household.householdLocation')}
-                  placeholderTextColor={colors.textTertiary}
-                />
-                <View style={styles.editRow}>
-                  <TouchableOpacity
-                    style={[styles.chipButton, styles.chipCancel]}
-                    onPress={() => {
-                      setIsEditing(false);
-                      setEditName(selectedHousehold.name);
-                      setEditAddress(selectedHousehold.address || '');
-                    }}
-                    disabled={isSaving}
-                  >
-                    <AppText style={styles.chipCancelText}>{t('common.cancel')}</AppText>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.chipButton, styles.chipSave, (!householdDirty || isSaving) && styles.chipDisabled]}
-                    onPress={handleSaveChanges}
-                    disabled={!householdDirty || isSaving}
-                  >
-                    {isSaving ? (
-                      <ActivityIndicator color="#FFFFFF" />
-                    ) : (
-                      <AppText style={styles.chipSaveText}>{t('common.save')}</AppText>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ) : (
-              <View style={styles.padded}>
-                <View style={styles.displayRow}>
-                  <AppText style={styles.displayLabel}>{t('householdSettingsScreen.householdName')}</AppText>
-                  <AppText style={styles.displayValue}>{selectedHousehold.name}</AppText>
-                </View>
-                <View style={styles.displayRow}>
-                  <AppText style={styles.displayLabel}>{t('householdSettingsScreen.householdLocation')}</AppText>
-                  <AppText style={styles.displayValue}>
-                    {selectedHousehold.address || '—'}
-                  </AppText>
-                </View>
-                {isOwner ? (
-                  <TouchableOpacity style={styles.editLink} onPress={() => setIsEditing(true)} activeOpacity={0.7}>
-                    <Ionicons name="create-outline" size={18} color={colors.primary} />
-                    <AppText style={styles.editLinkText}>{t('common.edit')}</AppText>
-                  </TouchableOpacity>
-                ) : (
-                  <AppText style={styles.readOnlyNote}>{t('householdSettingsScreen.ownerOnlyEdit')}</AppText>
-                )}
-              </View>
-            )}
-          </SettingsGroupCard>
-        </SettingsSection>
-
-        <SettingsSection title={t('currency.sectionTitle')}>
-          <AppText style={styles.sectionHint}>
-            {currencyLocked
+        <Group>
+          <FieldRow
+            label={t('householdSettingsScreen.householdName')}
+            value={isOwner ? editName : selectedHousehold.name}
+            onChangeText={setEditName}
+            placeholder={t('household.householdName')}
+            editable={isOwner}
+          />
+          <FieldRow
+            label={t('householdSettingsScreen.householdLocation')}
+            value={isOwner ? editAddress : selectedHousehold.address || ''}
+            onChangeText={setEditAddress}
+            placeholder={t('household.householdLocation')}
+            editable={isOwner}
+          />
+          <CurrencyPicker
+            variant="row"
+            value={selectedHousehold.currency || 'USD'}
+            onChange={handleChangeCurrency}
+            disabled={!isOwner || currencyLocked || savingCurrency}
+            loading={savingCurrency}
+          />
+        </Group>
+        <GroupFooter>
+          {isOwner
+            ? currencyLocked
               ? t('currency.sectionHintLocked')
-              : isOwner
-              ? t('currency.sectionHintEditable')
-              : t('currency.sectionHintMember')}
-          </AppText>
-          <SettingsGroupCard>
-            <View style={styles.padded}>
-              <CurrencyPicker
-                value={selectedHousehold.currency || 'USD'}
-                onChange={handleChangeCurrency}
-                disabled={!isOwner || currencyLocked || savingCurrency}
-                lockedHint={
-                  currencyLocked && isOwner ? t('currency.lockedInlineHint') : undefined
-                }
-              />
-              {savingCurrency ? (
-                <View style={styles.currencySaving}>
-                  <ActivityIndicator size="small" color={colors.primary} />
-                  <AppText style={styles.currencySavingText}>{t('common.saving')}</AppText>
-                </View>
-              ) : null}
-            </View>
-          </SettingsGroupCard>
-        </SettingsSection>
+              : t('currency.sectionHintEditable')
+            : `${t('householdSettingsScreen.ownerOnlyEdit')} ${currencyLocked ? t('currency.sectionHintLocked') : t('currency.sectionHintMember')}`}
+        </GroupFooter>
 
-        <SettingsSection title={t('householdSettingsScreen.sectionInvite')}>
-          <AppText style={styles.sectionHint}>{t('householdSettingsScreen.inviteHint')}</AppText>
-          <SettingsGroupCard>
-            <View style={styles.inviteRow}>
-              <View style={styles.codeBadge}>
-                <AppText style={styles.codeBadgeText}>{selectedHousehold.joinCode}</AppText>
-              </View>
-              <TouchableOpacity onPress={handleCopyCode} style={styles.iconBtn} hitSlop={10}>
-                <Ionicons name="copy-outline" size={22} color={colors.primary} />
-              </TouchableOpacity>
+        <SectionHeading title={t('householdSettingsScreen.sectionInvite')} />
+        <Group>
+          <View style={styles.inviteRow}>
+            <View
+              style={styles.inviteCodeColumn}
+              accessible
+              accessibilityLabel={`${t('householdSettingsScreen.inviteCode')}: ${selectedHousehold.joinCode}`}
+            >
+              <AppText style={styles.inviteCaption}>{t('householdSettingsScreen.inviteCode')}</AppText>
+              <AppText style={styles.inviteCode} selectable>{selectedHousehold.joinCode}</AppText>
             </View>
-            <View style={styles.inviteActions}>
-              <View style={styles.inviteActionHalf}>
-                <PrimaryButton title={t('householdSettingsScreen.shareInvite')} onPress={handleShare} variant="secondary" />
-              </View>
-              <View style={styles.inviteActionHalf}>
-                <PrimaryButton title={t('householdSettingsScreen.copyCode')} onPress={handleCopyCode} variant="outline" />
-              </View>
-            </View>
-            {isOwner ? (
-              <View style={styles.regenWrap}>
-                <TouchableOpacity
-                  style={[styles.regenButton, regenerating && styles.chipDisabled]}
-                  onPress={handleRegenerate}
-                  disabled={regenerating}
-                  activeOpacity={0.7}
-                >
-                  {regenerating ? (
-                    <ActivityIndicator size="small" color={colors.danger} />
-                  ) : (
-                    <>
-                      <Ionicons name="refresh-outline" size={18} color={colors.danger} />
-                      <AppText style={styles.regenText}>{t('householdSettingsScreen.regenerateCode')}</AppText>
-                    </>
-                  )}
-                </TouchableOpacity>
-              </View>
-            ) : null}
-          </SettingsGroupCard>
-        </SettingsSection>
-
-        <SettingsSection title={t('householdSettingsScreen.sectionMembers')}>
-          <SettingsGroupCard>
-            {selectedHousehold.members.map((m, index) => {
-              const role = roleForMember(m);
-              const canRemove = isOwner && role === 'member';
-              return (
-                <MemberRow
-                  key={m._id}
-                  name={m.name}
-                  email={m.email}
-                  avatarUrl={m.avatarUrl}
-                  role={role}
-                  roleLabel={role === 'owner' ? t('householdSettingsScreen.owner') : t('householdSettingsScreen.member')}
-                  showRemove={canRemove}
-                  removing={removingMemberId === m._id}
-                  onRemove={canRemove ? () => handleRemoveMember(m._id, m.name) : undefined}
-                  isLast={index === selectedHousehold.members.length - 1}
-                />
-              );
-            })}
-          </SettingsGroupCard>
-        </SettingsSection>
-
-        <SettingsSection title={t('householdSettingsScreen.sectionNotifications')}>
-          <AppText style={styles.sectionHint}>
-            {t('householdSettingsScreen.muteHouseholdHint')}
-          </AppText>
-          <SettingsGroupCard>
-            <ToggleRow
-              icon="notifications-off-outline"
-              iconBackgroundColor={colors.warningSoft ?? colors.dangerSoft}
-              iconColor={colors.warning ?? colors.danger}
-              title={t('householdSettingsScreen.muteHouseholdTitle')}
-              subtitle={t('householdSettingsScreen.muteHouseholdSubtitle')}
-              value={householdMuted}
-              onValueChange={handleToggleHouseholdMute}
-              isLast
+            <Pressable
+              onPress={handleCopyCode}
+              accessibilityRole="button"
+              accessibilityLabel={t('householdSettingsScreen.copyCode')}
+              style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
+            >
+              <Ionicons name="copy-outline" size={22} color={colors.primary} />
+            </Pressable>
+            <Pressable
+              onPress={handleShare}
+              accessibilityRole="button"
+              accessibilityLabel={t('householdSettingsScreen.shareInvite')}
+              style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
+            >
+              <Ionicons name="share-outline" size={22} color={colors.primary} />
+            </Pressable>
+          </View>
+          {isOwner ? (
+            <GroupRow
+              titleLines={0}
+              destructive
+              title={t('householdSettingsScreen.regenerateCode')}
+              loading={regenerating}
+              onPress={handleRegenerate}
             />
-            {savingMute ? (
-              <View style={styles.currencySaving}>
-                <ActivityIndicator size="small" color={colors.primary} />
-              </View>
-            ) : null}
-          </SettingsGroupCard>
-        </SettingsSection>
+          ) : null}
+        </Group>
+        <GroupFooter>{t('householdSettingsScreen.inviteHint')}</GroupFooter>
 
-        <SettingsSection title={t('householdSettingsScreen.sectionActions')}>
-          <TouchableOpacity style={styles.switchRow} onPress={handleSwitchHousehold} activeOpacity={0.7}>
-            <View style={styles.switchRowLeft}>
-              <Ionicons name="swap-horizontal-outline" size={22} color={colors.textSecondary} />
-              <View style={styles.switchRowText}>
-                <AppText style={styles.switchTitle}>{t('householdSettingsScreen.switchHousehold')}</AppText>
-                <AppText style={styles.switchHint}>{t('householdSettingsScreen.switchHouseholdHint')}</AppText>
-              </View>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
-          </TouchableOpacity>
-
-          <View style={styles.actionSpacer} />
-
-          {!isOwner ? (
-            <TouchableOpacity style={styles.leaveOutline} onPress={handleLeaveHousehold} activeOpacity={0.8}>
-              <AppText style={styles.leaveOutlineText}>{t('householdSettingsScreen.leaveHousehold')}</AppText>
-              <AppText style={styles.leaveOutlineHint}>{t('householdSettingsScreen.leaveHouseholdHint')}</AppText>
-            </TouchableOpacity>
-          ) : (
-            <>
-              {memberCount > 1 ? (
-                <TouchableOpacity style={styles.leaveOutline} onPress={handleLeaveHousehold} activeOpacity={0.8}>
-                  <AppText style={styles.leaveOutlineText}>{t('householdSettingsScreen.leaveHousehold')}</AppText>
-                  <AppText style={styles.leaveOutlineHint}>{t('householdSettingsScreen.leaveOwnerHint')}</AppText>
-                </TouchableOpacity>
-              ) : null}
-              <View style={styles.actionSpacer} />
-              <PrimaryButton
-                title={t('householdSettingsScreen.deleteHousehold')}
-                onPress={handleDeleteHousehold}
-                variant="danger"
+        <SectionHeading title={t('householdSettingsScreen.sectionMembers')} />
+        <Group>
+          {selectedHousehold.members.map((m, index) => {
+            const role = roleForMember(m);
+            const canRemove = isOwner && role === 'member';
+            return (
+              <MemberRow
+                key={m._id}
+                name={m.name}
+                email={m.email}
+                avatarUrl={m.avatarUrl}
+                role={role}
+                roleLabel={role === 'owner' ? t('householdSettingsScreen.owner') : t('householdSettingsScreen.member')}
+                showRemove={canRemove}
+                removing={removingMemberId === m._id}
+                onRemove={canRemove ? () => handleRemoveMember(m._id, m.name) : undefined}
+                isLast={index === selectedHousehold.members.length - 1}
               />
-              <AppText style={styles.deleteHint}>{t('householdSettingsScreen.deleteHouseholdHint')}</AppText>
-            </>
-          )}
-        </SettingsSection>
+            );
+          })}
+        </Group>
 
-        <View style={styles.bottomPad} />
+        <Group style={styles.spacedGroup}>
+          <ToggleRow
+            icon="notifications-off-outline"
+            iconBackgroundColor={colors.primaryUltraSoft}
+            iconColor={colors.primary}
+            title={t('householdSettingsScreen.muteHouseholdTitle')}
+            subtitle={t('householdSettingsScreen.muteHouseholdSubtitle')}
+            value={householdMuted}
+            onValueChange={handleToggleHouseholdMute}
+          />
+          <GroupRow
+            titleLines={0}
+            title={t('householdSettingsScreen.switchHousehold')}
+            subtitle={t('householdSettingsScreen.switchHouseholdHint')}
+            icon="swap-horizontal-outline"
+            onPress={handleSwitchHousehold}
+            chevron
+          />
+        </Group>
+
+        <Group style={styles.spacedGroup}>
+          {!isOwner ? (
+            <GroupRow
+              titleLines={0}
+              title={t('householdSettingsScreen.leaveHousehold')}
+              subtitle={t('householdSettingsScreen.leaveHouseholdHint')}
+              onPress={handleLeaveHousehold}
+              destructive
+            />
+          ) : [
+            memberCount > 1 ? (
+              <GroupRow
+                titleLines={0}
+                key="leave"
+                title={t('householdSettingsScreen.leaveHousehold')}
+                subtitle={t('householdSettingsScreen.leaveOwnerHint')}
+                onPress={handleLeaveHousehold}
+                destructive
+              />
+            ) : null,
+            <GroupRow
+              titleLines={0}
+              key="delete"
+              title={t('householdSettingsScreen.deleteHousehold')}
+              subtitle={t('householdSettingsScreen.deleteHouseholdHint')}
+              onPress={handleDeleteHousehold}
+              destructive
+            />,
+          ]}
+        </Group>
       </ScrollView>
     </SanctuaryScreenShell>
   );
@@ -637,10 +571,11 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: 'transparent',
+      backgroundColor: colors.background,
     },
     scrollView: { flex: 1 },
     scrollContent: {
+      paddingTop: spacing.md,
       paddingBottom: spacing.xxl,
     },
     emptyContainer: {
@@ -653,225 +588,48 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
       fontSize: fontSizes.lg,
       color: colors.textSecondary,
     },
-    sectionHint: {
-      fontSize: fontSizes.sm,
-      color: colors.textSecondary,
-      marginBottom: spacing.sm,
-      lineHeight: 20,
-    },
-    padded: {
-      padding: spacing.md,
-    },
-    inputLabel: {
-      fontSize: fontSizes.xs,
-      fontWeight: fontWeights.semibold,
-      color: colors.textSecondary,
-      marginBottom: spacing.xs,
-    },
-    inputLabelSpaced: {
-      marginTop: spacing.md,
-    },
-    textInput: {
-      backgroundColor: colors.primaryUltraSoft,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: radii.md,
-      paddingHorizontal: spacing.md,
-      paddingVertical: Platform.OS === 'ios' ? spacing.sm : spacing.xs,
-      fontSize: fontSizes.md,
-      color: colors.text,
-    },
-    editRow: {
-      flexDirection: 'row',
-      gap: spacing.sm,
-      marginTop: spacing.lg,
-    },
-    chipButton: {
-      flex: 1,
-      paddingVertical: spacing.md,
-      borderRadius: radii.md,
+    headerButton: {
+      // The native header already gives the item a 44pt target; extra height pushes the label off centre.
+      paddingHorizontal: spacing.xxs,
       alignItems: 'center',
       justifyContent: 'center',
-      minHeight: 48,
     },
-    chipCancel: {
-      backgroundColor: colors.primaryUltraSoft,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    chipCancelText: {
+    headerButtonText: {
       fontSize: fontSizes.md,
       fontWeight: fontWeights.semibold,
-      color: colors.textSecondary,
-    },
-    chipSave: {
-      backgroundColor: colors.primary,
-    },
-    chipSaveText: {
-      fontSize: fontSizes.md,
-      fontWeight: fontWeights.semibold,
-      color: '#FFFFFF',
-    },
-    chipDisabled: {
-      opacity: 0.5,
-    },
-    displayRow: {
-      paddingVertical: spacing.sm,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: colors.borderLight,
-    },
-    displayLabel: {
-      fontSize: fontSizes.xs,
-      fontWeight: fontWeights.semibold,
-      color: colors.textTertiary,
-      marginBottom: 4,
-    },
-    displayValue: {
-      fontSize: fontSizes.md,
-      fontWeight: fontWeights.semibold,
-      color: colors.text,
-    },
-    editLink: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.xs,
-      marginTop: spacing.md,
-      alignSelf: 'flex-start',
-    },
-    editLinkText: {
-      fontSize: fontSizes.sm,
-      fontWeight: fontWeights.semibold,
-      color: colors.primary,
-    },
-    readOnlyNote: {
-      fontSize: fontSizes.sm,
-      color: colors.textTertiary,
-      marginTop: spacing.md,
-    },
-    currencySaving: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.xs,
-      marginTop: spacing.sm,
-    },
-    currencySavingText: {
-      fontSize: fontSizes.xs,
-      color: colors.textSecondary,
     },
     inviteRow: {
+      minHeight: 60,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
       flexDirection: 'row',
       alignItems: 'center',
-      padding: spacing.md,
-      gap: spacing.md,
     },
-    codeBadge: {
+    inviteCodeColumn: {
       flex: 1,
-      backgroundColor: colors.primaryUltraSoft,
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.md,
-      borderRadius: radii.md,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
+      minWidth: 0,
     },
-    codeBadgeText: {
+    inviteCaption: {
+      fontSize: fontSizes.sm - 1,
+      color: colors.textSecondary,
+    },
+    inviteCode: {
       fontSize: fontSizes.xl,
       fontWeight: fontWeights.bold,
-      letterSpacing: 4,
-      color: colors.text,
+      letterSpacing: 2,
       fontVariant: ['tabular-nums'],
+      color: colors.text,
     },
-    iconBtn: {
-      padding: spacing.sm,
-    },
-    inviteActions: {
-      flexDirection: 'row',
-      gap: spacing.sm,
-      paddingHorizontal: spacing.md,
-      paddingBottom: spacing.md,
-    },
-    inviteActionHalf: {
-      flex: 1,
-    },
-    regenWrap: {
-      paddingHorizontal: spacing.md,
-      paddingBottom: spacing.md,
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: colors.borderLight,
-    },
-    regenButton: {
-      flexDirection: 'row',
+    iconButton: {
+      width: 44,
+      height: 44,
       alignItems: 'center',
       justifyContent: 'center',
-      gap: spacing.sm,
-      paddingVertical: spacing.sm,
     },
-    regenText: {
-      fontSize: fontSizes.sm,
-      fontWeight: fontWeights.semibold,
-      color: colors.danger,
+    spacedGroup: {
+      marginTop: spacing.xl,
     },
-    switchRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingVertical: spacing.md,
-      paddingHorizontal: spacing.md,
-      backgroundColor: colors.surface,
-      borderRadius: radii.lg,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      ...(shadows.sm as object),
-    },
-    switchRowLeft: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.md,
-      flex: 1,
-    },
-    switchRowText: {
-      flex: 1,
-    },
-    switchTitle: {
-      fontSize: fontSizes.md,
-      fontWeight: fontWeights.semibold,
-      color: colors.text,
-    },
-    switchHint: {
-      fontSize: fontSizes.sm,
-      color: colors.textSecondary,
-      marginTop: 2,
-    },
-    actionSpacer: {
-      height: spacing.md,
-    },
-    leaveOutline: {
-      padding: spacing.lg,
-      borderRadius: radii.lg,
-      backgroundColor: colors.danger,
-      shadowColor: colors.danger,
-      shadowOpacity: 0.22,
-      shadowRadius: 10,
-      shadowOffset: { width: 0, height: 6 },
-      elevation: 4,
-    },
-    leaveOutlineText: {
-      fontSize: fontSizes.md,
-      fontWeight: fontWeights.semibold,
-      color: '#FFFFFF',
-      marginBottom: spacing.xs,
-    },
-    leaveOutlineHint: {
-      fontSize: fontSizes.sm,
-      color: 'rgba(255, 255, 255, 0.88)',
-      lineHeight: 18,
-    },
-    deleteHint: {
-      fontSize: fontSizes.sm,
-      color: colors.textSecondary,
-      marginTop: spacing.sm,
-      lineHeight: 18,
-    },
-    bottomPad: {
-      height: spacing.xl,
+    pressed: {
+      opacity: 0.6,
     },
   });

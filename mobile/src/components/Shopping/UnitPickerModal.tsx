@@ -9,10 +9,13 @@ import {
   Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { useShoppingMotion } from './useShoppingMotion';
+import { Group } from '../ui/Group';
 import { AppText } from '../AppText';
-import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows } from '../../theme';
+import { useThemeColors, fontSizes, fontWeights, spacing, radii } from '../../theme';
 
-const ROW_HEIGHT = 48;
+const ROW_HEIGHT = 56;
 const MAX_LIST_HEIGHT = 320;
 
 export type UnitPickerRow = { key: string; label: string };
@@ -44,6 +47,7 @@ export const UnitPickerModal: React.FC<UnitPickerModalProps> = ({
   cancelLabel,
 }) => {
   const colors = useThemeColors();
+  const reduceMotion = useShoppingMotion();
   const insets = useSafeAreaInsets();
 
   const data = React.useMemo<UnitPickerRow[]>(
@@ -58,33 +62,34 @@ export const UnitPickerModal: React.FC<UnitPickerModalProps> = ({
       StyleSheet.create({
         backdrop: {
           flex: 1,
-          backgroundColor: 'rgba(0,0,0,0.45)',
+          backgroundColor: colors.shadowStrong,
           justifyContent: 'flex-end',
         },
         card: {
-          borderTopLeftRadius: radii.lg,
-          borderTopRightRadius: radii.lg,
+          borderTopLeftRadius: radii.xl,
+          borderTopRightRadius: radii.xl,
           paddingTop: spacing.md,
           paddingBottom: Math.max(insets.bottom, spacing.md),
           maxHeight: '55%',
-          borderWidth: 1,
-          borderColor: colors.borderLight,
-          ...(shadows.lg as object),
         },
         title: {
-          fontSize: fontSizes.lg,
+          fontSize: 20,
           fontWeight: fontWeights.bold,
           color: colors.text,
-          paddingHorizontal: spacing.xl,
+          paddingHorizontal: spacing.lg,
           paddingBottom: spacing.sm,
         },
         list: {
           maxHeight: MAX_LIST_HEIGHT,
         },
         row: {
-          height: ROW_HEIGHT,
-          paddingHorizontal: spacing.xl,
-          justifyContent: 'center',
+          minHeight: ROW_HEIGHT,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: spacing.sm,
+          paddingVertical: spacing.sm,
+          paddingHorizontal: spacing.md,
+          justifyContent: 'space-between',
           borderBottomWidth: StyleSheet.hairlineWidth,
           borderBottomColor: colors.borderLight,
         },
@@ -92,6 +97,7 @@ export const UnitPickerModal: React.FC<UnitPickerModalProps> = ({
           backgroundColor: colors.primaryUltraSoft,
         },
         rowText: {
+          flex: 1,
           fontSize: fontSizes.md,
           color: colors.text,
         },
@@ -100,6 +106,7 @@ export const UnitPickerModal: React.FC<UnitPickerModalProps> = ({
           color: colors.primary,
         },
         cancelRow: {
+          minHeight: 44,
           marginTop: spacing.sm,
           paddingVertical: spacing.md,
           alignItems: 'center',
@@ -118,6 +125,8 @@ export const UnitPickerModal: React.FC<UnitPickerModalProps> = ({
       const selected = selectedValue === item.key;
       return (
         <TouchableOpacity
+          accessibilityRole="radio"
+          accessibilityState={{ checked: selected }}
           style={[styles.row, selected && styles.rowSelected]}
           onPress={() => {
             onSelect(item.key);
@@ -126,6 +135,7 @@ export const UnitPickerModal: React.FC<UnitPickerModalProps> = ({
           activeOpacity={0.7}
         >
           <AppText style={[styles.rowText, selected && styles.rowTextSelected]}>{item.label}</AppText>
+          {selected ? <Ionicons name="checkmark-outline" size={22} color={colors.primary} /> : null}
         </TouchableOpacity>
       );
     },
@@ -134,41 +144,31 @@ export const UnitPickerModal: React.FC<UnitPickerModalProps> = ({
 
   const keyExtractor = React.useCallback((item: UnitPickerRow) => (item.key === '' ? '__none__' : item.key), []);
 
-  const getItemLayout = React.useCallback(
-    (_data: ArrayLike<UnitPickerRow> | null | undefined, index: number) => ({
-      length: ROW_HEIGHT,
-      offset: ROW_HEIGHT * index,
-      index,
-    }),
-    []
-  );
-
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable
-          style={[styles.card, { backgroundColor: colors.surface }]}
-          onPress={(e) => e.stopPropagation()}
-        >
-          <AppText style={styles.title}>{title}</AppText>
-          <FlatList
-            data={data}
-            keyExtractor={keyExtractor}
-            renderItem={renderItem}
-            getItemLayout={getItemLayout}
-            style={[styles.list, { height: listHeight }]}
-            nestedScrollEnabled={Platform.OS === 'android'}
-            keyboardShouldPersistTaps="handled"
-            removeClippedSubviews={Platform.OS === 'android'}
-            initialNumToRender={14}
-            maxToRenderPerBatch={14}
-            windowSize={5}
-          />
-          <TouchableOpacity style={styles.cancelRow} onPress={onClose} activeOpacity={0.7}>
+    <Modal visible={visible} transparent animationType={reduceMotion ? 'none' : 'fade'} onRequestClose={onClose}>
+      <View style={styles.backdrop}>
+        <Pressable style={StyleSheet.absoluteFill} accessibilityRole="button" accessibilityLabel={cancelLabel} onPress={onClose} />
+        <View style={[styles.card, { backgroundColor: colors.background }]} accessibilityViewIsModal>
+          <AppText accessibilityRole="header" style={styles.title}>{title}</AppText>
+          <Group style={{ maxHeight: MAX_LIST_HEIGHT, flexShrink: 1 }}>
+            <FlatList
+              data={data}
+              keyExtractor={keyExtractor}
+              renderItem={renderItem}
+              style={[styles.list, { height: listHeight }]}
+              nestedScrollEnabled={Platform.OS === 'android'}
+              keyboardShouldPersistTaps="handled"
+              removeClippedSubviews={Platform.OS === 'android'}
+              initialNumToRender={14}
+              maxToRenderPerBatch={14}
+              windowSize={5}
+            />
+          </Group>
+          <TouchableOpacity accessibilityRole="button" style={styles.cancelRow} onPress={onClose} activeOpacity={0.7}>
             <AppText style={styles.cancelText}>{cancelLabel}</AppText>
           </TouchableOpacity>
-        </Pressable>
-      </Pressable>
+        </View>
+      </View>
     </Modal>
   );
 };

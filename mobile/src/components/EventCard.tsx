@@ -4,7 +4,7 @@ import { AppText } from './AppText';
 import { Event } from '../api/eventsApi';
 import { formatDateTime, formatTime } from '../utils/dateHelpers';
 import { getDateFnsLocale } from '../utils/dateLocales';
-import { useThemeColors, fontSizes, fontWeights, radii, spacing, shadows } from '../theme';
+import { useThemeColors, fontSizes, fontWeights, radii, spacing } from '../theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -32,21 +32,25 @@ export const EventCard: React.FC<EventCardProps> = ({ event }) => {
 
   const styles = React.useMemo(() => StyleSheet.create({
     card: {
-      backgroundColor: colors.surface,
-      padding: spacing.lg,
-      borderRadius: radii.lg,
-      marginBottom: spacing.md,
-      borderWidth: 1,
-      borderColor: colors.border,
-      ...(shadows.sm as object),
+      padding: spacing.md,
+      minHeight: 60,
     },
     header: {
       flexDirection: 'row',
       alignItems: 'flex-start',
       gap: spacing.md,
     },
+    iconWell: {
+      width: 36,
+      height: 36,
+      borderRadius: radii.sm,
+      backgroundColor: colors.primaryUltraSoft,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
     content: {
       flex: 1,
+      minWidth: 0,
     },
     title: {
       fontSize: fontSizes.md,
@@ -70,18 +74,18 @@ export const EventCard: React.FC<EventCardProps> = ({ event }) => {
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <Ionicons name={typeIcons[event.type] || 'calendar-outline'} size={22} color={colors.muted} />
+        <View style={styles.iconWell}>
+          <Ionicons name={typeIcons[event.type] || 'calendar-outline'} size={22} color={colors.primary} />
+        </View>
         <View style={styles.content}>
-          <AppText style={styles.title} numberOfLines={2} ellipsizeMode="tail">{event.title}</AppText>
+          <AppText style={styles.title}>{event.title}</AppText>
           <AppText style={styles.time}>
             {formatDateTime(event.date, dateLocale)}
             {event.endDate && ` - ${formatTime(event.endDate, dateLocale)}`}
           </AppText>
+          {event.description ? <AppText style={styles.description}>{event.description}</AppText> : null}
         </View>
       </View>
-      {event.description && (
-        <AppText style={styles.description}>{event.description}</AppText>
-      )}
     </View>
   );
 };

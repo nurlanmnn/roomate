@@ -66,6 +66,7 @@ export default {
 
   // Navigation & Tabs
   tabs: {
+    money: 'Argent',
     home: 'Accueil',
     expenses: 'Dépenses',
     calendar: 'Calendrier',
@@ -188,6 +189,11 @@ export default {
 
   // Household Settings
   householdSettingsScreen: {
+    sectionNotifications: 'Notifications',
+    muteHouseholdTitle: 'Mettre ce foyer en sourdine',
+    muteHouseholdSubtitle: 'Vous recevrez toujours les notifications de vos autres foyers.',
+    muteHouseholdHint: 'Coupe les notifications de ce foyer pour vous uniquement.',
+    muteHouseholdError: 'Impossible de modifier la sourdine. Réessayez.',
     title: 'Paramètres du Foyer',
     sectionHousehold: 'Foyer',
     sectionInvite: 'Invitation',
@@ -233,6 +239,13 @@ export default {
 
   // Home Screen
   home: {
+    owesYou: 'Vous doit',
+    owesYouLine: '%{name} vous doit %{amount}',
+    youOweLine: 'Vous devez %{amount} à %{name}',
+    yourTurn: 'À votre tour',
+    itemsToBuy: '%{count} à acheter',
+    nothingToBuy: 'Rien à acheter',
+    householdSpending: 'Dépenses du foyer',
     welcome: 'Bienvenue',
     welcomeTo: 'Bienvenue à',
     quickActions: 'Actions Rapides',
@@ -248,6 +261,7 @@ export default {
     youOwe: 'Vous devez',
     youAreOwed: 'On vous doit',
     allSettled: 'Tout est réglé !',
+    evenOverall: 'Vous êtes quittes au total',
     thisMonth: 'Ce Mois',
     lastMonth: 'Mois Dernier',
     events: 'Événements',
@@ -262,7 +276,7 @@ export default {
     tipStart: 'Commencez à suivre vos dépenses pour obtenir des informations personnalisées et mieux gérer votre budget.',
     getStarted: 'Commencez en ajoutant votre première dépense, en créant une liste de courses ou en ajoutant un événement au calendrier.',
     inviteRoommates: 'Invitez vos colocataires avec le code :',
-    setupHeroTagline: 'Configurons votre foyer 👇',
+    setupHeroTagline: 'Configurons votre foyer',
     setupInviteTitle: 'Inviter vos colocataires',
     setupInviteDescription: 'Partagez ce code pour que d’autres rejoignent le foyer.',
     setupCopyCode: 'Copier',
@@ -550,6 +564,10 @@ export default {
 
   // Shopping
   shopping: {
+    quickAdd: 'Ajout rapide',
+    quickAddEmpty: 'Saisissez votre liste de courses',
+    quickAddParseError: 'Aucun article n’a pu être lu dans votre saisie',
+    quickAddHelp: 'Saisissez votre liste de courses, séparée par des virgules. Vous pouvez indiquer des quantités. Exemple : lait, 2 kg de poulet, 3 œufs, 1 litre d’eau.',
     title: 'Liste de Courses',
     sectionSearch: 'Recherche',
     sectionCurrentList: 'Liste actuelle',

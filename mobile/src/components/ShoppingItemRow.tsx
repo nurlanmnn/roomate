@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { Alert, AlertButton, Pressable, View, TouchableOpacity, StyleSheet } from 'react-native';
 import { AppText } from './AppText';
 import { Ionicons } from '@expo/vector-icons';
 import { ShoppingItem } from '../api/shoppingApi';
-import { useThemeColors, fontSizes, fontWeights, spacing } from '../theme';
-import { SwipeableRow } from './SwipeableRow';
+import { useLanguage } from '../context/LanguageContext';
+import { useThemeColors, fontSizes, fontWeights, radii, spacing } from '../theme';
+import { ShoppingSwipeableRow } from './Shopping/ShoppingSwipeableRow';
 
 interface ShoppingItemRowProps {
   item: ShoppingItem;
@@ -13,189 +14,95 @@ interface ShoppingItemRowProps {
   onDelete?: () => void;
   isFirst?: boolean;
   isLast?: boolean;
-  /** Row sits inside SettingsGroupCard (transparent row bg). */
+  /** Row sits inside a grouped list. */
   inGroupCard?: boolean;
 }
 
 const ShoppingItemRowComponent: React.FC<ShoppingItemRowProps> = ({
-  item,
-  onToggle,
-  onEdit,
-  onDelete,
-  isFirst = false,
-  isLast = false,
-  inGroupCard = false,
+  item, onToggle, onEdit, onDelete, isLast = false, inGroupCard = false,
 }) => {
   const colors = useThemeColors();
-  const styles = React.useMemo(() => StyleSheet.create({
-    row: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingVertical: spacing.md,
-      paddingHorizontal: spacing.lg,
-      minHeight: 56,
-      backgroundColor: inGroupCard ? 'transparent' : colors.surface,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.borderLight,
-    },
-    rowFirst: {
-      borderTopWidth: 0,
-    },
-    rowLast: {
-      borderBottomWidth: 0,
-    },
-    rowCompleted: {
-      backgroundColor: colors.primaryUltraSoft,
-    },
-    checkboxContainer: {
-      marginRight: spacing.md,
-    },
-    checkbox: {
-      width: 24,
-      height: 24,
-      borderRadius: 7,
-      borderWidth: 2,
-      borderColor: colors.textTertiary,
-      backgroundColor: colors.surface,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    checkboxChecked: {
-      backgroundColor: colors.primary,
-      borderColor: colors.primary,
-    },
-    checkmark: {
-      color: colors.surface,
-      fontSize: 12,
-      fontWeight: fontWeights.bold,
-    },
-    content: {
-      flex: 1,
-      flexShrink: 1,
-      minWidth: 0,
-    },
-    name: {
-      fontSize: fontSizes.md,
-      fontWeight: fontWeights.medium,
-      color: colors.text,
-    },
-    nameCompleted: {
-      textDecorationLine: 'line-through',
-      color: colors.textSecondary,
-      fontWeight: fontWeights.regular,
-    },
-    details: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      marginTop: 2,
-    },
-    detailText: {
-      fontSize: fontSizes.sm,
-      color: colors.textTertiary,
-    },
-    meta: {
-      flexDirection: 'row',
-      gap: spacing.xs,
-      marginTop: 4,
-    },
-    badge: {
-      paddingHorizontal: 6,
-      paddingVertical: 2,
-      borderRadius: 4,
-      alignSelf: 'flex-start',
-    },
-    sharedBadge: {
-      fontSize: 10,
-      color: colors.primary,
-      fontWeight: fontWeights.semibold,
-      backgroundColor: colors.primaryUltraSoft,
-      overflow: 'hidden',
-    },
-    personalBadge: {
-      fontSize: 10,
-      color: colors.textTertiary,
-      fontWeight: fontWeights.medium,
-      backgroundColor: colors.background,
-      overflow: 'hidden',
-    },
-    actions: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.xs,
-      marginLeft: spacing.sm,
-    },
-    actionBtn: {
-      padding: spacing.xs,
-    },
-  }), [colors, inGroupCard]);
-
-  return (
-    <SwipeableRow
-      onSwipeLeft={onDelete}
-      onSwipeRight={!item.completed ? onToggle : undefined}
-      leftActionLabel="Delete"
-      leftActionIcon="trash-outline"
-      leftActionColor={colors.danger}
-      rightActionLabel="Complete"
-      rightActionIcon="checkmark-circle-outline"
-      rightActionColor={colors.primary}
-      disabled={item.completed}
+  const { t } = useLanguage();
+  const details = [
+    item.quantity && Number(item.quantity) !== 1 ? `×${item.quantity}` : '',
+    item.weight ? `${item.weight}${item.weightUnit ? ` ${item.weightUnit}` : ''}` : '',
+    item.isShared ? '' : item.ownerId?.name ?? '',
+  ].filter(Boolean).join(' · ');
+  const openMenu = () => {
+    const buttons: AlertButton[] = [];
+    if (onEdit) buttons.push({ text: t('common.edit'), onPress: onEdit });
+    if (onDelete) buttons.push({ text: t('common.delete'), style: 'destructive', onPress: onDelete });
+    buttons.push({ text: t('common.cancel'), style: 'cancel' });
+    Alert.alert(item.name, undefined, buttons);
+  };
+  const checkbox = (
+    <TouchableOpacity
+      onPress={onToggle}
+      style={styles.target}
+      accessibilityRole="checkbox"
+      accessibilityLabel={`${item.name}, ${t(item.completed ? 'shopping.completed' : 'shopping.active')}`}
+      accessibilityState={{ checked: item.completed }}
     >
+      <View style={[styles.checkbox, { borderColor: item.completed ? colors.primary : colors.textTertiary, backgroundColor: item.completed ? colors.primary : colors.surface }]}>
+        {item.completed ? <Ionicons name="checkmark-outline" size={22} color={colors.onPrimary} /> : null}
+      </View>
+    </TouchableOpacity>
+  );
+  const actions = onEdit || onDelete ? (
+    <TouchableOpacity
+      onPress={openMenu}
+      style={styles.target}
+      accessibilityRole="button"
+      accessibilityLabel={`${t('shopping.editItem')}: ${item.name}`}
+    >
+      <Ionicons name="ellipsis-horizontal" size={20} color={colors.textTertiary} />
+    </TouchableOpacity>
+  ) : null;
+  return (
+    <ShoppingSwipeableRow onSwipeLeft={onDelete} onSwipeRight={!item.completed ? onToggle : undefined} disabled={item.completed}>
       <View style={[
-        styles.row,
-        isFirst && styles.rowFirst,
-        isLast && styles.rowLast,
-        item.completed && styles.rowCompleted,
+        { backgroundColor: colors.surface },
+        !inGroupCard && !isLast && styles.separator,
+        !inGroupCard && !isLast && { borderBottomColor: colors.borderLight },
       ]}>
-        <TouchableOpacity onPress={onToggle} style={styles.checkboxContainer}>
-          <View style={[styles.checkbox, item.completed && styles.checkboxChecked]}>
-            {item.completed && <AppText style={styles.checkmark}>✓</AppText>}
-          </View>
-        </TouchableOpacity>
-        <View style={styles.content}>
-          <AppText style={[styles.name, item.completed && styles.nameCompleted]} numberOfLines={2} ellipsizeMode="tail">
-            {item.name}
-          </AppText>
-          {(item.quantity || item.weight) ? (
-            <View style={styles.details}>
-              {item.quantity && (
-                <AppText style={styles.detailText}>Qty: {item.quantity}</AppText>
-              )}
-              {item.weight && (
-                <AppText style={styles.detailText}>
-                  {item.quantity ? ' · ' : ''}{item.weight}{item.weightUnit ? ` ${item.weightUnit}` : ''}
-                </AppText>
-              )}
-            </View>
-          ) : null}
-          <View style={styles.meta}>
-            {item.isShared ? (
-              <AppText style={[styles.badge, styles.sharedBadge]}>Shared</AppText>
-            ) : (
-              item.ownerId && (
-                <AppText style={[styles.badge, styles.personalBadge]} numberOfLines={1}>
-                  {item.ownerId.name}
-                </AppText>
-              )
-            )}
-          </View>
-        </View>
-        <View style={styles.actions}>
-          {onEdit && (
-            <TouchableOpacity onPress={onEdit} style={styles.actionBtn}>
-              <Ionicons name="pencil-outline" size={18} color={colors.textSecondary} />
-            </TouchableOpacity>
-          )}
-          {onDelete && (
-            <TouchableOpacity onPress={onDelete} style={styles.actionBtn}>
-              <Ionicons name="trash-outline" size={18} color={colors.danger} />
-            </TouchableOpacity>
-          )}
+        <View style={styles.row}>
+          {checkbox}
+          <Pressable
+            style={styles.content}
+            onPress={onEdit}
+            disabled={!onEdit}
+            accessibilityRole={onEdit ? 'button' : undefined}
+            accessibilityLabel={[item.name, details].filter(Boolean).join(', ')}
+            accessibilityHint={onEdit ? t('shopping.editItem') : undefined}
+          >
+            <AppText
+              style={[
+                styles.name,
+                { color: item.completed ? colors.textTertiary : colors.text },
+                item.completed && styles.struck,
+              ]}
+            >
+              {item.name}
+            </AppText>
+            {details ? <AppText style={[styles.details, { color: colors.textSecondary }]}>{details}</AppText> : null}
+          </Pressable>
+          {actions}
         </View>
       </View>
-    </SwipeableRow>
+    </ShoppingSwipeableRow>
   );
 };
+
+const styles = StyleSheet.create({
+  target: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  checkbox: { width: 28, height: 28, borderRadius: radii.pill, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minHeight: 56, paddingLeft: spacing.sm, paddingRight: spacing.xs, paddingVertical: spacing.xs },
+  content: { flex: 1, minWidth: 0, minHeight: 44, justifyContent: 'center' },
+  name: { fontSize: fontSizes.md, fontWeight: fontWeights.medium },
+  struck: { textDecorationLine: 'line-through' },
+  details: { fontSize: fontSizes.sm, marginTop: spacing.xxs },
+  separator: { borderBottomWidth: StyleSheet.hairlineWidth },
+});
 
 /**
  * Memoized so that re-renders of the parent list (e.g. typing in the search

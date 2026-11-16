@@ -66,6 +66,7 @@ export default {
 
   // Navigation & Tabs
   tabs: {
+    money: 'Dinero',
     home: 'Inicio',
     expenses: 'Gastos',
     calendar: 'Calendario',
@@ -188,6 +189,11 @@ export default {
 
   // Household Settings
   householdSettingsScreen: {
+    sectionNotifications: 'Notificaciones',
+    muteHouseholdTitle: 'Silenciar este hogar',
+    muteHouseholdSubtitle: 'Seguirás recibiendo notificaciones de tus otros hogares.',
+    muteHouseholdHint: 'Silencia las notificaciones de este hogar solo para ti.',
+    muteHouseholdError: 'No se pudo cambiar el silencio. Inténtalo de nuevo.',
     title: 'Configuración del Hogar',
     sectionHousehold: 'Hogar',
     sectionInvite: 'Invitar',
@@ -233,6 +239,13 @@ export default {
 
   // Home Screen
   home: {
+    owesYou: 'Te debe',
+    owesYouLine: '%{name} te debe %{amount}',
+    youOweLine: 'Le debes %{amount} a %{name}',
+    yourTurn: 'Te toca',
+    itemsToBuy: '%{count} por comprar',
+    nothingToBuy: 'Nada que comprar',
+    householdSpending: 'Gastos del hogar',
     welcome: 'Bienvenido',
     welcomeTo: 'Bienvenido a',
     quickActions: 'Acciones Rápidas',
@@ -248,6 +261,7 @@ export default {
     youOwe: 'Debes',
     youAreOwed: 'Te deben',
     allSettled: '¡Todo liquidado!',
+    evenOverall: 'Estás a mano en total',
     thisMonth: 'Este Mes',
     lastMonth: 'Mes Pasado',
     events: 'Eventos',
@@ -262,7 +276,7 @@ export default {
     tipStart: 'Comienza a rastrear gastos para obtener información personalizada y gestionar mejor tu presupuesto.',
     getStarted: 'Comienza añadiendo tu primer gasto, creando una lista de compras o añadiendo un evento al calendario.',
     inviteRoommates: 'Invita a tus compañeros usando el código:',
-    setupHeroTagline: 'Configuremos tu hogar 👇',
+    setupHeroTagline: 'Configuremos tu hogar',
     setupInviteTitle: 'Invita a tus compañeros',
     setupInviteDescription: 'Comparte este código para que otros se unan al hogar.',
     setupCopyCode: 'Copiar',
@@ -550,6 +564,10 @@ export default {
 
   // Shopping
   shopping: {
+    quickAdd: 'Añadir rápido',
+    quickAddEmpty: 'Escribe tu lista de la compra',
+    quickAddParseError: 'No se pudo leer ningún artículo de lo que escribiste',
+    quickAddHelp: 'Escribe tu lista de la compra, separada por comas. Puedes incluir cantidades. Ejemplo: leche, 2 kg de pollo, 3 huevos, 1 litro de agua.',
     title: 'Lista de Compras',
     sectionSearch: 'Buscar',
     sectionCurrentList: 'Lista actual',

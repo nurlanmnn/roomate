@@ -1,7 +1,7 @@
-import React, { useMemo, useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { AppText } from './AppText';
-import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows } from '../theme';
+import { useThemeColors, fontSizes, fontWeights, spacing, radii } from '../theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../context/LanguageContext';
 import {
@@ -20,9 +20,6 @@ import {
 } from 'date-fns';
 import { getDateFnsLocale } from '../utils/dateLocales';
 
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const DAY_SIZE = (SCREEN_WIDTH - spacing.xl * 2 - spacing.xs * 6) / 7;
-
 interface CalendarViewProps {
   selectedDate: Date;
   onSelectDate: (date: Date) => void;
@@ -30,7 +27,7 @@ interface CalendarViewProps {
   /** ISO date strings (yyyy-MM-dd or full ISO) where the current user is on chore duty. */
   choreDates?: string[];
   onAddEvent?: (date: Date) => void;
-  /** When true, sits inside a SettingsGroupCard (no outer margin / border / shadow). */
+  /** When true, sits inside a grouped list without outer margins. */
   embedded?: boolean;
 }
 
@@ -45,6 +42,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   const colors = useThemeColors();
   const { t, language } = useLanguage();
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  // The header's Today action brings its selected day back into view.
+  useEffect(() => { if (isToday(selectedDate)) setCurrentMonth(selectedDate); }, [selectedDate]);
+  const [gridWidth, setGridWidth] = useState(7 * 44);
   const dateFnsLocale = useMemo(() => getDateFnsLocale(language), [language]);
 
   const styles = useMemo(
@@ -56,21 +56,14 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           padding: spacing.md,
           marginHorizontal: spacing.md,
           marginBottom: spacing.md,
-          borderWidth: 1,
-          borderColor: colors.borderLight,
-          ...(shadows.sm as object),
         },
         containerEmbedded: {
-          backgroundColor: 'transparent',
+          backgroundColor: colors.surface,
           marginHorizontal: 0,
           marginBottom: 0,
           borderWidth: 0,
-          paddingHorizontal: spacing.sm,
+          paddingHorizontal: spacing.xxs,
           paddingVertical: spacing.xs,
-          shadowOpacity: 0,
-          shadowRadius: 0,
-          shadowOffset: { width: 0, height: 0 },
-          elevation: 0,
         },
         header: {
           flexDirection: 'row',
@@ -80,12 +73,17 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           paddingHorizontal: spacing.xs,
         },
         monthTitle: {
-          fontSize: fontSizes.lg,
+          flex: 1,
+          textAlign: 'center',
+          fontSize: 20,
           fontWeight: fontWeights.bold,
           color: colors.text,
         },
         navButton: {
-          padding: spacing.sm,
+          minWidth: 44,
+          minHeight: 44,
+          alignItems: 'center',
+          justifyContent: 'center',
           borderRadius: radii.pill,
           backgroundColor: colors.surfaceAlt,
         },
@@ -95,7 +93,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           marginBottom: spacing.sm,
         },
         weekDayText: {
-          width: DAY_SIZE,
+          flexShrink: 1,
+          width: '14.285714%',
           textAlign: 'center',
           fontSize: fontSizes.sm,
           fontWeight: fontWeights.semibold,
@@ -107,21 +106,22 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           justifyContent: 'flex-start',
         },
         dayCell: {
-          width: DAY_SIZE,
-          height: DAY_SIZE,
+          width: '14.285714%',
+          minHeight: 44,
           alignItems: 'center',
           justifyContent: 'center',
           marginBottom: spacing.xxs,
         },
         dayButton: {
-          width: DAY_SIZE - 4,
-          height: DAY_SIZE - 4,
+          width: '100%',
+          minHeight: 48,
+          paddingVertical: spacing.xs,
           alignItems: 'center',
           justifyContent: 'center',
           borderRadius: radii.pill,
         },
         dayButtonSelected: {
-          backgroundColor: colors.primary,
+          backgroundColor: colors.enamel,
         },
         dayButtonToday: {
           borderWidth: 2,
@@ -136,7 +136,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           color: colors.textTertiary,
         },
         dayTextSelected: {
-          color: colors.surface,
+          color: colors.onEnamel,
           fontWeight: fontWeights.bold,
         },
         dayTextToday: {
@@ -145,33 +145,31 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         },
         dotsRow: {
           position: 'absolute',
-          bottom: 2,
+          bottom: spacing.xxs,
           flexDirection: 'row',
-          gap: 2,
+          gap: spacing.xxs,
         },
         eventDot: {
           width: 5,
           height: 5,
-          borderRadius: 2.5,
+          borderRadius: radii.pill,
           backgroundColor: colors.primary,
         },
         eventDotSelected: {
-          backgroundColor: colors.surface,
+          backgroundColor: colors.onEnamel,
         },
         choreDot: {
-          width: 5,
-          height: 5,
-          borderRadius: 2.5,
-          backgroundColor: colors.accent,
+          width: 7,
+          height: 7,
+          borderWidth: 1,
+          borderColor: colors.textSecondary,
+          borderRadius: radii.pill,
+          backgroundColor: colors.marigold,
         },
         choreDotSelected: {
-          backgroundColor: colors.surface,
+          backgroundColor: colors.marigold,
         },
-        addButton: {
-          position: 'absolute',
-          bottom: 4,
-          right: 4,
-        },
+
       }),
     [colors]
   );
@@ -241,84 +239,109 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     <View style={containerStyles}>
       {/* Header with month navigation */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.navButton} onPress={goToPrevMonth}>
-          <Ionicons name="chevron-back" size={20} color={colors.text} />
+        <TouchableOpacity
+          style={styles.navButton}
+          onPress={goToPrevMonth}
+          accessibilityRole="button"
+          accessibilityLabel={format(subMonths(currentMonth, 1), 'MMMM yyyy', { locale: dateFnsLocale })}
+        >
+          <Ionicons name="chevron-back-outline" size={20} color={colors.text} />
         </TouchableOpacity>
         <AppText style={styles.monthTitle}>
           {format(currentMonth, 'MMMM yyyy', { locale: dateFnsLocale })}
         </AppText>
-        <TouchableOpacity style={styles.navButton} onPress={goToNextMonth}>
-          <Ionicons name="chevron-forward" size={20} color={colors.text} />
+        <TouchableOpacity
+          style={styles.navButton}
+          onPress={goToNextMonth}
+          accessibilityRole="button"
+          accessibilityLabel={format(addMonths(currentMonth, 1), 'MMMM yyyy', { locale: dateFnsLocale })}
+        >
+          <Ionicons name="chevron-forward-outline" size={20} color={colors.text} />
         </TouchableOpacity>
       </View>
 
-      {/* Week day headers */}
-      <View style={styles.weekDays}>
-        {weekDays.map((day) => (
-          <AppText key={day} style={styles.weekDayText}>
-            {day}
-          </AppText>
-        ))}
-      </View>
-
-      {/* Days grid */}
-      <View style={styles.daysGrid}>
-        {calendarDays.map((day, index) => {
-          const dayKey = format(day, 'yyyy-MM-dd');
-          const isCurrentMonth = isSameMonth(day, currentMonth);
-          const isSelected = isSameDay(day, selectedDate);
-          const isDayToday = isToday(day);
-          const hasEvent = eventDatesSet.has(dayKey);
-          const hasChore = choreDatesSet.has(dayKey);
-
-          return (
-            <View key={index} style={styles.dayCell}>
-              <TouchableOpacity
-                style={[
-                  styles.dayButton,
-                  isSelected && styles.dayButtonSelected,
-                  isDayToday && !isSelected && styles.dayButtonToday,
-                ]}
-                onPress={() => handleDayPress(day)}
-                onLongPress={() => handleDayLongPress(day)}
-                delayLongPress={300}
-              >
-                <AppText
-                  style={[
-                    styles.dayText,
-                    !isCurrentMonth && styles.dayTextOtherMonth,
-                    isSelected && styles.dayTextSelected,
-                    isDayToday && !isSelected && styles.dayTextToday,
-                  ]}
-                >
-                  {format(day, 'd')}
+      <View onLayout={(event) => setGridWidth(Math.max(7 * 44, event.nativeEvent.layout.width))}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <View style={{ width: gridWidth }}>
+            {/* Week day headers */}
+            <View style={styles.weekDays}>
+              {weekDays.map((day) => (
+                <AppText key={day} style={styles.weekDayText}>
+                  {day}
                 </AppText>
-                {(hasEvent || hasChore) && (
-                  <View style={styles.dotsRow}>
-                    {hasEvent && (
-                      <View
-                        style={[
-                          styles.eventDot,
-                          isSelected && styles.eventDotSelected,
-                        ]}
-                      />
-                    )}
-                    {hasChore && (
-                      <View
-                        style={[
-                          styles.choreDot,
-                          isSelected && styles.choreDotSelected,
-                        ]}
-                      />
-                    )}
-                  </View>
-                )}
-              </TouchableOpacity>
+              ))}
             </View>
-          );
-        })}
+
+            {/* Days grid */}
+            <View style={styles.daysGrid}>
+              {calendarDays.map((day, index) => {
+                const dayKey = format(day, 'yyyy-MM-dd');
+                const isCurrentMonth = isSameMonth(day, currentMonth);
+                const isSelected = isSameDay(day, selectedDate);
+                const isDayToday = isToday(day);
+                const hasEvent = eventDatesSet.has(dayKey);
+                const hasChore = choreDatesSet.has(dayKey);
+
+                return (
+                  <View key={index} style={styles.dayCell}>
+                    <TouchableOpacity
+                      style={[
+                        styles.dayButton,
+                        isSelected && styles.dayButtonSelected,
+                        isDayToday && !isSelected && styles.dayButtonToday,
+                      ]}
+                      onPress={() => handleDayPress(day)}
+                      onLongPress={() => handleDayLongPress(day)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: isSelected }}
+                      accessibilityLabel={[
+                        format(day, 'PPPP', { locale: dateFnsLocale }),
+                        isDayToday ? t('calendar.today') : '',
+                        hasEvent ? t('home.events') : '',
+                        hasChore ? t('chores.yourTurn') : '',
+                      ].filter(Boolean).join(', ')}
+                      accessibilityHint={onAddEvent ? t('calendar.longPressToAdd') : undefined}
+                      hitSlop={{ left: 2, right: 2 }}
+                      delayLongPress={300}
+                    >
+                      <AppText
+                        style={[
+                          styles.dayText,
+                          !isCurrentMonth && styles.dayTextOtherMonth,
+                          isSelected && styles.dayTextSelected,
+                          isDayToday && !isSelected && styles.dayTextToday,
+                        ]}
+                      >
+                        {format(day, 'd')}
+                      </AppText>
+                      {(hasEvent || hasChore) && (
+                        <View style={styles.dotsRow}>
+                          {hasEvent && (
+                            <View
+                              style={[
+                                styles.eventDot,
+                                isSelected && styles.eventDotSelected,
+                              ]}
+                            />
+                          )}
+                          {hasChore && (
+                            <View
+                              style={[
+                                styles.choreDot,
+                                isSelected && styles.choreDotSelected,
+                              ]}
+                            />
+                          )}
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        </ScrollView>
       </View>
     </View>
   );
 };
-

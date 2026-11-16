@@ -1,7 +1,7 @@
-import React, { useRef, useCallback } from 'react';
-import { View, StyleSheet, Animated, Dimensions, PanResponder, PanResponderGestureState } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useThemeColors, spacing, fontSizes } from '../theme';
+import React, { useCallback, useEffect, useRef } from 'react';
+import { AccessibilityInfo, Animated, Dimensions, PanResponder, PanResponderGestureState, StyleSheet, View } from 'react-native';
+import { fontSizes, radii, spacing, useThemeColors } from '../theme';
 import { AppText } from './AppText';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -33,11 +33,22 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
   disabled = false,
 }) => {
   const colors = useThemeColors();
+  const reduceMotionRef = useRef(false);
+  useEffect(() => {
+    let mounted = true;
+    const update = (enabled: boolean) => {
+      if (!mounted) return;
+      reduceMotionRef.current = enabled;
+    };
+    void AccessibilityInfo.isReduceMotionEnabled().then(update);
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', update);
+    return () => { mounted = false; subscription.remove(); };
+  }, []);
   const translateX = useRef(new Animated.Value(0)).current;
   const isSwipingRef = useRef(false);
 
-  const finalLeftActionColor = leftActionColor || colors.danger;
-  const finalRightActionColor = rightActionColor || colors.primary;
+  const finalLeftActionColor = Object.values(colors).some(token => token === leftActionColor) ? leftActionColor : colors.danger;
+  const finalRightActionColor = Object.values(colors).some(token => token === rightActionColor) ? rightActionColor : colors.primary;
 
   // Refs for latest callback values
   const callbacksRef = useRef({ onSwipeLeft, onSwipeRight, disabled });
@@ -45,11 +56,10 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
 
   const resetPosition = useCallback(() => {
     isSwipingRef.current = false;
-    Animated.spring(translateX, {
+    Animated.timing(translateX, {
       toValue: 0,
       useNativeDriver: true,
-      tension: 100,
-      friction: 10,
+      duration: reduceMotionRef.current ? 0 : 180,
     }).start();
   }, [translateX]);
 
@@ -57,7 +67,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
     PanResponder.create({
       // Immediately claim when touch starts if we're already swiping
       onStartShouldSetPanResponder: () => false,
-      
+
       // Check if we should capture this gesture
       onMoveShouldSetPanResponder: (_, gs) => {
         if (callbacksRef.current.disabled) return false;
@@ -66,7 +76,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
         const hasMoved = Math.abs(gs.dx) > 8;
         return isHorizontal && hasMoved;
       },
-      
+
       // Capture gesture more aggressively for horizontal swipes
       onMoveShouldSetPanResponderCapture: (_, gs) => {
         if (callbacksRef.current.disabled) return false;
@@ -116,7 +126,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
         if (triggerLeft) {
           Animated.timing(translateX, {
             toValue: -SCREEN_WIDTH,
-            duration: 180,
+            duration: reduceMotionRef.current ? 0 : 180,
             useNativeDriver: true,
           }).start(() => {
             swLeft?.();
@@ -126,7 +136,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
         } else if (triggerRight) {
           Animated.timing(translateX, {
             toValue: SCREEN_WIDTH,
-            duration: 180,
+            duration: reduceMotionRef.current ? 0 : 180,
             useNativeDriver: true,
           }).start(() => {
             swRight?.();
@@ -154,41 +164,29 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
     extrapolate: 'clamp',
   });
 
-  const leftScale = translateX.interpolate({
-    inputRange: [-SWIPE_THRESHOLD, -20, 0],
-    outputRange: [1, 0.6, 0.4],
-    extrapolate: 'clamp',
-  });
-
   const rightOpacity = translateX.interpolate({
     inputRange: [0, 20, SWIPE_THRESHOLD * 1.5],
     outputRange: [0, 0.3, 1],
     extrapolate: 'clamp',
   });
 
-  const rightScale = translateX.interpolate({
-    inputRange: [0, 20, SWIPE_THRESHOLD],
-    outputRange: [0.4, 0.6, 1],
-    extrapolate: 'clamp',
-  });
-
   return (
     <View style={styles.container}>
       {/* Background actions */}
-      <View style={styles.actionsContainer}>
+      <View style={styles.actionsContainer} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
         {onSwipeLeft && (
           <Animated.View
             style={[
               styles.actionLeft,
               {
-                backgroundColor: finalLeftActionColor,
+                backgroundColor: colors.dangerSoft,
                 opacity: leftOpacity,
-                transform: [{ scale: leftScale }],
+
               },
             ]}
           >
-            <Ionicons name={leftActionIcon} size={22} color="#fff" />
-            {leftActionLabel && <AppText style={styles.label}>{leftActionLabel}</AppText>}
+            <Ionicons name={leftActionIcon} size={22} color={finalLeftActionColor} />
+            {leftActionLabel && <AppText style={[styles.label, { color: finalLeftActionColor }]}>{leftActionLabel}</AppText>}
           </Animated.View>
         )}
         {onSwipeRight && (
@@ -196,14 +194,14 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
             style={[
               styles.actionRight,
               {
-                backgroundColor: finalRightActionColor,
+                backgroundColor: colors.primaryUltraSoft,
                 opacity: rightOpacity,
-                transform: [{ scale: rightScale }],
+
               },
             ]}
           >
-            <Ionicons name={rightActionIcon} size={22} color="#fff" />
-            {rightActionLabel && <AppText style={styles.label}>{rightActionLabel}</AppText>}
+            <Ionicons name={rightActionIcon} size={22} color={finalRightActionColor} />
+            {rightActionLabel && <AppText style={[styles.label, { color: finalRightActionColor }]}>{rightActionLabel}</AppText>}
           </Animated.View>
         )}
       </View>
@@ -211,6 +209,15 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
       {/* Main content */}
       <Animated.View
         {...panResponder.panHandlers}
+        accessibilityActions={disabled ? [] : [
+          ...(onSwipeLeft ? [{ name: 'swipeLeft', label: leftActionLabel }] : []),
+          ...(onSwipeRight ? [{ name: 'swipeRight', label: rightActionLabel }] : []),
+        ]}
+        onAccessibilityAction={({ nativeEvent }) => {
+          if (disabled) return;
+          if (nativeEvent.actionName === 'swipeLeft') onSwipeLeft?.();
+          if (nativeEvent.actionName === 'swipeRight') onSwipeRight?.();
+        }}
         style={{ transform: [{ translateX }] }}
       >
         {children}
@@ -238,7 +245,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     paddingRight: spacing.lg,
     gap: spacing.xs,
-    borderRadius: 8,
+    borderRadius: radii.sm,
   },
   actionRight: {
     position: 'absolute',
@@ -251,10 +258,9 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     paddingLeft: spacing.lg,
     gap: spacing.xs,
-    borderRadius: 8,
+    borderRadius: radii.sm,
   },
   label: {
-    color: '#fff',
     fontSize: fontSizes.sm,
     fontWeight: '600',
   },

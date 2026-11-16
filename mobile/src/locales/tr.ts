@@ -66,6 +66,7 @@ export default {
 
   // Navigation & Tabs
   tabs: {
+    money: 'Para',
     home: 'Ana Sayfa',
     expenses: 'Harcamalar',
     calendar: 'Takvim',
@@ -188,6 +189,11 @@ export default {
 
   // Household Settings
   householdSettingsScreen: {
+    sectionNotifications: 'Bildirimler',
+    muteHouseholdTitle: 'Bu evi sessize al',
+    muteHouseholdSubtitle: 'Diğer evlerinden bildirim almaya devam edersin.',
+    muteHouseholdHint: 'Bu evin bildirimlerini yalnızca senin için kapatır.',
+    muteHouseholdError: 'Sessize alma durumu güncellenemedi. Tekrar dene.',
     title: 'Ev Ayarları',
     sectionHousehold: 'Ev',
     sectionInvite: 'Davet',
@@ -233,6 +239,13 @@ export default {
 
   // Home Screen
   home: {
+    owesYou: 'Sana borçlu',
+    owesYouLine: '%{name} sana %{amount} borçlu',
+    youOweLine: '%{name} kişisine %{amount} borçlusun',
+    yourTurn: 'Sıra sende',
+    itemsToBuy: '%{count} ürün alınacak',
+    nothingToBuy: 'Alınacak bir şey yok',
+    householdSpending: 'Ev harcamaları',
     welcome: 'Hoş Geldiniz',
     welcomeTo: 'Hoş Geldiniz',
     quickActions: 'Hızlı İşlemler',
@@ -248,6 +261,7 @@ export default {
     youOwe: 'Borcunuz',
     youAreOwed: 'Alacağınız',
     allSettled: 'Tüm hesaplar kapatıldı!',
+    evenOverall: 'Genel olarak denksiniz',
     thisMonth: 'Bu Ay',
     lastMonth: 'Geçen Ay',
     events: 'Etkinlikler',
@@ -262,7 +276,7 @@ export default {
     tipStart: 'Kişiselleştirilmiş bilgiler almak ve ev bütçenizi daha iyi yönetmek için harcamaları takip etmeye başlayın.',
     getStarted: 'İlk harcamanızı ekleyerek, alışveriş listesi oluşturarak veya takvime etkinlik ekleyerek başlayın.',
     inviteRoommates: 'Ev arkadaşlarınızı bu kodla davet edin:',
-    setupHeroTagline: 'Hane kurulumunu yapalım 👇',
+    setupHeroTagline: 'Hane kurulumunu yapalım',
     setupInviteTitle: 'Ev arkadaşlarını davet et',
     setupInviteDescription: 'Diğerlerinin katılması için bu kodu paylaş.',
     setupCopyCode: 'Kopyala',
@@ -550,6 +564,10 @@ export default {
 
   // Shopping
   shopping: {
+    quickAdd: 'Hızlı ekle',
+    quickAddEmpty: 'Lütfen alışveriş listeni yaz',
+    quickAddParseError: 'Yazdıklarından hiçbir ürün okunamadı',
+    quickAddHelp: 'Alışveriş listeni virgülle ayırarak yaz. Miktar da ekleyebilirsin. Örnek: süt, 2 kg tavuk, 3 yumurta, 1 litre su.',
     title: 'Alışveriş Listesi',
     sectionSearch: 'Ara',
     sectionCurrentList: 'Geçerli liste',
