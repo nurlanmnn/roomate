@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, View, ViewStyle } from 'react-native';
+import { AccessibilityRole, AccessibilityState, Pressable, StyleSheet, View, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '../AppText';
 import { useTheme } from '../../context/ThemeContext';
@@ -84,6 +84,9 @@ type GroupRowProps = {
   destructive?: boolean;
   accessibilityLabel?: string;
   accessibilityHint?: string;
+  accessibilityState?: AccessibilityState;
+  /** Defaults to `button` for pressable rows; use `switch` for toggle rows. */
+  accessibilityRole?: AccessibilityRole;
   titleLines?: number;
 };
 
@@ -100,6 +103,8 @@ export const GroupRow: React.FC<GroupRowProps> = ({
   destructive,
   accessibilityLabel,
   accessibilityHint,
+  accessibilityState,
+  accessibilityRole = 'button',
   titleLines = 2,
 }) => {
   const colors = useThemeColors();
@@ -148,9 +153,10 @@ export const GroupRow: React.FC<GroupRowProps> = ({
   return (
     <Pressable
       onPress={onPress}
-      accessibilityRole="button"
+      accessibilityRole={accessibilityRole}
       accessibilityLabel={accessibilityLabel}
       accessibilityHint={accessibilityHint}
+      accessibilityState={accessibilityState}
       style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.primaryUltraSoft }]}
     >
       {content}

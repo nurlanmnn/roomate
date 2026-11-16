@@ -31,6 +31,11 @@ export const ToggleRow: React.FC<ToggleRowProps> = ({
       title={title}
       titleLines={0}
       subtitle={subtitle}
+      onPress={() => onValueChange(!value)}
+      accessibilityRole="switch"
+      accessibilityLabel={title}
+      accessibilityHint={subtitle}
+      accessibilityState={{ checked: value }}
       leading={
         <View style={[styles.iconWell, { backgroundColor: colors.primaryUltraSoft }]}>
           <Ionicons name={outlineIcon} size={22} color={colors.primary} />
@@ -41,13 +46,10 @@ export const ToggleRow: React.FC<ToggleRowProps> = ({
           <Switch
             value={value}
             onValueChange={onValueChange}
-            accessibilityRole="switch"
-            accessibilityLabel={title}
-            accessibilityHint={subtitle}
-            accessibilityState={{ checked: value }}
-            hitSlop={8}
+            accessible={false}
+            importantForAccessibility="no"
             trackColor={{ false: colors.border, true: colors.primary }}
-            thumbColor={value ? colors.onPrimary : colors.surface}
+            thumbColor={colors.onEnamel}
             ios_backgroundColor={colors.border}
           />
         </View>

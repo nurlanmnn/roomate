@@ -12,7 +12,7 @@ import { shoppingApi } from '../../api/shoppingApi';
 import { choresApi, ChoreRotation } from '../../api/choresApi';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { HomeInviteCard } from '../../components/Home/HomeInviteCard';
-import { EnamelHeader } from '../../components/ui/EnamelHeader';
+import { EnamelHeader, StatusBarStrip } from '../../components/ui/EnamelHeader';
 import { Group, GroupRow, SectionHeading } from '../../components/ui/Group';
 import { Amount } from '../../components/ui/Amount';
 import { Avatar } from '../../components/ui/Avatar';
@@ -51,6 +51,9 @@ const EVENT_ICONS: Record<Event['type'], keyof typeof Ionicons.glyphMap> = {
   reminder: 'alarm-outline',
   other: 'calendar-outline',
 };
+
+/** First word of a display name, so the balance line on the enamel stays short. */
+const firstName = (name?: string | null): string => (name ?? '').trim().split(/\s+/)[0] || (name ?? '');
 
 export const HomeScreen: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -318,8 +321,8 @@ export const HomeScreen: React.FC = () => {
   const heroLine = heroPeople
     .map((b) =>
       b.owedToMe
-        ? t('home.owesYouLine', { name: b.name, amount: formatCurrency(b.amount, currency) })
-        : t('home.youOweLine', { name: b.name, amount: formatCurrency(b.amount, currency) })
+        ? t('home.owesYouLine', { name: firstName(b.name), amount: formatCurrency(b.amount, currency) })
+        : t('home.youOweLine', { name: firstName(b.name), amount: formatCurrency(b.amount, currency) })
     )
     .join('  ·  ');
 
@@ -359,6 +362,7 @@ export const HomeScreen: React.FC = () => {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
+      <StatusBarStrip />
       <ScrollView
         ref={scrollRef}
         style={styles.root}
@@ -518,11 +522,6 @@ export const HomeScreen: React.FC = () => {
                     shoppingStats.pending > 0
                       ? t('home.itemsToBuy', { count: shoppingStats.pending })
                       : t('home.nothingToBuy')
-                  }
-                  trailing={
-                    shoppingStats.pending > 0 ? (
-                      <AppText style={[styles.count, { color: colors.text }]}>{shoppingStats.pending}</AppText>
-                    ) : undefined
                   }
                   onPress={() => navigation.navigate('Shopping')}
                   chevron

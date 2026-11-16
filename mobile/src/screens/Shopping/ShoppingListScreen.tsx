@@ -24,13 +24,12 @@ import { shoppingApi, ShoppingItem, ShoppingList, WeightUnit } from '../../api/s
 import { ShoppingItemRow } from '../../components/ShoppingItemRow';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { EmptyState } from '../../components/ui/EmptyState';
-import { EnamelHeader } from '../../components/ui/EnamelHeader';
+import { EnamelHeader, HeaderIconButton, SheetCap, StatusBarStrip } from '../../components/ui/EnamelHeader';
 import { Sheet } from '../../components/ui/Sheet';
 import { Group, SectionHeading } from '../../components/ui/Group';
 import { useShoppingMotion } from '../../components/Shopping/useShoppingMotion';
 import { SearchBar } from '../../components/ui/SearchBar';
 import { ListTabs } from '../../components/Shopping/ListTabs';
-import { ActiveListCard } from '../../components/Shopping/ActiveListCard';
 import { SectionHeader } from '../../components/Shopping/SectionHeader';
 import { AddListSheet } from '../../components/Shopping/AddListSheet';
 import { AddItemSheet } from '../../components/Shopping/AddItemSheet';
@@ -96,6 +95,7 @@ export const ShoppingListScreen: React.FC = () => {
   const [editItemOwnerId, setEditItemOwnerId] = useState('');
   const [showEditUnitPicker, setShowEditUnitPicker] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
   const [addingItem, setAddingItem] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const loadGenRef = useRef(0);
@@ -634,13 +634,8 @@ export const ShoppingListScreen: React.FC = () => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
-        <EnamelHeader title={t('tabs.shopping')} subtitle={selectedList?.name ?? selectedHousehold.name}>
-          <View style={styles.remaining} accessible accessibilityLabel={`${t('shoppingList.toBuy')}: ${activeTotal}`}>
-            <AppText style={styles.remainingCount}>{activeTotal}</AppText>
-            <AppText style={styles.remainingLabel}>{t('shoppingList.toBuy')}</AppText>
-          </View>
-        </EnamelHeader>
-        <Sheet>
+        <StatusBarStrip />
+        <View style={{ flex: 1 }}>
           <ScrollView
             ref={scrollRef}
             style={styles.scrollView}
@@ -658,14 +653,49 @@ export const ShoppingListScreen: React.FC = () => {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            <View style={styles.searchPad}>
-              <SearchBar
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                placeholder={t('common.search')}
-              />
-            </View>
-            <SectionHeading title={t('shopping.yourLists')} />
+        <EnamelHeader
+              scrolls
+              overlap={0}
+              title={t('tabs.shopping')}
+              subtitle={selectedList?.name ?? selectedHousehold.name}
+              right={
+                <>
+                  <HeaderIconButton
+                    icon="search-outline"
+                    accessibilityLabel={t('common.search')}
+                    onPress={() => setShowSearch((v) => !v)}
+                  />
+                  {selectedList ? (
+                    <HeaderIconButton
+                      icon="ellipsis-horizontal"
+                      accessibilityLabel={`${t('common.edit')}: ${selectedList.name}`}
+                      onPress={() =>
+                        Alert.alert(selectedList.name, undefined, [
+                          { text: t('common.edit'), onPress: () => handleEditList(selectedList) },
+                          { text: t('common.delete'), style: 'destructive', onPress: () => handleDeleteList(selectedList) },
+                          { text: t('common.cancel'), style: 'cancel' },
+                        ])
+                      }
+                    />
+                  ) : null}
+                </>
+              }
+            >
+          <View style={styles.remaining} accessible accessibilityLabel={`${t('shoppingList.toBuy')}: ${activeTotal}`}>
+            <AppText style={styles.remainingCount}>{activeTotal}</AppText>
+            <AppText style={styles.remainingLabel}>{t('shoppingList.toBuy')}</AppText>
+          </View>
+        </EnamelHeader>
+            <SheetCap />
+            {showSearch || searchQuery ? (
+              <View style={styles.searchPad}>
+                <SearchBar
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  placeholder={t('common.search')}
+                />
+              </View>
+            ) : null}
             <ListTabs
               lists={filteredLists}
               selectedListId={selectedList?._id ?? null}
@@ -681,21 +711,6 @@ export const ShoppingListScreen: React.FC = () => {
 
             {selectedList ? (
               <>
-                <View style={styles.currentList}>
-                  <Group>
-                    <ActiveListCard
-                      embedded
-                      listName={selectedList.name}
-                      toBuyCount={q ? filteredItems.length : activeTotal}
-                      completedCount={q ? filteredCompletedItems.length : completedTotal}
-                      itemLabel={t('shopping.item')}
-                      itemsLabel={t('shopping.items')}
-                      onEdit={() => handleEditList(selectedList)}
-                      onDelete={() => handleDeleteList(selectedList)}
-                    />
-                  </Group>
-                </View>
-
                 {!loading && activeTotal === 0 && completedTotal === 0 ? (
                   <View style={styles.emptyStateWrap}>
                     <EmptyState
@@ -823,7 +838,6 @@ export const ShoppingListScreen: React.FC = () => {
 
           {selectedList ? (
             <View style={styles.addBar}>
-              <AppText style={styles.addBarLabel}>{t('shopping.addItem')}</AppText>
               <View style={styles.addBarRow}>
                 <TextInput
                   value={name}
@@ -859,7 +873,7 @@ export const ShoppingListScreen: React.FC = () => {
               </View>
             </View>
           ) : null}
-        </Sheet>
+        </View>
 
         <AddListSheet
           visible={showListModal}
@@ -1154,7 +1168,7 @@ const createStyles = (colors: ThemeColors, bottomInset: number) => StyleSheet.cr
   remainingLabel: { fontSize: fontSizes.md, color: colors.onEnamelSecondary, flexShrink: 1 },
   scrollView: { flex: 1 },
   scrollContent: { paddingTop: spacing.md, paddingBottom: TAB_BAR_HEIGHT },
-  searchPad: { marginHorizontal: spacing.md },
+  searchPad: { marginHorizontal: spacing.md, marginBottom: spacing.sm },
   currentList: { marginTop: spacing.md },
   completedSection: { marginTop: spacing.sm },
   completedCard: { marginTop: spacing.xxs },

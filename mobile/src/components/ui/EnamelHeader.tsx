@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, StyleSheet, View, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
+import { useIsFocused } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from '../AppText';
 import { useThemeColors, fonts, fontSizes, radii, spacing } from '../../theme';
@@ -44,7 +45,34 @@ type EnamelHeaderProps = {
   children?: React.ReactNode;
   /** Extra space at the bottom so a `Sheet` (or floating buttons) can overlap the field. */
   overlap?: number;
+  /**
+   * Set when the header sits inside a scroll view: extends the enamel upward so pull-to-refresh
+   * overscroll stays cobalt. Pair with `StatusBarStrip` on the screen so the clock stays legible.
+   */
+  scrolls?: boolean;
   style?: ViewStyle;
+};
+
+/** Pinned enamel strip under the status bar for tab screens whose header scrolls away. */
+export const StatusBarStrip: React.FC = () => {
+  const colors = useThemeColors();
+  const insets = useSafeAreaInsets();
+  return (
+    <View
+      pointerEvents="none"
+      style={[styles.strip, { height: insets.top, backgroundColor: colors.enamel }]}
+    />
+  );
+};
+
+/** Porcelain cap with the sheet's rounded top, for headers that scroll with their content. */
+export const SheetCap: React.FC = () => {
+  const colors = useThemeColors();
+  return (
+    <View style={{ backgroundColor: colors.enamel }}>
+      <View style={[styles.cap, { backgroundColor: colors.background }]} />
+    </View>
+  );
 };
 
 /**
@@ -58,10 +86,12 @@ export const EnamelHeader: React.FC<EnamelHeaderProps> = ({
   right,
   children,
   overlap = radii.xl,
+  scrolls = false,
   style,
 }) => {
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
+  const focused = useIsFocused();
 
   return (
     <View
@@ -71,8 +101,9 @@ export const EnamelHeader: React.FC<EnamelHeaderProps> = ({
         style,
       ]}
     >
+      {scrolls ? <View style={[styles.bleed, { backgroundColor: colors.enamel }]} /> : null}
       {/* Status bar text must be light on the enamel field in both appearances. */}
-      <StatusBar style="light" />
+      {focused ? <StatusBar style="light" /> : null}
       <View style={styles.topRow}>
         <View style={styles.titleBlock}>
           {leading ?? (
@@ -107,6 +138,25 @@ export const EnamelHeader: React.FC<EnamelHeaderProps> = ({
 const styles = StyleSheet.create({
   field: {
     paddingHorizontal: spacing.lg,
+  },
+  bleed: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: -800,
+    height: 800,
+  },
+  strip: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
+  cap: {
+    height: radii.xl,
+    borderTopLeftRadius: radii.xl,
+    borderTopRightRadius: radii.xl,
   },
   topRow: {
     flexDirection: 'row',

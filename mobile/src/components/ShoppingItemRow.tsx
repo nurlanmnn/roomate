@@ -1,11 +1,10 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { Alert, AlertButton, Pressable, View, TouchableOpacity, StyleSheet } from 'react-native';
 import { AppText } from './AppText';
 import { Ionicons } from '@expo/vector-icons';
 import { ShoppingItem } from '../api/shoppingApi';
 import { useLanguage } from '../context/LanguageContext';
 import { useThemeColors, fontSizes, fontWeights, radii, spacing } from '../theme';
-import { GroupRow } from './ui/Group';
 import { ShoppingSwipeableRow } from './Shopping/ShoppingSwipeableRow';
 
 interface ShoppingItemRowProps {
@@ -25,10 +24,17 @@ const ShoppingItemRowComponent: React.FC<ShoppingItemRowProps> = ({
   const colors = useThemeColors();
   const { t } = useLanguage();
   const details = [
-    item.quantity ? `${t('shopping.quantity')}: ${item.quantity}` : '',
+    item.quantity && Number(item.quantity) !== 1 ? `×${item.quantity}` : '',
     item.weight ? `${item.weight}${item.weightUnit ? ` ${item.weightUnit}` : ''}` : '',
-    item.isShared ? t('shopping.shared') : item.ownerId?.name ?? '',
+    item.isShared ? '' : item.ownerId?.name ?? '',
   ].filter(Boolean).join(' · ');
+  const openMenu = () => {
+    const buttons: AlertButton[] = [];
+    if (onEdit) buttons.push({ text: t('common.edit'), onPress: onEdit });
+    if (onDelete) buttons.push({ text: t('common.delete'), style: 'destructive', onPress: onDelete });
+    buttons.push({ text: t('common.cancel'), style: 'cancel' });
+    Alert.alert(item.name, undefined, buttons);
+  };
   const checkbox = (
     <TouchableOpacity
       onPress={onToggle}
@@ -42,20 +48,16 @@ const ShoppingItemRowComponent: React.FC<ShoppingItemRowProps> = ({
       </View>
     </TouchableOpacity>
   );
-  const actions = (
-    <View style={styles.actions}>
-      {onEdit ? (
-        <TouchableOpacity onPress={onEdit} style={styles.target} accessibilityRole="button" accessibilityLabel={`${t('shopping.editItem')}: ${item.name}`}>
-          <Ionicons name="pencil-outline" size={22} color={colors.textSecondary} />
-        </TouchableOpacity>
-      ) : null}
-      {onDelete ? (
-        <TouchableOpacity onPress={onDelete} style={styles.target} accessibilityRole="button" accessibilityLabel={`${t('common.delete')}: ${item.name}`}>
-          <Ionicons name="trash-outline" size={22} color={colors.danger} />
-        </TouchableOpacity>
-      ) : null}
-    </View>
-  );
+  const actions = onEdit || onDelete ? (
+    <TouchableOpacity
+      onPress={openMenu}
+      style={styles.target}
+      accessibilityRole="button"
+      accessibilityLabel={`${t('shopping.editItem')}: ${item.name}`}
+    >
+      <Ionicons name="ellipsis-horizontal" size={20} color={colors.textTertiary} />
+    </TouchableOpacity>
+  ) : null;
   return (
     <ShoppingSwipeableRow onSwipeLeft={onDelete} onSwipeRight={!item.completed ? onToggle : undefined} disabled={item.completed}>
       <View style={[
@@ -63,22 +65,29 @@ const ShoppingItemRowComponent: React.FC<ShoppingItemRowProps> = ({
         !inGroupCard && !isLast && styles.separator,
         !inGroupCard && !isLast && { borderBottomColor: colors.borderLight },
       ]}>
-        {item.completed ? (
-          // GroupRow has no title-style override; this matching row keeps completion visible as a strike-through.
-          <View style={styles.completedRow}>
-            {checkbox}
-            <View style={styles.content}>
-              <AppText style={[styles.nameCompleted, { color: colors.textTertiary }]}>{item.name}</AppText>
-              {details ? <AppText style={[styles.details, { color: colors.textSecondary }]}>{details}</AppText> : null}
-            </View>
-            {actions}
-          </View>
-        ) : (
-          <>
-            <GroupRow title={item.name} titleLines={0} leading={checkbox} trailing={actions} />
-            {details ? <AppText style={[styles.rowDetails, { color: colors.textSecondary }]}>{details}</AppText> : null}
-          </>
-        )}
+        <View style={styles.row}>
+          {checkbox}
+          <Pressable
+            style={styles.content}
+            onPress={onEdit}
+            disabled={!onEdit}
+            accessibilityRole={onEdit ? 'button' : undefined}
+            accessibilityLabel={[item.name, details].filter(Boolean).join(', ')}
+            accessibilityHint={onEdit ? t('shopping.editItem') : undefined}
+          >
+            <AppText
+              style={[
+                styles.name,
+                { color: item.completed ? colors.textTertiary : colors.text },
+                item.completed && styles.struck,
+              ]}
+            >
+              {item.name}
+            </AppText>
+            {details ? <AppText style={[styles.details, { color: colors.textSecondary }]}>{details}</AppText> : null}
+          </Pressable>
+          {actions}
+        </View>
       </View>
     </ShoppingSwipeableRow>
   );
@@ -87,12 +96,11 @@ const ShoppingItemRowComponent: React.FC<ShoppingItemRowProps> = ({
 const styles = StyleSheet.create({
   target: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   checkbox: { width: 28, height: 28, borderRadius: radii.pill, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
-  actions: { flexDirection: 'row', alignItems: 'center' },
-  completedRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 60, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  content: { flex: 1, minWidth: 0 },
-  nameCompleted: { fontSize: fontSizes.md, fontWeight: fontWeights.semibold, textDecorationLine: 'line-through' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minHeight: 56, paddingLeft: spacing.sm, paddingRight: spacing.xs, paddingVertical: spacing.xs },
+  content: { flex: 1, minWidth: 0, minHeight: 44, justifyContent: 'center' },
+  name: { fontSize: fontSizes.md, fontWeight: fontWeights.medium },
+  struck: { textDecorationLine: 'line-through' },
   details: { fontSize: fontSizes.sm, marginTop: spacing.xxs },
-  rowDetails: { fontSize: fontSizes.sm, paddingLeft: spacing.md + 44 + spacing.sm, paddingRight: spacing.md, paddingBottom: spacing.sm },
   separator: { borderBottomWidth: StyleSheet.hairlineWidth },
 });
 

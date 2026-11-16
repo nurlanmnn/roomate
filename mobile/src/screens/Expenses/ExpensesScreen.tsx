@@ -22,7 +22,7 @@ import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreen
 import { SpendingChart } from '../../components/SpendingChart';
 import { Amount } from '../../components/ui/Amount';
 import { EmptyState } from '../../components/ui/EmptyState';
-import { EnamelHeader, HeaderIconButton } from '../../components/ui/EnamelHeader';
+import { EnamelHeader, HeaderIconButton, SheetCap, StatusBarStrip } from '../../components/ui/EnamelHeader';
 import { Group, GroupRow, SectionHeading } from '../../components/ui/Group';
 import { Sheet } from '../../components/ui/Sheet';
 import {
@@ -718,6 +718,17 @@ export const ExpensesScreen: React.FC<{ navigation: any; }> = ({ navigation }) =
 
   const listHeader = (
     <>
+      <EnamelHeader
+        scrolls
+        overlap={0}
+        title={t('tabs.money')}
+        subtitle={selectedHousehold.name}
+        right={<HeaderIconButton icon="add-outline" accessibilityLabel={t('expenses.addExpense')} onPress={() => navigation.navigate('CreateExpense')} />}
+      >
+        <AppText style={{ color: colors.onEnamelSecondary, fontSize: fontSizes.sm, marginTop: spacing.md, marginBottom: spacing.xs }}>{t('time.thisMonth')}</AppText>
+        {moneySummary ? <Amount value={moneySummary.calendarMonthTotal} currency={currency} color={colors.onEnamel} size={56} fit /> : <AppText style={{ color: colors.onEnamel, fontSize: 40 }}>—</AppText>}
+      </EnamelHeader>
+      <SheetCap />
       {user && (
         <>
           <SectionHeading title={t('expenses.sectionBalances')} />
@@ -736,12 +747,6 @@ export const ExpensesScreen: React.FC<{ navigation: any; }> = ({ navigation }) =
           </Group>
         </>
       )}
-
-      <SectionHeading title={t('expenses.sectionActions')} />
-      <Group>
-        <GroupRow title={t('expenses.addExpense')} subtitle={t('expenses.addExpenseSubtitle')} icon="add-circle-outline" chevron onPress={() => navigation.navigate('CreateExpense')} />
-        {!user && <GroupRow title={t('expenses.settleUp')} subtitle={t('expenses.settleUpSubtitle')} icon="swap-horizontal-outline" chevron onPress={() => navigation.navigate('SettleUp')} />}
-      </Group>
 
       {showCategoryHint && (
         <View style={{ paddingHorizontal: spacing.md, marginTop: spacing.md }}>
@@ -799,15 +804,7 @@ export const ExpensesScreen: React.FC<{ navigation: any; }> = ({ navigation }) =
 
   return (
     <SanctuaryScreenShell edges={[]} innerStyle={styles.container}>
-      <EnamelHeader
-        title={t('tabs.money')}
-        subtitle={selectedHousehold.name}
-        right={<HeaderIconButton icon="add-outline" accessibilityLabel={t('expenses.addExpense')} onPress={() => navigation.navigate('CreateExpense')} />}
-      >
-        <AppText style={{ color: colors.onEnamelSecondary, fontSize: fontSizes.sm, marginTop: spacing.md, marginBottom: spacing.xs }}>{t('time.thisMonth')}</AppText>
-        {moneySummary ? <Amount value={moneySummary.calendarMonthTotal} currency={currency} color={colors.onEnamel} size={56} fit /> : <AppText style={{ color: colors.onEnamel, fontSize: 40 }}>—</AppText>}
-      </EnamelHeader>
-      <Sheet>
+      <StatusBarStrip />
         <FlatList
           ref={listRef}
           data={listRows}
@@ -880,7 +877,6 @@ export const ExpensesScreen: React.FC<{ navigation: any; }> = ({ navigation }) =
           windowSize={10}
           keyboardShouldPersistTaps="handled"
         />
-      </Sheet>
     </SanctuaryScreenShell>
   );
 };

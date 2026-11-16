@@ -4,13 +4,14 @@ import { Expense } from '../api/expensesApi';
 import { getCategoryById, getCategoryByName, getExpenseCategoryLabel } from '../constants/expenseCategories';
 import { useLanguage } from '../context/LanguageContext';
 import { fontSizes, fontWeights, radii, spacing, useThemeColors } from '../theme';
-import { formatDate, formatDateShort } from '../utils/dateHelpers';
+import { formatDate } from '../utils/dateHelpers';
 import { getDateFnsLocale } from '../utils/dateLocales';
 import { useHouseholdCurrency } from '../utils/useHouseholdCurrency';
 import { AppText } from './AppText';
 import { SwipeableRow } from './SwipeableRow';
 import { Amount } from './ui/Amount';
-import { Avatar } from './ui/Avatar';
+import { Ionicons } from '@expo/vector-icons';
+import { formatCurrency } from '../utils/formatCurrency';
 import { GroupRow } from './ui/Group';
 
 interface ExpenseCardProps {
@@ -31,6 +32,7 @@ const ExpenseCardInner: React.FC<ExpenseCardProps> = ({
   onEdit,
 }) => {
   const colors = useThemeColors();
+  const [expanded, setExpanded] = React.useState(false);
   const { t, language } = useLanguage();
   const dateLocale = React.useMemo(() => getDateFnsLocale(language), [language]);
   const relativeDayLabels = React.useMemo(
@@ -65,29 +67,36 @@ const ExpenseCardInner: React.FC<ExpenseCardProps> = ({
       borderColor: colors.border,
 
     },
-    metaRow: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: spacing.xs,
-      paddingHorizontal: spacing.md,
-      justifyContent: 'space-between',
-      alignItems: 'flex-start',
-      marginBottom: spacing.xs,
-    },
-    paidByRow: {
-      flexBasis: 120,
+    trailingRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      flex: 1,
+      gap: spacing.xs,
+    },
+    details: {
+      paddingHorizontal: spacing.md,
+      paddingBottom: spacing.sm,
+    },
+    detailLine: {
+      fontSize: fontSizes.sm,
+      color: colors.textSecondary,
+    },
+    shareRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
       gap: spacing.sm,
+      paddingVertical: spacing.xxs,
     },
-    paidByContainer: {
+    shareName: {
       flex: 1,
+      color: colors.textSecondary,
+      fontSize: fontSizes.sm,
     },
-    sinceDate: {
-      fontSize: fontSizes.xs,
-      color: colors.textTertiary,
-      marginTop: spacing.xxs,
+    actionsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      alignItems: 'center',
+      gap: spacing.xs,
+      marginTop: spacing.sm,
     },
     deleteButton: {
       minHeight: 44,
@@ -104,7 +113,6 @@ const ExpenseCardInner: React.FC<ExpenseCardProps> = ({
       paddingVertical: spacing.xs,
       borderRadius: radii.sm,
       backgroundColor: colors.surfaceAlt,
-      marginRight: spacing.xs,
     },
     deleteText: {
       fontSize: fontSizes.sm,
@@ -116,20 +124,8 @@ const ExpenseCardInner: React.FC<ExpenseCardProps> = ({
       color: colors.text,
       fontWeight: fontWeights.semibold,
     },
-    category: {
-      paddingHorizontal: spacing.md,
-      fontSize: fontSizes.sm,
-      color: colors.textSecondary,
-      marginBottom: spacing.xs,
-    },
-    participants: {
-      paddingHorizontal: spacing.md,
-      fontSize: fontSizes.sm,
-      color: colors.textTertiary,
-    },
     breakdownWrap: {
-      marginHorizontal: spacing.md,
-      marginTop: spacing.xs,
+      marginTop: spacing.sm,
       paddingTop: spacing.sm,
       borderTopWidth: StyleSheet.hairlineWidth,
       borderTopColor: colors.borderLight,
@@ -170,57 +166,59 @@ const ExpenseCardInner: React.FC<ExpenseCardProps> = ({
       <View style={styles.card}>
         <GroupRow
           title={expense.description}
-          titleLines={0}
-          subtitle={`${t('expenses.paidBy')} ${paidByName} · ${formatDate(expense.date, dateLocale, relativeDayLabels)}`}
+          subtitle={`${t('expenses.paidBy')} ${paidByName}`}
           icon={category?.icon ?? 'receipt-outline'}
-          trailing={<Amount value={expense.totalAmount} currency={currency} size={22} fit />}
+          trailing={
+            <View style={styles.trailingRow}>
+              <Amount value={expense.totalAmount} currency={currency} size={20} fit />
+              <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textTertiary} />
+            </View>
+          }
+          onPress={() => setExpanded((v) => !v)}
+          accessibilityLabel={`${expense.description}, ${t('expenses.paidBy')} ${paidByName}, ${formatCurrency(expense.totalAmount, currency)}`}
+          accessibilityState={{ expanded }}
         />
-        <View style={styles.metaRow}>
-          <View style={styles.paidByRow}>
-            <Avatar name={paidByName} uri={expense.paidBy?.avatarUrl} size={20} />
-            <View style={styles.paidByContainer}>
-              {expense.createdAt && (
-                <AppText style={styles.sinceDate}>
-                  {t('time.addedSince')} {formatDateShort(expense.createdAt, dateLocale)}
-                </AppText>
-              )}
-            </View>
-          </View>
-          {(canEdit || canDelete || onQuickSettle) && (
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.xxs, flexShrink: 1 }}>
-              {onQuickSettle && (
-                <TouchableOpacity accessibilityRole="button" onPress={onQuickSettle} style={styles.editButton}>
-                  <AppText style={[styles.editText, { color: colors.primary }]}>{t('expenses.settleUp')}</AppText>
-                </TouchableOpacity>
-              )}
-              {canEdit && onEdit && (
-                <TouchableOpacity accessibilityRole="button" onPress={() => onEdit(expense)} style={styles.editButton}>
-                  <AppText style={styles.editText}>{t('common.edit')}</AppText>
-                </TouchableOpacity>
-              )}
-              {canDelete && onDelete && (
-                <TouchableOpacity accessibilityRole="button" onPress={handleDelete} style={styles.deleteButton}>
-                  <AppText style={styles.deleteText}>{t('common.delete')}</AppText>
-                </TouchableOpacity>
-              )}
-            </View>
-          )}
-        </View>
-        {expense.category && (
-          <AppText style={styles.category}>{getExpenseCategoryLabel(t, expense.category)}</AppText>
-        )}
-        <AppText style={styles.participants}>
-          {t('expenses.splitAmong', { count: expense.participants.length })}
-        </AppText>
-        {shareBreakdown.length > 0 ? (
-          <View style={styles.breakdownWrap}>
-            <AppText style={styles.breakdownLabel}>{t('expenses.shareBreakdown')}</AppText>
-            {shareBreakdown.map((share, index) => (
-              <View key={`${share.userId}-${index}`} style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xxs }}>
-                <AppText style={{ flex: 1, color: colors.textSecondary, fontSize: fontSizes.sm }}>{share.name}</AppText>
-                <Amount value={share.amount} currency={currency} size={18} fit style={{ maxWidth: '50%' }} />
+        {expanded ? (
+          <View style={styles.details}>
+            <AppText style={styles.detailLine}>
+              {[
+                expense.category ? getExpenseCategoryLabel(t, expense.category) : null,
+                formatDate(expense.date, dateLocale, relativeDayLabels),
+                t('expenses.splitAmong', { count: expense.participants.length }),
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            </AppText>
+            {shareBreakdown.length > 0 ? (
+              <View style={styles.breakdownWrap}>
+                <AppText style={styles.breakdownLabel}>{t('expenses.shareBreakdown')}</AppText>
+                {shareBreakdown.map((share, index) => (
+                  <View key={`${share.userId}-${index}`} style={styles.shareRow}>
+                    <AppText style={styles.shareName}>{share.name}</AppText>
+                    <Amount value={share.amount} currency={currency} size={16} weight="semibold" fit style={{ maxWidth: '50%' }} />
+                  </View>
+                ))}
               </View>
-            ))}
+            ) : null}
+            {(canEdit || canDelete || onQuickSettle) && (
+              <View style={styles.actionsRow}>
+                {onQuickSettle && (
+                  <TouchableOpacity accessibilityRole="button" onPress={onQuickSettle} style={styles.editButton}>
+                    <AppText style={[styles.editText, { color: colors.primary }]}>{t('expenses.settleUp')}</AppText>
+                  </TouchableOpacity>
+                )}
+                {canEdit && onEdit && (
+                  <TouchableOpacity accessibilityRole="button" onPress={() => onEdit(expense)} style={styles.editButton}>
+                    <AppText style={styles.editText}>{t('common.edit')}</AppText>
+                  </TouchableOpacity>
+                )}
+                {canDelete && onDelete && (
+                  <TouchableOpacity accessibilityRole="button" onPress={handleDelete} style={styles.deleteButton}>
+                    <AppText style={styles.deleteText}>{t('common.delete')}</AppText>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
           </View>
         ) : null}
       </View>
