@@ -25,7 +25,7 @@ Use `useThemeColors()`; never hard-code hex or rgba in screens/components (only 
 | `background` | #F4F5F8 | #0A0F26 | screen ground |
 | `surface` | #FFFFFF | #131A3A | list groups, sheets, inputs |
 | `border` / `borderLight` | #D5DAE6 / #E4E7EE | #2C3768 / #252E57 | input borders / row separators |
-| `text` / `textSecondary` / `textTertiary` | #10151F / #535B6B / #6B7385 | #FFF / #AAB3D3 / #8C96BB | ink |
+| `text` / `textSecondary` / `textTertiary` | #10151F / #535B6B / #626A7C | #FFF / #AAB3D3 / #8C96BB | ink |
 | `primary` + `onPrimary` | #1D3BA8 + #FFF | #7C98FF + #0A0F26 | interactive tint; fills carry `onPrimary` text, never literal white |
 | `primarySoft` / `primaryUltraSoft` | #DCE3F8 / #EEF1FB | #1E2A5E / #161F47 | tinted icon wells, selected rows |
 | `enamel` + `onEnamel` / `onEnamelSecondary` | #1D3BA8 + #FFF / #D3DCFA | #2B50D8 + #FFF / #D6DEFF | the plaque/header field only |
@@ -123,7 +123,7 @@ light and dark (`xcrun simctl ui booted appearance dark|light`).
 - [x] Settings: Settings, Account, Household, Notifications + components/Settings/*
 - [x] Auth screens + HouseholdSelect + HouseholdCard
 - [x] Leftover sweep: no LinearGradient/BlurView/hard-coded colours/emoji; delete unused old components
-- [ ] `tsc` clean; simulator check light + dark; DESIGN.md written; pushed
+- [x] `tsc` clean; simulator check light + dark; DESIGN.md written; pushed
 
 Note (2026-11-16): all areas are restyled, type-checked and committed. Checked in the iOS simulator
 (light and dark) against a local test database: sign-in, household select, Home, Money, Shopping,

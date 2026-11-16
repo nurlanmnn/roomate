@@ -21,8 +21,8 @@ const lightColors = {
   // Ink
   text: '#10151F',
   textSecondary: '#535B6B',
-  textTertiary: '#6B7385',
-  muted: '#6B7385',
+  textTertiary: '#626A7C',
+  muted: '#626A7C',
   ink: '#10151F',
   onInk: '#FFFFFF',
 
