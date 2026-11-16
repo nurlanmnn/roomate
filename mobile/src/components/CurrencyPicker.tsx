@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   AccessibilityInfo,
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   View,
@@ -15,7 +16,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Group } from './ui/Group';
+import { FIELD_LABEL_WIDTH, Group } from './ui/Group';
 import {
   SUPPORTED_CURRENCIES,
   getCurrencyOption,
@@ -31,6 +32,10 @@ interface CurrencyPickerProps {
   disabled?: boolean;
   /** Shown inline under the picker when the currency is locked. */
   lockedHint?: string;
+  /** `row` renders the trigger as a label and value row for use inside a `Group`. */
+  variant?: 'field' | 'row';
+  /** Row variant only: shows a spinner in place of the chevron. */
+  loading?: boolean;
 }
 
 export const CurrencyPicker: React.FC<CurrencyPickerProps> = ({
@@ -38,6 +43,8 @@ export const CurrencyPicker: React.FC<CurrencyPickerProps> = ({
   onChange,
   disabled,
   lockedHint,
+  variant = 'field',
+  loading,
 }) => {
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
@@ -107,31 +114,56 @@ export const CurrencyPicker: React.FC<CurrencyPickerProps> = ({
 
   return (
     <>
-      <TouchableOpacity
-        accessibilityRole="button"
-        accessibilityLabel={`${t('currency.label')}: ${selectedDisplayName}, ${selected.code}`}
-        accessibilityState={{ disabled: Boolean(disabled), expanded: modalVisible }}
-        disabled={disabled}
-        style={[styles.pickerButton, disabled && styles.pickerDisabled]}
-        onPress={open}
-        activeOpacity={disabled ? 1 : 0.7}
-      >
-        <View style={styles.selectedRow}>
-          <View style={styles.symbolBadge}>
-            <AppText style={styles.symbolText}>{selected.symbol}</AppText>
-          </View>
-          <View style={styles.rowText}>
-            <AppText style={styles.rowName}>{selectedDisplayName}</AppText>
-            <AppText style={styles.rowCode}>{selected.code}</AppText>
-          </View>
-          {!disabled && (
-            <Ionicons name="chevron-down-outline" size={20} color={colors.textSecondary} />
+      {variant === 'row' ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${t('currency.label')}: ${selectedDisplayName}, ${selected.code}`}
+          accessibilityState={{ disabled: Boolean(disabled), expanded: modalVisible, busy: Boolean(loading) }}
+          disabled={disabled}
+          onPress={open}
+          style={({ pressed }) => [styles.fieldRow, pressed && styles.fieldRowPressed]}
+        >
+          <AppText style={styles.fieldLabel} numberOfLines={2}>{t('currency.label')}</AppText>
+          <AppText style={[styles.fieldValue, disabled && styles.fieldValueLocked]}>
+            {selectedDisplayName} · {selected.code}
+          </AppText>
+          {loading ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : disabled ? (
+            <Ionicons name="lock-closed-outline" size={18} color={colors.textTertiary} />
+          ) : (
+            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
           )}
-          {disabled && <Ionicons name="lock-closed-outline" size={18} color={colors.textTertiary} />}
-        </View>
-      </TouchableOpacity>
+        </Pressable>
+      ) : (
+        <>
+      <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel={`${t('currency.label')}: ${selectedDisplayName}, ${selected.code}`}
+            accessibilityState={{ disabled: Boolean(disabled), expanded: modalVisible }}
+            disabled={disabled}
+            style={[styles.pickerButton, disabled && styles.pickerDisabled]}
+            onPress={open}
+            activeOpacity={disabled ? 1 : 0.7}
+          >
+            <View style={styles.selectedRow}>
+              <View style={styles.symbolBadge}>
+                <AppText style={styles.symbolText}>{selected.symbol}</AppText>
+              </View>
+              <View style={styles.rowText}>
+                <AppText style={styles.rowName}>{selectedDisplayName}</AppText>
+                <AppText style={styles.rowCode}>{selected.code}</AppText>
+              </View>
+              {!disabled && (
+                <Ionicons name="chevron-down-outline" size={20} color={colors.textSecondary} />
+              )}
+              {disabled && <Ionicons name="lock-closed-outline" size={18} color={colors.textTertiary} />}
+            </View>
+          </TouchableOpacity>
 
-      {disabled && lockedHint ? <AppText style={styles.lockedHint}>{lockedHint}</AppText> : null}
+          {disabled && lockedHint ? <AppText style={styles.lockedHint}>{lockedHint}</AppText> : null}
+        </>
+      )}
 
       <Modal
         visible={modalVisible}
@@ -223,6 +255,32 @@ const CurrencyRow = React.memo(function CurrencyRow({
 
 const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
   StyleSheet.create({
+    fieldRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      minHeight: 52,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+    },
+    fieldRowPressed: {
+      backgroundColor: colors.primaryUltraSoft,
+    },
+    fieldLabel: {
+      width: FIELD_LABEL_WIDTH,
+      fontSize: fontSizes.md,
+      fontWeight: fontWeights.semibold,
+      color: colors.text,
+    },
+    fieldValue: {
+      flex: 1,
+      minWidth: 0,
+      fontSize: fontSizes.md,
+      color: colors.text,
+    },
+    fieldValueLocked: {
+      color: colors.textSecondary,
+    },
     pickerButton: {
       borderWidth: 1,
       borderColor: colors.border,

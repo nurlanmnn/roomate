@@ -1,11 +1,12 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect, useRef, useLayoutEffect } from 'react';
 import {
   Alert,
   Platform,
   ScrollView,
   StyleSheet,
   View,
-  TouchableOpacity,
+  Pressable,
+  ActivityIndicator,
   Image,
   Keyboard,
 } from 'react-native';
@@ -14,16 +15,12 @@ import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreen
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Ionicons } from '@expo/vector-icons';
-import { FormTextInput } from '../../components/FormTextInput';
-import { PrimaryButton } from '../../components/PrimaryButton';
 import { AppText } from '../../components/AppText';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { authApi } from '../../api/authApi';
 import { Avatar } from '../../components/ui/Avatar';
-import { SettingsSection } from '../../components/Settings/SettingsSection';
-import { SettingsGroupCard } from '../../components/Settings/SettingsGroupCard';
-import { GroupRow } from '../../components/ui/Group';
+import { Group, GroupRow, FieldRow, GroupFooter, SectionHeading } from '../../components/ui/Group';
 import { DeleteAccountModal } from '../../components/Settings/DeleteAccountModal';
 import { useThemeColors, fontSizes, fontWeights, radii, spacing } from '../../theme';
 import {
@@ -289,7 +286,34 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
     }
   };
 
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <Pressable
+          onPress={handleSaveProfile}
+          disabled={!canSaveProfile}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.save')}
+          accessibilityState={{ disabled: !canSaveProfile, busy: savingProfile }}
+          style={({ pressed }) => [styles.headerButton, pressed && styles.pressed]}
+        >
+          {savingProfile ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : (
+            <AppText style={[styles.headerButtonText, { color: canSaveProfile ? colors.primary : colors.textTertiary }]}>
+              {t('common.save')}
+            </AppText>
+          )}
+        </Pressable>
+      ),
+    });
+  }, [navigation, t, colors.primary, colors.textTertiary, styles, canSaveProfile, savingProfile, handleSaveProfile]);
+
   const displayAvatar = avatarUri;
+  const invalidEmail = email.trim().length > 0 && !emailLooksValid;
+  const passwordsMismatch = newPassword.length > 0 && confirmPassword.length > 0 && newPassword !== confirmPassword;
+  const passwordTooShort = newPassword.length > 0 && newPassword.length < 8;
 
   return (
     <SanctuaryScreenShell edges={[]} innerStyle={styles.container}>
@@ -303,178 +327,168 @@ export const AccountSettingsScreen: React.FC<{ navigation: any }> = ({ navigatio
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-          <SettingsSection title={t('accountSettingsScreen.profileSection')}>
-            <AppText style={styles.sectionHint}>{t('accountSettingsScreen.profileHint')}</AppText>
-            <SettingsGroupCard>
-              <View style={styles.avatarBlock}>
-                <TouchableOpacity
-                  onPress={handlePickImage}
-                  activeOpacity={0.85}
-                  style={styles.avatarTouch}
-                  accessibilityRole="button"
-                  accessibilityLabel={t('accountSettingsScreen.changeAvatar')}
-                >
-                  <View style={styles.avatarWrap}>
-                    {displayAvatar && displayAvatar.startsWith('data:') ? (
-                      <Image source={{ uri: displayAvatar }} style={styles.avatarImg} />
-                    ) : (
-                      <Avatar name={name || user?.name} uri={displayAvatar || undefined} size={64} />
-                    )}
-                    <View style={styles.avatarFab}>
-                      <Ionicons name="camera-outline" size={18} color={colors.onPrimary} />
-                    </View>
-                  </View>
-                </TouchableOpacity>
-                <View style={styles.avatarLabels}>
-                  <AppText style={styles.inlineName}>
-                    {name || user?.name || '—'}
-                  </AppText>
-                  <AppText style={styles.inlineEmail}>
-                    {email || user?.email || ''}
-                  </AppText>
-                  <TouchableOpacity
-                    onPress={handleDeleteProfilePhoto}
-                    disabled={!avatarUri}
-                    accessibilityRole="button"
-                    accessibilityState={{ disabled: !avatarUri }}
-                    activeOpacity={avatarUri ? 0.75 : 1}
-                    style={styles.removePhotoButton}
-                  >
-                    <AppText style={[styles.removePhotoLabel, !avatarUri && styles.removePhotoLabelDisabled]}>
-                      {t('accountSettingsScreen.deleteProfilePhoto')}
-                    </AppText>
-                  </TouchableOpacity>
-                </View>
+        <View style={styles.identityBlock}>
+          <Pressable
+            onPress={handlePickImage}
+            style={({ pressed }) => [styles.avatarTouch, pressed && styles.pressed]}
+            accessibilityRole="button"
+            accessibilityLabel={t('accountSettingsScreen.changeAvatar')}
+          >
+            <View style={styles.avatarWrap}>
+              {displayAvatar && displayAvatar.startsWith('data:') ? (
+                <Image source={{ uri: displayAvatar }} style={styles.avatarImg} />
+              ) : (
+                <Avatar name={name || user?.name} uri={displayAvatar || undefined} size={88} />
+              )}
+              <View style={styles.avatarFab}>
+                <Ionicons name="camera-outline" size={18} color={colors.onPrimary} />
               </View>
+            </View>
+          </Pressable>
+          <View style={styles.photoLinks}>
+            <Pressable
+              onPress={handlePickImage}
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.photoLink, pressed && styles.pressed]}
+            >
+              <AppText style={[styles.photoLinkText, { color: colors.primary }]}>
+                {t('accountSettingsScreen.changeAvatar')}
+              </AppText>
+            </Pressable>
+            {avatarUri ? (
+              <Pressable
+                onPress={handleDeleteProfilePhoto}
+                accessibilityRole="button"
+                style={({ pressed }) => [styles.photoLink, pressed && styles.pressed]}
+              >
+                <AppText style={[styles.photoLinkText, { color: colors.danger }]}>
+                  {t('accountSettingsScreen.deleteProfilePhoto')}
+                </AppText>
+              </Pressable>
+            ) : null}
+          </View>
+        </View>
 
-              <View style={styles.paddedFields}>
-                <FormTextInput
-                  label={t('accountSettingsScreen.name')}
-                  value={name}
-                  onChangeText={setName}
-                  placeholder={t('accountSettingsScreen.name')}
-                  autoCapitalize="words"
-                />
-                <FormTextInput
-                  label={t('accountSettingsScreen.email')}
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder={t('accountSettingsScreen.email')}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-                {email.trim().length > 0 && !emailLooksValid ? (
-                  <AppText style={styles.fieldError}>{t('accountSettingsScreen.invalidEmail')}</AppText>
-                ) : null}
-
-                {emailChanged && emailLooksValid ? (
-                  <View style={styles.emailChangeBlock}>
-                    <AppText style={styles.emailChangeHint}>{t('accountSettingsScreen.emailChangeHint')}</AppText>
-                    {!codePendingForThisEmail ? (
-                      <PrimaryButton
-                        title={t('accountSettingsScreen.sendVerificationCode')}
-                        onPress={handleRequestEmailCode}
-                        disabled={!canSendEmailCode}
-                        loading={sendingEmailCode}
-                        variant="secondary"
-                        style={styles.emailCodeButton}
-                      />
-                    ) : (
-                      <>
-                        <AppText style={styles.codeSentHint}>{t('accountSettingsScreen.codeSentCheckInbox')}</AppText>
-                        <FormTextInput
-                          label={t('accountSettingsScreen.verificationCode')}
-                          value={emailCode}
-                          onChangeText={(text) => setEmailCode(text.replace(/\D/g, '').slice(0, 6))}
-                          keyboardType="number-pad"
-                          autoCapitalize="none"
-                        />
-                        <PrimaryButton
-                          title={t('accountSettingsScreen.confirmNewEmail')}
-                          onPress={handleConfirmEmailChange}
-                          disabled={!canConfirmEmail}
-                          loading={confirmingEmail}
-                          variant="secondary"
-                          style={styles.emailCodeButton}
-                        />
-                        <TouchableOpacity
-                          onPress={handleRequestEmailCode}
-                          disabled={sendingEmailCode}
-                          accessibilityRole="button"
-                          accessibilityState={{ disabled: sendingEmailCode, busy: sendingEmailCode }}
-                          activeOpacity={0.7}
-                          style={styles.resendWrap}
-                        >
-                          <AppText style={styles.resendLink}>{t('accountSettingsScreen.resendVerificationCode')}</AppText>
-                        </TouchableOpacity>
-                      </>
-                    )}
-                  </View>
-                ) : null}
-              </View>
-            </SettingsGroupCard>
-            <PrimaryButton
-              title={t('accountSettingsScreen.saveChanges')}
-              onPress={handleSaveProfile}
-              disabled={!canSaveProfile}
-              loading={savingProfile}
-              style={styles.sectionButton}
-            />
-          </SettingsSection>
-
-          <SettingsSection title={t('accountSettingsScreen.securitySection')}>
-            <AppText style={styles.sectionHint}>{t('accountSettingsScreen.securityHint')}</AppText>
-            <SettingsGroupCard>
-              <View style={styles.paddedFields}>
-                <FormTextInput
-                  label={t('accountSettingsScreen.currentPassword')}
-                  value={currentPassword}
-                  onChangeText={setCurrentPassword}
-                  secureTextEntry
-                  autoCapitalize="none"
-                />
-                <FormTextInput
-                  label={t('accountSettingsScreen.newPassword')}
-                  value={newPassword}
-                  onChangeText={setNewPassword}
-                  secureTextEntry
-                  autoCapitalize="none"
-                />
-                <FormTextInput
-                  label={t('accountSettingsScreen.confirmPassword')}
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  secureTextEntry
-                  autoCapitalize="none"
-                />
-                {newPassword.length > 0 && newPassword !== confirmPassword ? (
-                  <AppText style={styles.fieldError}>{t('accountSettingsScreen.passwordsMismatch')}</AppText>
-                ) : null}
-              </View>
-            </SettingsGroupCard>
-            <PrimaryButton
-              title={t('accountSettingsScreen.updatePassword')}
-              onPress={handleUpdatePassword}
-              disabled={!passwordValid}
-              loading={changingPassword}
-              variant="secondary"
-              style={styles.sectionButton}
-            />
-          </SettingsSection>
-
-          <SettingsSection title={t('accountSettingsScreen.dangerZone')}>
-            <AppText style={styles.sectionHint}>{t('accountSettingsScreen.deleteAccountHint')}</AppText>
-            <SettingsGroupCard>
+        <Group style={styles.profileGroup}>
+          <FieldRow
+            label={t('accountSettingsScreen.name')}
+            value={name}
+            onChangeText={setName}
+            placeholder={t('accountSettingsScreen.name')}
+            autoCapitalize="words"
+          />
+          <FieldRow
+            label={t('accountSettingsScreen.email')}
+            value={email}
+            onChangeText={setEmail}
+            placeholder={t('accountSettingsScreen.email')}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          {emailChanged && emailLooksValid ? (
+            !codePendingForThisEmail ? (
               <GroupRow
-                title={t('accountSettingsScreen.deleteAccount')}
-                icon="trash-outline"
-                iconTone="danger"
+                key="sendCode"
+                action
                 titleLines={0}
-                destructive
-                onPress={() => setDeleteModalVisible(true)}
+                title={t('accountSettingsScreen.sendVerificationCode')}
+                onPress={handleRequestEmailCode}
+                disabled={!canSendEmailCode}
+                loading={sendingEmailCode}
               />
-            </SettingsGroupCard>
-          </SettingsSection>
+            ) : [
+              <FieldRow
+                key="verificationCode"
+                label={t('accountSettingsScreen.verificationCode')}
+                value={emailCode}
+                onChangeText={(text) => setEmailCode(text.replace(/\D/g, '').slice(0, 6))}
+                keyboardType="number-pad"
+                autoCapitalize="none"
+                maxLength={6}
+              />,
+              <GroupRow
+                key="confirmEmail"
+                action
+                titleLines={0}
+                title={t('accountSettingsScreen.confirmNewEmail')}
+                onPress={handleConfirmEmailChange}
+                disabled={!canConfirmEmail}
+                loading={confirmingEmail}
+              />,
+              <GroupRow
+                key="resendCode"
+                action
+                titleLines={0}
+                title={t('accountSettingsScreen.resendVerificationCode')}
+                onPress={handleRequestEmailCode}
+                loading={sendingEmailCode}
+              />,
+            ]
+          ) : null}
+        </Group>
+        <GroupFooter tone={invalidEmail ? 'danger' : 'default'}>
+          {invalidEmail
+            ? t('accountSettingsScreen.invalidEmail')
+            : codePendingForThisEmail
+            ? t('accountSettingsScreen.codeSentCheckInbox')
+            : emailChanged
+            ? t('accountSettingsScreen.emailChangeHint')
+            : t('accountSettingsScreen.profileHint')}
+        </GroupFooter>
+
+        <SectionHeading title={t('accountSettingsScreen.securitySection')} />
+        <Group>
+          <FieldRow
+            label={t('accountSettingsScreen.currentPassword')}
+            value={currentPassword}
+            onChangeText={setCurrentPassword}
+            secureTextEntry
+            autoCapitalize="none"
+            textContentType="password"
+          />
+          <FieldRow
+            label={t('accountSettingsScreen.newPassword')}
+            value={newPassword}
+            onChangeText={setNewPassword}
+            secureTextEntry
+            autoCapitalize="none"
+            textContentType="newPassword"
+          />
+          <FieldRow
+            label={t('accountSettingsScreen.confirmPassword')}
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            secureTextEntry
+            autoCapitalize="none"
+            textContentType="newPassword"
+          />
+          <GroupRow
+            action
+            titleLines={0}
+            title={t('accountSettingsScreen.updatePassword')}
+            onPress={handleUpdatePassword}
+            disabled={!passwordValid}
+            loading={changingPassword}
+          />
+        </Group>
+        <GroupFooter tone={passwordsMismatch || passwordTooShort ? 'danger' : 'default'}>
+          {passwordsMismatch
+            ? t('accountSettingsScreen.passwordsMismatch')
+            : passwordTooShort
+            ? t('accountSettingsScreen.passwordMinLength')
+            : t('accountSettingsScreen.securityHint')}
+        </GroupFooter>
+
+        <Group style={styles.deleteGroup}>
+          <GroupRow
+            title={t('accountSettingsScreen.deleteAccount')}
+            titleLines={0}
+            destructive
+            onPress={() => setDeleteModalVisible(true)}
+          />
+        </Group>
+        <GroupFooter>{t('accountSettingsScreen.deleteAccountHint')}</GroupFooter>
       </ScrollView>
 
       <DeleteAccountModal
@@ -501,18 +515,20 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
       backgroundColor: colors.background,
     },
     flex: { flex: 1 },
-    sectionHint: {
-      fontSize: fontSizes.sm,
-      color: colors.textSecondary,
-      lineHeight: 20,
-      marginBottom: spacing.sm,
-      paddingHorizontal: spacing.lg,
-    },
-    avatarBlock: {
-      flexDirection: 'row',
+    headerButton: {
+      // The native header already gives the item a 44pt target; extra height pushes the label off centre.
+      paddingHorizontal: spacing.xxs,
       alignItems: 'center',
-      padding: spacing.md,
-      gap: spacing.md,
+      justifyContent: 'center',
+    },
+    headerButtonText: {
+      fontSize: fontSizes.md,
+      fontWeight: fontWeights.semibold,
+    },
+    identityBlock: {
+      alignItems: 'center',
+      paddingTop: spacing.lg,
+      paddingHorizontal: spacing.lg,
     },
     avatarTouch: {
       minWidth: 44,
@@ -522,8 +538,8 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
       position: 'relative',
     },
     avatarImg: {
-      width: 64,
-      height: 64,
+      width: 88,
+      height: 88,
       borderRadius: radii.pill,
     },
     avatarFab: {
@@ -537,88 +553,32 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
       alignItems: 'center',
       justifyContent: 'center',
       borderWidth: 3,
-      borderColor: colors.surface,
+      borderColor: colors.background,
     },
-    avatarLabels: {
-      flex: 1,
-      minWidth: 0,
+    photoLinks: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'center',
+      gap: spacing.lg,
+      marginTop: spacing.xs,
     },
-    inlineName: {
-      fontSize: fontSizes.lg,
-      fontWeight: fontWeights.bold,
-      color: colors.text,
-    },
-    inlineEmail: {
-      fontSize: fontSizes.sm,
-      color: colors.textSecondary,
-      marginTop: spacing.xxs,
-    },
-    removePhotoButton: {
-      alignSelf: 'flex-start',
+    photoLink: {
       minWidth: 44,
       minHeight: 44,
       justifyContent: 'center',
-      marginTop: spacing.sm,
-      paddingVertical: spacing.xs,
-      paddingHorizontal: spacing.sm,
-      borderRadius: radii.md,
-      borderWidth: 1,
-      borderColor: colors.border,
-      backgroundColor: colors.surface,
     },
-    removePhotoLabel: {
-      fontSize: fontSizes.sm,
+    photoLinkText: {
+      fontSize: fontSizes.md - 1,
       fontWeight: fontWeights.semibold,
-      color: colors.danger,
+      textAlign: 'center',
     },
-    removePhotoLabelDisabled: {
-      color: colors.textTertiary,
-    },
-    paddedFields: {
-      padding: spacing.md,
-      paddingTop: spacing.lg,
-    },
-    fieldError: {
-      fontSize: fontSizes.sm,
-      color: colors.danger,
-      marginTop: -spacing.sm,
-      marginBottom: spacing.sm,
-    },
-    emailChangeBlock: {
-      marginTop: spacing.md,
-      paddingTop: spacing.md,
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: colors.borderLight,
-    },
-    emailChangeHint: {
-      fontSize: fontSizes.sm,
-      color: colors.textSecondary,
-      lineHeight: 20,
-      marginBottom: spacing.md,
-    },
-    codeSentHint: {
-      fontSize: fontSizes.sm,
-      color: colors.textSecondary,
-      marginBottom: spacing.sm,
-    },
-    emailCodeButton: {
+    profileGroup: {
       marginTop: spacing.sm,
     },
-    resendWrap: {
-      alignSelf: 'flex-start',
-      marginTop: spacing.sm,
-      paddingVertical: spacing.xs,
-      minHeight: 44,
-      minWidth: 44,
-      justifyContent: 'center',
+    deleteGroup: {
+      marginTop: spacing.xxl,
     },
-    resendLink: {
-      fontSize: fontSizes.sm,
-      fontWeight: fontWeights.semibold,
-      color: colors.primary,
-    },
-    sectionButton: {
-      marginTop: spacing.md,
-      marginHorizontal: spacing.md,
+    pressed: {
+      opacity: 0.6,
     },
   });

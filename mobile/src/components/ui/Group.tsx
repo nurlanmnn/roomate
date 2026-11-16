@@ -1,5 +1,15 @@
 import React from 'react';
-import { AccessibilityRole, AccessibilityState, Pressable, StyleSheet, View, ViewStyle } from 'react-native';
+import {
+  AccessibilityRole,
+  AccessibilityState,
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  TextInput,
+  TextInputProps,
+  View,
+  ViewStyle,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '../AppText';
 import { useTheme } from '../../context/ThemeContext';
@@ -82,6 +92,11 @@ type GroupRowProps = {
   chevron?: boolean;
   onPress?: () => void;
   destructive?: boolean;
+  /** Sets the title in the interactive colour: the row is a command, not a destination. */
+  action?: boolean;
+  disabled?: boolean;
+  /** Replaces the trailing element with a spinner and blocks presses. */
+  loading?: boolean;
   accessibilityLabel?: string;
   accessibilityHint?: string;
   accessibilityState?: AccessibilityState;
@@ -101,6 +116,9 @@ export const GroupRow: React.FC<GroupRowProps> = ({
   chevron,
   onPress,
   destructive,
+  action,
+  disabled,
+  loading,
   accessibilityLabel,
   accessibilityHint,
   accessibilityState,
@@ -126,7 +144,10 @@ export const GroupRow: React.FC<GroupRowProps> = ({
         ) : null)}
       <View style={styles.rowText}>
         <AppText
-          style={[styles.rowTitle, { color: destructive ? colors.danger : colors.text }]}
+          style={[
+            styles.rowTitle,
+            { color: destructive ? colors.danger : action ? colors.primary : colors.text },
+          ]}
           numberOfLines={titleLines}
         >
           {title}
@@ -137,7 +158,11 @@ export const GroupRow: React.FC<GroupRowProps> = ({
           </AppText>
         ) : null}
       </View>
-      {trailing ? <View style={styles.trailing}>{trailing}</View> : null}
+      {loading ? (
+        <ActivityIndicator size="small" color={destructive ? colors.danger : colors.primary} />
+      ) : trailing ? (
+        <View style={styles.trailing}>{trailing}</View>
+      ) : null}
       {chevron ? <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} /> : null}
     </>
   );
@@ -153,18 +178,113 @@ export const GroupRow: React.FC<GroupRowProps> = ({
   return (
     <Pressable
       onPress={onPress}
+      disabled={disabled || loading}
       accessibilityRole={accessibilityRole}
       accessibilityLabel={accessibilityLabel}
       accessibilityHint={accessibilityHint}
-      accessibilityState={accessibilityState}
-      style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.primaryUltraSoft }]}
+      accessibilityState={{ disabled: Boolean(disabled || loading), busy: Boolean(loading), ...accessibilityState }}
+      style={({ pressed }) => [
+        styles.row,
+        disabled && styles.disabled,
+        pressed && { backgroundColor: colors.primaryUltraSoft },
+      ]}
     >
       {content}
     </Pressable>
   );
 };
 
+type FieldRowProps = Omit<TextInputProps, 'style'> & {
+  label: string;
+  /** Trailing element after the value, e.g. a lock glyph on a read-only field. */
+  trailing?: React.ReactNode;
+};
+
+/**
+ * A `Group` row that is edited in place: label on the left, value beside it.
+ * With `editable={false}` it is a plain label and value pair in the same columns.
+ */
+export const FieldRow: React.FC<FieldRowProps> = ({ label, trailing, editable = true, value, ...input }) => {
+  const colors = useThemeColors();
+  return (
+    <View style={styles.fieldRow}>
+      <AppText style={[styles.fieldLabel, { color: colors.text }]} numberOfLines={2}>
+        {label}
+      </AppText>
+      {editable ? (
+        <TextInput
+          value={value}
+          accessibilityLabel={label}
+          placeholderTextColor={colors.textTertiary}
+          selectionColor={colors.primary}
+          style={[styles.fieldInput, { color: colors.text }]}
+          {...input}
+        />
+      ) : (
+        <AppText style={[styles.fieldValue, { color: colors.textSecondary }]}>{value || '—'}</AppText>
+      )}
+      {trailing}
+    </View>
+  );
+};
+
+type GroupFooterProps = {
+  children: React.ReactNode;
+  tone?: 'default' | 'danger';
+};
+
+/** Explanatory text under a `Group`, set on the ground and aligned with the row text. */
+export const GroupFooter: React.FC<GroupFooterProps> = ({ children, tone = 'default' }) => {
+  const colors = useThemeColors();
+  return (
+    <AppText
+      style={[styles.footer, { color: tone === 'danger' ? colors.danger : colors.textSecondary }]}
+      accessibilityLiveRegion={tone === 'danger' ? 'polite' : undefined}
+    >
+      {children}
+    </AppText>
+  );
+};
+
+/** Label column shared by `FieldRow` and any custom row that sits in the same group. */
+export const FIELD_LABEL_WIDTH = '42%';
+
 const styles = StyleSheet.create({
+  fieldRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    minHeight: 52,
+    paddingHorizontal: spacing.md,
+  },
+  fieldLabel: {
+    width: FIELD_LABEL_WIDTH,
+    fontSize: fontSizes.md,
+    fontWeight: fontWeights.semibold,
+    paddingVertical: spacing.sm,
+  },
+  fieldInput: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 44,
+    fontSize: fontSizes.md,
+    paddingVertical: spacing.sm,
+  },
+  fieldValue: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: fontSizes.md,
+    paddingVertical: spacing.sm,
+  },
+  footer: {
+    fontSize: fontSizes.sm - 1,
+    lineHeight: 18,
+    paddingHorizontal: spacing.xl + spacing.xs,
+    paddingTop: spacing.xs,
+  },
+  disabled: {
+    opacity: 0.45,
+  },
   heading: {
     flexDirection: 'row',
     alignItems: 'flex-end',

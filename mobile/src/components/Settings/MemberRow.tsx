@@ -3,7 +3,6 @@ import { View, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppText } from '../AppText';
 import { Avatar } from '../ui/Avatar';
-import { RoleBadge, RoleBadgeVariant } from './RoleBadge';
 import { useLanguage } from '../../context/LanguageContext';
 import { useThemeColors, fontSizes, fontWeights, spacing } from '../../theme';
 
@@ -11,7 +10,7 @@ interface MemberRowProps {
   name: string;
   email: string;
   avatarUrl?: string;
-  role: RoleBadgeVariant;
+  role: 'owner' | 'member';
   roleLabel: string;
   showRemove?: boolean;
   removing?: boolean;
@@ -34,12 +33,14 @@ export const MemberRow: React.FC<MemberRowProps> = ({
 
   return (
     <View style={styles.row}>
-      <Avatar name={name} uri={avatarUrl} size={44} />
+      <Avatar name={name} uri={avatarUrl} size={40} />
       <View style={styles.meta}>
         <AppText style={[styles.name, { color: colors.text }]}>{name}</AppText>
         <AppText style={[styles.email, { color: colors.textSecondary }]}>{email}</AppText>
-        <RoleBadge variant={role} label={roleLabel} />
       </View>
+      {role === 'owner' ? (
+        <AppText style={[styles.role, { color: colors.textSecondary }]}>{roleLabel}</AppText>
+      ) : null}
       {showRemove && onRemove ? (
         <Pressable
           onPress={onRemove}
@@ -79,7 +80,11 @@ const styles = StyleSheet.create({
     fontWeight: fontWeights.semibold,
   },
   email: {
+    fontSize: fontSizes.sm - 1,
+  },
+  role: {
     fontSize: fontSizes.sm,
+    flexShrink: 1,
   },
   remove: {
     minWidth: 44,

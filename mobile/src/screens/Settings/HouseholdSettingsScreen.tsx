@@ -1,30 +1,27 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useLayoutEffect } from 'react';
 import {
   View,
   StyleSheet,
   ScrollView,
   Alert,
-  TextInput,
+  Pressable,
   ActivityIndicator,
   Share,
-  Platform,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreenShell';
 import { AppText } from '../../components/AppText';
-import { PrimaryButton } from '../../components/PrimaryButton';
 import { CurrencyPicker } from '../../components/CurrencyPicker';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { householdsApi, getOwnerIdString, HouseholdMember } from '../../api/householdsApi';
 import { dedupedFetch, getCached, invalidateCache } from '../../utils/queryCache';
-import { GroupRow } from '../../components/ui/Group';
-import { SettingsSection } from '../../components/Settings/SettingsSection';
-import { SettingsGroupCard } from '../../components/Settings/SettingsGroupCard';
+import { Group, GroupRow, FieldRow, GroupFooter, SectionHeading } from '../../components/ui/Group';
 import { ToggleRow } from '../../components/Settings/ToggleRow';
 import { MemberRow } from '../../components/Settings/MemberRow';
 import * as Clipboard from 'expo-clipboard';
-import { useThemeColors, fontSizes, fontWeights, spacing, radii } from '../../theme';
+import { useThemeColors, fontSizes, fontWeights, spacing } from '../../theme';
 
 export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { selectedHousehold, setSelectedHousehold } = useHousehold();
@@ -34,7 +31,6 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
   const [isOwner, setIsOwner] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState('');
   const [editAddress, setEditAddress] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -193,7 +189,6 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
       invalidateCache('households:list');
       if (txCountKey) invalidateCache(txCountKey);
       setSelectedHousehold(updated);
-      setIsEditing(false);
       Alert.alert(t('common.success'), t('accountSettingsScreen.profileUpdated'));
     } catch (error: unknown) {
       const err = error as { response?: { data?: { error?: string } } };
@@ -369,6 +364,37 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
     return m._id === ownerIdStr ? 'owner' : 'member';
   };
 
+  const householdDirty =
+    isOwner &&
+    editName.trim().length > 0 &&
+    !!selectedHousehold &&
+    (editName.trim() !== selectedHousehold.name ||
+      editAddress.trim() !== (selectedHousehold.address || ''));
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: isOwner && selectedHousehold ? () => (
+        <Pressable
+          onPress={handleSaveChanges}
+          disabled={!householdDirty || isSaving}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.save')}
+          accessibilityState={{ disabled: !householdDirty || isSaving, busy: isSaving }}
+          style={({ pressed }) => [styles.headerButton, pressed && styles.pressed]}
+        >
+          {isSaving ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : (
+            <AppText style={[styles.headerButtonText, { color: householdDirty ? colors.primary : colors.textTertiary }]}>
+              {t('common.save')}
+            </AppText>
+          )}
+        </Pressable>
+      ) : undefined,
+    });
+  }, [navigation, t, colors.primary, colors.textTertiary, styles, isOwner, selectedHousehold, householdDirty, isSaving, handleSaveChanges]);
+
   if (!selectedHousehold) {
     return (
       <SanctuaryScreenShell edges={['bottom']} innerStyle={styles.container}>
@@ -379,12 +405,6 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
     );
   }
 
-  const householdDirty =
-    isEditing &&
-    isOwner &&
-    (editName.trim() !== selectedHousehold.name ||
-      (editAddress.trim() || '') !== (selectedHousehold.address || ''));
-
   return (
     <SanctuaryScreenShell edges={['bottom']} innerStyle={styles.container}>
       <ScrollView
@@ -394,227 +414,149 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <SettingsSection title={t('householdSettingsScreen.sectionHousehold')}>
-          <SettingsGroupCard>
-            {isOwner && isEditing ? (
-              <View style={styles.padded}>
-                <AppText style={styles.inputLabel}>{t('householdSettingsScreen.householdName')}</AppText>
-                <TextInput
-                  style={styles.textInput}
-                  value={editName}
-                  onChangeText={setEditName}
-                  accessibilityLabel={t('householdSettingsScreen.householdName')}
-                  placeholder={t('household.householdName')}
-                  placeholderTextColor={colors.textTertiary}
-                />
-                <AppText style={[styles.inputLabel, styles.inputLabelSpaced]}>
-                  {t('householdSettingsScreen.householdLocation')}
-                </AppText>
-                <TextInput
-                  style={styles.textInput}
-                  value={editAddress}
-                  onChangeText={setEditAddress}
-                  accessibilityLabel={t('householdSettingsScreen.householdLocation')}
-                  placeholder={t('household.householdLocation')}
-                  placeholderTextColor={colors.textTertiary}
-                />
-                <View style={styles.editRow}>
-                  <PrimaryButton
-                    title={t('common.cancel')}
-                    variant="secondary"
-                    style={styles.editButton}
-                    disabled={isSaving}
-                    onPress={() => {
-                      setIsEditing(false);
-                      setEditName(selectedHousehold.name);
-                      setEditAddress(selectedHousehold.address || '');
-                    }}
-                  />
-                  <PrimaryButton
-                    title={t('common.save')}
-                    style={styles.editButton}
-                    onPress={handleSaveChanges}
-                    disabled={!householdDirty || isSaving}
-                    loading={isSaving}
-                  />
-                </View>
-              </View>
-            ) : [
-                <GroupRow
-                  titleLines={0}
-                  key="name"
-                  title={t('householdSettingsScreen.householdName')}
-                  subtitle={selectedHousehold.name}
-                />,
-                <GroupRow
-                  titleLines={0}
-                  key="location"
-                  title={t('householdSettingsScreen.householdLocation')}
-                  subtitle={selectedHousehold.address || '—'}
-                />,
-                isOwner ? (
-                  <GroupRow
-                    titleLines={0}
-                    key="edit"
-                    title={t('common.edit')}
-                    icon="create-outline"
-                    onPress={() => setIsEditing(true)}
-                    chevron
-                  />
-                ) : (
-                  <GroupRow key="readOnly" titleLines={0} title={t('householdSettingsScreen.ownerOnlyEdit')} />
-                ),
-            ]}
-          </SettingsGroupCard>
-        </SettingsSection>
-
-        <SettingsSection title={t('currency.sectionTitle')}>
-          <AppText style={styles.sectionHint}>
-            {currencyLocked
+        <Group>
+          <FieldRow
+            label={t('householdSettingsScreen.householdName')}
+            value={isOwner ? editName : selectedHousehold.name}
+            onChangeText={setEditName}
+            placeholder={t('household.householdName')}
+            editable={isOwner}
+          />
+          <FieldRow
+            label={t('householdSettingsScreen.householdLocation')}
+            value={isOwner ? editAddress : selectedHousehold.address || ''}
+            onChangeText={setEditAddress}
+            placeholder={t('household.householdLocation')}
+            editable={isOwner}
+          />
+          <CurrencyPicker
+            variant="row"
+            value={selectedHousehold.currency || 'USD'}
+            onChange={handleChangeCurrency}
+            disabled={!isOwner || currencyLocked || savingCurrency}
+            loading={savingCurrency}
+          />
+        </Group>
+        <GroupFooter>
+          {isOwner
+            ? currencyLocked
               ? t('currency.sectionHintLocked')
-              : isOwner
-              ? t('currency.sectionHintEditable')
-              : t('currency.sectionHintMember')}
-          </AppText>
-          <SettingsGroupCard>
-            <View style={styles.padded}>
-              <CurrencyPicker
-                value={selectedHousehold.currency || 'USD'}
-                onChange={handleChangeCurrency}
-                disabled={!isOwner || currencyLocked || savingCurrency}
-                lockedHint={
-                  currencyLocked && isOwner ? t('currency.lockedInlineHint') : undefined
-                }
-              />
-              {savingCurrency ? (
-                <View style={styles.currencySaving} accessibilityLiveRegion="polite">
-                  <ActivityIndicator size="small" color={colors.primary} />
-                  <AppText style={styles.currencySavingText}>{t('common.saving')}</AppText>
-                </View>
-              ) : null}
+              : t('currency.sectionHintEditable')
+            : `${t('householdSettingsScreen.ownerOnlyEdit')} ${currencyLocked ? t('currency.sectionHintLocked') : t('currency.sectionHintMember')}`}
+        </GroupFooter>
+
+        <SectionHeading title={t('householdSettingsScreen.sectionInvite')} />
+        <Group>
+          <View style={styles.inviteRow}>
+            <View
+              style={styles.inviteCodeColumn}
+              accessible
+              accessibilityLabel={`${t('householdSettingsScreen.inviteCode')}: ${selectedHousehold.joinCode}`}
+            >
+              <AppText style={styles.inviteCaption}>{t('householdSettingsScreen.inviteCode')}</AppText>
+              <AppText style={styles.inviteCode} selectable>{selectedHousehold.joinCode}</AppText>
             </View>
-          </SettingsGroupCard>
-        </SettingsSection>
-
-        <SettingsSection title={t('householdSettingsScreen.sectionInvite')}>
-          <AppText style={styles.sectionHint}>{t('householdSettingsScreen.inviteHint')}</AppText>
-          <SettingsGroupCard>
-            <GroupRow
-              titleLines={0}
-              title={selectedHousehold.joinCode}
-              accessibilityLabel={`${t('householdSettingsScreen.sectionInvite')}: ${selectedHousehold.joinCode}`}
-            />
-            <GroupRow
-              titleLines={0}
-              title={t('householdSettingsScreen.shareInvite')}
-              icon="share-outline"
-              onPress={handleShare}
-            />
-            <GroupRow
-              titleLines={0}
-              title={t('householdSettingsScreen.copyCode')}
-              icon="copy-outline"
+            <Pressable
               onPress={handleCopyCode}
-            />
-            {isOwner ? (
-              <GroupRow
-                titleLines={0}
-                title={t('householdSettingsScreen.regenerateCode')}
-                destructive
-                trailing={regenerating ? <ActivityIndicator size="small" color={colors.danger} /> : undefined}
-                onPress={regenerating ? undefined : handleRegenerate}
-              />
-            ) : null}
-          </SettingsGroupCard>
-        </SettingsSection>
-
-        <SettingsSection title={t('householdSettingsScreen.sectionMembers')}>
-          <SettingsGroupCard>
-            {selectedHousehold.members.map((m, index) => {
-              const role = roleForMember(m);
-              const canRemove = isOwner && role === 'member';
-              return (
-                <MemberRow
-                  key={m._id}
-                  name={m.name}
-                  email={m.email}
-                  avatarUrl={m.avatarUrl}
-                  role={role}
-                  roleLabel={role === 'owner' ? t('householdSettingsScreen.owner') : t('householdSettingsScreen.member')}
-                  showRemove={canRemove}
-                  removing={removingMemberId === m._id}
-                  onRemove={canRemove ? () => handleRemoveMember(m._id, m.name) : undefined}
-                  isLast={index === selectedHousehold.members.length - 1}
-                />
-              );
-            })}
-          </SettingsGroupCard>
-        </SettingsSection>
-
-        <SettingsSection title={t('householdSettingsScreen.sectionNotifications')}>
-          <AppText style={styles.sectionHint}>
-            {t('householdSettingsScreen.muteHouseholdHint')}
-          </AppText>
-          <SettingsGroupCard>
-            <ToggleRow
-              icon="notifications-off-outline"
-              iconBackgroundColor={colors.primaryUltraSoft}
-              iconColor={colors.primary}
-              title={t('householdSettingsScreen.muteHouseholdTitle')}
-              subtitle={t('householdSettingsScreen.muteHouseholdSubtitle')}
-              value={householdMuted}
-              onValueChange={handleToggleHouseholdMute}
-              isLast
-            />
-            {savingMute ? (
-              <View style={styles.savingRow} accessibilityLiveRegion="polite">
-                <ActivityIndicator size="small" color={colors.primary} />
-                <AppText style={styles.currencySavingText}>{t('common.saving')}</AppText>
-              </View>
-            ) : null}
-          </SettingsGroupCard>
-        </SettingsSection>
-
-        <SettingsSection title={t('householdSettingsScreen.sectionActions')}>
-          <SettingsGroupCard>
+              accessibilityRole="button"
+              accessibilityLabel={t('householdSettingsScreen.copyCode')}
+              style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
+            >
+              <Ionicons name="copy-outline" size={22} color={colors.primary} />
+            </Pressable>
+            <Pressable
+              onPress={handleShare}
+              accessibilityRole="button"
+              accessibilityLabel={t('householdSettingsScreen.shareInvite')}
+              style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
+            >
+              <Ionicons name="share-outline" size={22} color={colors.primary} />
+            </Pressable>
+          </View>
+          {isOwner ? (
             <GroupRow
               titleLines={0}
-              title={t('householdSettingsScreen.switchHousehold')}
-              subtitle={t('householdSettingsScreen.switchHouseholdHint')}
-              icon="swap-horizontal-outline"
-              onPress={handleSwitchHousehold}
-              chevron
+              destructive
+              title={t('householdSettingsScreen.regenerateCode')}
+              loading={regenerating}
+              onPress={handleRegenerate}
             />
-            {!isOwner ? (
+          ) : null}
+        </Group>
+        <GroupFooter>{t('householdSettingsScreen.inviteHint')}</GroupFooter>
+
+        <SectionHeading title={t('householdSettingsScreen.sectionMembers')} />
+        <Group>
+          {selectedHousehold.members.map((m, index) => {
+            const role = roleForMember(m);
+            const canRemove = isOwner && role === 'member';
+            return (
+              <MemberRow
+                key={m._id}
+                name={m.name}
+                email={m.email}
+                avatarUrl={m.avatarUrl}
+                role={role}
+                roleLabel={role === 'owner' ? t('householdSettingsScreen.owner') : t('householdSettingsScreen.member')}
+                showRemove={canRemove}
+                removing={removingMemberId === m._id}
+                onRemove={canRemove ? () => handleRemoveMember(m._id, m.name) : undefined}
+                isLast={index === selectedHousehold.members.length - 1}
+              />
+            );
+          })}
+        </Group>
+
+        <Group style={styles.spacedGroup}>
+          <ToggleRow
+            icon="notifications-off-outline"
+            iconBackgroundColor={colors.primaryUltraSoft}
+            iconColor={colors.primary}
+            title={t('householdSettingsScreen.muteHouseholdTitle')}
+            subtitle={t('householdSettingsScreen.muteHouseholdSubtitle')}
+            value={householdMuted}
+            onValueChange={handleToggleHouseholdMute}
+          />
+          <GroupRow
+            titleLines={0}
+            title={t('householdSettingsScreen.switchHousehold')}
+            subtitle={t('householdSettingsScreen.switchHouseholdHint')}
+            icon="swap-horizontal-outline"
+            onPress={handleSwitchHousehold}
+            chevron
+          />
+        </Group>
+
+        <Group style={styles.spacedGroup}>
+          {!isOwner ? (
+            <GroupRow
+              titleLines={0}
+              title={t('householdSettingsScreen.leaveHousehold')}
+              subtitle={t('householdSettingsScreen.leaveHouseholdHint')}
+              onPress={handleLeaveHousehold}
+              destructive
+            />
+          ) : [
+            memberCount > 1 ? (
               <GroupRow
                 titleLines={0}
+                key="leave"
                 title={t('householdSettingsScreen.leaveHousehold')}
-                subtitle={t('householdSettingsScreen.leaveHouseholdHint')}
+                subtitle={t('householdSettingsScreen.leaveOwnerHint')}
                 onPress={handleLeaveHousehold}
                 destructive
               />
-            ) : [
-                memberCount > 1 ? (
-                  <GroupRow
-                    titleLines={0}
-                    key="leave"
-                    title={t('householdSettingsScreen.leaveHousehold')}
-                    subtitle={t('householdSettingsScreen.leaveOwnerHint')}
-                    onPress={handleLeaveHousehold}
-                    destructive
-                  />
-                ) : null,
-                <GroupRow
-                  titleLines={0}
-                  key="delete"
-                  title={t('householdSettingsScreen.deleteHousehold')}
-                  subtitle={t('householdSettingsScreen.deleteHouseholdHint')}
-                  onPress={handleDeleteHousehold}
-                  destructive
-                />,
-            ]}
-          </SettingsGroupCard>
-        </SettingsSection>
+            ) : null,
+            <GroupRow
+              titleLines={0}
+              key="delete"
+              title={t('householdSettingsScreen.deleteHousehold')}
+              subtitle={t('householdSettingsScreen.deleteHouseholdHint')}
+              onPress={handleDeleteHousehold}
+              destructive
+            />,
+          ]}
+        </Group>
       </ScrollView>
     </SanctuaryScreenShell>
   );
@@ -628,6 +570,7 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
     },
     scrollView: { flex: 1 },
     scrollContent: {
+      paddingTop: spacing.md,
       paddingBottom: spacing.xxl,
     },
     emptyContainer: {
@@ -640,61 +583,48 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
       fontSize: fontSizes.lg,
       color: colors.textSecondary,
     },
-    sectionHint: {
-      fontSize: fontSizes.sm,
-      color: colors.textSecondary,
-      paddingHorizontal: spacing.lg,
-      marginBottom: spacing.sm,
-      lineHeight: 20,
+    headerButton: {
+      // The native header already gives the item a 44pt target; extra height pushes the label off centre.
+      paddingHorizontal: spacing.xxs,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
-    padded: {
-      padding: spacing.md,
-    },
-    inputLabel: {
-      fontSize: fontSizes.sm,
-      fontWeight: fontWeights.semibold,
-      color: colors.textSecondary,
-      marginBottom: spacing.xs,
-    },
-    inputLabelSpaced: {
-      marginTop: spacing.md,
-    },
-    textInput: {
-      minHeight: 50,
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: radii.md,
-      paddingHorizontal: spacing.md,
-      paddingVertical: Platform.OS === 'ios' ? spacing.sm : spacing.xs,
+    headerButtonText: {
       fontSize: fontSizes.md,
+      fontWeight: fontWeights.semibold,
+    },
+    inviteRow: {
+      minHeight: 60,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    inviteCodeColumn: {
+      flex: 1,
+      minWidth: 0,
+    },
+    inviteCaption: {
+      fontSize: fontSizes.sm - 1,
+      color: colors.textSecondary,
+    },
+    inviteCode: {
+      fontSize: fontSizes.xl,
+      fontWeight: fontWeights.bold,
+      letterSpacing: 2,
+      fontVariant: ['tabular-nums'],
       color: colors.text,
     },
-    editRow: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: spacing.sm,
-      marginTop: spacing.lg,
-    },
-    editButton: {
-      flex: 1,
-      minWidth: 120,
-    },
-    currencySaving: {
-      flexDirection: 'row',
+    iconButton: {
+      width: 44,
+      height: 44,
       alignItems: 'center',
-      gap: spacing.xs,
-      marginTop: spacing.sm,
+      justifyContent: 'center',
     },
-    currencySavingText: {
-      fontSize: fontSizes.sm,
-      color: colors.textSecondary,
-      flexShrink: 1,
+    spacedGroup: {
+      marginTop: spacing.xl,
     },
-    savingRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.xs,
-      padding: spacing.md,
+    pressed: {
+      opacity: 0.6,
     },
   });
