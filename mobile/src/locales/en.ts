@@ -235,6 +235,12 @@ export default {
 
   // Home Screen
   home: {
+    owesYouLine: '%{name} owes you %{amount}',
+    youOweLine: 'You owe %{name} %{amount}',
+    yourTurn: 'Your turn',
+    itemsToBuy: '%{count} to buy',
+    nothingToBuy: 'Nothing to buy',
+    householdSpending: 'Household spending',
     welcome: 'Welcome',
     welcomeTo: 'Welcome to',
     quickActions: 'Quick Actions',
@@ -264,7 +270,7 @@ export default {
     tipStart: 'Start tracking expenses to get personalized insights and better manage your household budget.',
     getStarted: 'Get started by adding your first expense, creating a shopping list, or adding a calendar event.',
     inviteRoommates: 'Invite your roommates using the code:',
-    setupHeroTagline: "Let's set up your household 👇",
+    setupHeroTagline: "Let's set up your household",
     setupInviteTitle: 'Invite your roommates',
     setupInviteDescription: 'Share this code so others can join your household.',
     setupCopyCode: 'Copy',

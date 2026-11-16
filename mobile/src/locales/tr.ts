@@ -234,6 +234,12 @@ export default {
 
   // Home Screen
   home: {
+    owesYouLine: '%{name} sana %{amount} borçlu',
+    youOweLine: '%{name} kişisine %{amount} borçlusun',
+    yourTurn: 'Sıra sende',
+    itemsToBuy: '%{count} ürün alınacak',
+    nothingToBuy: 'Alınacak bir şey yok',
+    householdSpending: 'Ev harcamaları',
     welcome: 'Hoş Geldiniz',
     welcomeTo: 'Hoş Geldiniz',
     quickActions: 'Hızlı İşlemler',
@@ -263,7 +269,7 @@ export default {
     tipStart: 'Kişiselleştirilmiş bilgiler almak ve ev bütçenizi daha iyi yönetmek için harcamaları takip etmeye başlayın.',
     getStarted: 'İlk harcamanızı ekleyerek, alışveriş listesi oluşturarak veya takvime etkinlik ekleyerek başlayın.',
     inviteRoommates: 'Ev arkadaşlarınızı bu kodla davet edin:',
-    setupHeroTagline: 'Hane kurulumunu yapalım 👇',
+    setupHeroTagline: 'Hane kurulumunu yapalım',
     setupInviteTitle: 'Ev arkadaşlarını davet et',
     setupInviteDescription: 'Diğerlerinin katılması için bu kodu paylaş.',
     setupCopyCode: 'Kopyala',

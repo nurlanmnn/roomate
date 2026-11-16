@@ -234,6 +234,12 @@ export default {
 
   // Home Screen
   home: {
+    owesYouLine: '%{name} vous doit %{amount}',
+    youOweLine: 'Vous devez %{amount} à %{name}',
+    yourTurn: 'À votre tour',
+    itemsToBuy: '%{count} à acheter',
+    nothingToBuy: 'Rien à acheter',
+    householdSpending: 'Dépenses du foyer',
     welcome: 'Bienvenue',
     welcomeTo: 'Bienvenue à',
     quickActions: 'Actions Rapides',
@@ -263,7 +269,7 @@ export default {
     tipStart: 'Commencez à suivre vos dépenses pour obtenir des informations personnalisées et mieux gérer votre budget.',
     getStarted: 'Commencez en ajoutant votre première dépense, en créant une liste de courses ou en ajoutant un événement au calendrier.',
     inviteRoommates: 'Invitez vos colocataires avec le code :',
-    setupHeroTagline: 'Configurons votre foyer 👇',
+    setupHeroTagline: 'Configurons votre foyer',
     setupInviteTitle: 'Inviter vos colocataires',
     setupInviteDescription: 'Partagez ce code pour que d’autres rejoignent le foyer.',
     setupCopyCode: 'Copier',

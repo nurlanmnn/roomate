@@ -234,6 +234,12 @@ export default {
 
   // Home Screen
   home: {
+    owesYouLine: '%{name} te debe %{amount}',
+    youOweLine: 'Le debes %{amount} a %{name}',
+    yourTurn: 'Te toca',
+    itemsToBuy: '%{count} por comprar',
+    nothingToBuy: 'Nada que comprar',
+    householdSpending: 'Gastos del hogar',
     welcome: 'Bienvenido',
     welcomeTo: 'Bienvenido a',
     quickActions: 'Acciones Rápidas',
@@ -263,7 +269,7 @@ export default {
     tipStart: 'Comienza a rastrear gastos para obtener información personalizada y gestionar mejor tu presupuesto.',
     getStarted: 'Comienza añadiendo tu primer gasto, creando una lista de compras o añadiendo un evento al calendario.',
     inviteRoommates: 'Invita a tus compañeros usando el código:',
-    setupHeroTagline: 'Configuremos tu hogar 👇',
+    setupHeroTagline: 'Configuremos tu hogar',
     setupInviteTitle: 'Invita a tus compañeros',
     setupInviteDescription: 'Comparte este código para que otros se unan al hogar.',
     setupCopyCode: 'Copiar',

@@ -1,31 +1,27 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Alert, Share } from 'react-native';
-import { AppText } from '../../components/AppText';
+import { View, StyleSheet, ScrollView, RefreshControl, Pressable, Share } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreenShell';
+import { Ionicons } from '@expo/vector-icons';
+import { AppText } from '../../components/AppText';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { eventsApi, Event } from '../../api/eventsApi';
 import { expensesApi, PairwiseBalance, HomeExpenseSummary } from '../../api/expensesApi';
 import { shoppingApi } from '../../api/shoppingApi';
-import { EventCard } from '../../components/EventCard';
-import { BalanceSummary } from '../../components/BalanceSummary';
+import { choresApi, ChoreRotation } from '../../api/choresApi';
 import { PrimaryButton } from '../../components/PrimaryButton';
-import { SpendingChart } from '../../components/SpendingChart';
-import { DeferredRender } from '../../components/DeferredRender';
-import { DashboardHero } from '../../components/Home/DashboardHero';
 import { HomeInviteCard } from '../../components/Home/HomeInviteCard';
-import { HomeSetupStep } from '../../components/Home/HomeSetupStep';
-import { SectionBlock } from '../../components/ui/SectionBlock';
-import { SummaryStatCard } from '../../components/Home/SummaryStatCard';
-import { InsightCard } from '../../components/Home/InsightCard';
-import { SmartTipCard } from '../../components/Home/SmartTipCard';
-import { formatCurrency, formatCompactCurrency } from '../../utils/formatCurrency';
+import { EnamelHeader } from '../../components/ui/EnamelHeader';
+import { Group, GroupRow, SectionHeading } from '../../components/ui/Group';
+import { Amount } from '../../components/ui/Amount';
+import { Avatar } from '../../components/ui/Avatar';
+import { LoadingSkeleton } from '../../components/LoadingSkeleton';
+import { formatCurrency } from '../../utils/formatCurrency';
+import { formatDate } from '../../utils/dateHelpers';
+import { getDateFnsLocale } from '../../utils/dateLocales';
 import { useHouseholdCurrency } from '../../utils/useHouseholdCurrency';
-import { useThemeColors, fontSizes, fontWeights, spacing, radii, shadows, TAB_BAR_HEIGHT } from '../../theme';
-import { Ionicons } from '@expo/vector-icons';
-import { LoadingSkeleton, SkeletonCard } from '../../components/LoadingSkeleton';
+import { useThemeColors, fontSizes, fontWeights, spacing, radii, TAB_BAR_HEIGHT } from '../../theme';
 import { getCached, dedupedFetch, DEFAULT_STALE_TIME_MS, isFresh } from '../../utils/queryCache';
 import { prefetchBalanceHistoryData } from '../../utils/balanceHistoryDataCache';
 
@@ -38,9 +34,22 @@ type HomeDashboardSnapshot = {
 
 const homeDashboardKey = (householdId: string) => `home:dashboard:${householdId}`;
 
-const navigateBalanceHistory = (navigation: { getParent: () => { navigate: (name: string) => void } | undefined }, householdId?: string) => {
-  if (householdId) prefetchBalanceHistoryData(householdId);
-  navigation.getParent()?.navigate('BalanceHistory');
+/** How far the action buttons ride up over the enamel field. */
+const ACTIONS_OVERLAP = 27;
+const HOME_EVENTS_SHOWN = 3;
+
+const EVENT_ICONS: Record<Event['type'], keyof typeof Ionicons.glyphMap> = {
+  bill: 'receipt-outline',
+  cleaning: 'sparkles-outline',
+  social: 'people-outline',
+  meal: 'restaurant-outline',
+  meeting: 'chatbubbles-outline',
+  maintenance: 'construct-outline',
+  shopping: 'cart-outline',
+  trip: 'airplane-outline',
+  birthday: 'gift-outline',
+  reminder: 'alarm-outline',
+  other: 'calendar-outline',
 };
 
 export const HomeScreen: React.FC = () => {
@@ -48,20 +57,19 @@ export const HomeScreen: React.FC = () => {
   const { selectedHousehold, setSelectedHousehold } = useHousehold();
   const { user } = useAuth();
   const colors = useThemeColors();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const dateLocale = React.useMemo(() => getDateFnsLocale(language), [language]);
   const currency = useHouseholdCurrency();
   const [events, setEvents] = useState<Event[]>([]);
   const [balances, setBalances] = useState<PairwiseBalance[]>([]);
   const [homeSummary, setHomeSummary] = useState<HomeExpenseSummary | null>(null);
   const [shoppingStats, setShoppingStats] = useState({ total: 0, pending: 0 });
+  const [chores, setChores] = useState<ChoreRotation[]>([]);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
-  const [insights, setInsights] = useState<any>(null);
-  const [spendingRange, setSpendingRange] = useState<'week' | 'month' | 'year' | 'all'>('month');
   const [loadError, setLoadError] = useState(false);
-  /** True only after a successful Promise.all home fetch — avoids showing "setup" when the API failed and state stayed empty. */
+  /** True only after a successful home fetch: avoids showing "setup" when the API failed and state stayed empty. */
   const [dashboardLoadOk, setDashboardLoadOk] = useState(false);
-  const [homeEventsVisible, setHomeEventsVisible] = useState(5);
   const scrollRef = useRef<ScrollView>(null);
   /** Only the latest home fetch may commit (avoids duplicate effects + out-of-order responses). */
   const loadGenRef = useRef(0);
@@ -70,191 +78,12 @@ export const HomeScreen: React.FC = () => {
 
   useFocusEffect(
     React.useCallback(() => {
-      scrollRef.current?.scrollTo({ y: 0, animated: true });
-      // SWR-style: call loadData on focus, but allow a fresh cache snapshot to
-      // satisfy it so flipping between tabs doesn't refetch every time. A
-      // create/delete invalidates the key, so real changes still refetch.
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
+      // SWR-style: a fresh cache snapshot satisfies the focus reload, so flipping between
+      // tabs doesn't refetch every time. A create/delete invalidates the key.
       loadDataRef.current?.({ allowStale: true });
     }, [])
   );
-
-  const styles = React.useMemo(() => StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: 'transparent',
-    },
-    scrollView: {
-      flex: 1,
-    },
-    scrollContent: {
-      paddingTop: spacing.lg,
-      paddingBottom: TAB_BAR_HEIGHT + spacing.xl,
-    },
-    emptyContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: spacing.xxl,
-    },
-    emptyText: {
-      fontSize: fontSizes.md,
-      color: colors.muted,
-    },
-    skeletonStatCard: {
-      flex: 1,
-      padding: spacing.lg,
-      backgroundColor: colors.surface,
-      borderRadius: radii.lg,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-    },
-    skeletonStatContent: {
-      flex: 1,
-    },
-    skeletonHero: {
-      marginHorizontal: spacing.xl,
-      marginBottom: spacing.lg,
-      padding: spacing.xl,
-      backgroundColor: colors.surface,
-      borderRadius: radii.lg,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-    },
-    statsRow: {
-      flexDirection: 'row',
-      paddingHorizontal: spacing.xl,
-      marginBottom: spacing.xl,
-      gap: spacing.sm,
-    },
-    emptyStateContainer: {
-      paddingHorizontal: spacing.xl,
-      paddingTop: spacing.sm,
-    },
-    setupStepsCard: {
-      backgroundColor: colors.surface,
-      borderRadius: radii.lg,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      paddingHorizontal: spacing.xs,
-      paddingBottom: spacing.sm,
-      marginBottom: spacing.lg,
-      ...(shadows.sm as object),
-    },
-    setupStepsHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: spacing.sm,
-      paddingTop: spacing.md,
-      paddingBottom: spacing.xs,
-      gap: spacing.sm,
-    },
-    setupStepsTitle: {
-      fontSize: fontSizes.lg,
-      fontWeight: fontWeights.bold,
-      color: colors.text,
-      flex: 1,
-    },
-    setupProgressBadge: {
-      fontSize: fontSizes.xs,
-      fontWeight: fontWeights.semibold,
-      color: colors.primary,
-      backgroundColor: colors.primaryUltraSoft,
-      paddingHorizontal: spacing.sm,
-      paddingVertical: spacing.xxs,
-      borderRadius: radii.sm,
-      overflow: 'hidden',
-    },
-    primaryCta: {
-      marginBottom: spacing.md,
-    },
-    secondaryRow: {
-      flexDirection: 'row',
-      gap: spacing.sm,
-      marginBottom: spacing.lg,
-    },
-    secondaryBtn: {
-      flex: 1,
-    },
-    summaryCard: {
-      backgroundColor: colors.surface,
-      borderRadius: radii.lg,
-      padding: spacing.lg,
-      marginTop: spacing.md,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      ...(shadows.sm as object),
-    },
-    summaryRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-around',
-      gap: spacing.md,
-    },
-    summaryItem: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.sm,
-    },
-    summaryTextContainer: {
-      flex: 1,
-    },
-    summaryLabel: {
-      fontSize: fontSizes.xs,
-      color: colors.textSecondary,
-      marginBottom: spacing.xxs,
-    },
-    summaryValue: {
-      fontSize: fontSizes.lg,
-      fontWeight: fontWeights.bold,
-      color: colors.text,
-    },
-    trendIndicator: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginTop: spacing.md,
-      paddingTop: spacing.md,
-      borderTopWidth: 1,
-      borderTopColor: colors.borderLight,
-      gap: spacing.xs,
-    },
-    trendText: {
-      fontSize: fontSizes.sm,
-      fontWeight: fontWeights.medium,
-    },
-    insightRow: {
-      marginTop: spacing.lg,
-    },
-    tipSection: {
-      paddingHorizontal: spacing.xl,
-      marginBottom: spacing.xxl,
-    },
-    errorBanner: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.sm,
-      paddingHorizontal: spacing.xl,
-      paddingVertical: spacing.md,
-      marginHorizontal: spacing.xl,
-      marginTop: spacing.md,
-      borderRadius: radii.md,
-    },
-    errorBannerText: {
-      fontSize: fontSizes.sm,
-      fontWeight: fontWeights.medium,
-      flex: 1,
-    },
-    homeEventsLoadMore: {
-      alignItems: 'center',
-      paddingVertical: spacing.md,
-      marginTop: spacing.xs,
-    },
-    homeEventsLoadMoreText: {
-      fontSize: fontSizes.sm,
-      fontWeight: fontWeights.semibold,
-      color: colors.primary,
-    },
-  }), [colors]);
 
   const householdId = selectedHousehold?._id;
 
@@ -277,7 +106,6 @@ export const HomeScreen: React.FC = () => {
         setEvents(snapshot.events);
         setBalances(snapshot.balances);
         setHomeSummary(snapshot.homeSummary);
-        setInsights(snapshot.homeSummary.insights);
         setShoppingStats(snapshot.shoppingStats);
         setDashboardLoadOk(true);
         setInitialLoading(false);
@@ -286,7 +114,7 @@ export const HomeScreen: React.FC = () => {
         setBalances([]);
         setHomeSummary(null);
         setShoppingStats({ total: 0, pending: 0 });
-        setInsights(null);
+        setChores([]);
         setInitialLoading(true);
         setDashboardLoadOk(false);
       }
@@ -294,9 +122,17 @@ export const HomeScreen: React.FC = () => {
     }
   }, [selectedHousehold?._id]);
 
-  useEffect(() => {
-    setHomeEventsVisible(5);
-  }, [events.length]);
+  /** Chores are a secondary read: failures leave the Today list without chore rows. */
+  const loadChores = React.useCallback((hid: string) => {
+    choresApi
+      .getChores(hid)
+      .then((data) => {
+        if (prevHouseholdIdRef.current === hid) setChores(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
+        /* non-blocking */
+      });
+  }, []);
 
   const loadData = React.useCallback(async (opts?: { allowStale?: boolean }) => {
     if (!householdId) return;
@@ -310,6 +146,7 @@ export const HomeScreen: React.FC = () => {
       setLoading(true);
     }
     setLoadError(false);
+    loadChores(householdId);
     try {
       const snapshot = await dedupedFetch<HomeDashboardSnapshot>(
         homeDashboardKey(householdId),
@@ -339,7 +176,6 @@ export const HomeScreen: React.FC = () => {
       setEvents(snapshot.events);
       setBalances(snapshot.balances);
       setHomeSummary(snapshot.homeSummary);
-      setInsights(snapshot.homeSummary.insights);
       setShoppingStats(snapshot.shoppingStats);
       setDashboardLoadOk(true);
     } catch (error: any) {
@@ -364,7 +200,7 @@ export const HomeScreen: React.FC = () => {
         setInitialLoading(false);
       }
     }
-  }, [householdId, setSelectedHousehold]);
+  }, [householdId, setSelectedHousehold, loadChores]);
 
   useEffect(() => {
     loadDataRef.current = loadData;
@@ -448,274 +284,433 @@ export const HomeScreen: React.FC = () => {
       /* dismissed */
     }
   };
-
-  const spendingByCategory = React.useMemo(() => {
-    if (!homeSummary) return [];
-    const map = {
-      week: homeSummary.categoryTotals.week,
-      month: homeSummary.categoryTotals.month,
-      year: homeSummary.categoryTotals.year,
-      all: homeSummary.categoryTotals.all,
-    } as const;
-    return map[spendingRange] ?? [];
-  }, [homeSummary, spendingRange]);
+  const openBalances = () => {
+    if (selectedHousehold?._id) prefetchBalanceHistoryData(selectedHousehold._id);
+    navigation.getParent()?.navigate('BalanceHistory');
+  };
 
   if (!selectedHousehold) {
     return (
-      <SanctuaryScreenShell edges={['top', 'bottom']} innerStyle={styles.container}>
-        <View style={styles.emptyContainer}>
-          <AppText style={styles.emptyText}>{t('home.pleaseSelectHousehold')}</AppText>
-        </View>
-      </SanctuaryScreenShell>
+      <View style={[styles.root, styles.centered, { backgroundColor: colors.background }]}>
+        <AppText style={[styles.bodyText, { color: colors.textSecondary }]}>
+          {t('home.pleaseSelectHousehold')}
+        </AppText>
+      </View>
     );
   }
 
-  if (initialLoading) {
-    return (
-      <SanctuaryScreenShell edges={['top']} innerStyle={styles.container}>
-        <ScrollView style={styles.scrollView}>
-          <View style={styles.skeletonHero}>
-            <LoadingSkeleton width={220} height={28} style={{ marginBottom: spacing.xs }} />
-            <LoadingSkeleton width={120} height={14} />
-            <LoadingSkeleton width={100} height={20} style={{ marginTop: spacing.md }} />
-          </View>
-          <View style={styles.statsRow}>
-            {[1, 2, 3].map((i) => (
-              <View key={i} style={styles.skeletonStatCard}>
-                <LoadingSkeleton width={44} height={44} borderRadius={radii.md} />
-                <LoadingSkeleton width={60} height={18} style={{ marginTop: spacing.sm }} />
-                <LoadingSkeleton width={50} height={12} style={{ marginTop: spacing.xs }} />
-              </View>
-            ))}
-          </View>
-          <View style={{ paddingHorizontal: spacing.xl, marginTop: spacing.xl }}>
-            <LoadingSkeleton width={150} height={20} style={{ marginBottom: spacing.md }} />
-            {[1, 2, 3].map((i) => (
-              <SkeletonCard key={i} lines={2} showAvatar={true} />
-            ))}
-          </View>
-        </ScrollView>
-      </SanctuaryScreenShell>
-    );
-  }
+  // Balances that involve the signed-in user, largest first.
+  const myBalances = user
+    ? balances
+        .filter((b) => b.fromUserId === user._id || b.toUserId === user._id)
+        .map((b) => {
+          const owedToMe = b.toUserId === user._id;
+          const otherId = owedToMe ? b.fromUserId : b.toUserId;
+          return { otherId, owedToMe, amount: b.amount, name: getUserName(otherId), avatar: getUserAvatar(otherId) };
+        })
+        .sort((a, b) => b.amount - a.amount)
+    : [];
+
+  const net = stats.netBalance;
+  const settled = Math.abs(net) < 0.005;
+  const heroLabel = settled ? t('home.allSettled') : net > 0 ? t('home.youAreOwed') : t('home.youOwe');
+  const heroPeople = myBalances.slice(0, 2);
+  const heroLine = heroPeople
+    .map((b) =>
+      b.owedToMe
+        ? t('home.owesYouLine', { name: b.name, amount: formatCurrency(b.amount, currency) })
+        : t('home.youOweLine', { name: b.name, amount: formatCurrency(b.amount, currency) })
+    )
+    .join('  ·  ');
+
+  const myChores = user
+    ? chores.filter((c) => c.currentAssignee?._id === user._id && !c.currentPeriodCompleted)
+    : [];
+  const nextEvents = events.slice(0, HOME_EVENTS_SHOWN);
+  const relativeDays = { today: t('time.today'), tomorrow: t('time.tomorrow'), yesterday: t('time.yesterday') };
+  const showSetup = dashboardLoadOk && !hasData;
+
+  const householdSwitcher = (
+    <Pressable
+      onPress={() => navigation.getParent()?.navigate('HouseholdSelect')}
+      accessibilityRole="button"
+      accessibilityLabel={`${selectedHousehold.name}. ${t('householdSettingsScreen.switchHousehold')}`}
+      hitSlop={8}
+      style={({ pressed }) => [styles.switcher, pressed && styles.pressed]}
+    >
+      <AppText style={[styles.switcherText, { color: colors.onEnamel }]} numberOfLines={1}>
+        {selectedHousehold.name}
+      </AppText>
+      <Ionicons name="chevron-down" size={16} color={colors.onEnamel} />
+    </Pressable>
+  );
+
+  const profileButton = (
+    <Pressable
+      onPress={() => navigation.getParent()?.navigate('Settings')}
+      accessibilityRole="button"
+      accessibilityLabel={t('settings.title')}
+      hitSlop={6}
+      style={({ pressed }) => [styles.profileButton, { borderColor: colors.marigold }, pressed && styles.pressed]}
+    >
+      <Avatar name={user?.name} uri={user?.avatarUrl} size={36} />
+    </Pressable>
+  );
 
   return (
-    <SanctuaryScreenShell edges={['top']} innerStyle={styles.container}>
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
       <ScrollView
         ref={scrollRef}
-        style={styles.scrollView}
+        style={styles.root}
         contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={loadData} />}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={loading} onRefresh={loadData} tintColor={colors.onEnamel} />
+        }
       >
-      {loadError && (
-        <View style={[styles.errorBanner, { backgroundColor: colors.dangerSoft }]}>
-          <Ionicons name="cloud-offline-outline" size={20} color={colors.danger} />
-          <AppText style={[styles.errorBannerText, { color: colors.danger }]}>
-            {t('home.couldNotConnect')}
-          </AppText>
-        </View>
-      )}
+        {/* Keeps the pull-to-refresh overscroll area enamel instead of exposing the ground. */}
+        <View style={[styles.overscrollFill, { backgroundColor: colors.enamel }]} />
 
-      <DashboardHero
-        householdName={selectedHousehold.name}
-        address={selectedHousehold.address}
-        metricLabel={hasData ? t('home.thisMonth') : undefined}
-        metricValue={hasData ? formatCompactCurrency(stats.monthlyExpenses, currency) : undefined}
-        tagline={dashboardLoadOk && !hasData ? t('home.setupHeroTagline') : undefined}
-      />
+        <EnamelHeader
+          leading={householdSwitcher}
+          right={profileButton}
+          overlap={radii.xl + ACTIONS_OVERLAP}
+        >
+          {initialLoading ? (
+            <View style={styles.heroSkeleton}>
+              <LoadingSkeleton width={120} height={16} />
+              <LoadingSkeleton width={220} height={84} style={{ marginTop: spacing.sm }} />
+            </View>
+          ) : (
+            <Pressable
+              onPress={openBalances}
+              accessibilityRole="button"
+              accessibilityLabel={`${heroLabel}${settled ? '' : ` ${formatCurrency(Math.abs(net), currency)}`}. ${heroLine}`}
+              accessibilityHint={t('home.balanceSummary')}
+              style={({ pressed }) => [styles.hero, pressed && styles.pressed]}
+            >
+              <AppText style={[styles.heroLabel, { color: colors.onEnamelSecondary }]}>{heroLabel}</AppText>
+              <Amount
+                value={Math.abs(net)}
+                currency={currency}
+                size={104}
+                weight="extrabold"
+                color={colors.onEnamel}
+                fit
+                style={styles.heroAmount}
+              />
+              {heroPeople.length > 0 ? (
+                <View style={styles.heroPeople}>
+                  <View style={styles.avatarStack}>
+                    {heroPeople.map((b, i) => (
+                      <View
+                        key={b.otherId}
+                        style={[styles.stackedAvatar, { borderColor: colors.enamel, marginLeft: i === 0 ? 0 : -8 }]}
+                      >
+                        <Avatar name={b.name} uri={b.avatar} size={26} />
+                      </View>
+                    ))}
+                  </View>
+                  <AppText style={[styles.heroLine, { color: colors.onEnamel }]} numberOfLines={2}>
+                    {heroLine}
+                  </AppText>
+                </View>
+              ) : null}
+            </Pressable>
+          )}
+        </EnamelHeader>
 
-      {hasData && (
-        <View style={styles.statsRow}>
-          <SummaryStatCard
-            icon={<Ionicons name="cash-outline" size={22} color={colors.primary} />}
-            label={t('home.thisMonth')}
-            value={formatCompactCurrency(stats.monthlyExpenses, currency)}
-            iconBgColor={colors.primaryUltraSoft}
-            onPress={() => navigation.navigate('Expenses')}
-          />
-          <SummaryStatCard
-            icon={<Ionicons name="cart-outline" size={22} color={colors.accent} />}
-            label={t('tabs.shopping')}
-            value={stats.pendingShopping}
-            iconBgColor={colors.accentUltraSoft}
-            onPress={() => navigation.navigate('Shopping')}
-          />
-          <SummaryStatCard
-            icon={<Ionicons name="calendar-outline" size={22} color={colors.teal} />}
-            label={t('home.events')}
-            value={stats.upcomingEventsCount}
-            iconBgColor={colors.tealUltraSoft}
-            onPress={() => navigation.navigate('Calendar')}
-          />
-        </View>
-      )}
+        <View style={[styles.sheet, { backgroundColor: colors.background }]}>
+          <View style={styles.actions}>
+            <PrimaryButton
+              variant="ink"
+              icon="add"
+              title={t('home.addExpense')}
+              onPress={() => navigation.getParent()?.navigate('CreateExpense')}
+              style={styles.action}
+            />
+            <PrimaryButton
+              variant="secondary"
+              icon="swap-horizontal"
+              title={t('home.settleUp')}
+              onPress={() => navigation.getParent()?.navigate('SettleUp')}
+              style={styles.action}
+            />
+          </View>
 
-      {/* Guided setup only after we successfully loaded (empty household). Failed loads show banner + pull to refresh, not fake "new home" UI. */}
-      {dashboardLoadOk && !hasData && (
-        <View style={styles.emptyStateContainer}>
-          {selectedHousehold.joinCode ? (
-            <HomeInviteCard joinCode={selectedHousehold.joinCode} householdName={selectedHousehold.name} />
+          {loadError ? (
+            <View
+              style={[styles.errorBanner, { backgroundColor: colors.dangerSoft }]}
+              accessibilityRole="alert"
+            >
+              <Ionicons name="cloud-offline-outline" size={20} color={colors.danger} />
+              <AppText style={[styles.errorText, { color: colors.text }]}>{t('home.couldNotConnect')}</AppText>
+            </View>
           ) : null}
 
-          <View style={styles.setupStepsCard}>
-            <View style={styles.setupStepsHeader}>
-              <AppText style={styles.setupStepsTitle}>{t('home.setupStepsHeading')}</AppText>
-              <AppText style={styles.setupProgressBadge}>
+          {initialLoading ? (
+            <View style={styles.listSkeleton}>
+              <LoadingSkeleton width={110} height={20} />
+              <LoadingSkeleton width="100%" height={180} borderRadius={radii.lg} style={{ marginTop: spacing.sm }} />
+            </View>
+          ) : null}
+
+          {showSetup ? (
+            <>
+              <SectionHeading title={t('home.setupStepsHeading')} />
+              <AppText style={[styles.sectionNote, { color: colors.textSecondary }]}>
                 {t('home.setupProgress', { done: setupDoneCount, total: 3 })}
               </AppText>
-            </View>
-            <HomeSetupStep
-              stepNumber={1}
-              title={t('home.setupStep1Title')}
-              subtitle={t('home.setupStep1Subtitle')}
-              completed={setupInviteDone}
-              onPress={handleShareInvite}
-            />
-            <HomeSetupStep
-              stepNumber={2}
-              title={t('home.setupStep2Title')}
-              subtitle={t('home.setupStep2Subtitle')}
-              completed={setupExpenseDone}
-              onPress={() => navigation.getParent()?.navigate('CreateExpense')}
-            />
-            <HomeSetupStep
-              stepNumber={3}
-              title={t('home.setupStep3Title')}
-              subtitle={t('home.setupStep3Subtitle')}
-              completed={setupShoppingDone}
-              onPress={() => navigation.navigate('Shopping')}
-              isLast
-            />
-          </View>
-
-          <PrimaryButton
-            title={t('home.primaryFirstExpense')}
-            onPress={() => navigation.getParent()?.navigate('CreateExpense')}
-            style={styles.primaryCta}
-          />
-          <View style={styles.secondaryRow}>
-            <PrimaryButton
-              variant="outline"
-              title={t('home.shoppingList')}
-              onPress={() => navigation.navigate('Shopping')}
-              style={styles.secondaryBtn}
-            />
-            <PrimaryButton
-              variant="outline"
-              title={t('home.addEvent')}
-              onPress={() => navigation.navigate('Calendar')}
-              style={styles.secondaryBtn}
-            />
-          </View>
-        </View>
-      )}
-      {user && balances.length > 0 && (
-        <SectionBlock
-          title={t('home.balanceSummary')}
-          description={t('home.balanceDescription')}
-          actionLabel={t('common.seeAll')}
-          onAction={() => navigateBalanceHistory(navigation, selectedHousehold?._id)}
-        >
-          <TouchableOpacity
-            activeOpacity={0.9}
-            onPress={() => navigateBalanceHistory(navigation, selectedHousehold?._id)}
-          >
-            <BalanceSummary
-              balances={balances}
-              currentUserId={user._id}
-              getUserName={getUserName}
-              getUserAvatar={getUserAvatar}
-              hideTitle
-            />
-          </TouchableOpacity>
-        </SectionBlock>
-      )}
-
-      {((homeSummary?.expenseCount ?? 0) > 0 ||
-        Boolean(insights?.monthlyTrend?.some((m: { amount: number }) => m.amount > 0))) && (
-        <SectionBlock
-          title={t('home.spendingInsights')}
-          description={t('home.spendingDescription')}
-        >
-          <DeferredRender>
-            <SpendingChart
-              byCategory={spendingByCategory}
-              monthlyTrend={insights?.monthlyTrend || []}
-              predictions={insights?.predictions}
-              selectedRange={spendingRange}
-              onChangeRange={setSpendingRange}
-              hidePrediction
-            />
-          </DeferredRender>
-          {insights?.monthlyTrend && insights.monthlyTrend.length >= 2 && (() => {
-            const thisMonth = stats.monthlyExpenses;
-            const lastMonth = insights.monthlyTrend[insights.monthlyTrend.length - 2]?.amount || 0;
-            const difference = thisMonth - lastMonth;
-            const percentChange = lastMonth > 0 ? ((difference / lastMonth) * 100).toFixed(1) : '0';
-            const isIncrease = difference > 0;
-            const trendText = lastMonth > 0
-              ? `${isIncrease ? '+' : ''}${formatCurrency(Math.abs(difference), currency)} (${isIncrease ? '+' : ''}${percentChange}%) ${isIncrease ? t('home.moreThanLastMonth') : t('home.lessThanLastMonth')}`
-              : t('home.thisMonth');
-            return (
-              <View style={styles.insightRow}>
-                <InsightCard
-                  title={t('home.thisMonth')}
-                  value={formatCurrency(thisMonth, currency)}
-                  trend={lastMonth > 0 ? { direction: isIncrease ? 'increasing' : 'decreasing', text: trendText } : undefined}
-                  variant="primary"
+              {selectedHousehold.joinCode ? (
+                <View style={styles.inviteWrap}>
+                  <HomeInviteCard joinCode={selectedHousehold.joinCode} householdName={selectedHousehold.name} />
+                </View>
+              ) : null}
+              <Group>
+                <GroupRow
+                  icon={setupInviteDone ? 'checkmark-circle' : 'person-add-outline'}
+                  iconTone={setupInviteDone ? 'neutral' : 'primary'}
+                  title={t('home.setupStep1Title')}
+                  subtitle={t('home.setupStep1Subtitle')}
+                  onPress={handleShareInvite}
+                  chevron
                 />
-              </View>
-            );
-          })()}
-          {insights?.predictions && (
-            <View style={styles.insightRow}>
-              <InsightCard
-                title={t('spendingChart.nextMonthPrediction')}
-                value={formatCurrency(insights.predictions.nextMonth, currency)}
-                trend={{
-                  direction: insights.predictions.trend,
-                  text: insights.predictions.trend === 'increasing' ? t('spendingChart.increasing') : insights.predictions.trend === 'decreasing' ? t('spendingChart.decreasing') : t('spendingChart.stable'),
-                }}
-                variant="teal"
-              />
-            </View>
-          )}
-        </SectionBlock>
-      )}
-
-      {events.length > 0 && (
-        <SectionBlock
-          title={t('home.upcomingEvents')}
-          description={t('home.upcomingEventsDescription')}
-          actionLabel={t('common.seeAll')}
-          onAction={() => navigation.navigate('Calendar')}
-        >
-          {events.slice(0, homeEventsVisible).map((event) => (
-            <EventCard key={event._id} event={event} />
-          ))}
-          {events.length > homeEventsVisible ? (
-            <TouchableOpacity
-              style={styles.homeEventsLoadMore}
-              onPress={() => setHomeEventsVisible((n) => n + 5)}
-              activeOpacity={0.75}
-            >
-              <AppText style={styles.homeEventsLoadMoreText}>
-                {t('common.loadMore')} ({Math.min(homeEventsVisible, events.length)}/{events.length})
-              </AppText>
-            </TouchableOpacity>
+                <GroupRow
+                  icon={setupExpenseDone ? 'checkmark-circle' : 'wallet-outline'}
+                  iconTone={setupExpenseDone ? 'neutral' : 'primary'}
+                  title={t('home.setupStep2Title')}
+                  subtitle={t('home.setupStep2Subtitle')}
+                  onPress={() => navigation.getParent()?.navigate('CreateExpense')}
+                  chevron
+                />
+                <GroupRow
+                  icon={setupShoppingDone ? 'checkmark-circle' : 'cart-outline'}
+                  iconTone={setupShoppingDone ? 'neutral' : 'primary'}
+                  title={t('home.setupStep3Title')}
+                  subtitle={t('home.setupStep3Subtitle')}
+                  onPress={() => navigation.navigate('Shopping')}
+                  chevron
+                />
+              </Group>
+            </>
           ) : null}
-        </SectionBlock>
-      )}
 
-      {hasData && (
-        <View style={styles.tipSection}>
-          <SmartTipCard
-            title={t('home.quickTip')}
-            message={stats.monthlyExpenses > 0 ? t('home.tipReview') : t('home.tipStart')}
-          />
+          {!initialLoading && !showSetup ? (
+            <>
+              <SectionHeading title={t('time.today')} />
+              <Group>
+                {myChores.map((chore) => (
+                  <GroupRow
+                    key={`chore-${chore._id}`}
+                    icon="sparkles-outline"
+                    iconTone="marigold"
+                    title={chore.name}
+                    subtitle={t('home.yourTurn')}
+                    onPress={() => navigation.getParent()?.navigate('ChoreRotation')}
+                    chevron
+                  />
+                ))}
+                <GroupRow
+                  key="shopping"
+                  icon="cart-outline"
+                  title={t('home.shoppingList')}
+                  subtitle={
+                    shoppingStats.pending > 0
+                      ? t('home.itemsToBuy', { count: shoppingStats.pending })
+                      : t('home.nothingToBuy')
+                  }
+                  trailing={
+                    shoppingStats.pending > 0 ? (
+                      <AppText style={[styles.count, { color: colors.text }]}>{shoppingStats.pending}</AppText>
+                    ) : undefined
+                  }
+                  onPress={() => navigation.navigate('Shopping')}
+                  chevron
+                />
+                {nextEvents.map((event) => (
+                  <GroupRow
+                    key={`event-${event._id}`}
+                    icon={EVENT_ICONS[event.type] ?? 'calendar-outline'}
+                    title={event.title}
+                    subtitle={formatDate(event.date, dateLocale, relativeDays)}
+                    onPress={() => navigation.navigate('Calendar')}
+                    chevron
+                  />
+                ))}
+              </Group>
+
+              <SectionHeading
+                title={t('home.balanceSummary')}
+                actionLabel={myBalances.length > 0 ? t('common.seeAll') : undefined}
+                onAction={openBalances}
+              />
+              <Group>
+                {myBalances.length === 0 ? (
+                  <GroupRow icon="checkmark-circle-outline" iconTone="neutral" title={t('home.allSettled')} />
+                ) : (
+                  myBalances.map((b) => (
+                    <GroupRow
+                      key={`balance-${b.otherId}`}
+                      leading={<Avatar name={b.name} uri={b.avatar} size={36} />}
+                      title={b.name}
+                      subtitle={b.owedToMe ? t('expenses.owesYou') : t('home.youOwe')}
+                      trailing={<Amount value={b.amount} currency={currency} size={22} direction={b.owedToMe ? 'owed' : 'owe'} />}
+                      onPress={openBalances}
+                      accessibilityLabel={
+                        b.owedToMe
+                          ? t('home.owesYouLine', { name: b.name, amount: formatCurrency(b.amount, currency) })
+                          : t('home.youOweLine', { name: b.name, amount: formatCurrency(b.amount, currency) })
+                      }
+                    />
+                  ))
+                )}
+              </Group>
+
+              <SectionHeading title={t('home.thisMonth')} />
+              <Group>
+                <GroupRow
+                  icon="stats-chart-outline"
+                  title={t('home.householdSpending')}
+                  trailing={<Amount value={stats.monthlyExpenses} currency={currency} size={22} />}
+                  onPress={() => navigation.navigate('Expenses')}
+                  chevron
+                />
+              </Group>
+            </>
+          ) : null}
         </View>
-      )}
-    </ScrollView>
-    </SanctuaryScreenShell>
+      </ScrollView>
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+  centered: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.xxl,
+  },
+  bodyText: {
+    fontSize: fontSizes.md,
+    textAlign: 'center',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 0,
+  },
+  overscrollFill: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: -600,
+    height: 600,
+  },
+  switcher: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: spacing.xxs + 2,
+    minHeight: 44,
+    maxWidth: '100%',
+  },
+  switcherText: {
+    fontSize: fontSizes.md + 1,
+    fontWeight: fontWeights.semibold,
+    flexShrink: 1,
+  },
+  profileButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  hero: {
+    paddingTop: spacing.md,
+  },
+  heroSkeleton: {
+    paddingTop: spacing.md,
+    opacity: 0.35,
+  },
+  heroLabel: {
+    fontSize: fontSizes.md - 1,
+    fontWeight: fontWeights.medium,
+  },
+  heroAmount: {
+    marginTop: spacing.xxs,
+  },
+  heroPeople: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs + 2,
+    marginTop: spacing.sm,
+  },
+  avatarStack: {
+    flexDirection: 'row',
+  },
+  stackedAvatar: {
+    borderWidth: 2,
+    borderRadius: 15,
+  },
+  heroLine: {
+    flex: 1,
+    fontSize: fontSizes.sm,
+    lineHeight: 19,
+  },
+  sheet: {
+    flexGrow: 1,
+    marginTop: -radii.xl,
+    borderTopLeftRadius: radii.xl,
+    borderTopRightRadius: radii.xl,
+    paddingBottom: TAB_BAR_HEIGHT + spacing.xxl,
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: spacing.xs + 2,
+    marginHorizontal: spacing.md,
+    marginTop: -ACTIONS_OVERLAP,
+  },
+  action: {
+    flex: 1,
+    minHeight: 54,
+    paddingHorizontal: spacing.sm,
+  },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.md,
+    padding: spacing.md,
+    borderRadius: radii.md,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: fontSizes.sm,
+  },
+  listSkeleton: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.xl,
+  },
+  sectionNote: {
+    fontSize: fontSizes.sm,
+    paddingHorizontal: spacing.lg,
+    marginTop: -spacing.xxs,
+    marginBottom: spacing.sm,
+  },
+  inviteWrap: {
+    marginHorizontal: spacing.md,
+  },
+  count: {
+    fontSize: fontSizes.md,
+    fontWeight: fontWeights.semibold,
+    fontVariant: ['tabular-nums'],
+  },
+  pressed: {
+    opacity: 0.7,
+  },
+});
