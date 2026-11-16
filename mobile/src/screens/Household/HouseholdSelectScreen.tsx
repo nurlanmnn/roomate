@@ -139,7 +139,9 @@ export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigatio
 
   const handleSelectHousehold = (household: Household) => {
     setSelectedHousehold(household);
-    navigation.replace('Main');
+    // Reset rather than replace: Home pushes this screen on top of the old Main,
+    // and replacing would leave the previous household's tabs mounted underneath.
+    navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
   };
 
   return (

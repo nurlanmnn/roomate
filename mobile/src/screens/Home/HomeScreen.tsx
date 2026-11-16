@@ -386,7 +386,8 @@ export const HomeScreen: React.FC = () => {
           right={profileButton}
           overlap={radii.xl + ACTIONS_OVERLAP}
         >
-          {initialLoading ? (
+          {/* No snapshot yet (still loading, or the first load failed): don't claim a balance we never received. */}
+          {initialLoading || !homeSummary ? (
             <View style={styles.heroSkeleton}>
               <LoadingSkeleton width={120} height={16} />
               <LoadingSkeleton width={220} height={84} style={{ marginTop: spacing.sm }} />
