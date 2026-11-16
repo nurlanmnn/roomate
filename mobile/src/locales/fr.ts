@@ -261,6 +261,7 @@ export default {
     youOwe: 'Vous devez',
     youAreOwed: 'On vous doit',
     allSettled: 'Tout est réglé !',
+    evenOverall: 'Vous êtes quittes au total',
     thisMonth: 'Ce Mois',
     lastMonth: 'Mois Dernier',
     events: 'Événements',

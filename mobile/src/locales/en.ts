@@ -257,6 +257,7 @@ export default {
     youOwe: 'You owe',
     youAreOwed: 'You are owed',
     allSettled: 'All settled up!',
+    evenOverall: "You're even overall",
     thisMonth: 'This month',
     lastMonth: 'Last month',
     events: 'Events',

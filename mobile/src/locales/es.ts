@@ -261,6 +261,7 @@ export default {
     youOwe: 'Debes',
     youAreOwed: 'Te deben',
     allSettled: '¡Todo liquidado!',
+    evenOverall: 'Estás a mano en total',
     thisMonth: 'Este Mes',
     lastMonth: 'Mes Pasado',
     events: 'Eventos',

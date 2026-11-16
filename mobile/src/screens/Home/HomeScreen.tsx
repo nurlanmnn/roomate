@@ -315,8 +315,16 @@ export const HomeScreen: React.FC = () => {
     : [];
 
   const net = stats.netBalance;
-  const settled = Math.abs(net) < 0.005;
-  const heroLabel = settled ? t('home.allSettled') : net > 0 ? t('home.youAreOwed') : t('home.youOwe');
+  const even = Math.abs(net) < 0.005;
+  // A zero net can still hide open debts in both directions (owe Alice, Bob owes you): only call it settled when nothing is open.
+  const settled = even && !myBalances.some((b) => b.amount >= 0.005);
+  const heroLabel = settled
+    ? t('home.allSettled')
+    : even
+      ? t('home.evenOverall')
+      : net > 0
+        ? t('home.youAreOwed')
+        : t('home.youOwe');
   const heroPeople = myBalances.slice(0, 2);
   const heroLines = heroPeople.map((b) =>
     b.owedToMe

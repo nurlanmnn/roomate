@@ -261,6 +261,7 @@ export default {
     youOwe: 'Borcunuz',
     youAreOwed: 'Alacağınız',
     allSettled: 'Tüm hesaplar kapatıldı!',
+    evenOverall: 'Genel olarak denksiniz',
     thisMonth: 'Bu Ay',
     lastMonth: 'Geçen Ay',
     events: 'Etkinlikler',

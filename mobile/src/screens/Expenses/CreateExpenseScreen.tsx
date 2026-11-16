@@ -850,6 +850,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
 
       // Home dashboard aggregates (spending totals, insights) need the server
       // to recompute — drop so the next focus refetches fresh numbers.
+      invalidateCache(`expenses:${selectedHousehold._id}:summary`);
       invalidateCache(`home:dashboard:${selectedHousehold._id}`);
       invalidateCache(`settle-up:${selectedHousehold._id}`);
       invalidateCache(`household:${selectedHousehold._id}:transaction-count`);

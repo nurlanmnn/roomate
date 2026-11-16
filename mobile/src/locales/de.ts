@@ -261,6 +261,7 @@ export default {
     youOwe: 'Sie schulden',
     youAreOwed: 'Man schuldet Ihnen',
     allSettled: 'Alles abgerechnet!',
+    evenOverall: 'Insgesamt ausgeglichen',
     thisMonth: 'Dieser Monat',
     lastMonth: 'Letzter Monat',
     events: 'Ereignisse',
