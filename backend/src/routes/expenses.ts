@@ -9,6 +9,7 @@ import { computeExpenseInsights } from '../utils/expenseInsightsAggregate';
 import { computeHomeExpenseSummary } from '../utils/expenseHomeSummary';
 import { checkHouseholdMember } from '../utils/householdAccess';
 import { notificationService } from '../services/notificationService';
+import { runInBackground } from '../utils/background';
 import mongoose from 'mongoose';
 import { isoDateSchema, objectIdSchema, optionalTrimmedString, trimmedString } from '../utils/validation';
 
@@ -272,6 +273,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
     // Send notification to household members
     const creator = await User.findById(userId);
     if (creator) {
+      runInBackground(
       notificationService.notifyExpenseAdded(
         household.members.map(m => m.toString()),
         userId,
@@ -280,7 +282,9 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
         data.totalAmount,
         data.householdId,
         household.name
-      ).catch(err => console.error('Notification error:', err));
+      ),
+      'Notification'
+    );
     }
 
     res.status(201).json(expense);

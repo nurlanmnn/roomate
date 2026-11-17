@@ -6,6 +6,7 @@ import { User } from '../models/User';
 import { authMiddleware } from '../middleware/auth';
 import { checkHouseholdMember } from '../utils/householdAccess';
 import { notificationService } from '../services/notificationService';
+import { runInBackground } from '../utils/background';
 import { isoDateSchema, objectIdSchema, optionalTrimmedString, trimmedString } from '../utils/validation';
 
 const router = express.Router();
@@ -124,6 +125,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
     // Send notification to household members
     const creator = await User.findById(userId);
     if (creator) {
+      runInBackground(
       notificationService.notifyEventAdded(
         household.members.map(m => m.toString()),
         userId,
@@ -132,7 +134,9 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
         new Date(data.date),
         data.householdId,
         household.name
-      ).catch(err => console.error('Notification error:', err));
+      ),
+      'Notification'
+    );
     }
 
     res.status(201).json(event);
@@ -180,6 +184,7 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
     const household = await Household.findById(event.householdId).select('members name').lean();
     const updater = await User.findById(userId);
     if (household && updater) {
+      runInBackground(
       notificationService.notifyEventUpdated(
         household.members.map(m => m.toString()),
         userId,
@@ -187,7 +192,9 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
         data.title,
         event.householdId.toString(),
         household.name
-      ).catch(err => console.error('Notification error:', err));
+      ),
+      'Notification'
+    );
     }
 
     res.json(event);

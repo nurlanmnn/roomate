@@ -34,6 +34,12 @@ export const config = {
    * Create a token with push permissions and set: EXPO_ACCESS_TOKEN=...
    */
   expoAccessToken: (process.env.EXPO_ACCESS_TOKEN || '').trim(),
+  /**
+   * Shared secret for GET /internal/run-scheduler. Vercel Schedules send it as
+   * `Authorization: Bearer <CRON_SECRET>` automatically when the env var is set.
+   * If unset, the endpoint rejects every call.
+   */
+  cronSecret: (process.env.CRON_SECRET || '').trim(),
 };
 
 export const getEnv = () => config;

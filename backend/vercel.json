@@ -1,0 +1,18 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "functions": {
+    "api/index.ts": {
+      "maxDuration": 60,
+      "includeFiles": "public/legal/**"
+    }
+  },
+  "rewrites": [{ "source": "/(.*)", "destination": "/api" }],
+  "schedules": {
+    "notification-reminders": {
+      "schedule": "0 * * * *",
+      "path": "/internal/run-scheduler",
+      "requestMethod": "GET"
+    }
+  }
+}
