@@ -11,7 +11,7 @@ type RoomateMarkProps = {
 
 /**
  * The Roomate mark: a roof line over two dots, a roommate and you (marigold).
- * Geometry matches scripts/generate-logo.py and assets/logo.svg.
+ * Geometry matches mobile/scripts/generate-logo.py and assets/logo.svg.
  */
 export const RoomateMark: React.FC<RoomateMarkProps> = ({ size = 64, color }) => {
   const colors = useThemeColors();
