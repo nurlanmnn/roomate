@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from '../../components/AppText';
 import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreenShell';
 import { EnamelHeader } from '../../components/ui/EnamelHeader';
+import { RoomateMark } from '../../components/ui/RoomateMark';
 import { Sheet } from '../../components/ui/Sheet';
 import { useLanguage } from '../../context/LanguageContext';
 import { fonts, fontSizes, fontWeights, spacing, useThemeColors } from '../../theme';
@@ -32,6 +33,7 @@ export const AuthScreenLayout: React.FC<AuthScreenLayoutProps> = ({
         <ScrollView style={styles.fill} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           <EnamelHeader leading={
             <View style={[styles.plaque, landing && styles.landingPlaque]}>
+              {landing ? <View style={styles.mark}><RoomateMark size={72} /></View> : null}
               <AppText accessibilityRole="header" style={[styles.brand, { color: colors.onEnamel }]}>Roomate</AppText>
               <AppText style={[styles.description, { color: colors.onEnamelSecondary }]}>{t('auth.appTagline')}</AppText>
             </View>
@@ -60,6 +62,7 @@ const styles = StyleSheet.create({
   scrollContent: { flexGrow: 1 },
   plaque: { paddingTop: spacing.lg, paddingBottom: spacing.lg },
   landingPlaque: { paddingTop: spacing.xxxl, paddingBottom: spacing.xxxl },
+  mark: { marginBottom: spacing.lg },
   brand: { fontFamily: fonts.displayExtrabold, fontSize: 52 },
   description: { fontSize: fontSizes.md, marginTop: spacing.xs },
   content: { width: '100%', maxWidth: 520, alignSelf: 'center', paddingHorizontal: spacing.lg, paddingTop: spacing.xl },

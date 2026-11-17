@@ -319,6 +319,9 @@ Four radii with fixed jobs: `sm` (10) for icon wells, chips and badges; `md` (14
 
 ## Components
 
+### Logo mark
+"Two under one roof": a rounded roof line over two dots, a roommate (white) and you (marigold), on the enamel field. The app icon is the mark on full-bleed cobalt; the launch screen is the white mark centred on cobalt; the landing plaque shows `RoomateMark` (72pt) above the wordmark. All PNGs come from `scripts/generate-logo.py`; the vector master is `mobile/assets/logo.svg`. The marigold dot is the mark's one use of marigold outside "yours" UI, and it still means "you".
+
 ### Enamel header
 Cobalt field with title (or a custom `leading`, such as the household switcher on Home), optional subtitle, right-aligned `HeaderIconButton`s (44pt circle, 1.5pt keyline ring, 22pt white icon), and one key figure as children. Status bar text is light in both appearances.
 

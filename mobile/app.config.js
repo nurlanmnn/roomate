@@ -26,7 +26,8 @@ module.exports = () => {
       icon: './assets/icon.png',
       userInterfaceStyle: 'light',
       splash: {
-        backgroundColor: '#ffffff',
+        image: './assets/splash-icon.png',
+        backgroundColor: '#1D3BA8',
         resizeMode: 'contain',
       },
       assetBundlePatterns: ['**/*'],
