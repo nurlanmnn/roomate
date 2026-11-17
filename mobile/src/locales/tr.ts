@@ -655,6 +655,25 @@ export default {
   },
 
   // Auth
+  // First-launch intro (before Landing)
+  intro: {
+    skip: "Geç",
+    next: "İleri",
+    pageOf: "Sayfa {{page}} / {{total}}",
+    moneyCaption: "Sam sana borçlu",
+    moneyExample: "Sam sana 24,50 borçlu",
+    moneyTitle: "Her faturayı bölüş",
+    moneyBody: "Bir harcamayı bir kez ekle. Kimin kime borçlu olduğunu Roomate hesaplar.",
+    shoppingCaption: "alınacak",
+    shoppingExample: "6 ürün alınacak",
+    shoppingTitle: "Ortak tek liste",
+    shoppingBody: "Herkes evin neye ihtiyacı olduğunu ve neyin alındığını görür.",
+    choresExample: "Çöpü çıkar",
+    choresCaption: "Bu akşam",
+    choresTitle: "Görevler sırayla",
+    choresBody: "Nöbetler ve ev etkinlikleri tek takvimde; sıra sana geldiğinde hatırlatma.",
+  },
+
   auth: {
     login: 'Giriş Yap',
     signup: 'Kayıt Ol',

@@ -655,6 +655,25 @@ export default {
   },
 
   // Auth
+  // First-launch intro (before Landing)
+  intro: {
+    skip: "Überspringen",
+    next: "Weiter",
+    pageOf: "Seite {{page}} von {{total}}",
+    moneyCaption: "Sam schuldet dir",
+    moneyExample: "Sam schuldet dir 24,50",
+    moneyTitle: "Jede Rechnung teilen",
+    moneyBody: "Trag eine Ausgabe einmal ein. Roomate rechnet aus, wer wem was schuldet.",
+    shoppingCaption: "zu kaufen",
+    shoppingExample: "6 Artikel zu kaufen",
+    shoppingTitle: "Eine gemeinsame Liste",
+    shoppingBody: "Alle sehen, was der Haushalt braucht und was schon gekauft ist.",
+    choresExample: "Müll rausbringen",
+    choresCaption: "Heute Abend",
+    choresTitle: "Aufgaben im Wechsel",
+    choresBody: "Dienste und Termine in einem Kalender, mit Erinnerung, wenn du dran bist.",
+  },
+
   auth: {
     login: 'Anmelden',
     signup: 'Registrieren',
