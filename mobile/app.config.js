@@ -14,7 +14,7 @@ module.exports = () => {
   const raw =
     process.env.EXPO_PUBLIC_API_URL ||
     process.env.API_URL ||
-    'https://api.roomate.us';
+    'https://roomate-api.vercel.app';
   const apiUrl = raw.startsWith('http') ? raw : `https://${raw}`;
 
   return {
