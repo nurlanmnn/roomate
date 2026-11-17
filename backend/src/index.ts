@@ -83,6 +83,12 @@ app.get('/legal/privacy', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'legal', 'privacy.html'));
 });
 
+/** Public support page (App Store Connect Support URL). Canonical: https://api.roomate.us/legal/support */
+app.get('/legal/support', (req, res) => {
+  res.type('html');
+  res.sendFile(path.join(__dirname, '..', 'public', 'legal', 'support.html'));
+});
+
 app.get('/privacy', (_req, res) => {
   res.redirect(301, '/legal/privacy');
 });
