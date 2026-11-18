@@ -10,6 +10,7 @@ import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreen
 import { Amount } from '../../components/ui/Amount';
 import { Avatar } from '../../components/ui/Avatar';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { ChipRow } from '../../components/ui/ChipRow';
 import { Group, GroupRow, SectionHeading } from '../../components/ui/Group';
 import { useAuth } from '../../context/AuthContext';
 import { useHousehold } from '../../context/HouseholdContext';
@@ -83,37 +84,6 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any; }> = () => {
           fontSize: fontSizes.md,
           fontWeight: fontWeights.semibold,
           color: colors.text,
-        },
-        filterRow: {
-          flexWrap: 'wrap',
-          flexDirection: 'row',
-          padding: spacing.xxs,
-          gap: spacing.xxs,
-          backgroundColor: colors.primaryUltraSoft,
-          borderRadius: radii.md,
-        },
-        filterButton: {
-          minHeight: 44,
-          flexBasis: 65,
-          flex: 1,
-          paddingVertical: spacing.xs,
-          paddingHorizontal: spacing.sm,
-          borderRadius: radii.sm,
-          alignItems: 'center',
-          justifyContent: 'center',
-          minWidth: 50,
-        },
-        filterButtonActive: {
-          backgroundColor: colors.primary,
-        },
-        filterButtonText: {
-          fontSize: fontSizes.xs,
-          fontWeight: fontWeights.medium,
-          color: colors.textSecondary,
-        },
-        filterButtonTextActive: {
-          color: colors.onPrimary,
-          fontWeight: fontWeights.semibold,
         },
         emptyContainer: {
           flex: 1,
@@ -313,41 +283,23 @@ export const SettlementHistoryScreen: React.FC<{ navigation: any; }> = () => {
         </View>
 
         <View><SectionHeading title={t('settlementHistory.sectionPeriod')} />
-          <Group>
-            <View style={styles.filterRow}>
-              {(['all', 'month', '3months', '6months', 'year'] as DateFilter[]).map((filter) => (
-                <TouchableOpacity
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: dateFilter === filter }}
-                  key={filter}
-                  style={[
-                    styles.filterButton,
-                    dateFilter === filter && styles.filterButtonActive,
-                  ]}
-                  onPress={() => setDateFilter(filter)}
-                  activeOpacity={0.85}
-                >
-                  <AppText
-                    style={[
-                      styles.filterButtonText,
-                      dateFilter === filter && styles.filterButtonTextActive,
-                    ]}
-                  >
-                    {filter === 'all'
-                      ? t('time.all')
-                      : filter === 'month'
-                        ? t('time.month')
-                        : filter === '3months'
-                          ? t('monthlyTrend.lastNMonths', { count: 3 })
-                          : filter === '6months'
-                            ? t('monthlyTrend.lastNMonths', { count: 6 })
-                            : t('time.year')}
-                  </AppText>
-                  {dateFilter === filter && <Ionicons name="checkmark-outline" size={16} color={colors.onPrimary} />}
-                </TouchableOpacity>
-              ))}
-            </View>
-          </Group>
+          <ChipRow
+            options={(['all', 'month', '3months', '6months', 'year'] as DateFilter[]).map((filter) => ({
+              value: filter,
+              label:
+                filter === 'all'
+                  ? t('time.all')
+                  : filter === 'month'
+                    ? t('time.month')
+                    : filter === '3months'
+                      ? t('monthlyTrend.lastNMonths', { count: 3 })
+                      : filter === '6months'
+                        ? t('monthlyTrend.lastNMonths', { count: 6 })
+                        : t('time.year'),
+            }))}
+            selected={dateFilter}
+            onSelect={setDateFilter}
+          />
         </View>
 
         {loading ? (

@@ -21,7 +21,8 @@ import { formatCurrency } from '../../utils/formatCurrency';
 import { formatDate } from '../../utils/dateHelpers';
 import { getDateFnsLocale } from '../../utils/dateLocales';
 import { useHouseholdCurrency } from '../../utils/useHouseholdCurrency';
-import { useThemeColors, fontSizes, fontWeights, spacing, radii, TAB_BAR_HEIGHT } from '../../theme';
+import { useThemeColors, fonts, fontSizes, fontWeights, spacing, radii, TAB_BAR_HEIGHT, DISPLAY_MAX_FONT_SCALE } from '../../theme';
+import { format, type Locale } from 'date-fns';
 import { getCached, dedupedFetch, DEFAULT_STALE_TIME_MS, isFresh } from '../../utils/queryCache';
 import { prefetchBalanceHistoryData } from '../../utils/balanceHistoryDataCache';
 
@@ -37,20 +38,6 @@ const homeDashboardKey = (householdId: string) => `home:dashboard:${householdId}
 /** How far the action buttons ride up over the enamel field. */
 const ACTIONS_OVERLAP = 27;
 const HOME_EVENTS_SHOWN = 3;
-
-const EVENT_ICONS: Record<Event['type'], keyof typeof Ionicons.glyphMap> = {
-  bill: 'receipt-outline',
-  cleaning: 'sparkles-outline',
-  social: 'people-outline',
-  meal: 'restaurant-outline',
-  meeting: 'chatbubbles-outline',
-  maintenance: 'construct-outline',
-  shopping: 'cart-outline',
-  trip: 'airplane-outline',
-  birthday: 'gift-outline',
-  reminder: 'alarm-outline',
-  other: 'calendar-outline',
-};
 
 /** First word of a display name, so the balance line on the enamel stays short. */
 const firstName = (name?: string | null): string => (name ?? '').trim().split(/\s+/)[0] || (name ?? '');
@@ -543,7 +530,7 @@ export const HomeScreen: React.FC = () => {
                 {nextEvents.map((event) => (
                   <GroupRow
                     key={`event-${event._id}`}
-                    icon={EVENT_ICONS[event.type] ?? 'calendar-outline'}
+                    leading={<DateTile date={event.date} locale={dateLocale} />}
                     title={event.title}
                     subtitle={formatDate(event.date, dateLocale, relativeDays)}
                     onPress={() => navigation.navigate('Calendar')}
@@ -597,7 +584,27 @@ export const HomeScreen: React.FC = () => {
   );
 };
 
+/** An event's day as a tiny calendar leaf: month in caps over the day in signage numerals. */
+const DateTile: React.FC<{ date: string | Date; locale?: Locale }> = ({ date, locale }) => {
+  const colors = useThemeColors();
+  const d = new Date(date);
+  if (Number.isNaN(d.getTime())) return null;
+  return (
+    <View style={styles.dateTile} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+      <AppText style={[styles.dateMonth, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.2}>
+        {format(d, 'MMM', { locale }).replace('.', '').toUpperCase()}
+      </AppText>
+      <AppText style={[styles.dateDay, { color: colors.text }]} maxFontSizeMultiplier={DISPLAY_MAX_FONT_SCALE}>
+        {format(d, 'd')}
+      </AppText>
+    </View>
+  );
+};
+
 const styles = StyleSheet.create({
+  dateTile: { width: 30, alignItems: 'center' },
+  dateMonth: { fontSize: 10, fontWeight: fontWeights.semibold, letterSpacing: 0.5 },
+  dateDay: { fontFamily: fonts.displayExtrabold, fontSize: 22, lineHeight: 23, includeFontPadding: false },
   root: {
     flex: 1,
   },

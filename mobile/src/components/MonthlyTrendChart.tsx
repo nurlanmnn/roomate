@@ -1,11 +1,11 @@
-import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo, useState } from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useLanguage } from '../context/LanguageContext';
 import { fontSizes, fontWeights, radii, spacing, useThemeColors } from '../theme';
 import { toBcp47Locale } from '../utils/dateLocales';
 import { formatCurrency } from '../utils/formatCurrency';
 import { useHouseholdCurrency } from '../utils/useHouseholdCurrency';
+import { ChipRow } from './ui/ChipRow';
 import { AppText } from './AppText';
 import { Amount } from './ui/Amount';
 
@@ -31,23 +31,15 @@ export const MonthlyTrendChart = ({ monthlyTrend }: MonthlyTrendChartProps) => {
   return (
     <View style={[styles.section, { backgroundColor: colors.surface }]}>
       <AppText accessibilityRole="header" style={[styles.title, { color: colors.text }]}>{t('monthlyTrend.title')}</AppText>
-      <View style={[styles.ranges, { backgroundColor: colors.background }]}>
-        {([1, 3, 6] as MonthRange[]).map(range => (
-          <TouchableOpacity
-            key={range}
-            accessibilityRole="button"
-            accessibilityState={{ selected: selectedRange === range }}
-            accessibilityLabel={range === 1 ? t('monthlyTrend.lastMonth') : t('monthlyTrend.lastNMonths', { count: range })}
-            onPress={() => setSelectedRange(range)}
-            style={[styles.range, selectedRange === range && { backgroundColor: colors.primary }]}
-          >
-            <AppText style={[styles.rangeText, { color: selectedRange === range ? colors.onPrimary : colors.textSecondary }]}>
-              {range === 1 ? t('monthlyTrend.lastMonth') : t('monthlyTrend.lastNMonths', { count: range })}
-            </AppText>
-            {selectedRange === range && <Ionicons name="checkmark-outline" size={16} color={colors.onPrimary} />}
-          </TouchableOpacity>
-        ))}
-      </View>
+      <ChipRow
+        inset={0}
+        options={([1, 3, 6] as MonthRange[]).map(range => ({
+          value: range,
+          label: range === 1 ? t('monthlyTrend.lastMonth') : t('monthlyTrend.lastNMonths', { count: range }),
+        }))}
+        selected={selectedRange}
+        onSelect={setSelectedRange}
+      />
       <View style={styles.summary}>
         <AppText style={[styles.secondary, { color: colors.textSecondary }]}>
           {selectedRange === 1 ? t('monthlyTrend.lastMonth') : t('monthlyTrend.lastNMonths', { count: selectedRange })}
@@ -82,9 +74,6 @@ export const MonthlyTrendChart = ({ monthlyTrend }: MonthlyTrendChartProps) => {
 const styles = StyleSheet.create({
   section: { padding: spacing.md, borderRadius: radii.lg, marginBottom: spacing.md },
   title: { fontSize: 20, fontWeight: fontWeights.bold, marginBottom: spacing.md },
-  ranges: { flexDirection: 'row', flexWrap: 'wrap', padding: spacing.xxs, borderRadius: radii.sm, gap: spacing.xxs },
-  range: { flexGrow: 1, flexBasis: 70, minHeight: 44, padding: spacing.xs, borderRadius: radii.sm, justifyContent: 'center', alignItems: 'center', gap: spacing.xxs },
-  rangeText: { fontSize: fontSizes.sm, textAlign: 'center', fontWeight: fontWeights.medium },
   summary: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, paddingVertical: spacing.md },
   secondary: { fontSize: fontSizes.sm, flexShrink: 1 },
   plot: { height: 210, flexDirection: 'row', gap: spacing.xs, borderBottomWidth: StyleSheet.hairlineWidth, marginBottom: spacing.sm },

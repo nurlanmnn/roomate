@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Switch, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { GroupRow } from '../ui/Group';
-import { useThemeColors, radii } from '../../theme';
+import { useThemeColors } from '../../theme';
 
 interface ToggleRowProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -24,8 +24,6 @@ export const ToggleRow: React.FC<ToggleRowProps> = ({
   onValueChange,
 }) => {
   const colors = useThemeColors();
-  const outlineIcon = `${icon.replace(/-outline$/, '')}-outline` as keyof typeof Ionicons.glyphMap;
-
   return (
     <GroupRow
       title={title}
@@ -36,11 +34,7 @@ export const ToggleRow: React.FC<ToggleRowProps> = ({
       accessibilityLabel={title}
       accessibilityHint={subtitle}
       accessibilityState={{ checked: value }}
-      leading={
-        <View style={[styles.iconWell, { backgroundColor: colors.primaryUltraSoft }]}>
-          <Ionicons name={outlineIcon} size={22} color={colors.primary} />
-        </View>
-      }
+      icon={icon}
       trailing={
         // Claim the touch here so a tap on the switch isn't also delivered to the
         // row's onPress, which would toggle twice and snap the value back.
@@ -61,13 +55,6 @@ export const ToggleRow: React.FC<ToggleRowProps> = ({
 };
 
 const styles = StyleSheet.create({
-  iconWell: {
-    width: 36,
-    height: 36,
-    borderRadius: radii.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   switchTarget: {
     minWidth: 52,
     minHeight: 44,
