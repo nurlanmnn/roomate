@@ -20,6 +20,7 @@ import { fontSizes, fontWeights, radii, spacing, useTheme, useThemeColors } from
 import { toBcp47Locale } from '../utils/dateLocales';
 import { AppText } from './AppText';
 import { FormTextInput } from './FormTextInput';
+import { SearchBar } from './ui/SearchBar';
 import { PrimaryButton } from './PrimaryButton';
 
 export type SortOption = 'newest' | 'oldest' | 'amount' | 'category';
@@ -547,12 +548,11 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
                       }}
                       scrollEventThrottle={16}
                     >
-                      <FormTextInput
-                        label={t('common.search')}
+                      <SearchBar
                         value={filters.search}
                         onChangeText={(text) => updateFilter('search', text)}
                         placeholder={t('expenses.searchExpenses')}
-                        autoCapitalize="none"
+                        style={{ marginBottom: spacing.md }}
                       />
 
                       <View
@@ -695,7 +695,8 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
                               value={filters.amountMin || ''}
                               onChangeText={(text) => updateFilter('amountMin', text)}
                               placeholder={t('expenses.min')}
-                              keyboardType="numeric"
+                              keyboardType="decimal-pad"
+                              containerStyle={{ marginBottom: 0 }}
                             />
                           </View>
                           <View style={styles.amountInput}>
@@ -703,7 +704,8 @@ export const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
                               value={filters.amountMax || ''}
                               onChangeText={(text) => updateFilter('amountMax', text)}
                               placeholder={t('expenses.max')}
-                              keyboardType="numeric"
+                              keyboardType="decimal-pad"
+                              containerStyle={{ marginBottom: 0 }}
                             />
                           </View>
                         </View>

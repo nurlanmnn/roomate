@@ -41,14 +41,21 @@ export const LoginScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
         onChangeText={setEmail}
         placeholder={t('auth.email')}
         keyboardType="email-address"
+        textContentType="emailAddress"
+        autoComplete="email"
+        autoCorrect={false}
+        returnKeyType="next"
       />
 
       <FormTextInput
         label={t('auth.password')}
         value={password}
         onChangeText={setPassword}
-        placeholder={t('auth.password')}
         secureTextEntry
+        textContentType="password"
+        autoComplete="current-password"
+        returnKeyType="go"
+        onSubmitEditing={handleLogin}
       />
 
       <TouchableOpacity

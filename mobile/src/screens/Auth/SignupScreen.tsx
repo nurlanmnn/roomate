@@ -50,7 +50,7 @@ export const SignupScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
 
   return (
     <AuthScreenLayout title={t('auth.createAccount')} subtitle={t('auth.getStarted')} onBack={() => navigation.navigate('Landing')}>
-      <FormTextInput label={t('auth.name')} value={name} onChangeText={setName} placeholder={t('auth.name')} />
+      <FormTextInput label={t('auth.name')} value={name} onChangeText={setName} autoCapitalize="words" textContentType="name" autoComplete="name" returnKeyType="next" />
 
       <FormTextInput
         label={t('auth.email')}
@@ -58,22 +58,28 @@ export const SignupScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
         onChangeText={setEmail}
         placeholder={t('auth.email')}
         keyboardType="email-address"
+        textContentType="emailAddress"
+        autoComplete="email"
+        autoCorrect={false}
+        returnKeyType="next"
       />
 
       <FormTextInput
         label={t('auth.password')}
         value={password}
         onChangeText={setPassword}
-        placeholder={t('auth.password')}
         secureTextEntry
+        textContentType="newPassword"
+        autoComplete="new-password"
       />
 
       <FormTextInput
         label={t('auth.confirmPassword')}
         value={confirmPassword}
         onChangeText={setConfirmPassword}
-        placeholder={t('auth.confirmPassword')}
         secureTextEntry
+        textContentType="newPassword"
+        autoComplete="new-password"
       />
 
       <PrimaryButton title={t('auth.signup')} onPress={handleSignup} loading={loading} />

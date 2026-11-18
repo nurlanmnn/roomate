@@ -9,7 +9,6 @@ import {
   TouchableOpacity,
   Modal,
   FlatList,
-  TextInput,
   Pressable,
   Keyboard,
 } from 'react-native';
@@ -17,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FIELD_LABEL_WIDTH, Group } from './ui/Group';
+import { SearchBar } from './ui/SearchBar';
 import {
   SUPPORTED_CURRENCIES,
   getCurrencyOption,
@@ -186,15 +186,10 @@ export const CurrencyPicker: React.FC<CurrencyPickerProps> = ({
                 event.stopPropagation();
               }}
             >
-              <Ionicons name="search-outline" size={18} color={colors.textSecondary} />
-              <TextInput
-                accessibilityLabel={t('currency.searchPlaceholder')}
+              <SearchBar
                 value={search}
                 onChangeText={setSearch}
                 placeholder={t('currency.searchPlaceholder')}
-                placeholderTextColor={colors.textTertiary}
-                style={styles.searchInput}
-                autoCorrect={false}
                 autoCapitalize="characters"
               />
             </View>
@@ -373,22 +368,6 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
     searchWrap: {
       marginHorizontal: spacing.lg,
       marginTop: spacing.md,
-      paddingHorizontal: spacing.md,
-      paddingVertical: spacing.xs,
-      borderRadius: radii.md,
-      borderWidth: 1,
-      borderColor: colors.border,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.sm,
-      backgroundColor: colors.background,
-    },
-    searchInput: {
-      flex: 1,
-      minHeight: 44,
-      fontSize: fontSizes.md,
-      color: colors.text,
-      paddingVertical: spacing.xs,
     },
     listGroup: {
       flex: 1,

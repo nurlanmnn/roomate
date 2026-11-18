@@ -37,7 +37,9 @@ export const ForgotPasswordScreen: React.FC<{ navigation: any }> = ({ navigation
         onChangeText={setEmail}
         placeholder={t('auth.email')}
         keyboardType="email-address"
-        autoCapitalize="none"
+        textContentType="emailAddress"
+        autoComplete="email"
+        autoCorrect={false}
       />
 
       <PrimaryButton title={t('auth.sendResetCode')} onPress={handleSubmit} loading={loading} />

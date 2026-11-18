@@ -38,8 +38,8 @@ const AppContent = () => {
   return (
     <>
       <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
-      <OfflineBanner />
       <AppNavigator />
+      <OfflineBanner />
       {/* Hidden hotspot: tap 6x quickly to toggle perf overlay (works in TestFlight). */}
       <Pressable
         onPress={handleSecretTap}

@@ -1,113 +1,214 @@
 import React from 'react';
-import { TextInput, StyleSheet, Text, View, Platform, ViewStyle } from 'react-native';
+import { Platform, Pressable, StyleSheet, TextInput, TextInputProps, View, ViewStyle } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { AppText } from './AppText';
-import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 import { useThemeColors, fontSizes, fontWeights, radii, spacing } from '../theme';
 
-interface FormTextInputProps {
+type FormTextInputProps = Omit<TextInputProps, 'style' | 'onChangeText' | 'value'> & {
   label?: string;
   value: string;
   onChangeText: (text: string) => void;
-  placeholder?: string;
-  secureTextEntry?: boolean;
-  keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad' | 'number-pad';
   error?: string;
-  multiline?: boolean;
-  numberOfLines?: number;
-  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   helperText?: string;
-  onFocus?: () => void;
-  onBlur?: () => void;
-  autoFocus?: boolean;
-  /** Merged with the outer container (e.g. marginBottom: 0 for last field in a group). */
+  /**
+   * boxed: a standalone field on the porcelain ground (auth, sheets, modals).
+   * inset: a row inside a `Group`; the group's white fill is the field, so it carries no border of its own.
+   */
+  variant?: 'boxed' | 'inset';
+  /** Merged with the outer container (e.g. marginBottom: 0 for the last boxed field). */
   containerStyle?: ViewStyle;
-}
+};
 
-export const FormTextInput: React.FC<FormTextInputProps> = ({
-  label,
-  value,
-  onChangeText,
-  placeholder,
-  secureTextEntry,
-  keyboardType = 'default',
-  error,
-  multiline,
-  numberOfLines,
-  autoCapitalize = 'none',
-  helperText,
-  onFocus,
-  onBlur,
-  autoFocus,
-  containerStyle,
-}) => {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
+/**
+ * Labelled text field. The label sits above the value so long German and Turkish labels wrap
+ * instead of truncating. Focus turns the frame (boxed) or the label (inset) cobalt; an error adds
+ * an icon and a message so it never relies on colour alone. Secure fields get a show/hide toggle.
+ */
+export const FormTextInput = React.forwardRef<TextInput, FormTextInputProps>(function FormTextInput(
+  {
+    label,
+    value,
+    onChangeText,
+    placeholder,
+    secureTextEntry,
+    keyboardType = 'default',
+    error,
+    multiline,
+    numberOfLines,
+    autoCapitalize = 'none',
+    helperText,
+    onFocus,
+    onBlur,
+    variant = 'boxed',
+    containerStyle,
+    editable = true,
+    accessibilityLabel,
+    ...rest
+  },
+  ref
+) {
   const colors = useThemeColors();
-  const styles = React.useMemo(() => StyleSheet.create({
-    container: {
-      marginBottom: spacing.md,
-    },
-    label: {
-      fontSize: fontSizes.sm,
-      fontWeight: fontWeights.semibold,
-      marginBottom: spacing.xs,
-      color: colors.textSecondary,
-    },
-    input: {
-      borderWidth: 1.5,
-      borderColor: colors.border,
-      borderRadius: radii.md,
-      paddingHorizontal: spacing.md,
-      paddingVertical: Platform.select({ ios: spacing.md, android: spacing.sm, default: spacing.md }),
-      fontSize: fontSizes.md,
-      backgroundColor: colors.surface,
-      color: colors.text,
-    },
-    multilineInput: {
-      minHeight: 80,
-      paddingTop: spacing.md,
-      paddingBottom: spacing.md,
-    },
-    inputError: {
-      borderColor: colors.danger,
-    },
-    helperText: {
-      color: colors.muted,
-      fontSize: fontSizes.xs,
-      marginTop: spacing.xs,
-    },
-    errorText: {
-      color: colors.danger,
-      fontSize: fontSizes.xs,
-      marginTop: spacing.xs,
-    },
-  }), [colors, isDark]);
+  const { t } = useLanguage();
+  const [focused, setFocused] = React.useState(false);
+  const [revealed, setRevealed] = React.useState(false);
+  const inset = variant === 'inset';
+  const hasError = Boolean(error);
 
-  return (
-    <View style={[styles.container, containerStyle]}>
-      {label && <AppText style={styles.label}>{label}</AppText>}
+  // A placeholder that repeats the label above it is noise; keep only distinct hints.
+  const hint = placeholder && placeholder.trim() !== label?.trim() ? placeholder : undefined;
+
+  const frameColor = hasError ? colors.danger : focused ? colors.primary : colors.border;
+  const labelColor = hasError ? colors.danger : inset && focused ? colors.primary : colors.textSecondary;
+
+  const field = (
+    <View
+      style={[
+        inset ? styles.insetFrame : styles.boxFrame,
+        !inset && { backgroundColor: colors.surface, borderColor: frameColor },
+        !editable && styles.readOnly,
+      ]}
+    >
       <TextInput
-        style={[
-          styles.input,
-          multiline && styles.multilineInput,
-          error && styles.inputError,
-        ]}
+        ref={ref}
         value={value}
         onChangeText={onChangeText}
-        placeholder={placeholder}
-        secureTextEntry={secureTextEntry}
+        placeholder={hint}
+        placeholderTextColor={colors.textTertiary}
+        selectionColor={colors.primary}
+        cursorColor={colors.primary}
+        secureTextEntry={secureTextEntry && !revealed}
         keyboardType={keyboardType}
         multiline={multiline}
         numberOfLines={multiline ? numberOfLines : undefined}
         autoCapitalize={autoCapitalize}
-        placeholderTextColor={colors.muted}
         textAlignVertical={multiline ? 'top' : 'center'}
-        onFocus={onFocus}
-        onBlur={onBlur}
-        autoFocus={autoFocus}
+        editable={editable}
+        accessibilityLabel={accessibilityLabel ?? label ?? placeholder}
+        accessibilityHint={error || helperText || rest.accessibilityHint}
+        onFocus={(e) => {
+          setFocused(true);
+          onFocus?.(e);
+        }}
+        onBlur={(e) => {
+          setFocused(false);
+          onBlur?.(e);
+        }}
+        style={[
+          styles.input,
+          inset ? styles.insetInput : styles.boxInput,
+          multiline && styles.multiline,
+          { color: colors.text },
+        ]}
+        {...rest}
       />
-      {!error && !!helperText && <AppText style={styles.helperText}>{helperText}</AppText>}
-      {error && <AppText style={styles.errorText}>{error}</AppText>}
+      {secureTextEntry ? (
+        <Pressable
+          onPress={() => setRevealed((v) => !v)}
+          accessibilityRole="button"
+          accessibilityLabel={revealed ? t('common.hidePassword') : t('common.showPassword')}
+          hitSlop={4}
+          style={({ pressed }) => [styles.reveal, pressed && styles.pressed]}
+        >
+          <Ionicons name={revealed ? 'eye-off-outline' : 'eye-outline'} size={22} color={colors.textTertiary} />
+        </Pressable>
+      ) : null}
     </View>
   );
-};
+
+  return (
+    <View style={[inset ? styles.insetContainer : styles.boxContainer, containerStyle]}>
+      {label ? (
+        <AppText style={[inset ? styles.insetLabel : styles.boxLabel, { color: labelColor }]}>{label}</AppText>
+      ) : null}
+      {field}
+      {hasError ? (
+        <View style={styles.messageRow} accessibilityLiveRegion="polite">
+          <Ionicons name="alert-circle" size={15} color={colors.danger} style={styles.messageIcon} />
+          <AppText style={[styles.message, { color: colors.danger }]}>{error}</AppText>
+        </View>
+      ) : helperText ? (
+        <AppText style={[styles.message, styles.helper, { color: colors.textSecondary }]}>{helperText}</AppText>
+      ) : null}
+    </View>
+  );
+});
+
+const styles = StyleSheet.create({
+  boxContainer: {
+    marginBottom: spacing.md,
+  },
+  insetContainer: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.sm,
+  },
+  boxLabel: {
+    fontSize: fontSizes.sm,
+    fontWeight: fontWeights.semibold,
+    marginBottom: spacing.xs,
+  },
+  insetLabel: {
+    fontSize: fontSizes.sm - 1,
+    fontWeight: fontWeights.semibold,
+  },
+  boxFrame: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 52,
+    borderWidth: 1.5,
+    borderRadius: radii.md,
+  },
+  insetFrame: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 40,
+  },
+  readOnly: {
+    opacity: 0.6,
+  },
+  input: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: fontSizes.md,
+  },
+  boxInput: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: Platform.select({ ios: spacing.sm + 2, default: spacing.sm }),
+  },
+  insetInput: {
+    paddingHorizontal: 0,
+    paddingVertical: spacing.xs,
+  },
+  multiline: {
+    minHeight: 88,
+    paddingTop: spacing.sm,
+  },
+  reveal: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.xxs,
+  },
+  pressed: {
+    opacity: 0.6,
+  },
+  messageRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.xxs + 2,
+    marginTop: spacing.xs,
+  },
+  messageIcon: {
+    marginTop: 1,
+  },
+  message: {
+    flex: 1,
+    fontSize: fontSizes.xs,
+    lineHeight: 16,
+  },
+  helper: {
+    marginTop: spacing.xs,
+  },
+});

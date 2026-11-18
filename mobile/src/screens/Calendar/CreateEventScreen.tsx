@@ -222,15 +222,17 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
             accessibilityLabel={t('common.dismissKeyboard')}
           >
             <View>
-              <Group style={styles.inputCard}><View style={styles.inputPadding}>
+              <Group style={styles.inputCard}>
                 <FormTextInput
+                  variant="inset"
                   label={t('events.eventTitle')}
                   value={title}
                   onChangeText={setTitle}
                   placeholder={t('events.titlePlaceholder')}
-                  containerStyle={{ marginBottom: 0 }}
+                  autoCapitalize="sentences"
+                  returnKeyType="done"
                 />
-              </View></Group>
+              </Group>
 
               <Group style={styles.group}>
                 <GroupRow
@@ -276,16 +278,15 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
                   />
                 </TouchableOpacity>
                 {showDescription ? (
-                  <View style={styles.descriptionField}>
-                    <FormTextInput
-                      label={t('events.eventDescription')}
-                      value={description}
-                      onChangeText={setDescription}
-                      placeholder={t('events.descriptionPlaceholder')}
-                      multiline
-                      containerStyle={{ marginBottom: 0 }}
-                    />
-                  </View>
+                  <FormTextInput
+                    variant="inset"
+                    label={t('events.eventDescription')}
+                    value={description}
+                    onChangeText={setDescription}
+                    placeholder={t('events.descriptionPlaceholder')}
+                    autoCapitalize="sentences"
+                    multiline
+                  />
                 ) : null}
               </Group>
             </View>
@@ -483,8 +484,6 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) => StyleSheet.c
   emptyText: { fontSize: fontSizes.md, color: colors.textSecondary },
   group: { marginTop: spacing.md },
   inputCard: { marginTop: spacing.md },
-  inputPadding: { padding: spacing.md },
-  descriptionField: { padding: spacing.md },
   actions: {
     flexDirection: 'row',
     flexWrap: 'wrap',

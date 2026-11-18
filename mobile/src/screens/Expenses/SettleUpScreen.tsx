@@ -618,14 +618,10 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                     onChangeText={setAmount} placeholder="0.00" placeholderTextColor={colors.textTertiary}
                     keyboardType="numeric" style={styles.amountInput} />
                 </View>
-                <View style={styles.cardPad}>
-                  <FormTextInput label={t('settleUp.method')} value={method} onChangeText={setMethod}
-                    placeholder={t('settleUp.methodPlaceholder')} containerStyle={{ marginBottom: 0 }} />
-                </View>
-                <View style={styles.cardPad}>
-                  <FormTextInput label={t('settleUp.note')} value={note} onChangeText={setNote}
-                    placeholder={t('settleUp.notePlaceholder')} multiline containerStyle={{ marginBottom: 0 }} />
-                </View>
+                <FormTextInput variant="inset" label={t('settleUp.method')} value={method} onChangeText={setMethod}
+                  placeholder={t('settleUp.methodPlaceholder')} autoCapitalize="sentences" />
+                <FormTextInput variant="inset" label={t('settleUp.note')} value={note} onChangeText={setNote}
+                  placeholder={t('settleUp.notePlaceholder')} autoCapitalize="sentences" multiline />
               </Group>
               <SectionHeading title={t('settleUp.proofOptional')} />
               <Group>

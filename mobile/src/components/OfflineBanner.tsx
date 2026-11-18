@@ -1,68 +1,79 @@
 import React from 'react';
-import { View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLanguage } from '../context/LanguageContext';
-import { useThemeColors } from '../theme';
-import { spacing, fontSizes, fontWeights, radii } from '../theme';
+import { useTheme } from '../context/ThemeContext';
+import { useThemeColors, spacing, fontSizes, fontWeights, radii } from '../theme';
 import { AppText } from './AppText';
 import { useNetwork } from '../context/NetworkContext';
 
+/** Clearance for the docked tab bar so the pill floats just above it. */
+const TAB_BAR_CLEARANCE = 49;
+
+/**
+ * Small floating pill, centred above the tab bar, while the device is offline.
+ * It ignores touches, so nothing underneath is blocked. The full explanation is in the
+ * accessibility label; the visible text stays one short line in every language.
+ */
 export const OfflineBanner: React.FC = () => {
   const { isOnline } = useNetwork();
   const { t } = useLanguage();
+  const { theme } = useTheme();
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
 
   if (isOnline !== false) return null;
 
+  const isDark = theme === 'dark';
+  const bg = isDark ? colors.surfaceElevated : colors.ink;
+  const fg = isDark ? colors.text : colors.onInk;
+
   return (
     <View
       pointerEvents="none"
-      accessibilityRole="alert"
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        paddingTop: Math.max(insets.top, spacing.md),
-        paddingHorizontal: spacing.lg,
-        paddingBottom: spacing.md,
-        backgroundColor: colors.warningUltraSoft,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.border,
-        zIndex: 9999,
-      }}
+      style={[styles.layer, { bottom: insets.bottom + TAB_BAR_CLEARANCE + spacing.sm }]}
     >
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-        <View
-          style={{
-            width: 32,
-            height: 32,
-            borderRadius: radii.lg,
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: colors.warningSoft,
-          }}
-        >
-          <Ionicons name="cloud-offline-outline" size={18} color={colors.warning} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <AppText
-            style={{
-              color: colors.text,
-              fontSize: fontSizes.sm,
-              fontWeight: fontWeights.bold,
-            }}
-          >
-            {t('alerts.offlineBannerTitle')}
-          </AppText>
-          <AppText style={{ color: colors.textSecondary, fontSize: fontSizes.xs, marginTop: 2 }}>
-            {t('alerts.offlineBannerBody')}
-          </AppText>
-        </View>
+      <View
+        accessible
+        accessibilityRole="alert"
+        accessibilityLiveRegion="polite"
+        accessibilityLabel={`${t('alerts.offlineBannerTitle')}. ${t('alerts.offlineBannerBody')}`}
+        style={[
+          styles.pill,
+          { backgroundColor: bg, borderColor: isDark ? colors.border : bg },
+        ]}
+      >
+        <Ionicons name="cloud-offline-outline" size={15} color={fg} />
+        <AppText style={[styles.label, { color: fg }]} numberOfLines={1}>
+          {t('alerts.offlineBannerTitle')}
+        </AppText>
       </View>
     </View>
   );
 };
 
+const styles = StyleSheet.create({
+  layer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 9999,
+  },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs - 2,
+    maxWidth: '80%',
+    minHeight: 30,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  label: {
+    flexShrink: 1,
+    fontSize: fontSizes.xs + 1,
+    fontWeight: fontWeights.semibold,
+  },
+});

@@ -251,10 +251,13 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
     },
     templateFormContent: { paddingVertical: spacing.lg },
     manualAmountInput: {
-      minHeight: 50, fontFamily: fonts.displaySemibold, fontSize: 26, fontVariant: ['tabular-nums'],
-      color: colors.text, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
-      borderRadius: radii.md, padding: spacing.sm,
+      flex: 1, minWidth: 72, minHeight: 44, fontFamily: fonts.displaySemibold, fontSize: 24,
+      fontVariant: ['tabular-nums'], color: colors.text, textAlign: 'right', paddingVertical: spacing.xs,
     },
+    manualShareName: {
+      flexShrink: 1, maxWidth: '55%', fontSize: fontSizes.md, fontWeight: fontWeights.semibold, color: colors.text,
+    },
+    manualShareCurrency: { fontSize: fontSizes.sm, color: colors.textSecondary },
     remainingLabel: { fontSize: fontSizes.sm, color: colors.textSecondary, flexShrink: 1 },
     cardPad: {
       padding: spacing.lg,
@@ -314,14 +317,11 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
       color: colors.text,
     },
     manualShareRow: {
-      padding: spacing.md,
+      minHeight: 60,
+      paddingHorizontal: spacing.md,
       flexDirection: 'row',
       alignItems: 'center',
       gap: spacing.sm,
-    },
-    manualShareInputWrap: {
-      flex: 1,
-      minWidth: 0,
     },
     remaining: {
       marginTop: spacing.sm, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.xs,
@@ -914,15 +914,15 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
                 style={styles.amountInput}
               />
             </View>
-            <View style={styles.cardPad}>
-              <FormTextInput
-                label={t('expenses.description')}
-                value={description}
-                onChangeText={setDescription}
-                placeholder={t('expenses.descriptionPlaceholder')}
-                containerStyle={{ marginBottom: 0 }}
-              />
-            </View>
+            <FormTextInput
+              variant="inset"
+              label={t('expenses.description')}
+              value={description}
+              onChangeText={setDescription}
+              placeholder={t('expenses.descriptionPlaceholder')}
+              autoCapitalize="sentences"
+              returnKeyType="done"
+            />
           </Group>
 
           <SectionHeading title={t('expenses.sectionPaidBy')} />
@@ -1099,14 +1099,14 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
                       const member = selectedHousehold.members.find((item) => item._id === userId);
                       return (
                         <View key={userId} style={styles.manualShareRow}>
-                          <View style={styles.manualShareInputWrap}>
-                            <AppText style={styles.fieldLabel}>{member?.name}</AppText>
-                            <TextInput accessibilityLabel={`${member?.name}: ${t('expenses.amount')} (${currency})`}
-                              value={manualShares[userId] || ''}
-                              onChangeText={(text) => setManualShares({ ...manualShares, [userId]: text })}
-                              placeholder="0.00" placeholderTextColor={colors.textTertiary}
-                              keyboardType="numeric" style={styles.manualAmountInput} />
-                          </View>
+                          <AppText style={styles.manualShareName} numberOfLines={2}>{member?.name}</AppText>
+                          <TextInput accessibilityLabel={`${member?.name}: ${t('expenses.amount')} (${currency})`}
+                            value={manualShares[userId] || ''}
+                            onChangeText={(text) => setManualShares({ ...manualShares, [userId]: text })}
+                            placeholder="0.00" placeholderTextColor={colors.textTertiary}
+                            selectionColor={colors.primary}
+                            keyboardType="decimal-pad" style={styles.manualAmountInput} />
+                          <AppText style={styles.manualShareCurrency}>{currency}</AppText>
                         </View>
                       );
                     })}
@@ -1292,10 +1292,10 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
           </View>
           <ScrollView contentContainerStyle={styles.templateFormContent} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive">
             <AppText style={styles.saveTemplateModalDescription}>{t('expenses.saveTemplateDescription')}</AppText>
-            <Group><View style={styles.cardPad}>
-              <FormTextInput label={t('expenses.templateName')} value={templateName} onChangeText={setTemplateName}
-                placeholder={t('expenses.templateNamePlaceholder')} containerStyle={{ marginBottom: 0 }} />
-            </View></Group>
+            <Group>
+              <FormTextInput variant="inset" label={t('expenses.templateName')} value={templateName} onChangeText={setTemplateName}
+                placeholder={t('expenses.templateNamePlaceholder')} autoCapitalize="sentences" returnKeyType="done" />
+            </Group>
           </ScrollView>
           <View style={[styles.footerActions, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
             <PrimaryButton title={t('expenses.saveAsTemplate')} onPress={handleSaveTemplate} />
@@ -1319,10 +1319,10 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
           </View>
           <ScrollView contentContainerStyle={styles.templateFormContent} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive">
             <AppText style={styles.saveTemplateModalDescription}>{t('expenses.updateTemplateDescription')}</AppText>
-            <Group><View style={styles.cardPad}>
-              <FormTextInput label={t('expenses.templateName')} value={templateName} onChangeText={setTemplateName}
-                placeholder={t('expenses.templateNamePlaceholder')} containerStyle={{ marginBottom: 0 }} />
-            </View></Group>
+            <Group>
+              <FormTextInput variant="inset" label={t('expenses.templateName')} value={templateName} onChangeText={setTemplateName}
+                placeholder={t('expenses.templateNamePlaceholder')} autoCapitalize="sentences" returnKeyType="done" />
+            </Group>
           </ScrollView>
           <View style={[styles.footerActions, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
             <PrimaryButton title={t('common.update')} onPress={handleUpdateTemplate} />

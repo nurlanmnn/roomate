@@ -1,6 +1,8 @@
 export default {
   // Common
   common: {
+    showPassword: 'Passwort anzeigen',
+    hidePassword: 'Passwort verbergen',
     save: 'Speichern',
     saved: 'Gespeichert',
     cancel: 'Abbrechen',

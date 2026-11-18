@@ -190,16 +190,17 @@ export const CreateChoreScreen: React.FC<{ navigation: any; route: any }> = ({ n
             accessibilityLabel={t('common.dismissKeyboard')}
           >
             <View>
-              <Group><View style={styles.inputPadding}>
+              <Group>
                 <FormTextInput
+                  variant="inset"
                   label={t('chores.choreName')}
                   value={name}
                   onChangeText={setName}
                   placeholder={t('chores.choreNamePlaceholder')}
-                  autoCapitalize="words"
-                  containerStyle={{ marginBottom: 0 }}
+                  autoCapitalize="sentences"
+                  returnKeyType="done"
                 />
-              </View></Group>
+              </Group>
 
               <AppText style={styles.label} accessibilityRole="header">{t('chores.frequency')}</AppText>
               <View style={styles.frequencyRow} accessibilityRole="tablist">
@@ -332,7 +333,6 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) => StyleSheet.c
   container: { flex: 1, backgroundColor: colors.background },
   scrollView: { flex: 1 },
   scrollContent: { paddingTop: spacing.md, paddingBottom: spacing.xxl },
-  inputPadding: { padding: spacing.md },
   label: {
     fontSize: 20,
     fontWeight: fontWeights.bold,

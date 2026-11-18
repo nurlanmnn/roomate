@@ -1,6 +1,8 @@
 export default {
   // Common
   common: {
+    showPassword: 'Afficher le mot de passe',
+    hidePassword: 'Masquer le mot de passe',
     save: 'Enregistrer',
     saved: 'Enregistré',
     cancel: 'Annuler',

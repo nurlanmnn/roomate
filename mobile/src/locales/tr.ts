@@ -1,6 +1,8 @@
 export default {
   // Common
   common: {
+    showPassword: 'Şifreyi göster',
+    hidePassword: 'Şifreyi gizle',
     save: 'Kaydet',
     saved: 'Kaydedildi',
     cancel: 'İptal',
