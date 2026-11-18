@@ -655,6 +655,25 @@ export default {
   },
 
   // Auth
+  // First-launch intro (before Landing)
+  intro: {
+    skip: "Passer",
+    next: "Suivant",
+    pageOf: "Page {{page}} sur {{total}}",
+    moneyCaption: "Sam te doit",
+    moneyExample: "Sam te doit 24,50",
+    moneyTitle: "Partage chaque facture",
+    moneyBody: "Ajoute une dépense une fois. Roomate calcule qui doit quoi à qui.",
+    shoppingCaption: "à acheter",
+    shoppingExample: "6 articles à acheter",
+    shoppingTitle: "Une liste partagée",
+    shoppingBody: "Tout le monde voit ce dont la maison a besoin et ce qui est déjà acheté.",
+    choresExample: "Sortir les poubelles",
+    choresCaption: "Ce soir",
+    choresTitle: "Les tâches tournent",
+    choresBody: "Rotations et événements dans un seul calendrier, avec un rappel quand c'est ton tour.",
+  },
+
   auth: {
     login: 'Connexion',
     signup: 'Inscription',

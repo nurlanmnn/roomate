@@ -303,7 +303,8 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) =>
     symbolBadge: {
       minWidth: 36,
       paddingHorizontal: spacing.sm,
-      height: 36,
+      minHeight: 36,
+      paddingVertical: spacing.xxs,
       borderRadius: radii.sm,
       backgroundColor: colors.primaryUltraSoft,
       alignItems: 'center',

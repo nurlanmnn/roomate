@@ -6,6 +6,7 @@ import { Settlement } from '../models/Settlement';
 import { User } from '../models/User';
 import { authMiddleware } from '../middleware/auth';
 import { notificationService } from '../services/notificationService';
+import { runInBackground } from '../utils/background';
 import mongoose from 'mongoose';
 import crypto from 'crypto';
 import { objectIdSchema, optionalTrimmedString, trimmedString } from '../utils/validation';
@@ -146,13 +147,16 @@ router.post('/join', authMiddleware, async (req: Request, res: Response) => {
     // Notify existing members about new member
     const newMember = await User.findById(userId);
     if (newMember) {
+      runInBackground(
       notificationService.notifyMemberAdded(
         household.members.map(m => m._id?.toString() || m.toString()),
         userId,
         newMember.name,
         household.name,
         household._id.toString()
-      ).catch(err => console.error('Notification error:', err));
+      ),
+      'Notification'
+    );
     }
 
     res.json(household);
@@ -256,12 +260,15 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
     await household.populate('members', 'name email avatarUrl');
 
     // Notify members about household update
-    notificationService.notifyHouseholdUpdated(
+    runInBackground(
+      notificationService.notifyHouseholdUpdated(
       household.members.map(m => m._id?.toString() || m.toString()),
       userId,
       household.name,
       household._id.toString()
-    ).catch(err => console.error('Notification error:', err));
+    ),
+      'Notification'
+    );
 
     res.json(household);
   } catch (error) {
@@ -498,10 +505,13 @@ router.delete('/:id/members/:memberId', authMiddleware, async (req: Request, res
     await household.populate('members', 'name email avatarUrl');
 
     // Notify the removed member
-    notificationService.notifyMemberRemoved(
+    runInBackground(
+      notificationService.notifyMemberRemoved(
       memberId,
       household.name
-    ).catch(err => console.error('Notification error:', err));
+    ),
+      'Notification'
+    );
 
     res.json(household);
   } catch (error) {
@@ -539,11 +549,14 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
     await Household.findByIdAndDelete(id);
 
     // Notify members about deletion
-    notificationService.notifyHouseholdDeleted(
+    runInBackground(
+      notificationService.notifyHouseholdDeleted(
       memberIds,
       userId,
       householdName
-    ).catch(err => console.error('Notification error:', err));
+    ),
+      'Notification'
+    );
 
     res.json({ success: true });
   } catch (error) {

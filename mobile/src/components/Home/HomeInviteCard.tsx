@@ -84,6 +84,8 @@ export const HomeInviteCard: React.FC<HomeInviteCardProps> = ({ joinCode, househ
           opacity: 0.85,
         },
         actionLabel: {
+          flexShrink: 1,
+          textAlign: 'center',
           fontSize: fontSizes.sm,
           fontWeight: fontWeights.semibold,
           color: colors.primary,

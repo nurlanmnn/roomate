@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationContainer, useNavigation } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -11,6 +12,7 @@ import { useThemeColors, fontSizes, fontWeights } from '../theme';
 
 // Auth Screens
 import { LandingScreen } from '../screens/Auth/LandingScreen';
+import { IntroScreen, INTRO_SEEN_KEY } from '../screens/Auth/IntroScreen';
 import { LoginScreen } from '../screens/Auth/LoginScreen';
 import { SignupScreen } from '../screens/Auth/SignupScreen';
 import { VerifyEmailScreen } from '../screens/Auth/VerifyEmailScreen';
@@ -42,14 +44,24 @@ const MainStack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 const AuthNavigator = () => {
+  // First launch on this device shows the short intro before Landing.
+  const [introSeen, setIntroSeen] = React.useState<boolean | null>(null);
+  React.useEffect(() => {
+    AsyncStorage.getItem(INTRO_SEEN_KEY)
+      .then((v) => setIntroSeen(v === '1'))
+      .catch(() => setIntroSeen(true));
+  }, []);
+  if (introSeen === null) return null;
+
   return (
     <AuthStack.Navigator
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: 'transparent' },
       }}
-      initialRouteName="Landing"
+      initialRouteName={introSeen ? 'Landing' : 'Intro'}
     >
+      <AuthStack.Screen name="Intro" component={IntroScreen} />
       <AuthStack.Screen name="Landing" component={LandingScreen} />
       <AuthStack.Screen name="Login" component={LoginScreen} />
       <AuthStack.Screen name="Signup" component={SignupScreen} />

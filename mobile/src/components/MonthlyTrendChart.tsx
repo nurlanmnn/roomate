@@ -62,7 +62,7 @@ export const MonthlyTrendChart = ({ monthlyTrend }: MonthlyTrendChartProps) => {
             {displayedData.map(month => (
               <View key={month.month} style={styles.slot}>
                 <View style={[styles.bar, { height: Math.max(0, month.amount) / maximum * 150, backgroundColor: month.month === currentMonth ? colors.primary : colors.accentSoft }]} />
-                <AppText style={[styles.month, { color: colors.textSecondary }]}>{monthLabel(month.month)}</AppText>
+                <AppText style={[styles.month, { color: colors.textSecondary }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} maxFontSizeMultiplier={1.4}>{monthLabel(month.month)}</AppText>
               </View>
             ))}
           </View>

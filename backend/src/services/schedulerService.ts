@@ -66,6 +66,11 @@ class SchedulerService {
     }
   }
 
+  /** One pass of all scheduled tasks — used by the Vercel Cron endpoint. */
+  async runOnce(): Promise<void> {
+    await this.runScheduledTasks();
+  }
+
   private async runScheduledTasks(): Promise<void> {
     try {
       await Promise.all([this.sendEventReminders(), this.sendDebtReminders()]);

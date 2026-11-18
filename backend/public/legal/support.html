@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Support — Roomate</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f8fafc;
+      --text: #0f172a;
+      --muted: #64748b;
+      --accent: #15803d;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f172a;
+        --text: #f1f5f9;
+        --muted: #94a3b8;
+        --accent: #4ade80;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.55;
+      color: var(--text);
+      background: var(--bg);
+    }
+    .wrap {
+      max-width: 40rem;
+      margin: 0 auto;
+      padding: 1.5rem 1.25rem 3rem;
+    }
+    h1 {
+      font-size: 1.65rem;
+      font-weight: 700;
+      margin: 0 0 0.35rem;
+      letter-spacing: -0.02em;
+    }
+    .meta {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 1.75rem;
+    }
+    h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin: 1.5rem 0 0.5rem;
+      color: var(--accent);
+    }
+    p, ul { margin: 0.5rem 0; }
+    ul { padding-left: 1.25rem; }
+    li { margin: 0.35rem 0; }
+    a { color: var(--accent); }
+    .contact {
+      margin-top: 2rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid rgba(100, 116, 139, 0.35);
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <h1>Roomate Support</h1>
+    <p class="meta">Help with the Roomate app for shared households</p>
+
+    <h2>Contact us</h2>
+    <p>For questions, bug reports or account problems, email <a href="mailto:support.roomateapp@gmail.com">support.roomateapp@gmail.com</a>. We aim to reply within 2–5 business days. Telling us your phone model and what you were doing when the problem happened helps us help you faster.</p>
+
+    <h2>Common questions</h2>
+    <ul>
+      <li><strong>How do I add a roommate?</strong> Open Settings, find your household, and share its invite code. Your roommate chooses "Join with code" and enters it.</li>
+      <li><strong>How are balances worked out?</strong> Each expense is split between the people you choose, evenly or by custom amounts. Roomate keeps a running total of who owes whom.</li>
+      <li><strong>How do I settle up?</strong> Pay your roommate the way you normally do, then record the settlement in Roomate so both balances update. You can attach a photo of the payment.</li>
+      <li><strong>I didn't get my verification code.</strong> Check your spam folder, wait a minute, then request a new code.</li>
+    </ul>
+
+    <h2>Deleting your account</h2>
+    <p>In the app, go to Settings → Danger zone → Delete account. Households you own must be handed over or deleted first. Deleting your account is permanent. You can also email us to request deletion.</p>
+
+    <div class="contact">
+      <h2>Privacy</h2>
+      <p>Read our <a href="/legal/privacy">privacy policy</a>.</p>
+    </div>
+  </main>
+</body>
+</html>

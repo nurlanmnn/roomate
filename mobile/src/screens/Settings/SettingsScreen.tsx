@@ -19,7 +19,7 @@ import { fontSizes, fontWeights, radii, spacing, useTheme, useThemeColors } from
 import { getPrivacyPolicyUrl } from '../../api/apiClient';
 
 /** Canonical hosted policy (works when dev API URL is unreachable from the device, e.g. Expo Go + localhost). */
-const PRIVACY_POLICY_PRODUCTION_URL = 'https://api.roomate.us/legal/privacy';
+const PRIVACY_POLICY_PRODUCTION_URL = 'https://roomate-api.vercel.app/legal/privacy';
 
 type SettingsScreenProps = {
   navigation: any;

@@ -14,7 +14,7 @@ module.exports = () => {
   const raw =
     process.env.EXPO_PUBLIC_API_URL ||
     process.env.API_URL ||
-    'https://api.roomate.us';
+    'https://roomate-api.vercel.app';
   const apiUrl = raw.startsWith('http') ? raw : `https://${raw}`;
 
   return {
@@ -26,7 +26,8 @@ module.exports = () => {
       icon: './assets/icon.png',
       userInterfaceStyle: 'light',
       splash: {
-        backgroundColor: '#ffffff',
+        image: './assets/splash-icon.png',
+        backgroundColor: '#1D3BA8',
         resizeMode: 'contain',
       },
       assetBundlePatterns: ['**/*'],

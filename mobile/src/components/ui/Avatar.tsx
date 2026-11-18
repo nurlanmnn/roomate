@@ -56,7 +56,14 @@ export const Avatar: React.FC<AvatarProps> = ({ name, uri, size = 44 }) => {
 
   return (
     <View style={[styles.fallback, dim]}>
-      <AppText style={[styles.initials, { fontSize: Math.max(11, size * 0.38) }]}>{initials}</AppText>
+      <AppText
+        style={[styles.initials, { fontSize: Math.max(11, size * 0.38) }]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        maxFontSizeMultiplier={1.2}
+      >
+        {initials}
+      </AppText>
     </View>
   );
 };

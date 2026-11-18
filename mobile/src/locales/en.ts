@@ -655,6 +655,25 @@ export default {
   },
 
   // Auth
+  // First-launch intro (before Landing)
+  intro: {
+    skip: "Skip",
+    next: "Next",
+    pageOf: "Page {{page}} of {{total}}",
+    moneyCaption: "Sam owes you",
+    moneyExample: "Sam owes you 24.50",
+    moneyTitle: "Split every bill",
+    moneyBody: "Add an expense once. Roomate works out who owes whom, so nobody keeps a tally.",
+    shoppingCaption: "to buy",
+    shoppingExample: "6 items to buy",
+    shoppingTitle: "One shared list",
+    shoppingBody: "Everyone sees what the house needs, and what's already been bought.",
+    choresExample: "Take out the trash",
+    choresCaption: "Tonight",
+    choresTitle: "Chores take turns",
+    choresBody: "Rotations and house events live in one calendar, with a reminder when it's your turn.",
+  },
+
   auth: {
     login: 'Log in',
     signup: 'Sign up',
