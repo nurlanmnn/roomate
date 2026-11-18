@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, View, ViewStyle } from 'react-native';
 import { AppText } from '../AppText';
 import { useThemeColors, fontSizes, fontWeights, radii, spacing } from '../../theme';
 
@@ -17,18 +17,12 @@ type ChipRowProps<T extends string | number> = {
 /**
  * Single-choice filter as a row of pills. Each pill is as wide as its label and never wraps
  * inside a word ("Last 3 months" stays on one line in every language); when the set is wider
- * than the screen the row scrolls sideways instead of squeezing.
+ * than the screen, whole pills wrap onto the next line. Nothing scrolls or hides off-screen.
  */
 export function ChipRow<T extends string | number>({ options, selected, onSelect, inset = spacing.md, style }: ChipRowProps<T>) {
   const colors = useThemeColors();
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={[styles.row, { paddingHorizontal: inset }]}
-      style={style}
-      accessibilityRole="tablist"
-    >
+    <View style={[styles.row, { paddingHorizontal: inset }, style]} accessibilityRole="tablist">
       {options.map((o) => {
         const active = o.value === selected;
         return (
@@ -56,13 +50,14 @@ export function ChipRow<T extends string | number>({ options, selected, onSelect
           </Pressable>
         );
       })}
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     gap: spacing.xs,
   },
