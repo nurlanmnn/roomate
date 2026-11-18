@@ -1,5 +1,5 @@
-import React from 'react';
-import { StyleSheet, TextStyle, View, ViewStyle } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { LayoutChangeEvent, StyleSheet, TextStyle, View, ViewStyle } from 'react-native';
 import { AppText } from '../AppText';
 import { useThemeColors, fonts, DISPLAY_MAX_FONT_SCALE } from '../../theme';
 import { formatCurrency } from '../../utils/formatCurrency';
@@ -17,7 +17,7 @@ type AmountProps = {
   /** Overrides the direction colour (e.g. `colors.onEnamel` on the header field). */
   color?: string;
   weight?: 'semibold' | 'bold' | 'extrabold';
-  /** Shrinks to stay on one line inside narrow containers. */
+  /** Shrinks as one piece to stay on one line inside narrow containers (default on). */
   fit?: boolean;
   style?: ViewStyle;
   accessibilityLabel?: string;
@@ -27,7 +27,7 @@ type AmountProps = {
 const splitAmount = (formatted: string) => {
   const parts = formatted.match(/^([^\p{Nd}]*)([\s\S]*\p{Nd})([^\p{Nd}]*)$/u);
   const number = parts?.[2] ?? formatted;
-  const decimals = number.match(/^(.*\p{Nd})([.,\u066b]\p{Nd}{2})$/u);
+  const decimals = number.match(/^(.*\p{Nd})([.,٫]\p{Nd}{2})$/u);
   return {
     leadingCurrency: parts?.[1].trim() ?? '',
     head: decimals?.[1] ?? number,
@@ -36,9 +36,25 @@ const splitAmount = (formatted: string) => {
   };
 };
 
+/** Never draw money smaller than this fraction of the requested size. */
+const MIN_SCALE = 0.3;
+/** Headroom so rounding in glyph metrics never tips a fitted amount into truncation. */
+const FIT_SAFETY = 0.97;
+
+type FitState = { key: string; natural: number; available: number };
+
+const computeScale = (natural: number, available: number) =>
+  natural > 0 && available > 0 && available < natural - 0.5
+    ? Math.max(MIN_SCALE, (available / natural) * FIT_SAFETY)
+    : 1;
+
 /**
  * Money in the signage face: large whole number, smaller raised cents.
  * Small sizes (under 24pt) render on one baseline for legibility.
+ *
+ * With `fit` (the default) the amount shrinks as one piece to stay on a single
+ * line: currency, whole number and cents keep their proportions, and the number
+ * is never cut off with an ellipsis.
  */
 export const Amount: React.FC<AmountProps> = ({
   value,
@@ -47,7 +63,7 @@ export const Amount: React.FC<AmountProps> = ({
   direction = 'neutral',
   color,
   weight = 'bold',
-  fit = false,
+  fit = true,
   style,
   accessibilityLabel,
 }) => {
@@ -58,81 +74,157 @@ export const Amount: React.FC<AmountProps> = ({
     color ?? (direction === 'owed' ? colors.owed : direction === 'owe' ? colors.owe : colors.text);
   const family =
     weight === 'extrabold' ? fonts.displayExtrabold : weight === 'semibold' ? fonts.displaySemibold : fonts.displayBold;
+  const label = accessibilityLabel ?? `${sign}${formatted}`;
+  const split = size >= 24;
+
+  // Split layout: an off-screen copy at full size gives the natural width, the
+  // outer view reports the room it gets, and every part scales by the same factor.
+  const fitKey = `${sign}|${formatted}|${size}|${weight}`;
+  const [fitState, setFitState] = useState<FitState>({ key: fitKey, natural: 0, available: 0 });
+  const state = fitState.key === fitKey ? fitState : { key: fitKey, natural: 0, available: 0 };
+  const scale = fit && split ? computeScale(state.natural, state.available) : 1;
+
+  const onMeasure = useCallback(
+    (e: LayoutChangeEvent) => {
+      const natural = e.nativeEvent.layout.width;
+      setFitState((prev) => {
+        // A new amount starts over: its first outer layout is unscaled again.
+        const base = prev.key === fitKey ? prev : { key: fitKey, natural: 0, available: 0 };
+        return Math.abs(base.natural - natural) < 0.5 ? base : { ...base, natural };
+      });
+    },
+    [fitKey]
+  );
+
+  const onOuterLayout = useCallback(
+    (e: LayoutChangeEvent) => {
+      const width = e.nativeEvent.layout.width;
+      setFitState((prev) => {
+        const base = prev.key === fitKey ? prev : { key: fitKey, natural: 0, available: 0 };
+        // The outer view hugs its content, so once scaled it reports the scaled width.
+        // Only record a width while unscaled, or when the room squeezes the scaled amount further.
+        if (base.available > 0 && base.natural > 0) {
+          const drawn = base.natural * computeScale(base.natural, base.available);
+          if (width >= drawn - 1) return base;
+        }
+        return Math.abs(base.available - width) < 0.5 ? base : { ...base, available: width };
+      });
+    },
+    [fitKey]
+  );
 
   const base: TextStyle = {
     fontFamily: family,
     color: tint,
     fontVariant: size < 40 ? ['tabular-nums'] : undefined,
   };
-  const label = accessibilityLabel ?? `${sign}${formatted}`;
 
-  if (size < 24) {
+  if (!split) {
     return (
-      <View style={style} accessible accessibilityLabel={label}>
+      <View style={[styles.single, style]} accessible accessibilityLabel={label}>
         <AppText
           style={[base, { fontSize: size, lineHeight: Math.round(size * 1.2) }]}
           numberOfLines={1}
           adjustsFontSizeToFit={fit}
+          minimumFontScale={0.5}
           maxFontSizeMultiplier={DISPLAY_MAX_FONT_SCALE}
         >
-          {sign ? `${sign} ` : ''}
+          {sign ? `${sign} ` : ''}
           {formatted}
         </AppText>
       </View>
     );
   }
 
-  const { leadingCurrency, head, cents, trailingCurrency } = splitAmount(formatted);
-  const small = Math.round(size * 0.45);
-  const currencySize = Math.round(size * 0.42);
-  const currencyStyle: TextStyle = {
-    ...base,
-    fontFamily: fonts.displaySemibold,
-    fontSize: currencySize,
-    lineHeight: Math.round(currencySize * 1.2),
-    marginTop: Math.round(size * 0.09),
-    opacity: 0.8,
+  const parts = splitAmount(formatted);
+  const renderParts = (k: number, measuring: boolean) => {
+    const s = size * k;
+    const small = s * 0.45;
+    const currencySize = s * 0.42;
+    const raise = s * 0.09;
+    const currencyGap = Math.max(1, s * 0.04);
+    const currencyStyle: TextStyle = {
+      ...base,
+      fontFamily: fonts.displaySemibold,
+      fontSize: currencySize,
+      lineHeight: Math.ceil(currencySize * 1.2),
+      marginTop: raise,
+      opacity: 0.8,
+    };
+    // The sign leads the whole amount ("−€98", never "€ −98").
+    const signFirst = sign && parts.leadingCurrency;
+    return (
+      <>
+        {signFirst ? (
+          <AppText
+            style={[base, styles.noShrink, { fontSize: s, lineHeight: Math.ceil(s * 1.02), marginRight: currencyGap }]}
+            numberOfLines={1}
+            maxFontSizeMultiplier={DISPLAY_MAX_FONT_SCALE}
+          >
+            {sign}
+          </AppText>
+        ) : null}
+        {parts.leadingCurrency ? (
+          <AppText
+            style={[currencyStyle, styles.noShrink, { marginRight: currencyGap }]}
+            numberOfLines={1}
+            maxFontSizeMultiplier={DISPLAY_MAX_FONT_SCALE}
+          >
+            {parts.leadingCurrency}
+          </AppText>
+        ) : null}
+        <AppText
+          style={[base, measuring ? styles.noShrink : styles.head, { fontSize: s, lineHeight: Math.ceil(s * 1.02) }]}
+          numberOfLines={1}
+          // Last-resort guard for the frame before the first measurement lands.
+          adjustsFontSizeToFit={fit && !measuring}
+          minimumFontScale={0.5}
+          maxFontSizeMultiplier={DISPLAY_MAX_FONT_SCALE}
+        >
+          {sign && !signFirst ? `${sign} ` : ''}
+          {parts.head}
+        </AppText>
+        {parts.cents ? (
+          <AppText
+            style={[base, styles.noShrink, { fontSize: small, lineHeight: Math.ceil(small * 1.2), marginTop: raise }]}
+            numberOfLines={1}
+            maxFontSizeMultiplier={DISPLAY_MAX_FONT_SCALE}
+          >
+            {parts.cents}
+          </AppText>
+        ) : null}
+        {parts.trailingCurrency ? (
+          <AppText
+            style={[currencyStyle, styles.noShrink, { marginLeft: currencyGap }]}
+            numberOfLines={1}
+            maxFontSizeMultiplier={DISPLAY_MAX_FONT_SCALE}
+          >
+            {parts.trailingCurrency}
+          </AppText>
+        ) : null}
+      </>
+    );
   };
-  const currencyGap = Math.max(2, Math.round(size * 0.04));
 
   return (
-    <View style={[styles.row, style]} accessible accessibilityLabel={label}>
-      {leadingCurrency ? (
-        <AppText
-          style={[currencyStyle, { marginRight: currencyGap }]}
-          numberOfLines={1}
-          maxFontSizeMultiplier={DISPLAY_MAX_FONT_SCALE}
+    <View
+      style={[styles.row, style]}
+      accessible
+      accessibilityLabel={label}
+      onLayout={fit ? onOuterLayout : undefined}
+    >
+      {renderParts(scale, false)}
+      {fit ? (
+        <View
+          style={styles.measureBox}
+          pointerEvents="none"
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
         >
-          {leadingCurrency}
-        </AppText>
-      ) : null}
-      <AppText
-        style={[base, { fontSize: size, lineHeight: Math.round(size * 1.02) }]}
-        numberOfLines={1}
-        adjustsFontSizeToFit={fit}
-        minimumFontScale={0.5}
-        maxFontSizeMultiplier={DISPLAY_MAX_FONT_SCALE}
-      >
-        {sign ? `${sign} ` : ''}
-        {head}
-      </AppText>
-      {cents ? (
-        <AppText
-          style={[base, { fontSize: small, lineHeight: Math.round(small * 1.2), marginTop: Math.round(size * 0.09) }]}
-          numberOfLines={1}
-          maxFontSizeMultiplier={DISPLAY_MAX_FONT_SCALE}
-        >
-          {cents}
-        </AppText>
-      ) : null}
-      {trailingCurrency ? (
-        <AppText
-          style={[currencyStyle, { marginLeft: currencyGap }]}
-          numberOfLines={1}
-          maxFontSizeMultiplier={DISPLAY_MAX_FONT_SCALE}
-        >
-          {trailingCurrency}
-        </AppText>
+          <View style={styles.measureRow} onLayout={onMeasure}>
+            {renderParts(1, true)}
+          </View>
+        </View>
       ) : null}
     </View>
   );
@@ -143,5 +235,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     flexShrink: 1,
+    minWidth: 0,
+  },
+  single: {
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  head: {
+    flexShrink: 1,
+  },
+  noShrink: {
+    flexShrink: 0,
+  },
+  measureBox: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    width: 4000,
+    opacity: 0,
+    alignItems: 'flex-start',
+  },
+  measureRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
   },
 });

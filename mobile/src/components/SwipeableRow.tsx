@@ -186,7 +186,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
             ]}
           >
             <Ionicons name={leftActionIcon} size={22} color={finalLeftActionColor} />
-            {leftActionLabel && <AppText style={[styles.label, { color: finalLeftActionColor }]}>{leftActionLabel}</AppText>}
+            {leftActionLabel && <AppText numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} maxFontSizeMultiplier={1.4} style={[styles.label, { color: finalLeftActionColor }]}>{leftActionLabel}</AppText>}
           </Animated.View>
         )}
         {onSwipeRight && (
@@ -201,7 +201,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
             ]}
           >
             <Ionicons name={rightActionIcon} size={22} color={finalRightActionColor} />
-            {rightActionLabel && <AppText style={[styles.label, { color: finalRightActionColor }]}>{rightActionLabel}</AppText>}
+            {rightActionLabel && <AppText numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} maxFontSizeMultiplier={1.4} style={[styles.label, { color: finalRightActionColor }]}>{rightActionLabel}</AppText>}
           </Animated.View>
         )}
       </View>
@@ -261,6 +261,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.sm,
   },
   label: {
+    flexShrink: 1,
     fontSize: fontSizes.sm,
     fontWeight: '600',
   },

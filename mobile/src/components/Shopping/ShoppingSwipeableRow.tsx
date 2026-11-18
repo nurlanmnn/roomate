@@ -168,7 +168,7 @@ export const ShoppingSwipeableRow: React.FC<ShoppingSwipeableRowProps> = ({
             ]}
           >
             <Ionicons name="trash-outline" size={22} color={colors.danger} />
-            <AppText style={[styles.label, { color: colors.danger }]}>{t('common.delete')}</AppText>
+            <AppText numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} maxFontSizeMultiplier={1.4} style={[styles.label, { color: colors.danger }]}>{t('common.delete')}</AppText>
           </Animated.View>
         )}
         {onSwipeRight && (
@@ -182,7 +182,7 @@ export const ShoppingSwipeableRow: React.FC<ShoppingSwipeableRowProps> = ({
             ]}
           >
             <Ionicons name="checkmark-circle-outline" size={22} color={colors.primary} />
-            <AppText style={[styles.label, { color: colors.primary }]}>{t('shopping.completed')}</AppText>
+            <AppText numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} maxFontSizeMultiplier={1.4} style={[styles.label, { color: colors.primary }]}>{t('shopping.completed')}</AppText>
           </Animated.View>
         )}
       </View>

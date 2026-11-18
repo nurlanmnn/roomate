@@ -427,9 +427,6 @@ export const HomeScreen: React.FC = () => {
                       <AppText
                         key={`${heroPeople[index].otherId}-${index}`}
                         style={[styles.heroLine, { color: colors.onEnamel }]}
-                        numberOfLines={1}
-                        adjustsFontSizeToFit
-                        minimumFontScale={0.8}
                       >
                         {line}
                       </AppText>

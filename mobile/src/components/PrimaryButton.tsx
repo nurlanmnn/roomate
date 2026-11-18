@@ -71,7 +71,7 @@ export const PrimaryButton: React.FC<PrimaryButtonProps> = ({
       ) : (
         <View style={styles.content}>
           {icon ? <Ionicons name={icon} size={20} color={palette.fg} /> : null}
-          <AppText style={[styles.label, { color: palette.fg }]} numberOfLines={2}>
+          <AppText style={[styles.label, { color: palette.fg }]}>
             {title}
           </AppText>
         </View>

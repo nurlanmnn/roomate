@@ -63,7 +63,7 @@ export const IntroScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
         return (
           <View style={styles.countRow}>
             <AppText style={[styles.count, { color: colors.onEnamel }]} maxFontSizeMultiplier={DISPLAY_MAX_FONT_SCALE}>6</AppText>
-            <AppText style={[styles.caption, { color: colors.onEnamelSecondary }]}>{t('intro.shoppingCaption')}</AppText>
+            <AppText style={[styles.caption, styles.countCaption, { color: colors.onEnamelSecondary }]}>{t('intro.shoppingCaption')}</AppText>
           </View>
         );
       case 'chores':
@@ -141,6 +141,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 28, fontWeight: fontWeights.bold, letterSpacing: -0.3, marginBottom: spacing.sm },
   body: { fontSize: fontSizes.md, lineHeight: 24 },
   caption: { fontSize: fontSizes.md },
+  countCaption: { flexShrink: 1 },
   countRow: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm },
   count: { fontFamily: fonts.displayExtrabold, fontSize: 96, lineHeight: 100 },
   chore: { alignItems: 'flex-start', gap: spacing.xs },

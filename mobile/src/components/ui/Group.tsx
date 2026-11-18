@@ -153,7 +153,7 @@ export const GroupRow: React.FC<GroupRowProps> = ({
           {title}
         </AppText>
         {subtitle ? (
-          <AppText style={[styles.rowSubtitle, { color: colors.textSecondary }]} numberOfLines={3}>
+          <AppText style={[styles.rowSubtitle, { color: colors.textSecondary }]}>
             {subtitle}
           </AppText>
         ) : null}
@@ -313,10 +313,13 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
   },
   headingAction: {
+    flexShrink: 1,
+    maxWidth: '45%',
     minHeight: 28,
     justifyContent: 'flex-end',
   },
   headingActionText: {
+    textAlign: 'right',
     fontSize: fontSizes.md - 1,
     fontWeight: fontWeights.medium,
   },

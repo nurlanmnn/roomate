@@ -165,7 +165,7 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
     categoryRight: {
       maxWidth: '48%',
       flexDirection: 'column',
-      alignItems: 'baseline',
+      alignItems: 'flex-end',
       gap: spacing.xs,
       flexShrink: 0,
     },
@@ -245,8 +245,8 @@ export const SpendingChart: React.FC<SpendingChartProps> = ({
                 size={pieSize}
                 strokeWidth={28}
                 centerContent={
-                  <View style={{ alignItems: 'center' }}>
-                    <AppText style={{ fontSize: fontSizes.sm, color: colors.textSecondary }}>
+                  <View style={{ alignItems: 'center', maxWidth: '100%' }}>
+                    <AppText style={{ fontSize: fontSizes.sm, color: colors.textSecondary }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
                       {t('spendingChart.total')}
                     </AppText>
                     <Amount value={topCategories.reduce((sum, c) => sum + c.amount, 0)} currency={currency} size={28} fit />
