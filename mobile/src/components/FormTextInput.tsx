@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   multiline: {
-    minHeight: 88,
+    minHeight: 64,
     paddingTop: spacing.sm,
   },
   reveal: {

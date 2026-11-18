@@ -1,11 +1,12 @@
 import React from 'react';
 import { Alert, View, StyleSheet, Pressable } from 'react-native';
-import { AppText } from '../AppText';
 import { Ionicons } from '@expo/vector-icons';
-import { useThemeColors, fontSizes, fontWeights, radii, spacing } from '../../theme';
+import * as Clipboard from 'expo-clipboard';
+import { AppText } from '../AppText';
+import { Avatar } from '../ui/Avatar';
+import { useThemeColors, fonts, fontSizes, fontWeights, radii, spacing, DISPLAY_MAX_FONT_SCALE } from '../../theme';
 import { useLanguage } from '../../context/LanguageContext';
 import { Household } from '../../api/householdsApi';
-import * as Clipboard from 'expo-clipboard';
 
 interface HouseholdCardProps {
   household: Household;
@@ -15,66 +16,124 @@ interface HouseholdCardProps {
   memberCount: (params: { count: number }) => string;
 }
 
+/** The household's "house number": its initial in signage numerals on a small enamel plaque. */
+export const HouseholdPlaque: React.FC<{ name: string; size?: number }> = ({ name, size = 44 }) => {
+  const colors = useThemeColors();
+  const initial = (name.trim().match(/[\p{L}\p{N}]/u)?.[0] ?? '?').toUpperCase();
+  return (
+    <View
+      style={[styles.plaque, { width: size, height: size, backgroundColor: colors.enamel }]}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      <AppText
+        style={[styles.plaqueText, { color: colors.onEnamel, fontSize: Math.round(size * 0.56) }]}
+        maxFontSizeMultiplier={DISPLAY_MAX_FONT_SCALE}
+      >
+        {initial}
+      </AppText>
+    </View>
+  );
+};
+
+/**
+ * One household in the picker: plaque, name, members, and the invite code as a copy command.
+ * Rendered inside a `Group`, which draws the separators between households.
+ */
 export const HouseholdCard: React.FC<HouseholdCardProps> = ({
   household, onPress, copiedMessage, memberCountOne, memberCount,
 }) => {
   const colors = useThemeColors();
   const { t } = useLanguage();
-  const count = household.members?.length ?? 0;
+  const members = household.members ?? [];
+  const count = members.length;
+  const countLabel = count === 1 ? memberCountOne : memberCount({ count });
 
-  const handleCopyCode = (e: { stopPropagation?: () => void }) => {
-    e?.stopPropagation?.();
+  const handleCopyCode = () => {
     Clipboard.setStringAsync(household.joinCode).then(() => {
       Alert.alert(copiedMessage, '');
     });
   };
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.surface }]}>
-      <Pressable onPress={onPress} accessibilityRole="button"
-        style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.primaryUltraSoft }]}>
-        <View style={[styles.iconWrap, { backgroundColor: colors.primaryUltraSoft }]}>
-          <Ionicons name="home-outline" size={22} color={colors.primary} />
-        </View>
+    <View>
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={`${household.name}, ${countLabel}`}
+        style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.primaryUltraSoft }]}
+      >
+        <HouseholdPlaque name={household.name} />
         <View style={styles.content}>
-          <AppText style={[styles.name, { color: colors.text }]}>{household.name}</AppText>
-          {household.address ? <AppText style={[styles.detail, { color: colors.textSecondary }]}>{household.address}</AppText> : null}
-          {count > 0 ? (
-            <View style={styles.members}>
-              <Ionicons name="people-outline" size={18} color={colors.textSecondary} />
-              <AppText style={[styles.memberText, { color: colors.textSecondary }]}>
-                {count === 1 ? memberCountOne : memberCount({ count })}
-              </AppText>
-            </View>
-          ) : null}
+          <AppText style={[styles.name, { color: colors.text }]} numberOfLines={2}>{household.name}</AppText>
+          <AppText style={[styles.detail, { color: colors.textSecondary }]} numberOfLines={2}>
+            {household.address ? `${countLabel} · ${household.address}` : countLabel}
+          </AppText>
         </View>
-        <Ionicons name="chevron-forward-outline" size={18} color={colors.textTertiary} />
+        {count > 0 ? (
+          <View style={styles.stack} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+            {members.slice(0, 3).map((m, i) => (
+              <View key={m._id ?? i} style={[styles.stackItem, i > 0 && styles.stackOverlap, { borderColor: colors.surface }]}>
+                <Avatar name={m.name} uri={m.avatarUrl} size={26} />
+              </View>
+            ))}
+          </View>
+        ) : null}
+        <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
       </Pressable>
-      <View style={[styles.codeRow, { borderTopColor: colors.borderLight }]}>
+      <Pressable
+        onPress={handleCopyCode}
+        accessibilityRole="button"
+        accessibilityLabel={`${t('householdSettingsScreen.copyCode')}: ${household.joinCode}`}
+        hitSlop={4}
+        style={({ pressed }) => [styles.code, pressed && styles.pressed]}
+      >
         <AppText style={[styles.codeLabel, { color: colors.textSecondary }]}>{t('householdSettingsScreen.inviteCode')}</AppText>
-        <Pressable onPress={handleCopyCode} accessibilityRole="button"
-          accessibilityLabel={`${t('householdSettingsScreen.copyCode')}: ${household.joinCode}`}
-          style={({ pressed }) => [styles.codeButton, pressed && styles.pressed]}>
-          <AppText style={[styles.code, { color: colors.primary }]}>{household.joinCode}</AppText>
-          <Ionicons name="copy-outline" size={20} color={colors.primary} />
-        </Pressable>
-      </View>
+        <AppText style={[styles.codeValue, { color: colors.primary }]}>{household.joinCode}</AppText>
+        <Ionicons name="copy-outline" size={16} color={colors.primary} />
+      </Pressable>
     </View>
   );
 };
 
+const PLAQUE_COLUMN = spacing.md + 44 + spacing.sm;
+
 const styles = StyleSheet.create({
-  card: { borderRadius: radii.lg, marginBottom: spacing.sm, overflow: 'hidden' },
-  row: { minHeight: 60, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.md },
-  iconWrap: { width: 36, height: 36, borderRadius: radii.sm, alignItems: 'center', justifyContent: 'center' },
+  plaque: {
+    borderRadius: radii.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  plaqueText: {
+    fontFamily: fonts.displayExtrabold,
+    includeFontPadding: false,
+  },
+  row: {
+    minHeight: 64,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xxs,
+  },
   content: { flex: 1, minWidth: 0 },
-  name: { fontSize: fontSizes.md, fontWeight: fontWeights.semibold },
-  detail: { fontSize: fontSizes.sm, marginTop: spacing.xxs },
-  members: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs, marginTop: spacing.xs },
-  memberText: { fontSize: fontSizes.sm, flex: 1 },
-  codeRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: spacing.xs, marginHorizontal: spacing.md, paddingVertical: spacing.xxs, borderTopWidth: StyleSheet.hairlineWidth },
-  codeLabel: { fontSize: fontSizes.sm, flexShrink: 1 },
-  codeButton: { minWidth: 44, minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.xs, maxWidth: '100%' },
-  code: { fontSize: fontSizes.sm, fontWeight: fontWeights.semibold, flexShrink: 1 },
+  name: { fontSize: fontSizes.md + 1, fontWeight: fontWeights.semibold },
+  detail: { fontSize: fontSizes.sm - 1, marginTop: 2 },
+  stack: { flexDirection: 'row', alignItems: 'center' },
+  stackItem: { borderWidth: 2, borderRadius: 15 },
+  stackOverlap: { marginLeft: -10 },
+  code: {
+    minHeight: 40,
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: spacing.xs,
+    paddingLeft: PLAQUE_COLUMN,
+    paddingRight: spacing.md,
+    paddingBottom: spacing.xs,
+  },
+  codeLabel: { fontSize: fontSizes.sm - 1 },
+  codeValue: { fontSize: fontSizes.sm, fontWeight: fontWeights.semibold, letterSpacing: 0.6, fontVariant: ['tabular-nums'] },
   pressed: { opacity: 0.6 },
 });

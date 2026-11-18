@@ -18,6 +18,7 @@ import {
 import { useHeaderHeight } from '@react-navigation/elements';
 import { Group, GroupRow, SectionHeading } from '../../components/ui/Group';
 import { Amount } from '../../components/ui/Amount';
+import { AmountField } from '../../components/ui/AmountField';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SanctuaryScreenShell } from '../../components/sanctuary/SanctuaryScreenShell';
@@ -259,6 +260,7 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
     },
     manualShareCurrency: { fontSize: fontSizes.sm, color: colors.textSecondary },
     remainingLabel: { fontSize: fontSizes.sm, color: colors.textSecondary, flexShrink: 1 },
+    detailsGroup: { marginTop: spacing.lg },
     cardPad: {
       padding: spacing.lg,
     },
@@ -898,22 +900,16 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
           keyboardDismissMode="interactive"
           showsVerticalScrollIndicator={false}
         >
-          <AppText style={styles.householdName}>{selectedHousehold.name}</AppText>
-          <SectionHeading title={t('expenses.sectionExpenseDetails')} />
+          <AmountField
+            value={totalAmount}
+            onChangeText={setTotalAmount}
+            currency={currency}
+            symbol={currencySymbol}
+            label={t('expenses.totalAmount')}
+            meta={selectedHousehold.name}
+            autoFocus={!isEditing}
+          />
           <Group>
-            <View style={styles.cardPad}>
-              <AppText style={styles.fieldLabel}>{t('expenses.totalAmount')}</AppText>
-              <AppText style={styles.amountCurrency}>{currency} · {currencySymbol}</AppText>
-              <TextInput
-                accessibilityLabel={`${t('expenses.totalAmount')} (${currency})`}
-                value={totalAmount}
-                onChangeText={setTotalAmount}
-                placeholder="0.00"
-                placeholderTextColor={colors.textTertiary}
-                keyboardType="numeric"
-                style={styles.amountInput}
-              />
-            </View>
             <FormTextInput
               variant="inset"
               label={t('expenses.description')}
@@ -925,38 +921,30 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
             />
           </Group>
 
-          <SectionHeading title={t('expenses.sectionPaidBy')} />
-          <Group>
-            <GroupRow title={paidByMember?.name || t('expenses.sectionPaidBy')} icon="person-outline"
-              chevron titleLines={0} onPress={() => setActivePicker('paidBy')} />
-          </Group>
-          <SectionHeading title={t('expenses.splitMethod')} />
-          <Group>
-            <GroupRow title={splitSummary} icon="people-outline" chevron titleLines={0}
-              onPress={() => setActivePicker('split')} />
-          </Group>
-          <SectionHeading title={t('expenses.sectionDateAndCategory')} />
-          <Group>
+          <Group style={styles.detailsGroup}>
+            <GroupRow title={t('expenses.sectionPaidBy')} value={paidByMember?.name}
+              chevron onPress={() => setActivePicker('paidBy')} />
+            <GroupRow title={t('expenses.splitMethod')} subtitle={`${participantCount} ${participantLabel}`}
+              value={splitMethod === 'even' ? t('expenses.splitEvenly') : t('expenses.splitManually')}
+              accessibilityLabel={`${t('expenses.splitMethod')}: ${splitSummary}`}
+              chevron onPress={() => setActivePicker('split')} />
             <GroupRow title={t('expenses.date')}
-              subtitle={date.toLocaleDateString(intlLocale, { year: 'numeric', month: 'long', day: 'numeric' })}
-              icon="calendar-outline" chevron titleLines={0} onPress={() => setActivePicker('date')} />
-            <GroupRow title={t('expenses.categoryOptional')}
-              subtitle={selectedCategory ? getExpenseCategoryLabel(t, selectedCategory.id) : t('expenses.categoryPickerPlaceholder')}
-              icon={selectedCategory?.icon || 'pricetag-outline'} chevron titleLines={0}
-              onPress={() => setActivePicker('category')} />
+              value={date.toLocaleDateString(intlLocale, { year: 'numeric', month: 'short', day: 'numeric' })}
+              chevron onPress={() => setActivePicker('date')} />
+            <GroupRow title={t('expenses.category')}
+              value={selectedCategory ? getExpenseCategoryLabel(t, selectedCategory.id) : t('common.optional')}
+              chevron onPress={() => setActivePicker('category')} />
           </Group>
 
           {splitMethod === 'even' && selectedParticipants.length > 0 && totalAmount ? (
             <>
-              <SectionHeading title={t('expenses.sectionSplitPreview')} />
+              <SectionHeading title={`${t('expenses.shares')} (${t('expenses.evenSplit')})`} />
               <Group>
-                <View style={styles.cardPad}>
-                  <AppText style={styles.sharesTitle}>{t('expenses.shares')} ({t('expenses.evenSplit')})</AppText>
-                </View>
                 {calculateEvenShares().map((share, index) => {
                   const member = selectedHousehold.members.find((m) => m._id === share.userId);
                   return <GroupRow key={index} title={member?.name || ''} titleLines={0}
-                    trailing={<Amount value={share.amount} currency={currency} size={20} fit />} />;
+                    leading={<Avatar name={member?.name} uri={member?.avatarUrl} size={32} />}
+                    trailing={<Amount value={share.amount} currency={currency} size={18} fit />} />;
                 })}
               </Group>
             </>
@@ -966,10 +954,10 @@ export const CreateExpenseScreen: React.FC<{ navigation: any; route: any }> = ({
           <Group>
             <View accessibilityState={{ disabled: loadingTemplates }}>
               <GroupRow title={templates.length > 0 ? `${t('expenses.loadTemplate')} (${templates.length})` : t('expenses.loadTemplate')}
-                icon="document-text-outline" chevron titleLines={0}
+                action titleLines={0}
                 onPress={loadingTemplates ? undefined : () => setShowTemplatesModal(true)} />
             </View>
-            <GroupRow title={t('expenses.saveAsTemplate')} icon="bookmark-outline" chevron titleLines={0}
+            <GroupRow title={t('expenses.saveAsTemplate')} action titleLines={0}
               onPress={() => setShowSaveTemplateModal(true)} />
           </Group>
         </ScrollView>

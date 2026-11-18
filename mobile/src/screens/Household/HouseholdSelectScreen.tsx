@@ -29,7 +29,7 @@ import { useThemeColors, fonts, fontSizes, fontWeights, radii, spacing } from '.
 import { AppText } from '../../components/AppText';
 import { EnamelHeader, HeaderIconButton } from '../../components/ui/EnamelHeader';
 import { Sheet } from '../../components/ui/Sheet';
-import { SectionHeading } from '../../components/ui/Group';
+import { Group, GroupRow, SectionHeading } from '../../components/ui/Group';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { getCached, dedupedFetch, invalidateCache } from '../../utils/queryCache';
 
@@ -166,6 +166,7 @@ export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigatio
           {households.length > 0 ? (
             <View style={styles.section}>
               <SectionHeading title={t('household.yourHouseholds')} style={styles.sectionHeading} />
+              <Group style={styles.householdGroup}>
               {households.map((household) => (
                 <HouseholdCard
                   key={household._id}
@@ -176,6 +177,7 @@ export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigatio
                   memberCount={({ count }) => t('household.memberCount', { count })}
                 />
               ))}
+              </Group>
             </View>
           ) : loading ? (
             <View style={styles.loadingBlock}>
@@ -190,16 +192,14 @@ export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigatio
           {/* Actions section */}
           <View style={styles.actionsSection}>
             <SectionHeading title={t('household.createOrJoinSection')} style={styles.sectionHeading} />
-            <PrimaryButton
-              title={t('household.createHousehold')}
-              onPress={() => setCreateModalVisible(true)}
-              style={styles.primaryAction}
-            />
-            <PrimaryButton
-              title={t('household.joinWithCode')}
-              onPress={() => setJoinModalVisible(true)}
-              variant="outline"
-            />
+            <Group style={styles.householdGroup}>
+              <GroupRow title={t('household.createHousehold')} action titleLines={0}
+                trailing={<Ionicons name="add" size={22} color={colors.primary} />}
+                onPress={() => setCreateModalVisible(true)} />
+              <GroupRow title={t('household.joinWithCode')} action titleLines={0}
+                trailing={<Ionicons name="enter-outline" size={22} color={colors.primary} />}
+                onPress={() => setJoinModalVisible(true)} />
+            </Group>
           </View>
         </ScrollView>
       </Sheet>
@@ -354,7 +354,7 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>, insetBottom: nu
   sectionHeading: { paddingTop: 0, paddingHorizontal: spacing.xxs },
   loadingBlock: { paddingVertical: spacing.xxxl, alignItems: 'center', justifyContent: 'center' },
   actionsSection: { paddingHorizontal: spacing.md, marginTop: spacing.md },
-  primaryAction: { marginBottom: spacing.sm },
+  householdGroup: { marginHorizontal: 0 },
   modalOverlay: { flex: 1, backgroundColor: colors.shadowStrong, justifyContent: 'flex-end' },
   modalKeyboard: { width: '100%', maxHeight: '95%' },
   modalScroll: { flexGrow: 0 },

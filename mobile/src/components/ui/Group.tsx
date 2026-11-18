@@ -88,6 +88,8 @@ type GroupRowProps = {
   leading?: React.ReactNode;
   /** Trailing element: an amount, a count, a switch, a checkbox. */
   trailing?: React.ReactNode;
+  /** Current value of a setting-style row ("Paid by … Alex"), set right-aligned in slate. */
+  value?: string;
   /** Shows a chevron when the row navigates somewhere. */
   chevron?: boolean;
   onPress?: () => void;
@@ -113,6 +115,7 @@ export const GroupRow: React.FC<GroupRowProps> = ({
   iconTone = 'primary',
   leading,
   trailing,
+  value,
   chevron,
   onPress,
   destructive,
@@ -162,6 +165,10 @@ export const GroupRow: React.FC<GroupRowProps> = ({
         <ActivityIndicator size="small" color={destructive ? colors.danger : colors.primary} />
       ) : trailing ? (
         <View style={styles.trailing}>{trailing}</View>
+      ) : value ? (
+        <AppText style={[styles.rowValue, { color: colors.textSecondary }]} numberOfLines={2}>
+          {value}
+        </AppText>
       ) : null}
       {chevron ? <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} /> : null}
     </>
@@ -262,6 +269,12 @@ export const GroupFooter: React.FC<GroupFooterProps> = ({ children, tone = 'defa
 export const FIELD_LABEL_WIDTH = '42%';
 
 const styles = StyleSheet.create({
+  rowValue: {
+    flexShrink: 1,
+    maxWidth: '55%',
+    textAlign: 'right',
+    fontSize: fontSizes.md,
+  },
   fieldRow: {
     flexDirection: 'row',
     alignItems: 'center',

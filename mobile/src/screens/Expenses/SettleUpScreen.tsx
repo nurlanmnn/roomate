@@ -36,6 +36,8 @@ import {
   ensureMediaLibraryPermission,
 } from '../../utils/mediaLibraryPermission';
 import { Avatar } from '../../components/ui/Avatar';
+import { AmountField } from '../../components/ui/AmountField';
+import { getCurrencyOption } from '../../constants/currencies';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors, fontSizes, fontWeights, radii, spacing, fonts } from '../../theme';
@@ -92,7 +94,14 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
     mutedLine: { fontSize: fontSizes.sm, color: colors.textSecondary },
     cardPad: { padding: spacing.md },
     balanceGroup: { marginBottom: spacing.sm },
-    historyGroup: { marginTop: spacing.sm },
+    payee: { alignItems: 'center', gap: spacing.xs, paddingTop: spacing.sm },
+    payeeText: { fontSize: fontSizes.md, fontWeight: fontWeights.semibold, color: colors.text, textAlign: 'center' },
+    balanceItem: { paddingBottom: spacing.xs },
+    inlineActions: {
+      flexDirection: 'row', flexWrap: 'wrap', gap: spacing.lg,
+      paddingLeft: spacing.md + 40 + spacing.sm, paddingRight: spacing.md, marginTop: -spacing.xs,
+    },
+    historyGroup: { marginTop: spacing.xl },
     actions: {
       gap: spacing.xs, paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
     },
@@ -501,55 +510,53 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         ) : (
           <>
             <SectionHeading title={t('settleUp.sectionYouOwe')} />
-            {userOwedBalances.length > 0 ? userOwedBalances.map((balance) => {
-              const toUserName = getUserName(balance.toUserId);
-              const hasMutualDebt = mutualDebts.some(b => b.toUserId === balance.toUserId);
-              return (
-                <Group key={`${balance.fromUserId}-${balance.toUserId}`} style={styles.balanceGroup}>
-                  <GroupRow title={toUserName} titleLines={0}
-                    leading={<Avatar name={toUserName} uri={getUserAvatar(balance.toUserId)} size={44} />}
-                    trailing={<Amount value={balance.amount} currency={currency} direction="owe" size={22} fit
-                      accessibilityLabel={`${t('home.youOwe')} ${toUserName}: −${formatCurrency(balance.amount, currency)}`} />} />
-                  {hasMutualDebt ? (
-                    <View style={styles.mutualDebtNote}>
-                      <Ionicons name="swap-horizontal-outline" size={22} color={colors.textSecondary} />
-                      <AppText style={styles.mutualDebtNoteText}>{toUserName} {t('settleUp.alsoOwesYou')}</AppText>
+            {userOwedBalances.length > 0 ? (
+              <Group>
+                {userOwedBalances.map((balance) => {
+                  const toUserName = getUserName(balance.toUserId);
+                  const hasMutualDebt = mutualDebts.some(b => b.toUserId === balance.toUserId);
+                  return (
+                    <View key={`${balance.fromUserId}-${balance.toUserId}`} style={styles.balanceItem}>
+                      <GroupRow title={toUserName} titleLines={0}
+                        subtitle={hasMutualDebt ? `${toUserName} ${t('settleUp.alsoOwesYou')}` : t('settleUp.youOwe')}
+                        leading={<Avatar name={toUserName} uri={getUserAvatar(balance.toUserId)} size={40} />}
+                        trailing={<Amount value={balance.amount} currency={currency} direction="owe" size={22} fit
+                          accessibilityLabel={`${t('home.youOwe')} ${toUserName}: −${formatCurrency(balance.amount, currency)}`} />} />
+                      <View style={styles.inlineActions}>
+                        <InlineAction icon="checkmark-circle-outline" label={t('settleUp.markAsPaid')}
+                          onPress={() => handleMarkAsPaid(balance)} />
+                        {hasMutualDebt ? (
+                          <InlineAction icon="swap-horizontal-outline" label={t('settleUp.netBalance')}
+                            onPress={() => handleNetBalance(balance)} />
+                        ) : null}
+                      </View>
                     </View>
-                  ) : null}
-                  <View style={styles.actions}>
-                    {hasMutualDebt ? (
-                      <TouchableOpacity accessibilityRole="button" style={styles.actionButton}
-                        onPress={() => handleNetBalance(balance)} activeOpacity={0.8}>
-                        <Ionicons name="swap-horizontal-outline" size={22} color={colors.primary} />
-                        <AppText style={styles.actionText}>{t('settleUp.netBalance')}</AppText>
-                      </TouchableOpacity>
-                    ) : null}
-                    <PrimaryButton title={t('settleUp.markAsPaid')} variant="primary"
-                      icon="checkmark-circle-outline" onPress={() => handleMarkAsPaid(balance)} />
-                  </View>
-                </Group>
-              );
-            }) : (
-              <Group><View style={styles.cardPad}><AppText style={styles.mutedLine}>{t('settleUp.nothingToPayNow')}</AppText></View></Group>
+                  );
+                })}
+              </Group>
+            ) : (
+              <Group><GroupRow title={t('settleUp.nothingToPayNow')} titleLines={0} /></Group>
             )}
             {userOwedToBalances.length > 0 ? (
               <>
                 <SectionHeading title={t('home.youAreOwed')} />
-                {userOwedToBalances.map((balance) => {
-                  const fromUserName = getUserName(balance.fromUserId);
-                  return (
-                    <Group key={`${balance.fromUserId}-${balance.toUserId}`} style={styles.balanceGroup}>
-                      <GroupRow title={fromUserName} titleLines={0}
-                        leading={<Avatar name={fromUserName} uri={getUserAvatar(balance.fromUserId)} size={44} />}
-                        trailing={<Amount value={balance.amount} currency={currency} direction="owed" size={22} fit
-                          accessibilityLabel={`${fromUserName} ${t('settleUp.owesYou')}: +${formatCurrency(balance.amount, currency)}`} />} />
-                      <View style={styles.actions}>
-                        <PrimaryButton title={t('settleUp.forgiveDebt')} variant="secondary"
-                          icon="close-circle-outline" onPress={() => handleForgiveDebt(balance)} />
+                <Group>
+                  {userOwedToBalances.map((balance) => {
+                    const fromUserName = getUserName(balance.fromUserId);
+                    return (
+                      <View key={`${balance.fromUserId}-${balance.toUserId}`} style={styles.balanceItem}>
+                        <GroupRow title={fromUserName} titleLines={0} subtitle={t('settleUp.owesYou')}
+                          leading={<Avatar name={fromUserName} uri={getUserAvatar(balance.fromUserId)} size={40} />}
+                          trailing={<Amount value={balance.amount} currency={currency} direction="owed" size={22} fit
+                            accessibilityLabel={`${fromUserName} ${t('settleUp.owesYou')}: +${formatCurrency(balance.amount, currency)}`} />} />
+                        <View style={styles.inlineActions}>
+                          <InlineAction icon="close-circle-outline" label={t('settleUp.forgiveDebt')}
+                            onPress={() => handleForgiveDebt(balance)} />
+                        </View>
                       </View>
-                    </Group>
-                  );
-                })}
+                    );
+                  })}
+                </Group>
               </>
             ) : null}
             {receivedSettlementsAll.length > 0 ? (
@@ -589,7 +596,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
           </>
         )}
         <Group style={styles.historyGroup}>
-          <GroupRow icon="receipt-outline" title={t('expenses.viewSettlementHistory')}
+          <GroupRow title={t('expenses.viewSettlementHistory')}
             titleLines={0} chevron onPress={() => navigation.navigate('SettlementHistory')} />
         </Group>
       </ScrollView>
@@ -609,15 +616,15 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
             </View>
             <ScrollView style={styles.formScroll} contentContainerStyle={styles.formContent}
               keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive">
-              {selectedBalance ? <AppText style={styles.modalSubtitle}>{t('settleUp.paying')} {getUserName(selectedBalance.toUserId)}</AppText> : null}
-              <Group>
-                <View style={styles.cardPad}>
-                  <AppText style={styles.fieldLabel}>{t('expenses.amount')}</AppText>
-                  <AppText style={styles.currencyLabel}>{currency}</AppText>
-                  <TextInput accessibilityLabel={`${t('expenses.amount')} (${currency})`} value={amount}
-                    onChangeText={setAmount} placeholder="0.00" placeholderTextColor={colors.textTertiary}
-                    keyboardType="numeric" style={styles.amountInput} />
+              {selectedBalance ? (
+                <View style={styles.payee}>
+                  <Avatar name={getUserName(selectedBalance.toUserId)} uri={getUserAvatar(selectedBalance.toUserId)} size={44} />
+                  <AppText style={styles.payeeText}>{t('settleUp.paying')} {getUserName(selectedBalance.toUserId)}</AppText>
                 </View>
+              ) : null}
+              <AmountField value={amount} onChangeText={setAmount} currency={currency}
+                symbol={getCurrencyOption(currency).symbol} label={t('expenses.amount')} />
+              <Group>
                 <FormTextInput variant="inset" label={t('settleUp.method')} value={method} onChangeText={setMethod}
                   placeholder={t('settleUp.methodPlaceholder')} autoCapitalize="sentences" />
                 <FormTextInput variant="inset" label={t('settleUp.note')} value={note} onChangeText={setNote}
@@ -635,7 +642,7 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                       </TouchableOpacity>
                     </View>
                   </View>
-                ) : <GroupRow title={t('settleUp.addProof')} titleLines={0} icon="camera-outline" chevron onPress={handlePickProofImage} />}
+                ) : <GroupRow title={t('settleUp.addProof')} titleLines={0} action onPress={handlePickProofImage} />}
               </Group>
             </ScrollView>
             <View style={styles.modalActions}><PrimaryButton title={t('common.save')} onPress={handleSubmitSettlement} /></View>
@@ -688,15 +695,8 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
                   </Group>
                 </>
               ) : null}
-              <SectionHeading title={t('settleUp.customAmount')} />
-              <Group>
-                <View style={styles.cardPad}>
-                  <AppText style={styles.currencyLabel}>{currency}</AppText>
-                  <TextInput accessibilityLabel={`${t('settleUp.customAmount')} (${currency})`} value={forgiveAmount}
-                    onChangeText={setForgiveAmount} placeholder="0.00" placeholderTextColor={colors.textTertiary}
-                    keyboardType="numeric" style={styles.amountInput} />
-                </View>
-              </Group>
+              <AmountField value={forgiveAmount} onChangeText={setForgiveAmount} currency={currency}
+                symbol={getCurrencyOption(currency).symbol} label={t('settleUp.customAmount')} />
               <View style={styles.forgiveWarning}>
                 <Ionicons name="warning-outline" size={22} color={colors.warning} />
                 <AppText style={styles.forgiveWarningText}>{t('alerts.forgiveWarning')}</AppText>
@@ -719,5 +719,17 @@ export const SettleUpScreen: React.FC<{ navigation: any }> = ({ navigation }) =>
         </View>
       </Modal>
     </SanctuaryScreenShell>
+  );
+};
+
+/** A text command under a balance row: cobalt glyph and label, 44pt tall, no fill. */
+const InlineAction: React.FC<{ icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void }> = ({ icon, label, onPress }) => {
+  const colors = useThemeColors();
+  return (
+    <Pressable accessibilityRole="button" onPress={onPress} hitSlop={4}
+      style={({ pressed }) => [{ minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: spacing.xs, opacity: pressed ? 0.6 : 1 }]}>
+      <Ionicons name={icon} size={20} color={colors.primary} />
+      <AppText style={{ color: colors.primary, fontSize: fontSizes.md - 1, fontWeight: fontWeights.semibold }}>{label}</AppText>
+    </Pressable>
   );
 };
