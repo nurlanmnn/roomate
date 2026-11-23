@@ -82,7 +82,9 @@ export const Amount: React.FC<AmountProps> = ({
   const fitKey = `${sign}|${formatted}|${size}|${weight}`;
   const [fitState, setFitState] = useState<FitState>({ key: fitKey, natural: 0, available: 0 });
   const state = fitState.key === fitKey ? fitState : { key: fitKey, natural: 0, available: 0 };
-  const scale = fit && split ? computeScale(state.natural, state.available) : 1;
+  // Both layouts scale from measured widths. iOS's own adjustsFontSizeToFit is not used:
+  // in rows that hug their content it can shrink far below minimumFontScale.
+  const scale = fit ? computeScale(state.natural, state.available) : 1;
 
   const onMeasure = useCallback(
     (e: LayoutChangeEvent) => {
@@ -120,18 +122,36 @@ export const Amount: React.FC<AmountProps> = ({
   };
 
   if (!split) {
+    const renderSingle = (k: number, measuring: boolean) => (
+      <AppText
+        style={[base, measuring ? styles.noShrink : styles.head, { fontSize: size * k, lineHeight: Math.round(size * k * 1.2) }]}
+        numberOfLines={1}
+        maxFontSizeMultiplier={DISPLAY_MAX_FONT_SCALE}
+      >
+        {sign ? `${sign} ` : ''}
+        {formatted}
+      </AppText>
+    );
     return (
-      <View style={[styles.single, style]} accessible accessibilityLabel={label}>
-        <AppText
-          style={[base, { fontSize: size, lineHeight: Math.round(size * 1.2) }]}
-          numberOfLines={1}
-          adjustsFontSizeToFit={fit}
-          minimumFontScale={0.5}
-          maxFontSizeMultiplier={DISPLAY_MAX_FONT_SCALE}
-        >
-          {sign ? `${sign} ` : ''}
-          {formatted}
-        </AppText>
+      <View
+        style={[styles.single, style]}
+        accessible
+        accessibilityLabel={label}
+        onLayout={fit ? onOuterLayout : undefined}
+      >
+        {renderSingle(scale, false)}
+        {fit ? (
+          <View
+            style={styles.measureBox}
+            pointerEvents="none"
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+          >
+            <View style={styles.measureRow} onLayout={onMeasure}>
+              {renderSingle(1, true)}
+            </View>
+          </View>
+        ) : null}
       </View>
     );
   }
