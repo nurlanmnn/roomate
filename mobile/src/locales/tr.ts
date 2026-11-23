@@ -879,4 +879,17 @@ export default {
     viewProof: 'Kanıtı Görüntüle',
     paid: 'ödedi',
   },
+
+  // Address lookup
+  address: {
+    placeholder: "Bir sokak veya semt yazın",
+    verified: "Adres doğrulandı",
+    notVerified: "Doğrulanmadı. Doğrulamak için bir öneri seçin.",
+    searching: "Adres aranıyor…",
+    noMatches: "Eşleşen adres bulunamadı. Yine de kaydedebilirsiniz, ancak doğrulanmamış olur.",
+    lookupFailed: "Adres şu anda kontrol edilemiyor. Yine de kaydedebilirsiniz.",
+    suggestions: "Adres önerileri",
+    pickHint: "Bu adresi kullanır",
+    attribution: "© OpenStreetMap",
+  },
 };

@@ -1,4 +1,5 @@
 import { apiClient } from './apiClient';
+import type { AddressLocation } from './geoApi';
 
 export interface HouseholdMember {
   _id: string;
@@ -11,6 +12,8 @@ export interface Household {
   _id: string;
   name: string;
   address?: string;
+  /** Set when the address was picked from verified suggestions; cleared when the text is edited. */
+  addressLocation?: AddressLocation | null;
   ownerId: string | HouseholdMember; // Can be string or populated object
   members: HouseholdMember[];
   /** User ids who have muted notifications for this household specifically. */
@@ -33,6 +36,7 @@ export const getOwnerIdString = (household: Household): string => {
 export interface CreateHouseholdData {
   name: string;
   address?: string;
+  addressLocation?: AddressLocation | null;
   currency?: string;
 }
 
@@ -43,6 +47,7 @@ export interface JoinHouseholdData {
 export interface UpdateHouseholdData {
   name?: string;
   address?: string;
+  addressLocation?: AddressLocation | null;
   currency?: string;
 }
 

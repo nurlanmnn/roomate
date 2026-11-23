@@ -880,4 +880,17 @@ export default {
     viewProof: 'View proof',
     paid: 'paid',
   },
+
+  // Address lookup
+  address: {
+    placeholder: "Start typing a street or area",
+    verified: "Verified address",
+    notVerified: "Not verified. Pick a suggestion to verify it.",
+    searching: "Looking up address…",
+    noMatches: "No matching address found. You can still save it, but it won't be verified.",
+    lookupFailed: "Couldn't check the address right now. You can still save it.",
+    suggestions: "Address suggestions",
+    pickHint: "Uses this address",
+    attribution: "© OpenStreetMap",
+  },
 };

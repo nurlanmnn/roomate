@@ -879,4 +879,17 @@ export default {
     viewProof: 'Nachweis Anzeigen',
     paid: 'hat bezahlt',
   },
+
+  // Address lookup
+  address: {
+    placeholder: "Straße oder Ort eingeben",
+    verified: "Adresse bestätigt",
+    notVerified: "Nicht bestätigt. Wähle einen Vorschlag, um sie zu bestätigen.",
+    searching: "Adresse wird gesucht…",
+    noMatches: "Keine passende Adresse gefunden. Du kannst sie trotzdem speichern, sie wird aber nicht bestätigt.",
+    lookupFailed: "Die Adresse kann gerade nicht geprüft werden. Du kannst sie trotzdem speichern.",
+    suggestions: "Adressvorschläge",
+    pickHint: "Übernimmt diese Adresse",
+    attribution: "© OpenStreetMap",
+  },
 };

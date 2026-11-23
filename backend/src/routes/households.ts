@@ -22,9 +22,15 @@ const currencySchema = z
     { message: 'Unsupported currency' }
   );
 
+const addressLocationSchema = z.object({
+  lat: z.number().finite().min(-90).max(90),
+  lng: z.number().finite().min(-180).max(180),
+}).nullable().optional();
+
 const createHouseholdSchema = z.object({
   name: trimmedString(1, 120),
   address: optionalTrimmedString(200),
+  addressLocation: addressLocationSchema,
   currency: currencySchema.optional(),
 });
 
@@ -76,7 +82,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const { name, address, currency } = createHouseholdSchema.parse(req.body);
+    const { name, address, addressLocation, currency } = createHouseholdSchema.parse(req.body);
 
     // Generate unique join code
     let joinCode = generateJoinCode();
@@ -93,6 +99,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
     const household = new Household({
       name,
       address,
+      addressLocation: address ? addressLocation ?? undefined : undefined,
       ownerId: userId,
       members: [userId],
       joinCode,
@@ -205,6 +212,7 @@ router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
 const updateHouseholdSchema = z.object({
   name: trimmedString(1, 120).optional(),
   address: optionalTrimmedString(200),
+  addressLocation: addressLocationSchema,
   currency: currencySchema.optional(),
 });
 
@@ -232,7 +240,15 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
       household.name = updates.name;
     }
     if (updates.address !== undefined) {
-      household.address = updates.address;
+      household.address = updates.address || undefined;
+      // Replacing address text invalidates its previous coordinates.
+      household.addressLocation = updates.address
+        ? updates.addressLocation ?? undefined
+        : undefined;
+    } else if (updates.addressLocation !== undefined) {
+      household.addressLocation = household.address
+        ? updates.addressLocation ?? undefined
+        : undefined;
     }
     if (updates.currency !== undefined && updates.currency !== household.currency) {
       // Currency is locked once the household has any expenses or settlements —

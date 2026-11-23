@@ -21,6 +21,8 @@ import { householdsApi, Household } from '../../api/householdsApi';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { AddressField } from '../../components/AddressField';
+import type { AddressLocation } from '../../api/geoApi';
 import { FormTextInput } from '../../components/FormTextInput';
 import { HouseholdCard } from '../../components/Household/HouseholdCard';
 import { CurrencyPicker } from '../../components/CurrencyPicker';
@@ -45,6 +47,7 @@ export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigatio
   const [joinModalVisible, setJoinModalVisible] = useState(false);
   const [householdName, setHouseholdName] = useState('');
   const [householdAddress, setHouseholdAddress] = useState('');
+  const [householdAddressLocation, setHouseholdAddressLocation] = useState<AddressLocation | null>(null);
   const [householdCurrency, setHouseholdCurrency] = useState<string>(() =>
     guessDefaultCurrencyFromLocale(Localization.getLocales()[0]?.languageTag)
   );
@@ -99,7 +102,8 @@ export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigatio
     try {
       const household = await householdsApi.createHousehold({
         name: householdName,
-        address: householdAddress || undefined,
+        address: householdAddress.trim() || undefined,
+        addressLocation: householdAddress.trim() ? householdAddressLocation : null,
         currency: householdCurrency,
       });
       invalidateCache('households:list');
@@ -107,6 +111,7 @@ export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigatio
       setCreateModalVisible(false);
       setHouseholdName('');
       setHouseholdAddress('');
+      setHouseholdAddressLocation(null);
       Alert.alert(
         t('common.success'),
         `${t('household.householdCreated')}! ${t('householdSettingsScreen.inviteCode')}: ${household.joinCode}`,
@@ -246,11 +251,15 @@ export const HouseholdSelectScreen: React.FC<{ navigation: any }> = ({ navigatio
                   onChangeText={setHouseholdName}
                   placeholder={t('household.householdName')}
                 />
-                <FormTextInput
+                <AddressField
                   label={t('household.householdLocation')}
                   value={householdAddress}
-                  onChangeText={setHouseholdAddress}
-                  placeholder={t('household.householdLocation')}
+                  location={householdAddressLocation}
+                  onChange={(text, location) => {
+                    setHouseholdAddress(text);
+                    setHouseholdAddressLocation(location);
+                  }}
+                  placeholder={t('address.placeholder')}
                 />
                 <View style={styles.currencyField}>
                   <AppText style={styles.currencyLabel}>{t('currency.label')}</AppText>

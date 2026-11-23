@@ -879,4 +879,17 @@ export default {
     viewProof: 'Ver Prueba',
     paid: 'pagó',
   },
+
+  // Address lookup
+  address: {
+    placeholder: "Escribe una calle o zona",
+    verified: "Dirección verificada",
+    notVerified: "Sin verificar. Elige una sugerencia para verificarla.",
+    searching: "Buscando dirección…",
+    noMatches: "No se encontró ninguna dirección. Puedes guardarla igualmente, pero no estará verificada.",
+    lookupFailed: "No se puede comprobar la dirección ahora. Puedes guardarla igualmente.",
+    suggestions: "Sugerencias de dirección",
+    pickHint: "Usa esta dirección",
+    attribution: "© OpenStreetMap",
+  },
 };
