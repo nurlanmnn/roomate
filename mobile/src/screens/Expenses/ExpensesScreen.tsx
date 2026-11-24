@@ -34,7 +34,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useHousehold } from '../../context/HouseholdContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { fontSizes, fontWeights, radii, spacing, TAB_BAR_HEIGHT, useThemeColors } from '../../theme';
-import { fetchExpensesFullSnapshot, prefetchBalanceHistoryData } from '../../utils/balanceHistoryDataCache';
+import { fetchExpensesFullSnapshot } from '../../utils/balanceHistoryDataCache';
 import { toBcp47Locale } from '../../utils/dateLocales';
 import {
   dedupedFetch,
@@ -234,7 +234,6 @@ export const ExpensesScreen: React.FC<{ navigation: any; }> = ({ navigation }) =
     React.useCallback(() => {
       if (selectedHousehold) {
         loadDataRef.current?.({ allowStale: true });
-        prefetchBalanceHistoryData(selectedHousehold._id);
       }
     }, [selectedHousehold?._id]) // eslint-disable-line react-hooks/exhaustive-deps
   );
@@ -702,15 +701,6 @@ export const ExpensesScreen: React.FC<{ navigation: any; }> = ({ navigation }) =
           <SectionHeading title={t('expenses.sectionBalances')} style={{ paddingTop: 0 }} />
           <Group>
             <BalanceSummary balances={balances} currentUserId={user._id} getUserName={getUserName} getUserAvatar={getUserAvatar} hideTitle variant="plain" />
-            <GroupRow
-              title={t('expenses.balanceHistory')}
-              icon="time-outline"
-              chevron
-              onPress={() => {
-                prefetchBalanceHistoryData(selectedHousehold._id);
-                navigation.navigate('BalanceHistory');
-              }}
-            />
             <GroupRow title={t('expenses.settleUp')} subtitle={t('expenses.settleUpSubtitle')} icon="swap-horizontal-outline" chevron onPress={() => navigation.navigate('SettleUp')} />
           </Group>
         </>

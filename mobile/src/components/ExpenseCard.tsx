@@ -2,6 +2,7 @@ import React from 'react';
 import { Alert, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Expense } from '../api/expensesApi';
 import { getCategoryById, getCategoryByName, getExpenseCategoryLabel } from '../constants/expenseCategories';
+import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { fontSizes, fontWeights, radii, spacing, useThemeColors } from '../theme';
 import { formatDate } from '../utils/dateHelpers';
@@ -32,6 +33,7 @@ const ExpenseCardInner: React.FC<ExpenseCardProps> = ({
   onEdit,
 }) => {
   const colors = useThemeColors();
+  const { user } = useAuth();
   const [expanded, setExpanded] = React.useState(false);
   const { t, language } = useLanguage();
   const dateLocale = React.useMemo(() => getDateFnsLocale(language), [language]);
@@ -44,7 +46,30 @@ const ExpenseCardInner: React.FC<ExpenseCardProps> = ({
     [t]
   );
   const currency = useHouseholdCurrency();
-  const paidByName = expense.paidBy?.name || t('common.someone');
+  const paidById = typeof expense.paidBy === 'string' ? expense.paidBy : expense.paidBy?._id;
+  const paidByName =
+    (typeof expense.paidBy === 'object' ? expense.paidBy?.name : undefined) || t('common.someone');
+  const myShare = expense.shares?.find((share) => share.userId === user?._id)?.amount ?? 0;
+  const effect = (() => {
+    if (!user) return null;
+    const roundAmount = (amount: number) => Math.round((amount + Number.EPSILON) * 100) / 100;
+    if (paidById === user._id) {
+      const lent = expense.totalAmount - myShare;
+      // Ignore differences smaller than half a cent before rounding for display.
+      return lent >= 0.005
+        ? {
+            text: t('expenses.youLentAmount', { amount: formatCurrency(roundAmount(lent), currency) }),
+            color: colors.owed,
+          }
+        : null;
+    }
+    return myShare >= 0.005
+      ? {
+          text: t('expenses.youOweAmount', { amount: formatCurrency(roundAmount(myShare), currency) }),
+          color: colors.owe,
+        }
+      : { text: t('expenses.notInvolved'), color: colors.textTertiary };
+  })();
   const shareBreakdown = React.useMemo(() => {
     if (!expense.shares?.length) return [];
     const memberNameById = new Map(
@@ -71,6 +96,22 @@ const ExpenseCardInner: React.FC<ExpenseCardProps> = ({
       flexDirection: 'row',
       alignItems: 'center',
       gap: spacing.xs,
+      flexShrink: 1,
+      minWidth: 0,
+      maxWidth: '100%',
+    },
+    trailingAmounts: {
+      alignItems: 'flex-end',
+      flexShrink: 1,
+      minWidth: 0,
+      maxWidth: '100%',
+    },
+    effectText: {
+      fontSize: fontSizes.xs,
+      fontWeight: fontWeights.semibold,
+      textAlign: 'right',
+      maxWidth: '100%',
+      marginTop: spacing.xxs,
     },
     details: {
       paddingHorizontal: spacing.md,
@@ -170,12 +211,19 @@ const ExpenseCardInner: React.FC<ExpenseCardProps> = ({
           icon={category?.icon ?? 'receipt-outline'}
           trailing={
             <View style={styles.trailingRow}>
-              <Amount value={expense.totalAmount} currency={currency} size={20} fit />
+              <View style={styles.trailingAmounts}>
+                <Amount value={expense.totalAmount} currency={currency} size={20} fit style={{ maxWidth: '100%' }} />
+                {effect ? (
+                  <AppText style={[styles.effectText, { color: effect.color }]} numberOfLines={1}>
+                    {effect.text}
+                  </AppText>
+                ) : null}
+              </View>
               <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textTertiary} />
             </View>
           }
           onPress={() => setExpanded((v) => !v)}
-          accessibilityLabel={`${expense.description}, ${t('expenses.paidBy')} ${paidByName}, ${formatCurrency(expense.totalAmount, currency)}`}
+          accessibilityLabel={`${expense.description}, ${t('expenses.paidBy')} ${paidByName}, ${formatCurrency(expense.totalAmount, currency)}${effect ? `, ${effect.text}` : ''}`}
           accessibilityState={{ expanded }}
         />
         {expanded ? (

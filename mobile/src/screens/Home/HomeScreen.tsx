@@ -24,7 +24,6 @@ import { useHouseholdCurrency } from '../../utils/useHouseholdCurrency';
 import { useThemeColors, fonts, fontSizes, fontWeights, spacing, radii, TAB_BAR_HEIGHT, DISPLAY_MAX_FONT_SCALE } from '../../theme';
 import { format, type Locale } from 'date-fns';
 import { getCached, dedupedFetch, DEFAULT_STALE_TIME_MS, isFresh } from '../../utils/queryCache';
-import { prefetchBalanceHistoryData } from '../../utils/balanceHistoryDataCache';
 
 type HomeDashboardSnapshot = {
   homeSummary: HomeExpenseSummary;
@@ -275,8 +274,7 @@ export const HomeScreen: React.FC = () => {
     }
   };
   const openBalances = () => {
-    if (selectedHousehold?._id) prefetchBalanceHistoryData(selectedHousehold._id);
-    navigation.getParent()?.navigate('BalanceHistory');
+    navigation.navigate('Expenses');
   };
 
   if (!selectedHousehold) {
