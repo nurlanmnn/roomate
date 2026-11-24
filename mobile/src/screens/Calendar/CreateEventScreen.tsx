@@ -81,14 +81,12 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
   const [saving, setSaving] = useState(false);
   const [activeSheet, setActiveSheet] = useState<'type' | 'start' | 'end' | null>(null);
   const [pickerPart, setPickerPart] = useState<'date' | 'time'>('date');
-  const [showDescription, setShowDescription] = useState(false);
 
   // Pre-fill form when editing
   useEffect(() => {
     if (editingEvent) {
       setTitle(editingEvent.title);
       setDescription(editingEvent.description || '');
-      setShowDescription(!!editingEvent.description);
       setType(editingEvent.type);
       const eventDate = new Date(editingEvent.date);
       setDate(eventDate);
@@ -222,71 +220,49 @@ export const CreateEventScreen: React.FC<{ navigation: any; route: any }> = ({ n
             accessibilityLabel={t('common.dismissKeyboard')}
           >
             <View>
-              <Group style={styles.inputCard}><View style={styles.inputPadding}>
+              <Group style={styles.inputCard}>
                 <FormTextInput
+                  variant="inset"
                   label={t('events.eventTitle')}
                   value={title}
                   onChangeText={setTitle}
                   placeholder={t('events.titlePlaceholder')}
-                  containerStyle={{ marginBottom: 0 }}
+                  autoCapitalize="sentences"
+                  returnKeyType="done"
                 />
-              </View></Group>
+              </Group>
 
               <Group style={styles.group}>
                 <GroupRow
                   title={t('events.eventType')}
-                  subtitle={t(selectedEventType.labelKey)}
-                  icon={selectedEventType.icon}
+                  value={t(selectedEventType.labelKey)}
                   chevron
                   onPress={() => setActiveSheet('type')}
                 />
                 <GroupRow
                   title={t('events.date')}
-                  subtitle={startSummary}
-                  icon="calendar-outline"
+                  value={startSummary}
                   chevron
                   onPress={() => { setPickerPart('date'); setActiveSheet('start'); }}
                 />
                 <GroupRow
                   title={t('events.endDate')}
-                  subtitle={endSummary}
-                  icon="flag-outline"
+                  value={endSummary}
                   chevron
                   onPress={() => { setPickerPart('date'); setActiveSheet('end'); }}
                 />
               </Group>
 
               <Group style={styles.group}>
-                <TouchableOpacity
-                  accessibilityRole="button"
-                  accessibilityState={{ expanded: showDescription }}
-                  onPress={() => setShowDescription((current) => !current)}
-                >
-                  <GroupRow
-                    title={t('events.eventDescription')}
-                    subtitle={t('common.optional')}
-                    icon="document-text-outline"
-                    trailing={
-                      <Ionicons
-                        name={showDescription ? 'chevron-up-outline' : 'chevron-down-outline'}
-                        size={22}
-                        color={colors.textTertiary}
-                      />
-                    }
-                  />
-                </TouchableOpacity>
-                {showDescription ? (
-                  <View style={styles.descriptionField}>
-                    <FormTextInput
-                      label={t('events.eventDescription')}
-                      value={description}
-                      onChangeText={setDescription}
-                      placeholder={t('events.descriptionPlaceholder')}
-                      multiline
-                      containerStyle={{ marginBottom: 0 }}
-                    />
-                  </View>
-                ) : null}
+                <FormTextInput
+                  variant="inset"
+                  label={`${t('events.eventDescription')} (${t('common.optional').toLowerCase()})`}
+                  value={description}
+                  onChangeText={setDescription}
+                  placeholder={t('events.descriptionPlaceholder')}
+                  autoCapitalize="sentences"
+                  multiline
+                />
               </Group>
             </View>
           </TouchableWithoutFeedback>
@@ -483,8 +459,6 @@ const createStyles = (colors: ReturnType<typeof useThemeColors>) => StyleSheet.c
   emptyText: { fontSize: fontSizes.md, color: colors.textSecondary },
   group: { marginTop: spacing.md },
   inputCard: { marginTop: spacing.md },
-  inputPadding: { padding: spacing.md },
-  descriptionField: { padding: spacing.md },
   actions: {
     flexDirection: 'row',
     flexWrap: 'wrap',

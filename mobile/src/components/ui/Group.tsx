@@ -80,7 +80,7 @@ export const Group: React.FC<GroupProps> = ({ children, style }) => {
 type GroupRowProps = {
   title: string;
   subtitle?: string;
-  /** Ionicon shown in a tinted well on the left. */
+  /** Outline Ionicon set bare in a narrow leading column (no tinted well). */
   icon?: keyof typeof Ionicons.glyphMap;
   /** `marigold` marks something that is the current user's to do. */
   iconTone?: 'primary' | 'marigold' | 'neutral' | 'danger';
@@ -88,6 +88,8 @@ type GroupRowProps = {
   leading?: React.ReactNode;
   /** Trailing element: an amount, a count, a switch, a checkbox. */
   trailing?: React.ReactNode;
+  /** Current value of a setting-style row ("Paid by … Alex"), set right-aligned in slate. */
+  value?: string;
   /** Shows a chevron when the row navigates somewhere. */
   chevron?: boolean;
   onPress?: () => void;
@@ -113,6 +115,7 @@ export const GroupRow: React.FC<GroupRowProps> = ({
   iconTone = 'primary',
   leading,
   trailing,
+  value,
   chevron,
   onPress,
   destructive,
@@ -127,19 +130,21 @@ export const GroupRow: React.FC<GroupRowProps> = ({
 }) => {
   const colors = useThemeColors();
 
-  const tone = {
-    primary: { bg: colors.primaryUltraSoft, fg: colors.primary },
-    marigold: { bg: colors.marigoldSoft, fg: colors.warning },
-    neutral: { bg: colors.tealUltraSoft, fg: colors.textSecondary },
-    danger: { bg: colors.dangerSoft, fg: colors.danger },
+  // Glyphs stay slate; colour is kept for meaning: marigold = yours, danger = destructive.
+  const glyphColor = {
+    primary: colors.textSecondary,
+    neutral: colors.textTertiary,
+    marigold: colors.warning,
+    danger: colors.danger,
   }[iconTone];
+  const glyph = icon;
 
   const content = (
     <>
       {leading ??
-        (icon ? (
-          <View style={[styles.iconWell, { backgroundColor: tone.bg }]}>
-            <Ionicons name={icon} size={20} color={tone.fg} />
+        (glyph ? (
+          <View style={styles.iconColumn} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+            <Ionicons name={glyph} size={22} color={glyphColor} />
           </View>
         ) : null)}
       <View style={styles.rowText}>
@@ -162,6 +167,10 @@ export const GroupRow: React.FC<GroupRowProps> = ({
         <ActivityIndicator size="small" color={destructive ? colors.danger : colors.primary} />
       ) : trailing ? (
         <View style={styles.trailing}>{trailing}</View>
+      ) : value ? (
+        <AppText style={[styles.rowValue, { color: colors.textSecondary }]} numberOfLines={2}>
+          {value}
+        </AppText>
       ) : null}
       {chevron ? <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} /> : null}
     </>
@@ -262,6 +271,12 @@ export const GroupFooter: React.FC<GroupFooterProps> = ({ children, tone = 'defa
 export const FIELD_LABEL_WIDTH = '42%';
 
 const styles = StyleSheet.create({
+  rowValue: {
+    flexShrink: 1,
+    maxWidth: '55%',
+    textAlign: 'right',
+    fontSize: fontSizes.md,
+  },
   fieldRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -340,10 +355,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
-  iconWell: {
-    width: 36,
-    height: 36,
-    borderRadius: radii.sm,
+  iconColumn: {
+    width: 30,
     alignItems: 'center',
     justifyContent: 'center',
   },

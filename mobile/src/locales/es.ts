@@ -1,6 +1,8 @@
 export default {
   // Common
   common: {
+    showPassword: 'Mostrar contraseña',
+    hidePassword: 'Ocultar contraseña',
     save: 'Guardar',
     saved: 'Guardado',
     cancel: 'Cancelar',
@@ -326,20 +328,9 @@ export default {
     participants: 'Participantes',
     splitAmong: 'Dividido entre %{count} personas',
     shareBreakdown: 'Por persona',
-    balanceHistory: 'Historial de saldo',
-    balanceHistorySubtitle: 'Mira cómo los gastos y liquidaciones cambiaron tu saldo.',
-    balanceHistoryDebtLoan: 'Debes: %{debt} · Te deben: %{loan}',
-    balanceHistoryOweShort: 'Debes',
-    balanceHistoryOwedShort: 'Te deben',
-    balanceHistoryNoData: 'Aún no hay cambios de saldo',
-    balanceHistoryNoDataDescription: 'Agrega gastos o liquida para crear tu historial.',
-    balanceHistoryYouCovered: 'Cubierto por ti para otros: %{amount}',
-    balanceHistoryYourShare: 'Tu parte: %{amount}',
-    balanceHistoryYouPaid: 'Pagaste: %{amount}',
-    balanceHistoryYouReceived: 'Recibiste: %{amount}',
-    balanceHistoryWithUser: 'Liquidación con %{name}',
-    balanceHistoryLoadError:
-      'No se pudo cargar el historial de saldo. Desliza hacia abajo para reintentar.',
+    youLentAmount: 'Prestaste %{amount}',
+    youOweAmount: 'Debes %{amount}',
+    notInvolved: 'No participas',
     settleUp: 'Liquidar',
     settlementHistory: 'Historial de Liquidaciones',
     viewSettlementHistory: 'Ver Historial de Liquidaciones',
@@ -876,5 +867,18 @@ export default {
     loading: 'Cargando liquidaciones...',
     viewProof: 'Ver Prueba',
     paid: 'pagó',
+  },
+
+  // Address lookup
+  address: {
+    placeholder: "Escribe una calle o zona",
+    verified: "Dirección verificada",
+    notVerified: "Sin verificar. Elige una sugerencia para verificarla.",
+    searching: "Buscando dirección…",
+    noMatches: "No se encontró ninguna dirección. Puedes guardarla igualmente, pero no estará verificada.",
+    lookupFailed: "No se puede comprobar la dirección ahora. Puedes guardarla igualmente.",
+    suggestions: "Sugerencias de dirección",
+    pickHint: "Usa esta dirección",
+    attribution: "© OpenStreetMap",
   },
 };

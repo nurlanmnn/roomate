@@ -54,6 +54,7 @@ export type SupportedCurrency = (typeof SUPPORTED_CURRENCIES)[number];
 export interface IHousehold extends Document {
   name: string;
   address?: string;
+  addressLocation?: { lat: number; lng: number };
   ownerId: mongoose.Types.ObjectId;
   members: mongoose.Types.ObjectId[];
   /**
@@ -68,6 +69,11 @@ export interface IHousehold extends Document {
   createdAt: Date;
 }
 
+const AddressLocationSchema = new Schema({
+  lat: { type: Number, required: true, min: -90, max: 90 },
+  lng: { type: Number, required: true, min: -180, max: 180 },
+}, { _id: false });
+
 const HouseholdSchema = new Schema<IHousehold>({
   name: {
     type: String,
@@ -77,6 +83,10 @@ const HouseholdSchema = new Schema<IHousehold>({
   address: {
     type: String,
     trim: true,
+  },
+  addressLocation: {
+    type: AddressLocationSchema,
+    required: false,
   },
   ownerId: {
     type: Schema.Types.ObjectId,

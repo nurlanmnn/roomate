@@ -1,6 +1,8 @@
 export default {
   // Common
   common: {
+    showPassword: 'Şifreyi göster',
+    hidePassword: 'Şifreyi gizle',
     save: 'Kaydet',
     saved: 'Kaydedildi',
     cancel: 'İptal',
@@ -326,20 +328,9 @@ export default {
     participants: 'Katılımcılar',
     splitAmong: '%{count} kişi arasında paylaşıldı',
     shareBreakdown: 'Kişi başı',
-    balanceHistory: 'Bakiye geçmişi',
-    balanceHistorySubtitle: 'Harcamaların ve hesaplaşmaların bakiyeni nasıl değiştirdiğini gör.',
-    balanceHistoryDebtLoan: 'Borcun: %{debt} · Alacağın: %{loan}',
-    balanceHistoryOweShort: 'Borç',
-    balanceHistoryOwedShort: 'Alacak',
-    balanceHistoryNoData: 'Henüz bakiye değişimi yok',
-    balanceHistoryNoDataDescription: 'Geçmişi oluşturmak için harcama ekle veya hesaplaş.',
-    balanceHistoryYouCovered: 'Başkaları için karşıladığın: %{amount}',
-    balanceHistoryYourShare: 'Senin payın: %{amount}',
-    balanceHistoryYouPaid: 'Ödediğin: %{amount}',
-    balanceHistoryYouReceived: 'Aldığın: %{amount}',
-    balanceHistoryWithUser: '%{name} ile hesaplaşma',
-    balanceHistoryLoadError:
-      'Bakiye geçmişi yüklenemedi. Yeniden denemek için aşağı çekin.',
+    youLentAmount: '%{amount} borç verdin',
+    youOweAmount: '%{amount} borcun var',
+    notInvolved: 'Dahil değilsin',
     settleUp: 'Hesaplaş',
     settlementHistory: 'Hesaplaşma Geçmişi',
     viewSettlementHistory: 'Hesaplaşma Geçmişini Görüntüle',
@@ -876,5 +867,18 @@ export default {
     loading: 'Hesaplaşmalar yükleniyor...',
     viewProof: 'Kanıtı Görüntüle',
     paid: 'ödedi',
+  },
+
+  // Address lookup
+  address: {
+    placeholder: "Bir sokak veya semt yazın",
+    verified: "Adres doğrulandı",
+    notVerified: "Doğrulanmadı. Doğrulamak için bir öneri seçin.",
+    searching: "Adres aranıyor…",
+    noMatches: "Eşleşen adres bulunamadı. Yine de kaydedebilirsiniz, ancak doğrulanmamış olur.",
+    lookupFailed: "Adres şu anda kontrol edilemiyor. Yine de kaydedebilirsiniz.",
+    suggestions: "Adres önerileri",
+    pickHint: "Bu adresi kullanır",
+    attribution: "© OpenStreetMap",
   },
 };

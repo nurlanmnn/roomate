@@ -1,6 +1,8 @@
 export default {
   // Common
   common: {
+    showPassword: 'Passwort anzeigen',
+    hidePassword: 'Passwort verbergen',
     save: 'Speichern',
     saved: 'Gespeichert',
     cancel: 'Abbrechen',
@@ -326,20 +328,9 @@ export default {
     participants: 'Teilnehmer',
     splitAmong: 'Aufgeteilt auf %{count} Personen',
     shareBreakdown: 'Pro Person',
-    balanceHistory: 'Kontostand-Verlauf',
-    balanceHistorySubtitle: 'Sehen Sie, wie Ausgaben und Ausgleiche Ihren Kontostand verändert haben.',
-    balanceHistoryDebtLoan: 'Ihre Schulden: %{debt} · Ihnen geschuldet: %{loan}',
-    balanceHistoryOweShort: 'Schuld',
-    balanceHistoryOwedShort: 'Forderung',
-    balanceHistoryNoData: 'Noch keine Kontostand-Änderungen',
-    balanceHistoryNoDataDescription: 'Fügen Sie Ausgaben hinzu oder gleichen Sie aus, um Verlauf zu sehen.',
-    balanceHistoryYouCovered: 'Für andere übernommen: %{amount}',
-    balanceHistoryYourShare: 'Ihr Anteil: %{amount}',
-    balanceHistoryYouPaid: 'Sie haben gezahlt: %{amount}',
-    balanceHistoryYouReceived: 'Sie haben erhalten: %{amount}',
-    balanceHistoryWithUser: 'Ausgleich mit %{name}',
-    balanceHistoryLoadError:
-      'Kontostand-Verlauf konnte nicht geladen werden. Ziehen Sie nach unten, um es erneut zu versuchen.',
+    youLentAmount: 'Sie haben %{amount} ausgelegt',
+    youOweAmount: 'Sie schulden %{amount}',
+    notInvolved: 'Nicht beteiligt',
     settleUp: 'Abrechnen',
     settlementHistory: 'Abrechnungsverlauf',
     viewSettlementHistory: 'Abrechnungsverlauf Anzeigen',
@@ -876,5 +867,18 @@ export default {
     loading: 'Abrechnungen werden geladen...',
     viewProof: 'Nachweis Anzeigen',
     paid: 'hat bezahlt',
+  },
+
+  // Address lookup
+  address: {
+    placeholder: "Straße oder Ort eingeben",
+    verified: "Adresse bestätigt",
+    notVerified: "Nicht bestätigt. Wähle einen Vorschlag, um sie zu bestätigen.",
+    searching: "Adresse wird gesucht…",
+    noMatches: "Keine passende Adresse gefunden. Du kannst sie trotzdem speichern, sie wird aber nicht bestätigt.",
+    lookupFailed: "Die Adresse kann gerade nicht geprüft werden. Du kannst sie trotzdem speichern.",
+    suggestions: "Adressvorschläge",
+    pickHint: "Übernimmt diese Adresse",
+    attribution: "© OpenStreetMap",
   },
 };

@@ -1,6 +1,8 @@
 export default {
   // Common
   common: {
+    showPassword: 'Afficher le mot de passe',
+    hidePassword: 'Masquer le mot de passe',
     save: 'Enregistrer',
     saved: 'Enregistré',
     cancel: 'Annuler',
@@ -326,20 +328,9 @@ export default {
     participants: 'Participants',
     splitAmong: 'Partagé entre %{count} personnes',
     shareBreakdown: 'Par personne',
-    balanceHistory: 'Historique du solde',
-    balanceHistorySubtitle: 'Voyez comment les dépenses et règlements ont changé votre solde.',
-    balanceHistoryDebtLoan: 'Vous devez : %{debt} · On vous doit : %{loan}',
-    balanceHistoryOweShort: 'Dette',
-    balanceHistoryOwedShort: 'Créance',
-    balanceHistoryNoData: 'Aucun changement de solde pour le moment',
-    balanceHistoryNoDataDescription: 'Ajoutez des dépenses ou réglez des dettes pour créer l’historique.',
-    balanceHistoryYouCovered: 'Vous avez avancé pour les autres : %{amount}',
-    balanceHistoryYourShare: 'Votre part : %{amount}',
-    balanceHistoryYouPaid: 'Vous avez payé : %{amount}',
-    balanceHistoryYouReceived: 'Vous avez reçu : %{amount}',
-    balanceHistoryWithUser: 'Règlement avec %{name}',
-    balanceHistoryLoadError:
-      'Impossible de charger l’historique du solde. Tirez vers le bas pour réessayer.',
+    youLentAmount: 'Vous avez avancé %{amount}',
+    youOweAmount: 'Vous devez %{amount}',
+    notInvolved: 'Non concerné',
     settleUp: 'Régler',
     settlementHistory: 'Historique des Règlements',
     viewSettlementHistory: 'Voir l\'Historique des Règlements',
@@ -876,5 +867,18 @@ export default {
     loading: 'Chargement des règlements...',
     viewProof: 'Voir la Preuve',
     paid: 'a payé',
+  },
+
+  // Address lookup
+  address: {
+    placeholder: "Saisissez une rue ou un quartier",
+    verified: "Adresse vérifiée",
+    notVerified: "Non vérifiée. Choisissez une suggestion pour la vérifier.",
+    searching: "Recherche de l’adresse…",
+    noMatches: "Aucune adresse correspondante. Vous pouvez quand même l’enregistrer, mais elle ne sera pas vérifiée.",
+    lookupFailed: "Impossible de vérifier l’adresse pour le moment. Vous pouvez quand même l’enregistrer.",
+    suggestions: "Suggestions d’adresse",
+    pickHint: "Utilise cette adresse",
+    attribution: "© OpenStreetMap",
   },
 };

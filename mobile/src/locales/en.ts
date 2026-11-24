@@ -1,6 +1,8 @@
 export default {
   // Common
   common: {
+    showPassword: 'Show password',
+    hidePassword: 'Hide password',
     save: 'Save',
     saved: 'Saved',
     cancel: 'Cancel',
@@ -322,19 +324,9 @@ export default {
     participants: 'Participants',
     splitAmong: 'Split among %{count} people',
     shareBreakdown: 'Per person',
-    balanceHistory: 'Balance history',
-    balanceHistorySubtitle: 'See how expenses and settlements changed your balance.',
-    balanceHistoryDebtLoan: 'You owe: %{debt} · owed to you: %{loan}',
-    balanceHistoryOweShort: 'Owe',
-    balanceHistoryOwedShort: 'Owed',
-    balanceHistoryNoData: 'No balance changes yet',
-    balanceHistoryNoDataDescription: 'Add expenses or settle up to build your history.',
-    balanceHistoryYouCovered: 'You covered others: %{amount}',
-    balanceHistoryYourShare: 'Your share: %{amount}',
-    balanceHistoryYouPaid: 'You paid: %{amount}',
-    balanceHistoryYouReceived: 'You received: %{amount}',
-    balanceHistoryWithUser: 'Settlement with %{name}',
-    balanceHistoryLoadError: 'Could not load balance history. Pull down to retry.',
+    youLentAmount: 'You lent %{amount}',
+    youOweAmount: 'You owe %{amount}',
+    notInvolved: 'Not involved',
     settleUp: 'Settle up',
     settlementHistory: 'Settlement history',
     viewSettlementHistory: 'View settlement history',
@@ -877,5 +869,18 @@ export default {
     loading: 'Loading settlements...',
     viewProof: 'View proof',
     paid: 'paid',
+  },
+
+  // Address lookup
+  address: {
+    placeholder: "Start typing a street or area",
+    verified: "Verified address",
+    notVerified: "Not verified. Pick a suggestion to verify it.",
+    searching: "Looking up address…",
+    noMatches: "No matching address found. You can still save it, but it won't be verified.",
+    lookupFailed: "Couldn't check the address right now. You can still save it.",
+    suggestions: "Address suggestions",
+    pickHint: "Uses this address",
+    attribution: "© OpenStreetMap",
   },
 };

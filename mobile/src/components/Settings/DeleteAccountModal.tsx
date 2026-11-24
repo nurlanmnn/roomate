@@ -4,7 +4,6 @@ import {
   Modal,
   View,
   StyleSheet,
-  TextInput,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -12,6 +11,7 @@ import {
 } from 'react-native';
 import { AppText } from '../AppText';
 import { PrimaryButton } from '../PrimaryButton';
+import { FormTextInput } from '../FormTextInput';
 import { useThemeColors, fontSizes, fontWeights, radii, spacing } from '../../theme';
 
 const DELETE_PHRASE = 'DELETE';
@@ -92,30 +92,25 @@ export const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
             <AppText accessibilityRole="header" style={[styles.title, { color: colors.text }]}>{title}</AppText>
             <AppText style={[styles.body, { color: colors.textSecondary }]}>{body}</AppText>
 
-            <AppText style={[styles.label, { color: colors.textSecondary }]}>{passwordLabel}</AppText>
-            <TextInput
-              style={[styles.input, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }]}
+            <FormTextInput
+              label={passwordLabel}
               value={password}
               onChangeText={setPassword}
               secureTextEntry
-              accessibilityLabel={passwordLabel}
-              placeholderTextColor={colors.textTertiary}
-              autoCapitalize="none"
+              textContentType="password"
+              autoComplete="current-password"
               editable={!loading}
             />
 
-            <AppText style={[styles.label, { color: colors.textSecondary }]}>{typePhraseLabel}</AppText>
-            <TextInput
-              style={[styles.input, { borderColor: colors.border, color: colors.text, backgroundColor: colors.background }]}
+            <FormTextInput
+              label={typePhraseLabel}
               value={phrase}
               onChangeText={setPhrase}
               placeholder={DELETE_PHRASE}
-              accessibilityLabel={typePhraseLabel}
-              accessibilityHint={typePhraseHint}
-              placeholderTextColor={colors.textTertiary}
               autoCapitalize="characters"
               autoCorrect={false}
               editable={!loading}
+              containerStyle={{ marginBottom: spacing.xs }}
             />
             <AppText style={[styles.hint, { color: colors.textSecondary }]}>{typePhraseHint}</AppText>
 
@@ -161,20 +156,6 @@ const styles = StyleSheet.create({
   body: {
     fontSize: fontSizes.sm,
     marginBottom: spacing.lg,
-  },
-  label: {
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.semibold,
-    marginBottom: spacing.xs,
-  },
-  input: {
-    minHeight: 50,
-    borderWidth: 1,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    fontSize: fontSizes.md,
-    marginBottom: spacing.md,
   },
   hint: {
     fontSize: fontSizes.sm,

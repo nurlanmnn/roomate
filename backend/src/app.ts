@@ -7,6 +7,7 @@ import { config } from './config/env';
 import { connectDB } from './config/db';
 import authRoutes from './routes/auth';
 import householdRoutes from './routes/households';
+import geoRoutes from './routes/geo';
 import expenseRoutes from './routes/expenses';
 import expenseTemplateRoutes from './routes/expenseTemplates';
 import settlementRoutes from './routes/settlements';
@@ -212,6 +213,7 @@ app.use(express.json({ limit: '10mb' }));
 // Routes
 app.use('/auth', authRoutes);
 app.use('/households', householdRoutes);
+app.use('/geo', geoRoutes);
 app.use('/expenses', expenseRoutes);
 app.use('/expense-templates', expenseTemplateRoutes);
 app.use('/settlements', settlementRoutes);

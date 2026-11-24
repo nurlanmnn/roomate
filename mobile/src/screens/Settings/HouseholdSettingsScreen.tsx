@@ -17,6 +17,8 @@ import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { householdsApi, getOwnerIdString, HouseholdMember } from '../../api/householdsApi';
 import { dedupedFetch, getCached, invalidateCache } from '../../utils/queryCache';
+import { AddressField } from '../../components/AddressField';
+import type { AddressLocation } from '../../api/geoApi';
 import { Group, GroupRow, FieldRow, GroupFooter, SectionHeading } from '../../components/ui/Group';
 import { ToggleRow } from '../../components/Settings/ToggleRow';
 import { MemberRow } from '../../components/Settings/MemberRow';
@@ -33,6 +35,7 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
   const [isOwner, setIsOwner] = useState(false);
   const [editName, setEditName] = useState('');
   const [editAddress, setEditAddress] = useState('');
+  const [editAddressLocation, setEditAddressLocation] = useState<AddressLocation | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
   const [regenerating, setRegenerating] = useState(false);
@@ -61,6 +64,7 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
     if (selectedHousehold) {
       setEditName(selectedHousehold.name);
       setEditAddress(selectedHousehold.address || '');
+      setEditAddressLocation(selectedHousehold.addressLocation ?? null);
       const muted =
         !!user?._id &&
         (selectedHousehold.notificationMutedBy ?? []).some((id) => id === user._id);
@@ -184,7 +188,9 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
     try {
       const updated = await householdsApi.updateHousehold(selectedHousehold._id, {
         name: editName.trim(),
-        address: editAddress.trim() || undefined,
+        // An empty string clears the address (undefined would leave the old one in place).
+        address: editAddress.trim(),
+        addressLocation: editAddress.trim() ? editAddressLocation : null,
       });
       invalidateCache('households:list');
       if (txCountKey) invalidateCache(txCountKey);
@@ -369,7 +375,8 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
     editName.trim().length > 0 &&
     !!selectedHousehold &&
     (editName.trim() !== selectedHousehold.name ||
-      editAddress.trim() !== (selectedHousehold.address || ''));
+      editAddress.trim() !== (selectedHousehold.address || '') ||
+      Boolean(editAddressLocation) !== Boolean(selectedHousehold.addressLocation));
 
   // The header item is only rebuilt when its state changes; rebuilding it on every
   // render (each keystroke) makes the native header lose the item's size.
@@ -427,11 +434,16 @@ export const HouseholdSettingsScreen: React.FC<{ navigation: any }> = ({ navigat
             placeholder={t('household.householdName')}
             editable={isOwner}
           />
-          <FieldRow
+          <AddressField
+            variant="inset"
             label={t('householdSettingsScreen.householdLocation')}
             value={isOwner ? editAddress : selectedHousehold.address || ''}
-            onChangeText={setEditAddress}
-            placeholder={t('household.householdLocation')}
+            location={isOwner ? editAddressLocation : selectedHousehold.addressLocation}
+            onChange={(text, location) => {
+              setEditAddress(text);
+              setEditAddressLocation(location);
+            }}
+            placeholder={t('address.placeholder')}
             editable={isOwner}
           />
           <CurrencyPicker

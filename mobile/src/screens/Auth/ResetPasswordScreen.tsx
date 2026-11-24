@@ -74,16 +74,18 @@ export const ResetPasswordScreen: React.FC<{ navigation: any; route: any }> = ({
         label={t('auth.newPassword')}
         value={newPassword}
         onChangeText={setNewPassword}
-        placeholder={t('auth.newPassword')}
         secureTextEntry
+        textContentType="newPassword"
+        autoComplete="new-password"
       />
 
       <FormTextInput
         label={t('auth.confirmPassword')}
         value={confirmPassword}
         onChangeText={setConfirmPassword}
-        placeholder={t('auth.confirmPassword')}
         secureTextEntry
+        textContentType="newPassword"
+        autoComplete="new-password"
       />
 
       <PrimaryButton
